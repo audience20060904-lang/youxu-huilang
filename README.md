@@ -46,7 +46,10 @@ python3 -m http.server 8000
 
 ## 部署
 
-推到 `main` 就自动发布 —— `.github/workflows/deploy.yml` 会把游戏文件打包丢到 GitHub Pages，
+**一次性设置**：Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。
+只需要点这一次。这步没法写进 workflow —— Actions 的令牌没有创建 Pages 站点的权限。
+
+设置完之后，推到 `main` 就自动发布 —— `.github/workflows/deploy.yml` 会把游戏文件打包丢到 GitHub Pages，
 通常 30～60 秒后线上就是新的。不需要手动操作，在 GitHub 网页上直接改文件也算数。
 
 页面顶部内置了报错横幅：出问题会直接显示在页面上，不用开 F12。

@@ -24,10 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # enablement: true 会在第一次运行时自动打开这个仓库的 Pages
+      # Pages 必须先在 Settings -> Pages 里把 Source 设成 GitHub Actions。
+      # 这一步不能自动做：Actions 的 GITHUB_TOKEN 没有创建 Pages 站点的权限
+      # （enablement: true 会以 "Resource not accessible by integration" 失败）。
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       # 只把游戏本体打包上去，不带 .git / .github
       - name: Collect site files
