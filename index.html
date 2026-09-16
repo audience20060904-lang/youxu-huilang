@@ -1,6 +1,9 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 页面缩放整个锁死：这是个满屏的游戏界面，双击/双指放大只会把布局顶乱。
+     maximum-scale + user-scalable 管住安卓；iOS Safari 会无视它们，所以另有
+     CSS 的 touch-action:manipulation（禁双击放大）和下面那段 gesture 兜底（禁双指）。 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>幽墟回廊</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,6 +39,27 @@
   window.addEventListener("unhandledrejection", function(e){
     show("未捕获的 Promise：" + (e.reason && e.reason.message ? e.reason.message : e.reason));
   });
+  /* ---- 把页面缩放钉死 ----
+     iOS Safari 不认 user-scalable=no：双指靠 gesturestart 系列挡，
+     双击放大靠「300 毫秒内的第二次触摸」挡（touch-action:manipulation 已经挡掉大部分，
+     这里是兜底）。preventDefault 只拦缩放，单击、滚动、长按都不受影响。 */
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function(t){
+    document.addEventListener(t, function(e){ e.preventDefault(); }, {passive:false});
+  });
+  var lastTap = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function(e){
+    /* ⚠️ 不能见到「300ms 内第二次触摸」就一律 preventDefault —— 那会把第二次的
+       click 一起吃掉，连点两下按钮就有一下不算数。只拦真正的双击放大：
+       同一个位置（30px 内）连点两下，而且点的不是按钮/输入框这类要响应的东西。 */
+    var t = e.changedTouches && e.changedTouches[0];
+    var now = Date.now(), x = t ? t.clientX : 0, y = t ? t.clientY : 0;
+    var near = Math.abs(x - lastX) < 30 && Math.abs(y - lastY) < 30;
+    var live = e.target && e.target.closest && e.target.closest("button,input,textarea,label,select,a,.c");
+    if(now - lastTap <= 300 && near && !live && e.cancelable) e.preventDefault();
+    lastTap = now; lastX = x; lastY = y;
+  }, {passive:false});
+  document.addEventListener("dblclick", function(e){ e.preventDefault(); }, {passive:false});
+
   document.addEventListener("click", function(ev){
     if(ev.target.id === "errhide"){ document.getElementById("errbar").hidden = true; }
     if(ev.target.id === "errcopy"){

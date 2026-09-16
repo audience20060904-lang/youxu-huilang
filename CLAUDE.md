@@ -99,6 +99,15 @@
 - **遗物上限 `RELIC_MAX = 15`**（原来 10）。带满时遗物页很长 ——
   `#viewRelic` 必须在 `overflow-y:auto` 那条规则里，否则底下的合成面板会被挤没。
   ⚠️ 这条以前写的是早就改名的 `#viewBag`，白瞎了很久。
+- **怪倒下后自动收**（`finishBattle()` 末尾的 `setTimeout(closeBattleWin, 1000)`）——
+  「收取战利品」那个按钮已经删了，给一秒看清「倒下了」和最后那个词的释义就自动关窗。
+  `B.won` 是那一秒里的闸，别在这期间再手动关一次。
+- **页面缩放整个钉死**（用户要求"固定住"）：两个 viewport meta 都带
+  `maximum-scale=1, user-scalable=no`，CSS 里 `html{touch-action:manipulation}`，
+  index.html 顶部还有一段 JS 兜底（iOS 不认 user-scalable）：`gesturestart/change/end` 全 preventDefault，
+  再加「同一位置 300ms 内第二次触摸」。
+  ⚠️ 那段 touchend 兜底**必须带位置判断并放过 button/input/label/a/.c** ——
+  见到第二次触摸就无脑 preventDefault 会把第二次的 click 一起吃掉，连点两下按钮就有一下不算数。
 - **生命上限涨了要补当前血**：所有改 `P.relics` 的地方都包在 `withMaxHp()` 里 ——
   上限 +8 时当前血也 +8（20/30 → 28/38），换掉/拆掉加血遗物时把当前血压回新上限（至少留 1 点）。
   新增任何会动遗物的入口，**必须也从 `withMaxHp()` 过**。

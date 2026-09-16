@@ -948,11 +948,13 @@ function finishBattle(win){
   $("letters").hidden = true;
   $("wagerRow").hidden = true;
   $("qHaunt").hidden = true;
-  $("btnNextQ").hidden = false;
-  $("btnNextQ").textContent = "收取战利品";
+  $("btnNextQ").hidden = true;          // 不用再点「收取战利品」了
   $("btnFlee").hidden = true;
   B.won = true;
   renderBattleBars();
+  /* 怪一倒就自动收：给一秒看清「倒下了」和最后那个词的释义，然后关窗。
+     用 B.won 做闸 —— 这一秒里要是窗已经被别的流程关了（比如通关结算），就别再收一次。 */
+  setTimeout(function(){ if(B && B.won) closeBattleWin(); }, 1000);
 }
 function closeBattleWin(){
   const m = B.mob;
@@ -984,6 +986,7 @@ function closeBattleWin(){
   fov();
   // 普通怪不再掉东西（金币已经给过了）；遗物统一由清层/房间给
   G.paused = false;
+  lockInput(260);        // 战斗窗是自动关的，挡一下手里还没停的那一点
   render();
   maybeRelic();
 }
