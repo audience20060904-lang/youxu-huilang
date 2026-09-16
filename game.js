@@ -413,7 +413,14 @@ function cancelWalk(){
   if(G) G.goal = null;
   if(walkTimer){ clearTimeout(walkTimer); walkTimer = null; }
 }
-function findPath(tx, ty){
+/* 自动寻路会绕开的东西：泉 / 坛 / 箱 / 商 —— 踩上去就弹窗，是「互动」不是「路过」。
+   金币不算，路过顺手捡了正好。点它们本身当然还是走得过去（终点不受这条限制）。*/
+function isStop(x, y){
+  const th = thingAt(x, y);
+  return !!(th && th.kind !== "gold");
+}
+/* loose = true 时不绕，用来兜底：万一互动物件真把唯一的路堵死了，还能走过去 */
+function findPath(tx, ty, loose){
   if(tx === P.x && ty === P.y) return null;
   if(!G.seen[ty][tx] || G.map[ty][tx] === 0) return null;
   const key = function(x,y){ return y*W + x; };
@@ -431,7 +438,10 @@ function findPath(tx, ty){
       if(!G.seen[ny][nx] || G.map[ny][nx] === 0) continue;
       const k = key(nx,ny);
       if(done[k]) continue;
-      if(mobAt(nx,ny) && !(nx === tx && ny === ty)) continue;  // 怪物挡路
+      if(!(nx === tx && ny === ty)){
+        if(mobAt(nx,ny)) continue;                              // 怪物挡路
+        if(!loose && isStop(nx,ny)) continue;                   // 泉/坛/箱/商：绕开，别顺路踩进去
+      }
       done[k] = true;
       prev[k] = c;
       q.push({x:nx, y:ny});
@@ -450,7 +460,8 @@ function findPath(tx, ty){
 }
 function goTo(tx, ty){
   if(G.paused || G.over) return;
-  const path = findPath(tx, ty);
+  // 先按「绕开互动物件」找一条；真绕不过去（被堵死）再退回不绕的老办法
+  const path = findPath(tx, ty) || findPath(tx, ty, true);
   if(!path){
     if(G.seen[ty][tx] && G.map[ty][tx] === 1) say("那边过不去 —— 有东西挡着路。", "sys");
     return;
@@ -616,15 +627,27 @@ function pickQuizWord(cat){
   while(B && B.q && w.en === B.q.word.en && guard++ < 12) w = pick(bag);
   return w;
 }
+/* 这一题出拼写的概率：底子 10%，拼写流的两件遗物各再加 15%。
+   「盲斗」不走这条线，它是硬锁 100%。*/
+function spellChance(){
+  let p = SPELL_RATE;
+  if(hasRelic("carve")) p += SPELL_RELIC_RATE;
+  if(hasRelic("recite")) p += SPELL_RELIC_RATE;
+  return Math.min(1, p);
+}
 function nextQuestion(){
   const m = B.mob;
   let word;
-  if(B.retry){ word = B.retry; B.retry = null; }   // 复读者：重考刚才那个
+  // 拼错退回来的那个词优先（它这次只能是选择题），其次才是复读者的重考
+  const backToChoice = B.toChoice; B.toChoice = null;
+  if(backToChoice) word = backToChoice;
+  else if(B.retry){ word = B.retry; B.retry = null; }   // 复读者：重考刚才那个
   else word = pickQuizWord(m.cat);
   B.asked++;
   let type;
-  if(hasRelic("blind")) type = "spell";                       // 盲斗：全拼写
-  else if(m.boss && B.asked % 3 === 0) type = "spell";
+  if(backToChoice) type = "zh2en";                            // 拼错的词退回成选择题
+  else if(hasRelic("blind")) type = "spell";                  // 盲斗：全拼写
+  else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
   else if(CAN_SPEAK && B.asked % 4 === 0) type = "listen";
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   B.q = {word:word, type:type, done:false, haunted: !!(P.haunt && P.haunt.indexOf(word.en) >= 0)};
@@ -654,7 +677,6 @@ function nextQuestion(){
     $("qWord").textContent = "🔈 ? ? ?";
     $("qWord").className = "qword";
     $("btnSpeak").hidden = false;
-    $("btnSpeak").textContent = "🔊 再听一次";
     if(OPT.speak) speak(word.en);
   } else if(type === "en2zh"){
     $("qLabel").textContent = "这个词是什么意思？";
@@ -703,7 +725,7 @@ function setWagerLabel(){
   if(em) em.textContent = OPT.lock ? "已锁定：每题自动冒险" : "对了伤害翻倍，错了受伤翻倍";
 }
 function renderSpell(word){
-  $("qLabel").textContent = "拼出这个词";
+  $("qLabel").textContent = "拼出这个词 · 对了双倍经验";
   $("qWord").textContent = word.cn;
   $("qWord").className = "qword cn";
   $("opts").hidden = true;
@@ -810,6 +832,14 @@ function fxGold(x, y){
   const cell = cells[y * W + x];
   fxFly(cell || $("stageBox"), $("hGold"), "coin", 7);
 }
+/* 怪倒下：掉的金币飞向「金」，经验飞向「等级」（绿色，跟血/金区分开）*/
+function fxKill(x, y){
+  const cell = cells[y * W + x] || $("stageBox");
+  fxFly(cell, $("hGold"), "coin", 6);
+  const green = getComputedStyle(document.documentElement)
+                  .getPropertyValue("--venom").trim() || "#47702F";
+  fxFly(cell, $("hLevel"), "gem", 5, green);
+}
 /* 拿遗物：从弹窗（或屏幕中央）飞到底部的「遗物」标签，颜色按品质走 */
 function fxRelic(r){
   // 起点：当前开着的那个弹层（三选一 / 宝箱 / 游商都行），没有就用地图
@@ -850,10 +880,14 @@ function answer(btn, ok){
 
   const wasStrong = (rec.str || 0) >= 3;          // 学者：看的是答题前的熟练度
   const hitWeak = m.weak && word.cat === m.weak;
+  const isSpell = B.q.type === "spell";
   let head, note = "";
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
     P.combo++;
+    /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
+       连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
+    if(isSpell){ P.combo += SPELL_COMBO; B.xpx = SPELL_XPX; }
     // 伤害 =（攻击 + 连击加成）×暴击倍数 − 对方护甲，最低 1
     // 伤害：先把所有加成加完，**只有暴击一个乘区**，最后减护甲。
     // 别再往里加乘法 —— 玩家要能一眼算出还要答对几个。
@@ -891,7 +925,8 @@ function answer(btn, ok){
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 2;              // 点金
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
-    head = "<span class=\"big ok\">" + (B.wager ? "冒对了！" : crit ? "暴击！" : "命中！") + "</span>";
+    head = "<span class=\"big ok\">" +
+           (B.wager ? "冒对了！" : crit ? "暴击！" : isSpell ? "拼对了！" : "命中！") + "</span>";
     note = "你砍中 " + m.name + "，造成 <b>" + dmg + "</b> 点伤害" +
            (hitWeak ? "（正中弱点）" : "") +
            (surge ? "，浪涌炸开" : "") + (bonus ? "（连击 +" + bonus + "）" : "") + "。";
@@ -939,6 +974,8 @@ function answer(btn, ok){
                (wasHaunted ? "（心魔加重）" : "") + "。";
       }
     }
+    // 拼错不算白丢：同一个词下一题退回成选择题，再认一次
+    if(isSpell && !B.retry) B.toChoice = word;
     if(hasRelic("thorns") && !B.retry){
       m.hp -= 1;
       note += " 赤鳞反弹了 <b>1</b> 点。";
@@ -950,11 +987,12 @@ function answer(btn, ok){
 
   $("verdict").innerHTML = head +
     "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
-  if(CAN_SPEAK){
-    $("btnSpeak").hidden = false;
-    $("btnSpeak").textContent = "🔊 " + word.en;
-  }
-  say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn, ok ? "good" : "hurt");
+  if(CAN_SPEAK) $("btnSpeak").hidden = false;     // 答完了，随时能再听一次
+  let spellLog = "";
+  if(isSpell) spellLog = ok
+    ? " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>"
+    : (B.toChoice ? " <span class=\"sys\">(下一题换成选择题再认一次)</span>" : "");
+  say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn + spellLog, ok ? "good" : "hurt");
   renderBattleBars();
   renderHud();
   $("btnFlee").hidden = true;
@@ -984,15 +1022,18 @@ function finishBattle(win){
 }
 function closeBattleWin(){
   const m = B.mob;
+  const xpx = B.xpx || 1;            // 本场拼对过就是 2 倍（B 马上要清掉，先取出来）
   B = null;
   $("veilBattle").hidden = true;
   const i = G.mobs.indexOf(m);
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
-  gainXp(m.xp);
+  const xp = m.xp * xpx;
+  gainXp(xp);
   const greed = hasRelic("greed") ? 2 : 1;
   const g = (ri(2,5) + G.floor) * greed;
   P.gold += g;
+  fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
   if(hasRelic("reap")) heal += 3;
@@ -1000,7 +1041,8 @@ function closeBattleWin(){
   const before = P.hp;
   P.hp = Math.min(s0.maxHp, P.hp + heal);
   const gained = P.hp - before;
-  say(m.name + " 化成了灰。<span class=\"sys\">(+" + m.xp + " EXP，+" + g + " 金" +
+  say(m.name + " 化成了灰。<span class=\"sys\">(+" + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
+      "，+" + g + " 金" +
       (gained > 0 ? "，回复 " + gained + " 生命" : "") + ")</span>", "good");
   if(G.mobs.length === 0){
     /* 阶梯直接开在最后一只怪倒下的地方 —— 不用再满地图找那个 ▼。
@@ -1148,7 +1190,7 @@ function buildChestLetters(word){
     const b = document.createElement("button");
     b.type = "button"; b.className = "lbtn"; b.textContent = ch;
     b.addEventListener("click", function(){
-      if(chestQ.done || chestQ.spell.length >= word.en.length) return;
+      if(!chestQ || chestQ.done || chestQ.spell.length >= word.en.length) return;
       chestQ.spell += ch; b.disabled = true;
       drawChestSpell();
       if(chestQ.spell.length === word.en.length){
@@ -1160,7 +1202,7 @@ function buildChestLetters(word){
   const back = document.createElement("button");
   back.type = "button"; back.className = "lbtn back"; back.textContent = "←";
   back.addEventListener("click", function(){
-    if(chestQ.done || !chestQ.spell.length) return;
+    if(!chestQ || chestQ.done || !chestQ.spell.length) return;
     const ch = chestQ.spell.slice(-1);
     chestQ.spell = chestQ.spell.slice(0,-1);
     const b = Array.prototype.filter.call(box.children, function(x){
@@ -1223,7 +1265,7 @@ function openShop(th){
         if(c && !th.stock.some(function(x){ return x.relic === c; })) r = c;
       }
       if(!r) break;
-      th.stock.push({relic:r, price: 10 + (r.r || 0) * 12 + G.floor, sold:false});
+      th.stock.push({relic:r, price: (10 + (r.r || 0) * 12 + G.floor) * SHOP_MULT, sold:false});
     }
   }
   renderShop();
@@ -1309,14 +1351,21 @@ function withMaxHp(fn){
 function relicById(id){ return RELICS.filter(function(r){ return r.id === id; })[0]; }
 function relicRar(id){ const r = relicById(id); return r ? (r.r || 0) : 0; }
 
-/* 层数 → 掉落品质权重。数组里重复几次就是几倍权重，跟 wordLevels 一个写法。
-   前期几乎全是普通（它们是合成燃料），神圣只在深层才有影。*/
+/* 层数 → 掉落品质权重。写成「每档各几份」，rarWt 把它摊成带权重的数组。
+   前期几乎全是普通（它们是合成燃料）。
+   **深层也不该随手就是传奇/神圣** —— 越往下高品质只是「有机会」，
+   想要成型的搭配主要靠合成和游商，不是靠白捡。*/
+function rarWt(n0, n1, n2, n3, n4){
+  const out = [], n = [n0, n1, n2, n3, n4];
+  for(let r = 0; r < 5; r++) for(let i = 0; i < n[r]; i++) out.push(r);
+  return out;
+}
 function rarityWeights(floor){
-  if(floor <= 10) return [0,0,0,0,1];
-  if(floor <= 20) return [0,0,0,1,1,2];
-  if(floor <= 30) return [0,0,1,1,2,2,3];
-  if(floor <= 40) return [0,1,1,2,2,3,3,4];
-  return [1,1,2,2,3,3,4,4];
+  if(floor <= 10) return rarWt(7, 1, 0, 0, 0);    // 普通 88% · 稀有 12%
+  if(floor <= 20) return rarWt(14, 5, 1, 0, 0);   // 普通 70% · 稀有 25% · 史诗 5%
+  if(floor <= 30) return rarWt(11, 6, 2, 1, 0);   // 传奇 5% 才露头
+  if(floor <= 40) return rarWt(8, 6, 4, 2, 0);    // 传奇 10%，神圣还没有
+  return rarWt(5, 6, 5, 3, 1);                    // 50 层也只有 5% 神圣
 }
 /* 按当前层数抽一件还没拿过的遗物；那个品质抽干了就逐级往下找 */
 function rollRelic(floor){
@@ -1334,11 +1383,15 @@ function rollRelic(floor){
 }
 
 /* ---- 分解：拆掉一件换金币，腾出格子 ---- */
+/* 一件遗物值多少金 —— 分解、遗物页上的标价、带满了折算，全走这一个口 */
+function sellPrice(r){
+  return (RAR_SELL[(r && r.r) || 0] || RAR_SELL[0]) + Math.floor((G ? G.floor : 1) / 5);
+}
 function sellRelic(id){
   const i = P.relics.indexOf(id);
   if(i < 0) return;
   const r = relicById(id);
-  const g = (RAR_SELL[r.r || 0] || 4) + Math.floor((G ? G.floor : 1) / 5);
+  const g = sellPrice(r);
   withMaxHp(function(){ P.relics.splice(i, 1); });
   P.gold += g;
   say("你拆了 " + rc(r) + "，换成 <b>" + g + "</b> 金币。", "sys");
@@ -1370,23 +1423,46 @@ function fusePick(id){
   fuseSel.push(id);
   renderRelics();
 }
-function fuseGo(){
+/* 点「合成」先弹一个二选一的确认窗 —— 合成要花 FUSE_COST 金，砸下去不可撤销 */
+function askFuse(){
   if(fuseSel.length !== FUSE_N) return;
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
+  const gold = (P && P.gold) || 0;
+  const names = fuseSel.map(function(id){ const r = relicById(id); return r ? r.n : "?"; }).join("、");
+  $("fuseTitle").textContent = FUSE_N + " 件" + RAR_CN[rar] + " → 1 件" + RAR_CN[rar + 1];
+  $("fuseLedger").innerHTML =
+    li("砸掉", names) +
+    li("花费", FUSE_COST + " 金（你有 " + gold + "）") +
+    li("换回", "随机一件" + RAR_CN[rar + 1]);
+  const yes = $("btnFuseYes");
+  yes.disabled = gold < FUSE_COST;
+  yes.textContent = yes.disabled ? "金币不够" : "花 " + FUSE_COST + " 金合成";
+  $("veilFuse").hidden = false;
+  (yes.disabled ? $("btnFuseNo") : yes).focus();
+}
+function closeFuseAsk(){ $("veilFuse").hidden = true; }
+function fuseGo(){
+  closeFuseAsk();
+  if(fuseSel.length !== FUSE_N) return;
+  const rar = fuseRar();
+  if(rar < 0 || rar >= 4) return;
+  if(!P || P.gold < FUSE_COST){ say("合成要 <b>" + FUSE_COST + "</b> 金，你还不够。", "sys"); return; }
   // 挑的这三件必须都还在手上（分解过就作废）
   const eat = fuseSel.filter(function(id){ return P.relics.indexOf(id) >= 0; });
   if(eat.length !== FUSE_N){ fuseSel = []; renderRelics(); return; }
   const up = relicPool().filter(function(x){ return (x.r || 0) === rar + 1; });
   if(!up.length){ say("更高一档的遗物你已经拿齐了。", "sys"); return; }
   const got = pick(up);
+  P.gold -= FUSE_COST;
   withMaxHp(function(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
     P.relics.push(got.id);
   });
   fuseOn = false; fuseSel = [];
   noteRelicFound(got, "合成出");
-  say("你把 " + FUSE_N + " 件" + RAR_CN[rar] + "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
+  say("你付了 <b>" + FUSE_COST + "</b> 金，把 " + FUSE_N + " 件" + RAR_CN[rar] +
+      "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
   renderHud();
 }
 /* 遗物名字上色 */
@@ -1406,6 +1482,7 @@ function grantRelic(r, how){
     say("遗物已经被你撑满了，折成 <b>" + g + "</b> 金币。", "sys");
     return;
   }
+
   withMaxHp(function(){ P.relics.push(r.id); });
   noteRelicFound(r, how);
   say((how || "你得到了") + " " + rc(r) + " —— " + r.pw + "。", "crit");
@@ -1448,7 +1525,7 @@ function doSwap(dropId){
     say("你放下 " + (old ? old.n : "旧遗物") +
         "，换上了 " + rc(ps.relic) + "。", "crit");
   } else {
-    const g = 8 + G.floor * 2;
+    const g = sellPrice(ps.relic);          // 不换就当场分解，跟分解价一样
     P.gold += g;
     say("你没动手上的东西，" + ps.relic.n + " 折成了 <b>" + g + "</b> 金币。", "sys");
   }
@@ -1551,7 +1628,7 @@ function renderRelics(){
       (fuseOn
         ? "<span class=\"tick\">" + (picked ? "✓" : "") + "</span>"
         : "<button type=\"button\" class=\"melt\" data-sell=\"" + id + "\">分解<em>" +
-          ((RAR_SELL[q] || 4) + Math.floor((G ? G.floor : 1) / 5)) + " 金</em></button>");
+          sellPrice(r) + " 金</em></button>");
     box.appendChild(d);
   });
   renderFuse();
@@ -1575,12 +1652,12 @@ function renderFuse(){
   if(fuseOn){
     note.innerHTML = fuseSel.length
       ? ("已挑 <b>" + fuseSel.length + " / " + FUSE_N + "</b> 件" + RAR_CN[fuseRar()] +
-         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件）。再点一下可以取消选中。")
+         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件），另付 <b>" + FUSE_COST + "</b> 金。")
       : "在上面点 <b>" + FUSE_N + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
   } else {
     note.innerHTML = ready >= 0
-      ? ("点「选择」，挑 " + FUSE_N + " 件同品质的砸成一件更高的。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
-      : "同一个品质攒够 " + FUSE_N + " 件才能合成。";
+      ? ("点「选择」，挑 " + FUSE_N + " 件同品质的砸成一件更高的（另付 <b>" + FUSE_COST + "</b> 金）。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
+      : "同一个品质攒够 " + FUSE_N + " 件，再加 <b>" + FUSE_COST + "</b> 金才能合成。";
   }
 }
 
@@ -1841,8 +1918,13 @@ function openCodex(tab){
     const book = CODEX;
     $("codexTitle").textContent = "遗物 " + Object.keys(book).length + " / " + RELICS.length;
     /* 图鉴**默认全解锁**：名字、效果、铭文一律直接给，没拿过的只是没有计数。
-       （用户定的，别再把没拿过的遮成 ▨▨。）*/
-    RELICS.forEach(function(R){
+       （用户定的，别再把没拿过的遮成 ▨▨。）
+       顺序按品质**普通 → 神圣**排（content.js 里是按搭配线分组的，看图鉴时对不上）。
+       同品质保持 RELICS 里的原顺序，所以用带下标的稳定排序。*/
+    RELICS.map(function(R, i){ return {r:R, i:i}; })
+      .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
+      .map(function(x){ return x.r; })
+      .forEach(function(R){
       const rec = book[R.id], d = document.createElement("div");
       d.className = "cx " + (rec ? "found" : "lost");
       d.innerHTML =
@@ -1879,10 +1961,10 @@ function openCodex(tab){
   $("veilCodex").hidden = false;
 }
 function hideAll(){
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring","veilFuse"].forEach(function(id){ $(id).hidden = true; });
 }
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring","veilFuse"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -2109,7 +2191,7 @@ document.addEventListener("keydown", function(ev){
       const b = v.querySelector(".btn.primary");
       if(b){ ev.preventDefault(); b.click(); }
     } else if(ev.key === "Escape"){
-      if(v.id === "veilCodex" || v.id === "veilHelp") v.hidden = true;
+      if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
     }
     return;
@@ -2270,7 +2352,9 @@ $("relicOwned").addEventListener("click", function(ev){
   if(card && fuseOn) fusePick(card.dataset.id);
 });
 $("btnFusePick").addEventListener("click", fuseToggleMode);
-$("btnFuseGo").addEventListener("click", function(){ if(!this.disabled) fuseGo(); });
+$("btnFuseGo").addEventListener("click", function(){ if(!this.disabled) askFuse(); });
+$("btnFuseNo").addEventListener("click", closeFuseAsk);
+$("btnFuseYes").addEventListener("click", function(){ if(!this.disabled) fuseGo(); });
 
 /* ---- 带满了的取舍 ---- */
 $("swapList").addEventListener("click", function(ev){

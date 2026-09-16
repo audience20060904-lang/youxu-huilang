@@ -161,7 +161,7 @@
         <div class="relics own" id="relicOwned"></div>
       </div>
       <div class="panel">
-        <div class="phead">合成 · 3 件同品质 → 1 件更高</div>
+        <div class="phead">合成 · 3 件同品质 + 300 金 → 1 件更高</div>
         <div class="rowb">
           <button class="btn" id="btnFusePick" type="button">选择</button>
           <button class="btn primary" id="btnFuseGo" type="button" disabled>合成</button>
@@ -271,7 +271,7 @@
       <div class="qlabel" id="qLabel">这个词是什么意思？</div>
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
       <div class="qword" id="qWord">cat</div>
-      <button class="spk" id="btnSpeak" type="button" hidden>🔊 听一听</button>
+      <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>
     </div>
 
     <div class="wagerrow" id="wagerRow">
@@ -402,6 +402,21 @@
   </div>
 </div>
 
+<!-- 合成确认：要花金币，砸下去不可撤销，所以先二选一问一句 -->
+<div class="veil" id="veilFuse" hidden>
+  <div class="sheet">
+    <div class="eyebrow">合成</div>
+    <h2 id="fuseTitle">3 件同品质 → 1 件更高</h2>
+    <div class="ledger" id="fuseLedger"></div>
+    <p class="note">换到哪一件是随机的，砸下去就收不回来了。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnFuseNo" type="button">再想想</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnFuseYes" type="button">合成</button>
+    </div>
+  </div>
+</div>
+
 <div class="veil" id="veilCodex" hidden>
   <div class="sheet">
     <div class="eyebrow">图鉴 · 跨局永久记录</div>
@@ -427,6 +442,8 @@
         <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。</li>
         <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>连对 3 个</b>伤害 +1，<b>连对 5 个</b> +2，答错清零。暴击是双倍。</li>
+        <li><b>拼写题</b>：每题有<b>一成</b>的概率要你把词拼出来。拼对<b>连击 +10、这一场经验翻倍</b>；
+          拼错不算白丢 —— 同一个词<b>下一题换成选择题</b>再问你一次。</li>
         <li><b>连击跨怪物保留</b>：打完一只接着打下一只，连击<b>不会归零</b> —— 撤退、走路、下一层都留着。只有<b>答错</b>才断（拿了「长链」就只减半），倒下回镇上才清空。</li>
         <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满 ——
           踩上去会<b>先问你喝不喝</b>，不喝就留在原地，等真需要的时候再回来。撑不住就先撤退，去别处打一只弱的。</li>
@@ -436,14 +453,15 @@
         <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就冒。
           地图下面的<b>「锁定冒险」</b>打开后，<b>每题自动冒险</b>，不用一题点一次（拼写题除外）。</li>
         <li><b>弱点</b>：每只怪都怕一类词（战斗界面有标）。用那一类的词打中，<b>伤害 +2</b>。Boss 的弱点每次都不一样。</li>
-        <li><b>遗物</b>：<b>每清完一层三选一</b>，共 48 件分五个品质，<b>最多带 10 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质合成 1 件更高的</b>。
+        <li><b>遗物</b>：<b>每清完一层三选一</b>，共 48 件分五个品质，<b>最多带 15 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质 + 300 金合成 1 件更高的</b>。
           它们分成几条成套的路线 —— 比如「盲斗 + 刻字 + 默诵」把你变成拼写专家，
           「铁胆 + 孤注 + 赌骰」让你每题都敲下去。只在这一趟里管用。</li>
         <li><b>变强的唯一途径</b>：<b>遗物</b>。没有装备、没有背包，不用管属性搭配 ——伤害就是一条加法，<b>只有暴击会翻倍</b>。</li>
         <li><b>心魔</b>：这一趟答错过的词会<b>缠上来重考</b>。重遇时答对就驱散并回 2 点血；再答错会多掉 1 点。</li>
         <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> 献 5 点血换一件遗物；
           <span style="color:var(--torch)">箱</span> 拼对一个词才能开，<b>拼错就永久锁死</b>；
-          <span style="color:var(--frost)">商</span> 用洞里的金币买东西。</li>
+          <span style="color:var(--frost)">商</span> 用洞里的金币买东西。
+          <b>自动寻路会绕开它们</b>，想用就直接点它。</li>
         <li><b>存档</b>：<b>打开网页自动读档</b>，不会问你。存档点只有三个 —— <b>进入关卡、下一层、回到主城</b>。
           所以一层打到一半关掉页面，下次是<b>从这一层的入口重来</b>：这一层里砍的怪、捡的金币、拿的遗物都不算数。</li>
         <li><b>主城</b>：你从<b>灰岩镇</b>出发，进洞窟选一条路下去。等级和遗物都是<b>进洞之后才有的</b>，只在这一趟里算数。</li>
