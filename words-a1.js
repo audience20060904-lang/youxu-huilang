@@ -1,7 +1,9 @@
-/* 第一章词库 · CEFR A1 → B1，共 430 词
+/* 全部词库 · CEFR A1 / A2 / B1，共 448 词
    格式：[英文, 中文, 类别, 难度]   难度：1=A1  2=A2  3=B1
 
-   **难度跟层数挂钩**：越深越靠近 B1，映射写在 game.js 的 wordLevels()。
+   **一个难度就是一章，章与章之间的词不重复**（用户定的）：
+   第一章「石廊」只出难度 1，第二章「锈庭」只出难度 2，难度 3 留给还没做的第三章。
+   哪一章用哪个难度写在 content.js 的 `CHAPTERS[].wordLv` 上。
    加词直接往 WORDS 里加，四个字段都要给；类别要在 CAT_CN 里有对应中文名。
    **英文不能重复** —— WMAP 按英文做键，重了会静默覆盖。
    怪物按类别出题（见 content.js 里每只怪的 cat 字段）。*/
@@ -55,8 +57,21 @@ var WORDS = [
 ["big","大的","adj",1],["small","小的","adj",1],["hot","热的","adj",1],["cold","冷的","adj",1],
 ["good","好的","adj",1],["bad","坏的","adj",1],["new","新的","adj",1],["old","旧的","adj",1],
 ["happy","快乐的","adj",1],["sad","伤心的","adj",1],["fast","快的","adj",1],["slow","慢的","adj",1],
-["long","长的","adj",1],["short","短的","adj",1],["strong","强壮的","adj",1],["tired","累的","adj",1]
-/* ---------- A2（第 13 层起开始掺，第 21 层起成为主力） ---------- */
+["long","长的","adj",1],["short","短的","adj",1],["strong","强壮的","adj",1],["tired","累的","adj",1],
+
+/* 时间 / 地点 / 情绪三类以前只有 A2 和 B1 的词。
+   第一章现在**只出 A1**，这三类怪（锈钟怪 / 回廊游影 / 吞惧者）的弱点就没词可出了，
+   所以补到每类都有 8 个以上 —— 少于 6 个的话 scopeToLevel() 会整类退回去。 */
+["afternoon","下午","time",1],["evening","傍晚","time",1],["month","月份","time",1],
+["yesterday","昨天","time",1],
+
+["park","公园","place",1],["city","城市","place",1],["town","小镇","place",1],
+["street","街道","place",1],["garden","花园","place",1],
+
+["love","爱","feel",1],["fun","有趣的","feel",1],["glad","高兴的","feel",1],
+["sorry","抱歉的","feel",1],["worry","担心","feel",1],["calm","平静的","feel",1],
+["shy","害羞的","feel",1],["miss","想念","feel",1],["kind","善良的","feel",1]
+/* ---------- A2（第二章「锈庭」的全部词） ---------- */
 ,["wolf","狼","animal",2],["snake","蛇","animal",2],
 ["bee","蜜蜂","animal",2],["ant","蚂蚁","animal",2],["goat","山羊","animal",2],["deer","鹿","animal",2],
 ["frog","青蛙","animal",2],["eagle","鹰","animal",2],["shark","鲨鱼","animal",2],["salad","沙拉","food",2],["cheese","奶酪","food",2],["butter","黄油","food",2],
@@ -98,7 +113,7 @@ var WORDS = [
 ["strange","奇怪的","adj",2],["famous","著名的","adj",2],["modern","现代的","adj",2],["ancient","古老的","adj",2],
 ["safe","安全的","adj",2],["dangerous","危险的","adj",2],["simple","简单的","adj",2],["difficult","困难的","adj",2],
 
-/* ---------- 新类别：时间 / 地点 / 情绪 ---------- */
+/* ---------- A2 的时间 / 地点 / 情绪 ---------- */
 ["morning","早晨","time",1],["week","星期","time",1],["year","年","time",1],
 ["today","今天","time",1],["tomorrow","明天","time",1],["hour","小时","time",2],["minute","分钟","time",2],
 ["season","季节","time",2],["spring","春天","time",2],["summer","夏天","time",2],["autumn","秋天","time",2],
@@ -109,7 +124,7 @@ var WORDS = [
 ["library","图书馆","place",2],["factory","工厂","place",2],["village","村庄","place",2],["bridge","桥","place",2],
 ["corner","角落","place",2],["gate","大门","place",2],["tower","塔","place",2],["cave","洞穴","place",2],["angry","生气的","feel",2],["afraid","害怕的","feel",2],["bored","无聊的","feel",2],["excited","兴奋的","feel",2],["nervous","紧张的","feel",2],
 ["proud","自豪的","feel",2],["lonely","孤独的","feel",2],["surprised","惊讶的","feel",2],["worried","担心的","feel",2],
-/* ---------- B1（第 31 层起掺入，第 41 层起成为主力） ---------- */
+/* ---------- B1（留给第三章，现在游戏里出不到） ---------- */
 ["creature","生物","animal",3],["insect","昆虫","animal",3],["beast","野兽","animal",3],["prey","猎物","animal",3],
 ["nest","巢","animal",3],["herd","兽群","animal",3],["feather","羽毛","animal",3],["claw","爪子","animal",3],
 

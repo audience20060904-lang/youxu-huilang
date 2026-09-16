@@ -486,3 +486,7 @@ var COIN =
 /* 粒子用的小图形：金币碎屑 / 遗物碎屑。飞的时候只有几像素大，不用画细。*/
 var MOTE_COIN = '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.2" fill="currentColor" stroke="#8A5F0C" stroke-width=".9"/></svg>';
 var MOTE_GEM  = '<svg viewBox="0 0 10 10"><path d="M5 .8 9.2 5 5 9.2.8 5z" fill="currentColor"/></svg>';
+
+/* 第二章的 Boss「锈庭主事」共用守卫那张小图（战斗立绘走 def.art，也是 warden）。
+   MOB_ART 的键是 def.id，所以这里得单独挂一个别名，不然地图上只会画出「庭」字。 */
+MOB_ART.steward = MOB_ART.warden;

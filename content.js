@@ -5,12 +5,13 @@
    玩家伤害固定值（不是区间），怪物血量是它的整数倍 —— 玩家永远知道"还要答对几个"。*/
 "use strict";
 
-/* ===== 章节 ===== */
+/* ===== 章节 =====
+   CHAPTER 是**两章共用**的那套数值（地图大小、主角、成长曲线）。
+   ⚠️ W / H / floors / view 在 game.js 开头就被取成了 const，**各章不能各来一套** ——
+   想让某一章换地图尺寸，得先改 game.js。
+   每章自己的东西（名字、词难度、宝石倍率、怪物加成、Boss）写在下面的 CHAPTERS 里。 */
 var CHAPTER = {
-  id: 1,
-  name: "石廊",
-  level: "A1",
-  floors: 50,         // 本章 50 层，A1 一路爬到 B1
+  floors: 50,         // 每章都是 50 层
   W: 15, H: 21,       // 地牢总格数（完整地图）
   view: {w:9, h:13},  // **屏幕上一次只显示这么大一块**，镜头跟着人走。
                       // 格子大小 = 可用尺寸 / 视野格数，所以**视野调小 = 格子变大**。
@@ -39,6 +40,36 @@ var CHAPTER = {
   }
 };
 
+/* ===== 每一章 =====
+   **一个难度就是一章，章与章之间的词不重复**（用户定的）：
+   wordLv 就是这一章唯一会出的词难度（1=A1 2=A2 3=B1），出题只从这一桶里抽。
+   gemMult 是结算时的难度倍率 —— 第一章 100%，A2 章 125%，以后的 B1 章 150%。
+   foeBonus 是这一章所有怪（除了章末 Boss，它自己一套数值）的固定加成，整数加法。
+   加第三章：往数组里再抄一条（wordLv:3、gemMult:1.5），再往 ROUTES 里加一条路就行。 */
+var CHAPTERS = [
+  {id:1, name:"石廊", level:"A1", wordLv:1, gemMult:1.00,
+   foeBonus:{hp:0, dmg:0, armor:0, xp:0},
+   boss:{id:"warden", g:"卫", name:"石廊守卫", art:"warden", cat:"all",
+         hp:200, dmg:14, armor:3, xp:60, boss:true, fixed:true}},
+  {id:2, name:"锈庭", level:"A2", wordLv:2, gemMult:1.25,
+   foeBonus:{hp:4, dmg:1, armor:0, xp:2},
+   boss:{id:"steward", g:"庭", name:"锈庭主事", art:"warden", cat:"all",
+         hp:300, dmg:18, armor:4, xp:90, boss:true, fixed:true}}
+];
+var CH = CHAPTERS[0];        // 当前这一章。game.js 的 setChapter() 负责换，别在别处赋值
+
+/* ===== 结算 =====
+   一趟结束（倒下或通关）按局内表现算分，再乘这一章的 gemMult，得到带回镇上的**宝石**。
+   全是整数加减，跟伤害公式一个规矩 —— 玩家要能自己把这笔账算出来。 */
+var SCORE = {
+  perFloor: 3,    // 到达的层数，每层
+  perCombo: 1,    // 这一趟的最大连击，每点
+  perKill:  1,    // 每击败一只
+  accDiv:   4,    // 正确率的百分数 ÷ 4（88% → 22 分）
+  clear:    50,   // 通关一次性加
+  goldDiv:  20    // 身上没花完的金币，每 20 枚 1 分
+};
+
 /* ===== 拼写题 =====
    拼写不再按固定节奏插进来，而是**每道题独立掷一次骰子**。
    SPELL_RATE 是底子，拼写流的遗物（刻字/默诵）各自再加 SPELL_RELIC_RATE。
@@ -55,7 +86,7 @@ var SPELL_COMBO = 10;         // 拼对：连击 +10
    cat 决定它出哪一类词；from 是最早出现的层数
    随层数成长：每深一层 +2 血，每深两层 +1 伤害 */
 var FOES = [
- {id:"rat",    g:"鼠", name:"石廊灰鼠",   art:"rat",    cat:"animal", hp:8,  dmg:2, armor:0, xp:3, from:1},
+ {id:"rat",    g:"鼠", name:"廊道灰鼠",   art:"rat",    cat:"animal", hp:8,  dmg:2, armor:0, xp:3, from:1},
  {id:"slime",  g:"泥", name:"食橱泥怪",   art:"slime",  cat:"food",   hp:10, dmg:2, armor:0, xp:4, from:1},
  {id:"spider", g:"蛛", name:"洞穴长足蛛", art:"spider", cat:"verb",   hp:12, dmg:3, armor:0, xp:5, from:3},
  {id:"bone",   g:"骨", name:"残骨兵",     art:"bone",   cat:"body",   hp:14, dmg:3, armor:1, xp:6, from:6},
@@ -67,10 +98,8 @@ var FOES = [
  {id:"dread",  g:"惧", name:"吞惧者",     art:"dread",  cat:"feel",   hp:26, dmg:5, armor:1, xp:12, from:30},
  {id:"prism",  g:"棱", name:"碎色棱",     art:"prism", cat:"color",  hp:24, dmg:6, armor:2, xp:13, from:38}
 ];
-/* 章末 Boss（第 50 层） */
-var BOSS = {id:"warden", g:"卫", name:"石廊守卫", art:"warden", cat:"all",
-            hp:200, dmg:14, armor:3, xp:60, boss:true};
-/* 每 10 层的守层者（第 10/20/30/40 层）—— 比普通怪硬，弱点随机 */
+/* 章末 Boss 挪进 CHAPTERS 了（每章一只）。game.js 里用 CH.boss 取当前这一只。
+   每 10 层的守层者（第 10/20/30/40 层）—— 比普通怪硬，弱点随机，两章共用 */
 var GATEKEEPER = {id:"gate", g:"门", name:"层间守者", art:"warden", cat:"all",
             hp:34, dmg:5, armor:1, xp:20, boss:true};
 
@@ -80,8 +109,11 @@ var GATEKEEPER = {id:"gate", g:"门", name:"层间守者", art:"warden", cat:"al
    game.js 不用动 —— enterRoute() 认的就是这些字段。
    open:false 的会灰着显示，点不动。 */
 var ROUTES = [
-  {id:"stone", name:"石廊", tag:"第一章 · A1",
-   desc:"入门词到 B1 · 50 层 · 尽头有石廊守卫",
+  {id:"stone", ch:1, name:"石廊", tag:"第一章 · A1",
+   desc:"A1 入门词 · 50 层 · 尽头有石廊守卫",
+   open:true},
+  {id:"rust", ch:2, name:"锈庭", tag:"第二章 · A2",
+   desc:"A2 进阶词 · 50 层 · 怪更硬，宝石 ×1.25",
    open:true}
 ];
 
@@ -90,7 +122,7 @@ var ROUTES = [
    颜色在 style.css 的 --q0..--q4。**层数越深，掉高品质的权重越大**（见 game.js 的 rarityWeights）。*/
 var RAR_CN = ["普通", "稀有", "史诗", "传奇", "神圣"];
 /* 分解价（金币）和合成所需件数 */
-var RAR_SELL = [12, 27, 48, 78, 120];
+var RAR_SELL = [60, 135, 240, 390, 600];
 var FUSE_N = 3;      // 几件同品质合成一件更高品质
 var FUSE_COST = 300; // 合成还要付这么多金币（会弹窗二选一确认）
 var SHOP_MULT = 5;   // 游商的遗物加价倍数 —— 洞里的金币得有地方去

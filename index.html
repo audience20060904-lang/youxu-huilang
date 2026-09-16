@@ -89,7 +89,7 @@
           <p class="fallline" id="townFlavor">石廊的风从洞口吹上来，带着铁锈味。</p>
         </div>
         <div class="bank">
-          <div class="bcell"><span class="k">存款</span><span class="v gold" id="tGold">0</span></div>
+          <div class="bcell"><span class="k">宝石</span><span class="v gold" id="tGold">0</span></div>
           <div class="bcell"><span class="k">最深</span><span class="v" id="tBest">—</span></div>
           <div class="bcell"><span class="k">通关</span><span class="v" id="tClears">0</span></div>
           <div class="bcell"><span class="k">倒下</span><span class="v" id="tDeaths">0</span></div>
@@ -102,10 +102,10 @@
             <i>鉴</i><span class="pn">图鉴<em>你认过的词、拿过的遗物</em></span><span class="go">▸</span>
           </button>
           <div class="place off">
-            <i>铁</i><span class="pn">铁匠铺<em>拿存款换点永久的好处 —— 还没开门</em></span>
+            <i>祝</i><span class="pn">祝福<em>用宝石换永久的好处 —— 还没开门</em></span>
           </div>
         </div>
-        <p class="note">进洞后拿到的<b>遗物</b>只在那一趟里算数。倒下就全丢了，<b>只有金币能带回镇上</b>。</p>
+        <p class="note">进洞后拿到的<b>遗物</b>和<b>金币</b>只在那一趟里算数。出来时按这一趟的表现<b>结算成宝石</b>带回镇上。</p>
       </div>
 
       <!-- 取景窗。状态浮层直接压在地图上（见 .mapui），所以这几块不再占纵向空间 -->
@@ -174,7 +174,7 @@
     <section class="view" id="viewSet">
       <div class="panel">
         <div class="phead">设置 Settings</div>
-        <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>单词发音</b><i>听音辨词题会自动朗读</i></span></label>
+        <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>答完自动朗读</b><i>每题答完念一遍这个词；也能自己点题面右上角的 🔊</i></span></label>
         <label class="setopt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
       </div>
       <div class="panel">
@@ -190,7 +190,7 @@
       <div class="panel" id="panelSaveFile" hidden>
         <div class="phead">本地存档文件</div>
         <p class="note">把这台设备上的<b>全部存档</b>存成一个文件，放在你自己手里 ——
-          词汇熟练度、遗物图鉴、探索记录、镇上存款，连没走完的那一趟都在里面。
+          词汇熟练度、遗物图鉴、探索记录、镇上宝石，连没走完的那一趟都在里面。
           换设备、换浏览器、清过缓存，选回这个文件就能接着玩。</p>
         <div class="rowb">
           <button class="btn" id="btnSaveFile" type="button">下载存档文件</button>
@@ -448,7 +448,8 @@
         <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满 ——
           踩上去会<b>先问你喝不喝</b>，不喝就留在原地，等真需要的时候再回来。撑不住就先撤退，去别处打一只弱的。</li>
         <li><b>生命上限</b>：拿到加生命上限的遗物时，<b>当前血量也跟着涨同样多</b> —— 20/30 拿到「上限 +8」之后是 <b>28/38</b>，不用再去找泉水补。</li>
-        <li><b>词汇</b>：第一章全部是 <b>A1 入门词</b>（cat / water / red / run）。答错的词会记进词库，之后<b>出现得更频繁</b>，直到你答对三次。</li>
+        <li><b>词汇</b>：<b>一章只出一个难度的词，两章不重复</b> —— 第一章全是 <b>A1 入门词</b>（cat / water / red / run），
+          第二章全是 <b>A2 进阶词</b>。答错的词会记进词库，之后<b>出现得更频繁</b>，直到你答对三次。</li>
         <li><b>撤退</b>：战斗里随时可以撤退，怪物身上已经掉的血会留着，你可以回头再打。</li>
         <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就冒。
           地图下面的<b>「锁定冒险」</b>打开后，<b>每题自动冒险</b>，不用一题点一次（拼写题除外）。</li>
@@ -465,7 +466,10 @@
         <li><b>存档</b>：<b>打开网页自动读档</b>，不会问你。存档点只有三个 —— <b>进入关卡、下一层、回到主城</b>。
           所以一层打到一半关掉页面，下次是<b>从这一层的入口重来</b>：这一层里砍的怪、捡的金币、拿的遗物都不算数。</li>
         <li><b>主城</b>：你从<b>灰岩镇</b>出发，进洞窟选一条路下去。等级和遗物都是<b>进洞之后才有的</b>，只在这一趟里算数。</li>
-        <li><b>倒下</b>：会被抬回镇上，<b>遗物全部丢在洞里</b>，等级也归零。但<b>金币带得回来</b>，存进镇上；词汇熟练度和图鉴也永远不会丢。想再下去，回洞窟重新选一条。</li>
+        <li><b>结算</b>：一趟结束（倒下或通关）会按<b>到达层数、最大连击、击杀数、正确率、没花完的金币</b>算一笔分，
+          再乘这一章的<b>难度倍率</b>（第一章 100%，第二章 125%），换成<b>宝石</b>带回镇上。宝石以后花在<b>祝福</b>上。</li>
+        <li><b>倒下</b>：会被抬回镇上，<b>遗物和金币全部留在洞里</b>，等级也归零 —— 但那一趟照样结算宝石。
+          词汇熟练度和图鉴永远不会丢。想再下去，回洞窟重新选一条。</li>
       </ul>
     </div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseHelp" type="button">关闭</button></div>

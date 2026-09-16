@@ -32,6 +32,21 @@ var OPT_KEY = "youxu.opt.v1";
 var OPT = load(OPT_KEY, {speak:true, auto:true, lock:false});   // lock = 锁定冒险
 function saveOpt(){ put(OPT_KEY, OPT); }
 
+/* ================= 章节 =================
+   CH 是**当前这一章**（content.js 的 CHAPTERS 里的一条）。两章共用地图尺寸和主角数值
+   （那些在 CHAPTER 里），各章不同的只有：名字、词难度 wordLv、宝石倍率 gemMult、
+   怪物加成 foeBonus、章末 Boss。**换章只能走 setChapter()**。 */
+function chapterById(id){
+  for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].id === id) return CHAPTERS[i];
+  return null;
+}
+function setChapter(id){
+  const c = chapterById(id);
+  if(c) CH = c;
+  $("hChap").textContent = CH.name;   // 顶栏那块在主城里固定写「主城 · 灰岩镇」，不用管
+  return CH;
+}
+
 function gate(rep){
   const now = Date.now();
   if(now < lockUntil) return false;
@@ -43,7 +58,7 @@ function lockInput(ms){ lockUntil = Math.max(lockUntil, Date.now() + ms); }
 /* ================= 局 ================= */
 function newRun(){
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
-        right:0, wrong:0, seenWords:[], combo:0,
+        right:0, wrong:0, seenWords:[], combo:0, maxCombo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:false, over:false };
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
@@ -94,7 +109,7 @@ function nextFloor(){
   render();
   lockInput(320);
   const last = G.floor === FLOORS;
-  say("—— " + CHAPTER.name + " 第 " + G.floor + " 层 ——", "crit");
+  say("—— " + CH.name + " 第 " + G.floor + " 层 ——", "crit");
   say(last ? "空气冷得发硬。这一层尽头有东西在等。" : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), last ? "hurt" : "sys");
   commit(true);          // 存档点之二：下一层
 }
@@ -169,7 +184,7 @@ function genFloor(){
   }
   if(G.floor === FLOORS){
     const sp = take();
-    if(sp) G.mobs.push(makeFoe(BOSS, sp.x, sp.y));
+    if(sp) G.mobs.push(makeFoe(CH.boss, sp.x, sp.y));
   } else if(G.floor % 10 === 0){
     const sp = take();
     if(sp) G.mobs.push(makeFoe(GATEKEEPER, sp.x, sp.y));   // 每 10 层的守门人
@@ -195,13 +210,17 @@ function makeFoe(def, x, y){
   // 否则第 38 层登场的怪在第 40 层只长了 2 层，一出场就是纸糊。
   // def.from 只决定**什么时候出现**，def.hp 决定它在同层怪里的相对硬度。
   const gw = CHAPTER.grow;
-  const step = def.id === "warden" ? 0 : Math.max(0, G.floor - 1);
-  const hp = def.hp + step * gw.hpPerFloor;
+  // def.fixed = 章末 Boss，数值写死不随层数长；别的（含守层者）都要长
+  const step = def.fixed ? 0 : Math.max(0, G.floor - 1);
+  // 章节加成：第二章的怪整体更硬一点（章末 Boss 自己一套数值，不加）
+  const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
+  const hp = def.hp + step * gw.hpPerFloor + fb.hp;
   // 弱点词类：普通怪就是它自己那类，Boss 每次随机（逼你换着类背）
-  const weak = def.boss ? pick(Object.keys(BYCAT)) : def.cat;
+  // ⚠️ 只能从**这一章有词的类**里挑 —— 挑到没词的类等于白给一个弱点
+  const weak = def.boss ? pick(chapterCats()) : def.cat;
   return { x:x, y:y, def:def, g:def.g, name:def.name, art:def.art, cat:def.cat, boss:!!def.boss, weak:weak,
-           hp:hp, max:hp, dmg:def.dmg + Math.floor(step / gw.dmgEvery), armor:def.armor,
-           xp:def.xp + Math.floor(step / gw.xpEvery), seen:false };
+           hp:hp, max:hp, dmg:def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg, armor:def.armor + fb.armor,
+           xp:def.xp + Math.floor(step / gw.xpEvery) + fb.xp, seen:false };
 }
 
 /* ================= 日志 ================= */
@@ -531,7 +550,7 @@ function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
   G.paused = true;
   const last = G.floor === FLOORS;
-  $("stairEyebrow").textContent = CHAPTER.name + " 第 " + G.floor + " 层 · 已清空";
+  $("stairEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 已清空";
   $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + (G.floor + 1) + " 层";
   $("stairNote").innerHTML = last
     ? "下面就是这一章的尽头。<b>下去就没有回头路。</b>"
@@ -585,14 +604,18 @@ function renderBattleBars(){
   c.textContent = "连击 ×" + P.combo + (bonus ? "　伤害 +" + bonus : (P.combo ? "　再对 " + (3 - P.combo) + " 个 +1 伤害" : ""));
   c.className = "combo" + (bonus ? "" : " none");
 }
-/* 层数 → 词难度。数组里重复出现就是权重，比写百分比直观。
-   50 层的曲线：前 12 层纯 A1，之后逐段掺 A2，30 层后开始出 B1，40 层后以 B1 为主。*/
-function wordLevels(floor){
-  if(floor <= 12) return [1];
-  if(floor <= 20) return [1,1,2];
-  if(floor <= 30) return [1,2,2];
-  if(floor <= 40) return [2,2,3];
-  return [2,3,3];
+/* **一章只出一个难度的词**（第一章 A1、第二章 A2，B1 留给第三章）——
+   用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
+   难度写在 content.js 的 CHAPTERS[].wordLv 上。*/
+function chapterLv(){ return (CH && CH.wordLv) || 1; }
+/* 这一章**真的有词**的类别（出 Boss 弱点时只在这里面挑）。
+   A1 的时间/地点/情绪词是后来补的，就是为了让这几类怪在第一章也有弱点可打。*/
+function chapterCats(){
+  const lv = chapterLv(), out = [];
+  Object.keys(BYCAT).forEach(function(c){
+    if(BYCAT[c].filter(function(w){ return (w.lv || 1) === lv; }).length >= 6) out.push(c);
+  });
+  return out.length ? out : Object.keys(BYCAT);
 }
 /* 先按权重抽一个难度（数组里重复几次就是几倍权重），再按这个难度筛词。
    筛得太窄就逐级回退，**永远不返回空数组** —— 出不出题直接关系到能不能打。*/
@@ -602,8 +625,8 @@ function scopeToLevel(pool, want){
   out = ALLW.filter(function(w){ return (w.lv || 1) === want; });
   return out.length >= 6 ? out : pool;
 }
-function scopeByLevel(pool, floor){
-  return scopeToLevel(pool, pick(wordLevels(floor)));
+function scopeByLevel(pool){
+  return scopeToLevel(pool, chapterLv());
 }
 function pickQuizWord(cat){
   // 心魔：这一趟答错过的词，有 35% 直接被拽出来重考
@@ -612,10 +635,9 @@ function pickQuizWord(cat){
     const en = pick(P.haunt), w = WMAP[en];
     if(w && !(B && B.q && B.q.word.en === en)) return w;
   }
-  const floor = G ? G.floor : 1;
   const catRate = hasRelic("scent") ? 0.9 : 0.7;        // 嗅迹：多出弱点类的词
   let pool = (cat !== "all" && Math.random() < catRate && BYCAT[cat]) ? BYCAT[cat] : ALLW;
-  pool = scopeByLevel(pool, floor);
+  pool = scopeByLevel(pool);
   const bag = [];
   pool.forEach(function(w){
     const r = LEX[w.en], s = r ? (r.str || 0) : 0;
@@ -648,8 +670,8 @@ function nextQuestion(){
   if(backToChoice) type = "zh2en";                            // 拼错的词退回成选择题
   else if(hasRelic("blind")) type = "spell";                  // 盲斗：全拼写
   else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
-  else if(CAN_SPEAK && B.asked % 4 === 0) type = "listen";
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
+  // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
   B.q = {word:word, type:type, done:false, haunted: !!(P.haunt && P.haunt.indexOf(word.en) >= 0)};
   B.locked = false;
   // 「锁定冒险」开着就每题自动押上（拼写题除外，那题本来就不给冒险）
@@ -672,13 +694,7 @@ function nextQuestion(){
   B.optCount = hasRelic("narrow") ? 3 : 4;                    // 窄视：选项少一个
   if(type === "spell"){ renderSpell(word); return; }
 
-  if(type === "listen"){
-    $("qLabel").textContent = "听音辨词 · 它念的是什么？";
-    $("qWord").textContent = "🔈 ? ? ?";
-    $("qWord").className = "qword";
-    $("btnSpeak").hidden = false;
-    if(OPT.speak) speak(word.en);
-  } else if(type === "en2zh"){
+  if(type === "en2zh"){
     $("qLabel").textContent = "这个词是什么意思？";
     $("qWord").textContent = word.en;
     $("qWord").className = "qword";
@@ -888,6 +904,7 @@ function answer(btn, ok){
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
     if(isSpell){ P.combo += SPELL_COMBO; B.xpx = SPELL_XPX; }
+    if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
     // 伤害 =（攻击 + 连击加成）×暴击倍数 − 对方护甲，最低 1
     // 伤害：先把所有加成加完，**只有暴击一个乘区**，最后减护甲。
     // 别再往里加乘法 —— 玩家要能一眼算出还要答对几个。
@@ -987,7 +1004,10 @@ function answer(btn, ok){
 
   $("verdict").innerHTML = head +
     "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
-  if(CAN_SPEAK) $("btnSpeak").hidden = false;     // 答完了，随时能再听一次
+  if(CAN_SPEAK){
+    $("btnSpeak").hidden = false;                  // 答完了，随时能再听一次
+    if(OPT.speak) speak(word.en);                  // 设置里开着就自动念一遍
+  }
   let spellLog = "";
   if(isSpell) spellLog = ok
     ? " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>"
@@ -1557,7 +1577,7 @@ function offerRelics(){
   }
 
   G.paused = true;
-  $("relicEyebrow").textContent = CHAPTER.name + " 第 " + G.floor + " 层 · 清干净了";
+  $("relicEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 清干净了";
   const box = $("relicList");
   box.innerHTML = "";
   picks.forEach(function(r){
@@ -1682,10 +1702,20 @@ function dropHaunt(en){
 
 /* ================= 主城 =================
    两个场景：town / run。主城是常驻的，一趟探索只是从镇口下去一次。
-   死亡 = 身上一切归零回镇上，**只有金币带得回来**（在 endRun 里结算）。 */
+   死亡 = 身上一切归零回镇上，**金币留在洞里** —— 带回来的是结算换的**宝石**（endRun）。 */
 var TOWN_KEY = "youxu.town.v1";
-var TOWN = load(TOWN_KEY, {gold:0});
-/* TOWN 也常驻内存，改完等 commit() 落盘 */
+/* 宝石就是以前的「镇上存款」，**localStorage 的键没变**（老档照样能读）。
+   字段从 gold 改叫 gem，读的时候兜一下老档。宝石以后花在「祝福」上。 */
+var TOWN = (function(){
+  const t = load(TOWN_KEY, {gem:0}) || {};
+  return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0)};
+})();
+/* 宝石一变就落盘（用户要求）——**别绕过这个函数直接改 TOWN.gem** */
+function addGems(n){
+  TOWN.gem = Math.max(0, (TOWN.gem || 0) + n);
+  commitPerm();
+  if(SCENE === "town") renderTown();
+}
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -1696,13 +1726,13 @@ function showScene(){
   $("townPanel").hidden = inRun;
   /* 探索时顶栏整块收起 —— 章节名挪进了地图浮层的「层」那一格，省下的高度全给地图 */
   $("topBar").hidden = inRun;
-  $("hChap").textContent = CHAPTER.name;
+  $("hChap").textContent = CH.name;
   $("chapterTag").textContent = "主城 · 灰岩镇";
   if(inRun) sizeMap();
 }
 function renderTown(){
   const M = meta();
-  $("tGold").textContent = TOWN.gold;
+  $("tGold").textContent = TOWN.gem;
   $("tBest").textContent = M.best ? ("第 " + M.best + " 层") : "—";
   $("tClears").textContent = M.clears || 0;
   $("tDeaths").textContent = M.deaths || 0;
@@ -1717,7 +1747,7 @@ function goTown(){
   cancelWalk();
   B = null; pendingLoot = null; pendingRoom = null; chestQ = null; reopenShop = null; pendingSwap = null;
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
-        right:0, wrong:0, seenWords:[], combo:0,
+        right:0, wrong:0, seenWords:[], combo:0, maxCombo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:true, over:true };
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
@@ -1749,6 +1779,7 @@ function openCave(){
 function enterRoute(id){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
   if(!r || !r.open) return;
+  setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
   $("veilCave").hidden = true;
   SCENE = "run";
   showScene();
@@ -1793,7 +1824,7 @@ function writeRun(){
   if(!P || !G || G.over || !G.map) return;
   try{
     put(RUN_KEY, {
-      v: RUN_V, ch: CHAPTER.id, t: Date.now(),
+      v: RUN_V, ch: CH.id, t: Date.now(),
       P: P,
       floor: G.floor,
       // 地图和已探索按行压成 "0110..." 字符串，整档才几 KB
@@ -1811,14 +1842,17 @@ function writeRun(){
 }
 function readRun(){
   const s = load(RUN_KEY, null);
-  if(!s || s.v !== RUN_V || s.ch !== CHAPTER.id) return null;   // 版本对不上直接丢，不写迁移
+  // 版本对不上直接丢，不写迁移。章节不再要求等于当前章 —— 存的是哪一章就接着哪一章走
+  if(!s || s.v !== RUN_V || !chapterById(s.ch || 1)) return null;
   if(!s.P || !s.map || !s.seen || !s.mobs || !s.stair) return null;
   if(!s.floor || s.floor < 1 || s.floor > FLOORS) return null;
   return s;
 }
 function dropRun(){ try{ localStorage.removeItem(RUN_KEY); }catch(e){} }
 function foeDef(id){
-  if(id === BOSS.id) return BOSS;
+  // 各章的 Boss 和守层者也得能找回来，不然续玩档一读，它们就凭空消失了
+  for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].boss.id === id) return CHAPTERS[i].boss;
+  if(id === GATEKEEPER.id) return GATEKEEPER;
   for(let i=0;i<FOES.length;i++) if(FOES[i].id === id) return FOES[i];
   return null;
 }
@@ -1826,11 +1860,13 @@ function unpackGrid(str, f){
   return str.split("|").map(function(row){ return row.split("").map(f); });
 }
 function resumeRun(s){
+  setChapter(s.ch || 1);          // 先把章切对，下面的词难度/怪/结算才对得上
   P = s.P;
   // 旧档的 gear/bag 字段留着也无害，没人读它了                 // 老档兜底
   if(!P.relics) P.relics = [];
   if(!P.haunt) P.haunt = [];
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
+  if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
@@ -1846,7 +1882,7 @@ function resumeRun(s){
   $("log").innerHTML = "";
   hideAll();
   fov(); buildGrid(); render(); renderHud();
-  say("—— " + CHAPTER.name + " 第 " + G.floor + " 层 ——", "crit");
+  say("—— " + CH.name + " 第 " + G.floor + " 层 ——", "crit");
   say("你回到了踏进这一层时的样子 —— 存档存在每层的入口。", "sys");
   lockInput(320);
 }
@@ -1855,29 +1891,43 @@ function resumeRun(s){
 function meta(){ return MET; }
 function gameOver(){ endRun(false); }
 function chapterClear(){ endRun(true); }
+/* 一趟的结算：局内表现算成分，再乘这一章的难度倍率 = 带回镇上的宝石。
+   每一条都摆在结算界面上，玩家能自己把这笔账对一遍。数值在 content.js 的 SCORE 里。 */
+function runScore(win){
+  const total = P.right + P.wrong;
+  const acc = total ? Math.round(P.right / total * 100) : 0;
+  const floor = Math.min(G.floor, FLOORS);
+  const rows = [
+    {k:"到达第 " + floor + " 层",        v: floor * SCORE.perFloor},
+    {k:"最大连击 " + (P.maxCombo || 0),  v: (P.maxCombo || 0) * SCORE.perCombo},
+    {k:"击败 " + P.kills + " 只",        v: P.kills * SCORE.perKill},
+    {k:"正确率 " + acc + "%",            v: Math.floor(acc / SCORE.accDiv)},
+    {k:"没花完的 " + P.gold + " 金币",   v: Math.floor((P.gold || 0) / SCORE.goldDiv)}
+  ];
+  if(win) rows.push({k:"通关", v: SCORE.clear});
+  const sum = rows.reduce(function(a, r){ return a + r.v; }, 0);
+  return {rows:rows, sum:sum, acc:acc, floor:floor, gems: Math.floor(sum * CH.gemMult)};
+}
 function endRun(win){
   G.over = true;
   const M = meta();
   M.runs++;
   if(G.floor > M.best) M.best = Math.min(G.floor, FLOORS);
   if(win) M.clears++; else M.deaths = (M.deaths || 0) + 1;
-  // 装备和背包都留在洞里，只有金币能带回镇上
-  const haul = P.gold;
-  TOWN.gold += haul;
+  // 遗物和金币都留在洞里 —— 带回镇上的是结算换来的**宝石**
+  const sc = runScore(win);
+  addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
-  const total = P.right + P.wrong;
-  const acc = total ? Math.round(P.right / total * 100) : 0;
-  $("endEyebrow").textContent = win ? ("第" + CHAPTER.id + "章 · 通关") : "本次探索结束";
-  $("endTitle").textContent = win ? (BOSS.name + "倒下了") : ("你倒在第 " + G.floor + " 层");
-  $("endEyebrow").textContent = win ? ("第" + CHAPTER.id + "章 · 通关") : "你被抬回了镇上";
+  $("endTitle").textContent = win ? (CH.boss.name + "倒下了") : ("你倒在第 " + G.floor + " 层");
+  $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关") : "你被抬回了镇上";
   $("endStats").innerHTML =
-    li("到达层数", "第 " + Math.min(G.floor, FLOORS) + " / " + FLOORS + " 层") +
-    li("答对 / 答错", P.right + " / " + P.wrong) +
-    li("正确率", acc + "%") +
-    li("击败", P.kills + " 只") +
+    sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
+    li("<b>小计</b>", "<b>" + sc.sum + "</b>") +
+    li("难度 · 第" + CH.id + "章 " + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
+    li("<b>获得宝石</b>", "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
+    li("宝石合计", TOWN.gem) +
+    li("丢在洞里", (P.relics.length || 0) + " 件遗物 · " + P.gold + " 金币") +
     li("这趟遇到的词", P.seenWords.length + " 个") +
-    li("带回存款", haul + " 枚（共 " + TOWN.gold + "）") +
-    li("丢在洞里", (P.relics.length || 0) + " 件遗物") +
     li("累计掌握", Object.keys(LEX).filter(function(k){ return (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
   const box = $("endWords");
   box.innerHTML = "";
@@ -1899,7 +1949,7 @@ function endRun(win){
   hideAll();
   $("veilEnd").hidden = false;
   $("btnAgain").focus();
-  if(win) say(BOSS.name + "碎成了石块。第" + CHAPTER.id + "章结束 —— 下一章还没开凿。", "crit");
+  if(win) say(CH.boss.name + "碎成了石块。第" + CH.id + "章结束。", "crit");
 }
 function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
 
@@ -2037,8 +2087,9 @@ function mergeData(o){
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
 
   // 镇上存款取多的那边，**不相加** —— 免得来回导两次就凭空富了
-  const before = TOWN.gold || 0;
-  TOWN.gold = Math.max(before, (o.town && o.town.gold) || 0);
+  const before = TOWN.gem || 0;
+  const inGem = (o.town && (typeof o.town.gem === "number" ? o.town.gem : o.town.gold)) || 0;
+  TOWN.gem = Math.max(before, inGem);
 
   /* 导入是玩家自己点的，就地写一次盘 —— 它不是游戏里的那三个存档点，而是存档管理本身；
      不马上写的话玩家关掉页面会以为导入没生效。只写永久数据，
@@ -2048,13 +2099,13 @@ function mergeData(o){
   // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动
   let gotRun = false;
   if(o.run && o.run.P && !readRun() && !(SCENE === "run" && G && !G.over)){
-    if(o.run.v === RUN_V && o.run.ch === CHAPTER.id){ put(RUN_KEY, o.run); gotRun = true; }
+    if(o.run.v === RUN_V && chapterById(o.run.ch || 1)){ put(RUN_KEY, o.run); gotRun = true; }
   }
 
   renderHud();
   if(SCENE === "town") renderTown();
   refreshSaveState();
-  return {words:better, legs:legs, gold:(TOWN.gold - before), run:gotRun};
+  return {words:better, legs:legs, gold:(TOWN.gem - before), run:gotRun};
 }
 
 /* ================= 本地存档文件 =================
@@ -2068,7 +2119,7 @@ let pendingFile = null;          // 已经读出来、等玩家点确认的那�
    不在这里落盘 —— 存档点只有三个，导出不是其中之一。 */
 function snapshot(){
   return {
-    game: FILE_TAG, v: FILE_V, app: "幽墟回廊", ch: CHAPTER.id, t: Date.now(),
+    game: FILE_TAG, v: FILE_V, app: "幽墟回廊", ch: CH.id, t: Date.now(),
     lex: LEX, codex: CODEX, meta: meta(),
     town: TOWN, opt: OPT, run: load(RUN_KEY, null)
   };
@@ -2097,7 +2148,7 @@ function tally(o){
        + li("词汇", "掌握 " + mastered + " / 遇到 " + keys.length + " / 共 " + WORDS.length)
        + li("遗物图鉴", Object.keys(o.codex || {}).length + " / " + RELICS.length + " 件")
        + li("最深 / 通关 / 探索", "第 " + (M.best||0) + " 层　" + (M.clears||0) + " 次　" + (M.runs||0) + " 趟")
-       + li("镇上存款", ((o.town && o.town.gold) || 0) + " 枚")
+       + li("镇上宝石", ((o.town && (typeof o.town.gem === "number" ? o.town.gem : o.town.gold)) || 0) + " 颗")
        + li("没走完的探索", r && r.P ? ("第 " + r.floor + " 层 · Lv." + r.P.lvl + " · " + Math.max(0, r.P.hp) + " 血") : "无");
 }
 function fileMsg(t){ $("fileMsg").textContent = t || ""; }
@@ -2166,9 +2217,9 @@ function overwriteAll(o){
   put(LEX_KEY, o.lex || {});
   put(CODEX_KEY, o.codex || {});
   put(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
-  put(TOWN_KEY, o.town || {gold:0});
+  put(TOWN_KEY, o.town || {gem:0});
   if(o.opt && typeof o.opt === "object") put(OPT_KEY, o.opt);
-  if(o.run && o.run.P && o.run.v === RUN_V && o.run.ch === CHAPTER.id) put(RUN_KEY, o.run);
+  if(o.run && o.run.P && o.run.v === RUN_V && chapterById(o.run.ch || 1)) put(RUN_KEY, o.run);
   else try{ localStorage.removeItem(RUN_KEY); }catch(e){}
   setTimeout(function(){ try{ location.reload(); }catch(e){} }, 700);
 }
@@ -2261,7 +2312,7 @@ $("btnWipe").addEventListener("click", function(){
   LEX = {};
   CODEX = {};
   MET = {best:0, runs:0, clears:0, t:0};
-  TOWN = {gold:0};
+  TOWN = {gem:0};
   b.textContent = "已清除";
   setTimeout(function(){ b.textContent = "清除全部存档"; }, 1500);
   goTown();
@@ -2288,7 +2339,8 @@ function refreshSaveState(){
     ? ("你正在洞里。存档停在<b>第 " + (s ? s.floor : G.floor) + " 层的入口</b> —— " +
        "游戏只在<b>进入关卡、下一层、回到主城</b>这三个时候存。关掉页面，下次打开自动从这一层开头接着走，不会问你。")
     : s
-      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "）的入口。下次打开会自动接着走，也可以现在就继续。")
+      ? ("上次的探索停在<b>" + ((chapterById(s.ch || 1) || CH).name) + " 第 " + s.floor +
+         " 层</b>（Lv." + s.P.lvl + "）的入口。下次打开会自动接着走，也可以现在就继续。")
       : "存档只在<b>进入关卡、下一层、回到主城</b>这三个时候写，下次打开自动读档。你现在在镇上，没有在进行的探索。";
   $("btnResumeHere").hidden = !(s && !inRun);
   $("btnAbandon").disabled = !s;
@@ -2441,7 +2493,7 @@ $("btnMergeFile").addEventListener("click", function(){
   const r = mergeData(pendingFile);
   closeFileCard();
   fileMsg("合并完成：更新 " + r.words + " 个词，补上 " + r.legs + " 件遗物"
-        + (r.gold ? ("，存款 +" + r.gold + " 枚") : "")
+        + (r.gold ? ("，宝石 +" + r.gold + " 颗") : "")
         + (r.run ? "，还接回了一趟没走完的探索。" : "。"));
 });
 /* 覆盖是抹掉这台设备的进度，两步确认 —— 跟「清除全部存档」一个规矩 */
