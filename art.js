@@ -76,6 +76,52 @@ var SHOP =
  '<path d="M2 9.4a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0z" fill="currentColor"/>' + /* 扇贝棚沿 */
 '</svg>';
 
+/* ===== 地图上的箱 =====
+   圆盖木箱 + 一道铁箍 + 一把金锁。箱子里是拼写题，锁画得显眼一点。*/
+var CHEST =
+'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<ellipse cx="10" cy="17.4" rx="6.6" ry="1.2" fill="#6B5836" opacity=".16"/>' +
+ '<path d="M3.2 9.8c0-2.7 3-4.5 6.8-4.5s6.8 1.8 6.8 4.5z" fill="currentColor"/>' +   /* 箱盖 */
+ '<path d="M3.2 9.8c0-2.7 3-4.5 6.8-4.5v4.5z" fill="#fff" opacity=".2"/>' +
+ '<rect x="3.2" y="9.6" width="13.6" height="7.2" rx=".8" fill="currentColor"/>' +   /* 箱体 */
+ '<rect x="3.2" y="9.6" width="13.6" height="1" fill="#fff" opacity=".22"/>' +
+ '<rect x="3.2" y="14.8" width="13.6" height="2" fill="#000" opacity=".16"/>' +
+ '<rect x="8.9" y="5.3" width="2.2" height="11.5" fill="#000" opacity=".22"/>' +     /* 铁箍 */
+ '<rect x="8.3" y="10.2" width="3.4" height="3.2" rx=".6" fill="#E3B23C" stroke="#8C6412" stroke-width=".5"/>' +
+ '<circle cx="10" cy="11.6" r=".6" fill="#8C6412"/>' +                               /* 锁孔 */
+'</svg>';
+
+/* ===== 地图上的坛 =====
+   石台上悬着一颗宝石。石头是固定色，**宝石走 currentColor**（CSS 给的是遗物紫）——
+   一眼看出这是能换东西的地方，不是又一个箱子。*/
+var ALTAR =
+'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<ellipse cx="10" cy="17.6" rx="6.4" ry="1.2" fill="#6B5836" opacity=".16"/>' +
+ '<path d="M4.4 17.4 5.8 12.8h8.4l1.4 4.6z" fill="#B3A488"/>' +                      /* 台座 */
+ '<path d="M4.4 17.4 5.8 12.8h2.4l-1.6 4.6z" fill="#fff" opacity=".22"/>' +
+ '<rect x="4.4" y="11.2" width="11.2" height="2" rx=".5" fill="#C9BCA0"/>' +         /* 台面 */
+ '<rect x="4.4" y="11.2" width="11.2" height=".8" rx=".4" fill="#E4DAC3"/>' +
+ '<path d="M10 3.1 12.7 6.9 10 10.7 7.3 6.9z" fill="currentColor"/>' +               /* 悬着的宝石 */
+ '<path d="M10 3.1 12.7 6.9H10z" fill="#fff" opacity=".35"/>' +
+ '<circle cx="6.4" cy="8.6" r=".7" fill="currentColor" opacity=".5"/>' +             /* 飘着的微光 */
+ '<circle cx="13.7" cy="5.6" r=".55" fill="currentColor" opacity=".4"/>' +
+'</svg>';
+
+/* ===== 地图上的阶梯 =====
+   四级往下走的台阶，逐级后退、逐级变暗。原来是一个 ▼。
+   ⚠️ 别画成左右对称逐级收窄的 —— 试过，那是个金字塔（或者说圣诞树），不是楼梯。
+   台阶得往**一个方向**退，才读得出是在往下走。*/
+var STAIR =
+'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<rect x="2.8" y="4.4" width="14.4" height="3.3" rx=".4" fill="currentColor"/>' +
+ '<rect x="2.8" y="8.1" width="11" height="3.3" rx=".4" fill="currentColor"/>' +
+ '<rect x="2.8" y="8.1" width="11" height="3.3" rx=".4" fill="#000" opacity=".16"/>' +
+ '<rect x="2.8" y="11.8" width="7.6" height="3.3" rx=".4" fill="currentColor"/>' +
+ '<rect x="2.8" y="11.8" width="7.6" height="3.3" rx=".4" fill="#000" opacity=".32"/>' +
+ '<rect x="2.8" y="15.5" width="4.2" height="2.5" rx=".3" fill="currentColor"/>' +
+ '<rect x="2.8" y="15.5" width="4.2" height="2.5" rx=".3" fill="#000" opacity=".48"/>' +
+'</svg>';
+
 /* ===== 地图上的怪 =====
    跟立绘不是一回事：格子只有二三十像素，**这里只有轮廓**——
    没有地影、没有明暗、没有装饰，一个主形加一对眼睛，别再往里加细节，加了只会糊成一团。

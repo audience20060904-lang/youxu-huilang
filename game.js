@@ -327,21 +327,21 @@ function render(){
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
     const base = isWall ? "wall" : "floor";
-    let glyph = isWall ? "" : "·";
-    let content = isWall ? "" : "dot";
-    let art = null;              // 这一格画 SVG 而不是字符时，放要画的那张
+    let glyph = "";              // 地图上已经没有字符了；留着是给没配图的怪兜底
+    let content = isWall ? "" : "dot";   // 空地板上那个点是 CSS 画的（.c.dot::before），不占内容
+    let art = null;              // 这一格画 SVG 时，放要画的那张
     /* 阶梯只在这一层清空之后才画。清空前地图上根本没有 ▼ ——
        它会在最后一只怪倒下的那一格出现（见 closeBattleWin）。
        G.stair 在清空前只是个占位，别让它以「上锁的楼梯」露脸。 */
     if(!isWall && cleared && x === G.stair.x && y === G.stair.y){
-      glyph = "▼"; content = "stair";
+      content = "stair"; art = STAIR;
     }
     const th = thingAt(x,y);
     if(th){
       if(th.kind === "gold"){ content = "gold"; art = COIN; }
       else if(th.kind === "feat"){ content = "feat"; art = SPRING; }
-      else if(th.kind === "altar"){ glyph = "坛"; content = "altar"; }
-      else if(th.kind === "chest"){ glyph = "箱"; content = "chest"; }
+      else if(th.kind === "altar"){ content = "altar"; art = ALTAR; }
+      else if(th.kind === "chest"){ content = "chest"; art = CHEST; }
       else if(th.kind === "shop"){ content = "shop"; art = SHOP; }
     }
     const mo = mobAt(x,y);
@@ -356,7 +356,7 @@ function render(){
       c.className = "c floor you walkable" + (isGoal ? " goal" : "");
       continue;
     }
-    // 人、怪、金币、泉、商摊都是画出来的；坛/箱/阶梯/地板点还是一个字符
+    // 地图上的东西全是画出来的。glyph 只在某只怪没配图时才派上用场
     if(art) c.innerHTML = art; else c.textContent = glyph;
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
