@@ -24,6 +24,8 @@
     msg.textContent = seen.join("\n");
     bar.hidden = false;
   }
+  /* 存档写不进去之类的「不是 JS 崩了但玩家必须知道」的事，游戏逻辑也走这条横幅 */
+  window.showErr = show;
   window.addEventListener("error", function(e){
     if(e.target && e.target.tagName && /SCRIPT|LINK/.test(e.target.tagName)){
       show("文件加载失败：" + (e.target.src || e.target.href || "?"));
@@ -220,18 +222,6 @@
   </nav>
 </div>
 
-<div class="veil" id="veilResume" hidden>
-  <div class="sheet">
-    <div class="eyebrow">上次的探索还没走完</div>
-    <h2 id="resumeTitle">石廊 第 1 层</h2>
-    <div class="ledger" id="resumeStats"></div>
-    <div class="rowb">
-      <button class="btn ghost" id="btnFresh" type="button">重新开始</button>
-      <span class="sp"></span>
-      <button class="btn primary" id="btnResume" type="button">继续探索</button>
-    </div>
-  </div>
-</div>
 
 <div class="veil" id="veilCave" hidden>
   <div class="sheet">
@@ -399,12 +389,12 @@
         <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> 献 5 点血换一件遗物；
           <span style="color:var(--torch)">箱</span> 拼对一个词才能开，<b>拼错就永久锁死</b>；
           <span style="color:var(--frost)">商</span> 用洞里的金币买东西。</li>
-        <li><b>存档</b>：进度<b>自动保存</b>，关掉页面下次打开接着走。打到一半关掉 <b>等同于撤退</b> —— 你掉的血和怪掉的血都算数，跑不掉。</li>
+        <li><b>存档</b>：进度<b>全自动保存</b>，关掉页面下次打开<b>自动接着这一层</b>，不会问你。打到一半关掉 <b>等同于撤退</b> —— 你掉的血和怪掉的血都算数，跑不掉。</li>
         <li><b>主城</b>：你从<b>灰岩镇</b>出发，进洞窟选一条路下去。等级和遗物都是<b>进洞之后才有的</b>，只在这一趟里算数。</li>
         <li><b>倒下</b>：会被抬回镇上，<b>遗物全部丢在洞里</b>，等级也归零。但<b>金币带得回来</b>，存进镇上；词汇熟练度和图鉴也永远不会丢。想再下去，回洞窟重新选一条。</li>
       </ul>
     </div>
-    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseHelp" type="button">知道了</button></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseHelp" type="button">关闭</button></div>
   </div>
 </div>
 

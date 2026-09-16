@@ -7,12 +7,26 @@
 const W = CHAPTER.W, H = CHAPTER.H, FLOORS = CHAPTER.floors;
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 
+/* 所有落盘都过这一道。util 的 save 写不进去会返回 false（无痕模式、本地存储被禁、配额满），
+   以前是静默丢档 —— 玩家一路玩一路以为在存，关掉才发现什么都没有。现在第一次失败就顶到
+   页面顶部那条报错横幅上，并指路去下载存档文件。 */
+var saveWarned = false;
+function put(k, v){
+  if(save(k, v)) return true;
+  if(!saveWarned){
+    saveWarned = true;
+    if(window.showErr) window.showErr(
+      "存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了；想留住就去设置页「下载存档文件」。");
+  }
+  return false;
+}
+
 let LEX = load(LEX_KEY, {});
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
 let lastAct = 0, lockUntil = 0;
 var OPT_KEY = "youxu.opt.v1";
 var OPT = load(OPT_KEY, {speak:true, auto:true});
-function saveOpt(){ save(OPT_KEY, OPT); }
+function saveOpt(){ put(OPT_KEY, OPT); }
 
 function gate(rep){
   const now = Date.now();
@@ -795,7 +809,7 @@ function answer(btn, ok){
     if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; note += " 薪火在胸口炸开 —— 你以 1 点生命站住了。"; }
   }
   LEX[word.en] = rec;
-  save(LEX_KEY, LEX);
+  put(LEX_KEY, LEX);
 
   $("verdict").innerHTML = head +
     "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
@@ -991,7 +1005,7 @@ function judgeChest(){
   rec.seen++;
   if(ok){ rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0; }
   else { rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1; addHaunt(w.en); }
-  LEX[w.en] = rec; save(LEX_KEY, LEX);
+  LEX[w.en] = rec; put(LEX_KEY, LEX);
   $("chestVerdict").innerHTML = (ok
       ? "<span class=\"big ok\">咔哒 —— 开了</span>"
       : "<span class=\"big no\">锁咬死了</span>") +
@@ -1228,7 +1242,7 @@ function noteRelicFound(r, how){
   const book = load(CODEX_KEY, {});
   const first = !book[r.id];
   book[r.id] = {depth: first ? G.floor : book[r.id].depth, times: (first ? 0 : book[r.id].times) + 1};
-  save(CODEX_KEY, book);
+  put(CODEX_KEY, book);
   if(first) say("—— 初次发现：" + r.n + " ——", "crit");
 }
 
@@ -1359,7 +1373,7 @@ function dropHaunt(en){
    死亡 = 身上一切归零回镇上，**只有金币带得回来**（在 endRun 里结算）。 */
 var TOWN_KEY = "youxu.town.v1";
 var TOWN = load(TOWN_KEY, {gold:0});
-function saveTown(){ save(TOWN_KEY, TOWN); }
+function saveTown(){ put(TOWN_KEY, TOWN); }
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -1437,15 +1451,14 @@ function enterRoute(id){
    续玩档只存地图层面的状态，**不存战斗**：血量和怪的伤口都已经存下了，
    所以中途关页面 == 点「撤退」，玩家侧零新概念，也堵死「打不过就关页面」。 */
 var RUN_KEY = "youxu.run.v1", RUN_V = 3;   // v2：地图改成 15×21，旧档行宽对不上，作废
-let bootSave = null;      // 开局询问期间暂存的旧档
-let booting = false;      // 为真时 saveRun 空转，别把旧档覆掉
+let booting = false;      // 为真时 saveRun / clearRun 空转（整档覆盖后重载的那一小会儿）
 
 function packRow(row, f){ return row.map(f).join(""); }
 function saveRun(){
   if(booting) return;
   if(!P || !G || G.over || !G.map) return;
   try{
-    save(RUN_KEY, {
+    put(RUN_KEY, {
       v: RUN_V, ch: CHAPTER.id, t: Date.now(),
       P: P,
       floor: G.floor,
@@ -1502,18 +1515,10 @@ function resumeRun(s){
   say("你回到了刚才站的地方。伤口和战果都还在。", "sys");
   lockInput(320);
 }
-function describeRun(s){
-  const ago = agoText(s.t || Date.now());
-  return li("停在", CHAPTER.name + " 第 " + s.floor + " / " + FLOORS + " 层")
-       + li("等级 / 生命", "Lv." + s.P.lvl + "　" + Math.max(0, s.P.hp) + " 血")
-       + li("这趟答对 / 答错", s.P.right + " / " + s.P.wrong)
-       + li("上次游玩", ago);
-}
-
 /* ================= 结算 ================= */
 function meta(){ return load(META_KEY, {best:0, runs:0, clears:0, t:0}); }
 /* 永久档每次落盘都盖个时间戳 —— 存档信息卡要拿它当「上次游玩」 */
-function saveMeta(M){ M.t = Date.now(); save(META_KEY, M); }
+function saveMeta(M){ M.t = Date.now(); put(META_KEY, M); }
 function gameOver(){ endRun(false); }
 function chapterClear(){ endRun(true); }
 function endRun(win){
@@ -1675,7 +1680,7 @@ function mergeData(o){
       better++;
     }
   }
-  save(LEX_KEY, LEX);
+  put(LEX_KEY, LEX);
 
   const book = load(CODEX_KEY, {});
   let legs = 0;
@@ -1686,7 +1691,7 @@ function mergeData(o){
     else book[k] = {depth: Math.min(book[k].depth, inc.depth),
                     times: Math.max(book[k].times, inc.times)};
   }
-  save(CODEX_KEY, book);
+  put(CODEX_KEY, book);
 
   const M = meta(), im = o.meta || {};
   M.best = Math.max(M.best||0, im.best||0);
@@ -1703,7 +1708,7 @@ function mergeData(o){
   // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动
   let gotRun = false;
   if(o.run && o.run.P && !readRun() && !(SCENE === "run" && G && !G.over)){
-    if(o.run.v === RUN_V && o.run.ch === CHAPTER.id){ save(RUN_KEY, o.run); gotRun = true; }
+    if(o.run.v === RUN_V && o.run.ch === CHAPTER.id){ put(RUN_KEY, o.run); gotRun = true; }
   }
 
   renderHud();
@@ -1814,15 +1819,15 @@ function takeFile(file){
   fr.readAsText(file);
 }
 /* 整档覆盖：本地几个键全换掉，然后重载页面。
-   重载最干净 —— 页面上到处是旧数字，而开局流程本来就会问要不要接着走那一趟。 */
+   重载最干净 —— 页面上到处是旧数字；重载完开局流程会自动接着文件里那一趟走。 */
 function overwriteAll(o){
   booting = true;                  // 拦住 pagehide 里的 saveRun，别把刚导入的续玩档又盖回去
-  save(LEX_KEY, o.lex || {});
-  save(CODEX_KEY, o.codex || {});
-  save(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
-  save(TOWN_KEY, o.town || {gold:0});
-  if(o.opt && typeof o.opt === "object") save(OPT_KEY, o.opt);
-  if(o.run && o.run.P && o.run.v === RUN_V && o.run.ch === CHAPTER.id) save(RUN_KEY, o.run);
+  put(LEX_KEY, o.lex || {});
+  put(CODEX_KEY, o.codex || {});
+  put(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
+  put(TOWN_KEY, o.town || {gold:0});
+  if(o.opt && typeof o.opt === "object") put(OPT_KEY, o.opt);
+  if(o.run && o.run.P && o.run.v === RUN_V && o.run.ch === CHAPTER.id) put(RUN_KEY, o.run);
   else try{ localStorage.removeItem(RUN_KEY); }catch(e){}
   setTimeout(function(){ try{ location.reload(); }catch(e){} }, 700);
 }
@@ -1930,27 +1935,13 @@ function refreshSaveState(){
     lex: LEX, codex: load(CODEX_KEY, {}), meta: meta(), town: TOWN, run: s
   });
   $("saveState").innerHTML = inRun
-    ? "你正在洞里。每走一步、每打完一架都会自动存 —— 中途关掉页面也丢不了。"
+    ? "你正在洞里。每走一步、每打完一架都会自动存 —— 关掉页面，下次打开<b>直接接着这一层</b>，不会再问你。"
     : s
-      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "），随时能接着走。")
-      : "洞里的进度会自动保存。你现在在镇上，没有在进行的探索。";
+      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "）。下次打开会自动接着走，也可以现在就继续。")
+      : "洞里的进度会自动保存，下次打开自动接着上次那一层。你现在在镇上，没有在进行的探索。";
   $("btnResumeHere").hidden = !(s && !inRun);
   $("btnAbandon").disabled = !s;
 }
-$("btnResume").addEventListener("click", function(){
-  const s = bootSave || readRun();
-  bootSave = null; booting = false;
-  $("veilResume").hidden = true;
-  if(s){ SCENE = "run"; showScene(); resumeRun(s); saveRun(); }
-  else goTown();
-  refreshSaveState();
-});
-$("btnFresh").addEventListener("click", function(){
-  bootSave = null; booting = false;
-  $("veilResume").hidden = true;
-  goTown();          // 不继续就回镇上，重新从洞窟选
-  refreshSaveState();
-});
 /* ---- 房间：祭坛 / 宝箱 / 游商 ---- */
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
 $("btnAltarSkip").addEventListener("click", function(){ resolveAltar(false); });
@@ -2099,31 +2090,26 @@ $("btnResumeHere").addEventListener("click", function(){
   refreshSaveState(); showView("viewAdv");
 });
 
-/* ---- 手机切后台 / 关标签页前补存一次 ----
-   iOS Safari 杀后台标签页之前只给这一次机会，没有它前面那些存档时机都白搭 */
+/* ---- 自动存档的兜底时机 ----
+   正常操作（走路、战斗、拿遗物、买卖、下楼）每一步都已经各自存过了，下面这几条是保险：
+   iOS Safari 杀后台标签页之前只给 pagehide 这一次机会，安卓 Chrome 冻结标签页发的是
+   freeze，而这两个事件都有可能不发 —— 所以再加一条定时的。 */
 window.addEventListener("pagehide", saveRun);
+window.addEventListener("freeze", saveRun);
+window.addEventListener("blur", saveRun);
 window.addEventListener("visibilitychange", function(){
   if(document.visibilityState === "hidden") saveRun();
 });
+/* 15 秒一次。在镇上、局已结束或还没开局时 saveRun 自己会空转，不用另外判断。 */
+setInterval(saveRun, 15000);
 
 /* ================= 启动 =================
-   有可续的档就先问，别声不响地把人丢回第 3 层 */
+   打开就自动接着上次那一层 —— 不问、不弹窗。存是自动的，读也该是自动的。
+   不想接着走的话，设置页有「放弃本次探索，回主城」。 */
 (function boot(){
   const s = readRun();
-  if(s){
-    bootSave = s;
-    booting = true;      // 下面 newRun 会跑一遍生成流程，得拦住它的存档
-    SCENE = "run"; showScene();
-    newRun();            // 先建一局打底，P/G 不能是 undefined
-    $("resumeTitle").textContent = CHAPTER.name + " 第 " + s.floor + " 层";
-    $("resumeStats").innerHTML = describeRun(s);
-    hideAll();
-    $("veilResume").hidden = false;
-    $("btnResume").focus();
-    return;
-  }
+  if(s){ SCENE = "run"; showScene(); resumeRun(s); saveRun(); return; }
   goTown();
-  if(meta().runs === 0) $("veilHelp").hidden = false;
 })();
 refreshSaveState();
 })();
