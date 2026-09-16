@@ -350,8 +350,11 @@ function render(){
       c.className = "c floor you walkable" + (isGoal ? " goal" : "");
       continue;
     }
-    // 金币是画出来的（COIN），别的还是一个字符
-    if(content === "gold") c.innerHTML = COIN; else c.textContent = glyph;
+    // 金币、泉、商摊是画出来的，别的（坛/箱/阶梯/怪）还是一个字符
+    if(content === "gold") c.innerHTML = COIN;
+    else if(content === "feat") c.innerHTML = SPRING;
+    else if(content === "shop") c.innerHTML = SHOP;
+    else c.textContent = glyph;
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
   }

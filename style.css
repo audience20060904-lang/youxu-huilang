@@ -182,9 +182,11 @@ body{
 /* 以前有个「上锁的阶梯」的淡色状态，现在清空前压根不画阶梯，用不上了 */
 /* 金币要一眼看出是金的 —— --torch 偏棕，单独给一个亮金 */
 .c.gold{color:var(--coin)}
-/* 走出视野后金币整枚淡下去（描边是固定色，只调 color 淡不下来） */
-.c.mem.gold svg{opacity:.5}
-.c.feat{color:var(--frost)}
+.c.feat{color:var(--frost)}   /* 泉里的水 */
+.c.shop{color:var(--torch)}   /* 商摊的棚子和柜台 */
+/* 画出来的那几样（金币/泉/商摊）走出视野后整张淡下去 ——
+   它们内部有写死的固定色（石头、描边），只调 color 淡不下来 */
+.c.mem.gold svg,.c.mem.feat svg,.c.mem.shop svg{opacity:.5}
 .c.it0{color:var(--r0)}.c.it1{color:var(--r1)}.c.it2{color:var(--r2)}
 .c.it3{color:var(--r3)}.c.it4{color:var(--r4)}
 /* hover 必须放在底色规则之后才盖得住 */
