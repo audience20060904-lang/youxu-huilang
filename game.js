@@ -128,12 +128,37 @@ function genFloor(){
   const last = rooms[rooms.length-1];
   G.stair = {x:last.cx, y:last.cy};
 
-  const spots = [];
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
-    if(map[y][x] === 1 && !(x===P.x && y===P.y) && !(x===G.stair.x && y===G.stair.y)
-       && Math.abs(x-P.x) + Math.abs(y-P.y) > 4) spots.push({x:x,y:y});
+  /* ===== 能放东西的格子 =====
+     怪、泉、箱、坛、商、金币都从这里取位置。规矩：**别堵路**。
+     走廊只有一格宽，任何东西站上去都把路卡死；房间的门口那一格同理。
+     房间内部随便放 —— 绕得开。
+     分三档，前一档取空了才用后一档（极端小地图的兜底，正常一层用不到）：
+       spots = 房间内部、且不挨着走廊   doors = 房间的门口那一圈   rest = 走廊 */
+  const inRoom = [];
+  for(let y=0;y<H;y++) inRoom.push(new Array(W).fill(false));
+  rooms.forEach(function(r){
+    for(let j=r.y;j<r.y+r.h;j++) for(let i=r.x;i<r.x+r.w;i++) inRoom[j][i] = true;
+  });
+  function floorAt(x, y){ return x>=0 && y>=0 && x<W && y<H && map[y][x] === 1; }
+  function isCorridor(x, y){ return floorAt(x, y) && !inRoom[y][x]; }
+  function nextToCorridor(x, y){
+    return isCorridor(x-1,y) || isCorridor(x+1,y) || isCorridor(x,y-1) || isCorridor(x,y+1);
   }
-  function take(){ return spots.length ? spots.splice(Math.floor(Math.random()*spots.length),1)[0] : null; }
+
+  const spots = [], doors = [], rest = [];
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    if(map[y][x] !== 1) continue;
+    if(x === P.x && y === P.y) continue;
+    if(x === G.stair.x && y === G.stair.y) continue;
+    if(Math.abs(x-P.x) + Math.abs(y-P.y) <= 4) continue;      // 开局脚边不放东西
+    if(!inRoom[y][x]) rest.push({x:x, y:y});
+    else if(nextToCorridor(x, y)) doors.push({x:x, y:y});
+    else spots.push({x:x, y:y});
+  }
+  function take(){
+    const src = spots.length ? spots : (doors.length ? doors : rest);
+    return src.length ? src.splice(Math.floor(Math.random()*src.length),1)[0] : null;
+  }
 
   const pool = FOES.filter(function(f){ return f.from <= G.floor; });
   const gate = (G.floor === FLOORS) || (G.floor % 10 === 0);
