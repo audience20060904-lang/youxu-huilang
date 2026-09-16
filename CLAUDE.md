@@ -55,6 +55,7 @@
 | `content.js` | 数值配置：章节 `CHAPTER`、怪物 `FOES`/`BOSS`、遗物 `RELICS`。**调平衡只改这个文件** |
 | `art.js` | SVG 美术（怪物立绘 `ART`、主角 `HERO`、泉 `SPRING`、商 `SHOP`、金币 `COIN`、粒子碎屑），主体用 `currentColor`，颜色交给 CSS（金币走 `--coin`，不是 `--torch`）|
 | `game.js` | 全部游戏逻辑，约 1900 行 |
+| `遗物数据表.md` | **不上线**，只给用户改：48 件遗物的品质/文案/实际数值 + 全局数值（公式、掉率、分解价）。用户改这份，Claude 照着改 `content.js` / `game.js`。改了遗物数值就**同步更新它** |
 
 ## 常见改动
 
