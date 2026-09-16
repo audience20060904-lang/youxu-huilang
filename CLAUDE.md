@@ -29,6 +29,15 @@
 3. **用户不自己改代码。** 工作方式是：用户提需求 → Claude 在本仓库改 → 提交并推到 `main` → 网站自动更新。
    不要把「你去 GitHub 网页上点开文件改一下」当成交付。
 4. **网站已经跑通了**，用户确认能正常打开。别再问「Pages 开了吗」。
+5. **改完自动上线，不用问。**（用户 2026-09 明确授权）每次改动做完、自测过，就直接：
+   提交 → 推到 `main` → 用 Actions API 确认部署 `conclusion: success` → 在回复里带一句上线结果。
+   **不要再问「要不要合并到 main / 要不要上线」**，也不要停在某个开发分支上等许可。
+   - 会话被要求在某个 `claude/...` 分支上开发时：照样在那个分支上提交和推送，
+     然后把它合进 `main` 再推 `main`（`git checkout main && git merge --ff-only <分支> && git push origin main`）。
+     分支只是工作区，**`main` 才是上线口**。
+   - 例外只有两种，这时候先问：改动会**动坏现有存档**（换 localStorage 键、改存档格式），
+     或者用户自己说了「先别上线」。
+   - 自测跑不过、或者部署失败，就别硬推/别当成功报 —— 先修，或者如实说卡在哪。
 
 ## 文件结构
 
@@ -144,6 +153,7 @@
 ## 新会话怎么接手
 
 1. 如果这个仓库不在会话的 GitHub scope 里，先用 `add_repo` 加上 `audience20060904-lang/youxu-huilang`，然后 clone。
-2. 改完提交推到 `main`，然后用 Actions 的 API 确认部署成功（`list_workflow_runs` 看 conclusion）。
+2. 改完**自动上线**（见上面「已经定下来的事」第 5 条，不用问用户）：提交 → 推到 `main` →
+   用 Actions 的 API 确认部署成功（`list_workflow_runs` 看 conclusion）。
    **不要用 curl 去验证网站** —— 沙盒访问不了 github.io，见上面「踩过的坑」。
-3. 部署失败的话，用 `get_job_logs` 带 `failed_only: true` 看日志。
+3. 部署失败的话，用 `get_job_logs` 带 `failed_only: true` 看日志，修好再推一次，别把失败晾着。
