@@ -41,10 +41,17 @@ body{
 .views{flex:1; min-height:0; display:flex}
 .view{flex:1; min-width:0; display:none; flex-direction:column; gap:10px}
 .view.on{display:flex}
-/* 冒险以外的标签页内容是竖着排的列表，自己滚。
-   ⚠️ 遗物页以前写的是 #viewBag（早就改名成 #viewRelic 了），结果一直不能滚 ——
-   带满遗物时下面的合成面板直接被挤没。别再漏了。 */
-#viewInfo,#viewRelic,#viewSet{overflow-y:auto; padding-bottom:4px}
+/* 冒险以外的标签页内容是竖着排的列表，自己滚。 */
+#viewInfo,#viewSet{overflow-y:auto; padding-bottom:4px}
+/* 遗物页是个例外：**整页不滚**，滚的是遗物列表本身 ——
+   合成面板钉在标签页下方，带满 15 件时不用滚半天才看得见它（用户 2026-09）。
+   ⚠️ 要滚的是 .relics，不是 #viewRelic；给 .panel.grow 留 min-height:0，否则 flex 不肯收缩。 */
+#viewRelic{overflow:hidden; padding-bottom:4px}
+#viewRelic .panel.grow{flex:1; min-height:0}
+#viewRelic .panel.grow .relics{flex:1; min-height:0; overflow-y:auto;
+  /* 左上角那个「new」小红点是探出卡片外的，滚动容器会裁掉它 —— 先让出这一圈 */
+  padding:6px 2px 0 6px; margin:-6px -2px 0 -6px}
+#viewRelic .panel.fusebar{flex:none}
 
 /* ===== 底部标签栏 ===== */
 .tabbar{
@@ -306,7 +313,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 
 /* 四个选项排成 2×2 的正方块。宽度用 vh 卡住，免得矮屏上两行方块把弹窗顶出去 */
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:clamp(5px,1vh,8px);
-  width:min(100%, 34vh, 318px);margin-inline:auto}
+  width:min(100%, 33vh, 318px);margin-inline:auto}
 .opt{position:relative;aspect-ratio:1;text-align:center;
   background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);
   border-radius:3px;padding:8px;font-size:clamp(14px,2.1vh,16px);cursor:pointer;font-family:var(--body);
@@ -336,8 +343,19 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .mybar .me{width:clamp(26px,4vh,36px);height:clamp(26px,4vh,36px);flex:none;color:var(--hero)}
 .mybar .me svg{width:100%;height:100%}
 .mybar .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.combo{font-family:var(--mono);font-size:11px;color:var(--torch);letter-spacing:.06em;min-height:15px}
-.combo.none{color:var(--faint)}
+/* 连击条：三段常驻（连了几次 / 现在加百分之几 / 再对几个进下一档）。
+   ⚠️ 三段永远都在，只有数字变 —— 答题前后行数一致，战斗窗才不会跳高。 */
+.combo{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;line-height:1.25;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--torch);
+  min-height:clamp(15px,2.4vh,19px)}
+.combo .cmb-n{flex:none;color:var(--dim)}
+.combo .cmb-n b{font-size:clamp(13px,2.1vh,16px);color:var(--torch);font-weight:700;letter-spacing:.02em}
+.combo .cmb-p{flex:none;padding:0 5px;border-radius:2px;font-weight:700;
+  background:#F6E6C4;border:1px solid var(--torch-deep);color:var(--torch-deep)}
+.combo .cmb-p.off{background:none;border-color:var(--edge);color:var(--faint);font-weight:400}
+.combo .cmb-next{flex:1;min-width:0;color:var(--faint);text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo.none .cmb-n b{color:var(--faint)}
 
 .float{position:absolute;right:8px;top:2px;font-family:var(--mono);font-weight:700;font-size:17px;
   pointer-events:none;animation:rise .85s ease-out forwards}
@@ -360,13 +378,20 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 /* 拼写题 —— 跟选项方块一个规矩：尺寸全部 clamp(最小, xvh, 最大)，整屏要放得下。
    字母键排成 6 列的方块，跟 .opt 一样是正方形，手指点得中。
    拼写时 .opts 是藏起来的，所以这一块可以比选项那两行矮，但键本身要更大。 */
+/* 拼写题：字格 + 左边那个 🔊（进拼写题自动念一次，之后随时能再点）。
+   按钮是 flex 的兄弟节点，不占纵向空间 —— 字格本身比它高。 */
+.spellbar{display:flex;align-items:center;justify-content:center;gap:6px}
+.spkline{flex:none;width:clamp(26px,4vh,32px);height:clamp(26px,4vh,32px);padding:0;line-height:1;
+  background:var(--stone);border:1px solid var(--edge);color:var(--frost);border-radius:50%;
+  font-size:14px;cursor:pointer;font-family:var(--body);display:grid;place-items:center}
+.spkline:hover{border-color:var(--frost)}
 .spellrow{display:flex;gap:clamp(4px,.8vh,6px);justify-content:center;flex-wrap:wrap}
 .sbox{width:clamp(26px,4.8vh,36px);height:clamp(34px,6.2vh,46px);
   border:1px solid var(--edge);border-bottom:2px solid var(--torch-deep);
   background:#FFFDF7;display:grid;place-items:center;font-family:var(--mono);
   font-size:clamp(18px,3.2vh,25px);color:var(--torch)}
 /* 长词（grandmother / comfortable 这种 11 个字母的）字格缩一号，保证还是一行 */
-.spellrow.long .sbox{width:clamp(20px,3.6vh,27px);height:clamp(28px,5.2vh,38px);
+.spellrow.long .sbox{width:clamp(18px,3.2vh,23px);height:clamp(26px,4.8vh,35px);
   font-size:clamp(14px,2.6vh,20px)}
 .letters{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(5px,1vh,8px);
   width:min(100%,52vh,380px);margin-inline:auto}
@@ -395,6 +420,8 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   font-family:var(--body);font-size:12.5px;padding:6px 10px;cursor:pointer;margin-bottom:-1px}
 .tab.on{color:var(--torch);border-bottom-color:var(--torch)}
 .codex{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;padding-right:2px}
+/* ⚠️ 图鉴卡片占用了 .cx / .cn / .cd —— 战斗窗那条连击用的是带前缀的 .cmb-*，别再撞名字
+   （跟当年 .opt 撞设置页复选框是同一个坑）。 */
 .cx{border:1px solid var(--edge-soft);border-left:3px solid var(--edge);background:#FFFDF7;
   border-radius:2px;padding:8px 11px;display:flex;flex-direction:column;gap:3px}
 .cx.lost{background:var(--stone-2)}
@@ -576,3 +603,11 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .relic.own.off{opacity:.42;cursor:default}
 .relic.own.off:hover{border-color:var(--edge);background:var(--stone-2)}
 .relic.own .tick{flex:none;width:22px;text-align:center;font-size:15px;color:var(--torch-deep);font-weight:700}
+
+/* ===== 刚拿到的那几件：左上角一个「new」小红点，点一下那张卡就没了 =====
+   纯界面状态，不进存档（回主城 / 重开一趟就清）。 */
+.relic.own.fresh{position:relative;border-color:var(--blood)}
+.newdot{position:absolute;left:-4px;top:-5px;z-index:1;
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;line-height:1;
+  padding:2px 4px;border-radius:7px;background:var(--blood);color:#FFF7EE;
+  box-shadow:0 1px 2px rgba(0,0,0,.25)}

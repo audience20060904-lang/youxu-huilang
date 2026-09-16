@@ -61,6 +61,7 @@ function newRun(){
         right:0, wrong:0, seenWords:[], combo:0, maxCombo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:false, over:false };
+  newRelics = [];
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
@@ -601,10 +602,27 @@ function renderBattleBars(){
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
   paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp);
+  renderCombo();
+}
+/* ---- 连击：每 comboStep 次 +comboPct%，可叠加不封顶（火星把 step 减 1）---- */
+function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? 1 : 0)); }
+/* 现在这一串连击给多少百分比。**它进 answer() 的 pct 桶，不是独立乘区。** */
+function comboPct(combo){
+  const c = combo == null ? ((P && P.combo) || 0) : combo;
+  return Math.floor(c / comboStep()) * CHAPTER.comboPct;
+}
+/* 战斗窗底下那一条。玩家一眼要看见三件事：连了几次、现在加了百分之几、再对几个进下一档。
+   ⚠️ 三段都常驻（数字变、行数不变），答题前后窗高才不会跳。*/
+function renderCombo(){
   const c = $("combo");
-  const bonus = P.combo >= 5 ? CHAPTER.comboAt5 : P.combo >= 3 ? CHAPTER.comboAt3 : 0;
-  c.textContent = "连击 ×" + P.combo + (bonus ? "　伤害 +" + bonus : (P.combo ? "　再对 " + (3 - P.combo) + " 个 +1 伤害" : ""));
-  c.className = "combo" + (bonus ? "" : " none");
+  if(!c) return;
+  const n = (P && P.combo) || 0, step = comboStep(), pct = comboPct(n);
+  const need = step - (n % step);
+  c.className = "combo" + (pct ? "" : " none");
+  c.innerHTML =
+    "<span class=\"cmb-n\">连击 <b>×" + n + "</b></span>" +
+    "<span class=\"cmb-p" + (pct ? "" : " off") + "\">伤害 +" + pct + "%</span>" +
+    "<span class=\"cmb-next\">再对 " + need + " 个 +" + CHAPTER.comboPct + "%</span>";
 }
 /* **一章只出一个难度的词**（第一章 A1、第二章 A2，B1 留给第三章）——
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
@@ -695,7 +713,7 @@ function nextQuestion(){
   $("btnNextQ").textContent = "继续";
   $("btnRescue").hidden = true;
   $("btnFlee").hidden = false;
-  $("spellRow").hidden = true;
+  $("spellBar").hidden = true;
   $("letters").hidden = true;
   $("opts").hidden = false;
   $("btnSpeak").hidden = true;
@@ -754,8 +772,12 @@ function renderSpell(word){
   $("qWord").textContent = word.cn;
   $("qWord").className = "qword cn";
   $("opts").hidden = true;
-  $("spellRow").hidden = false;
+  $("spellBar").hidden = false;
   $("letters").hidden = false;
+  /* 拼写题旁边那个 🔊：进来先自动念一遍（用户 2026-09 要的），之后随时能再点。
+     它不跟设置里的「答完自动朗读」挂钩 —— 那条管的是答完之后那一次。*/
+  $("btnSpellSpeak").hidden = !CAN_SPEAK;
+  if(CAN_SPEAK) speak(word.en);
   B.spell = "";
   const letters = word.en.split("");
   const extra = "aeioustrnlm".split("");
@@ -926,13 +948,12 @@ function answer(btn, ok){
 
     // 第一层 · 基础点伤（会被百分比放大）
     let base = s.atk;
-    let bonus = P.combo >= 5 ? CHAPTER.comboAt5 : P.combo >= 3 ? CHAPTER.comboAt3 : 0;
-    if(bonus && hasRelic("spark")) bonus += 1;                              // 火星
-    base += bonus;
     if(wasStrong && hasRelic("scholar")) base += 1;                         // 学者
 
     // 第二层 · 百分比（全部相加，最后只乘一次）
-    let pct = 0;
+    // 连击也在这一桶里：每 comboStep 次 +comboPct%，不封顶（火星让 step 少 1）
+    const cbo = comboPct();
+    let pct = cbo;
     if(hasRelic("quick")) pct += Math.min(20, Math.floor(P.combo / 5) * 2); // 速记：每 5 连击 +2%，上限 20%
     if(isSpell && hasRelic("carve")) pct += 20;                             // 刻字
     if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
@@ -949,7 +970,7 @@ function answer(btn, ok){
     // 第四层 · 额外伤害（无视护甲、不吃暴击，单独一笔）
     let extra = 0;
     if(hasRelic("blind")) extra += 3;                                       // 盲斗
-    if(hasRelic("rend")){ extra += 3; P.hp = Math.max(1, P.hp - 1); }       // 割裂（不致死）
+    if(hasRelic("rend")){ extra += 5; P.hp = Math.max(1, P.hp - 1); }       // 割裂（不致死）
     if(isSpell && hasRelic("recite")) extra += 2;                           // 默诵
     if(hasRelic("snow")) extra += P.combo >= 30 ? 9 : P.combo >= 20 ? 6 : P.combo >= 10 ? 3 : 0;  // 滚雪球
 
@@ -971,7 +992,7 @@ function answer(btn, ok){
     if(B.wager && hasRelic("allin") && Math.random() < .10){                // 孤注
       P.hp = Math.min(s.maxHp, P.hp + Math.max(1, Math.round(s.maxHp * 0.2)));
     }
-    if(hasRelic("midas") && Math.random() < 0.25) P.gold += ri(2, 10);      // 点金
+    if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
     floatNum("foe", "-" + dmg, "dmg");
     if(extra > 0) setTimeout(function(){ floatNum("foe", "-" + extra, "dmg"); }, 220);
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
@@ -979,8 +1000,8 @@ function answer(btn, ok){
            (B.wager ? "冒对了！" : crit ? "暴击！" : isSpell ? "拼对了！" : "命中！") + "</span>";
     note = "你砍中 " + m.name + "，造成 <b>" + dmg + "</b> 点伤害" +
            (hitWeak ? "（正中弱点）" : "") +
-           (surge ? "，浪涌炸开" : "") + (bonus ? "（连击 +" + bonus + "）" : "") +
-           (pct ? "（+" + pct + "%）" : "") + "。" +
+           (surge ? "，浪涌炸开" : "") +
+           (pct ? "（+" + pct + "%" + (cbo ? "，其中连击 +" + cbo + "%" : "") + "）" : "") + "。" +
            (extra ? " 额外 <b>" + extra + "</b> 点无视护甲。" : "");
     if(B.rescue){                                     // 补救成功：刚才欠的那一下一笔勾销
       B.rescue = false; B.pend = null;
@@ -1201,17 +1222,19 @@ function gainXp(n){
    都挂在 G.things 上，靠 kind 分支。进格子时 onEnter 弹窗，处理完 G.paused 放开。 */
 var ALTAR_COST = 5;
 
-/* ---- 泉水：踩上去先问一句，不喝就留在原地，回头还能来 ---- */
+/* ---- 泉水：踩上去先问一句，不喝就留在原地，回头还能来 ----
+   用户 2026-09 从「回满血」改成**回复最大生命的 CHAPTER.springPct**（向上取整、最少 1 点）。*/
+function springHeal(s){ return Math.max(1, Math.ceil((s || stats()).maxHp * CHAPTER.springPct)); }
 function openSpring(th){
   G.paused = true;
   pendingRoom = th;
-  const s = stats(), heal = s.maxHp - P.hp;
+  const s = stats(), room = s.maxHp - P.hp, heal = Math.min(room, springHeal(s));
   $("springLedger").innerHTML =
     li("你现在", P.hp + " / " + s.maxHp) +
-    li("喝下去", heal > 0 ? ("回复 " + heal + " 点，回到满血") : "你已经是满的了");
-  $("btnSpringDrink").disabled = heal <= 0;
-  $("btnSpringDrink").textContent = heal > 0 ? "掬一捧喝下" : "喝不下了";
-  $("springNote").textContent = heal > 0
+    li("喝下去", room > 0 ? ("回复 " + heal + " 点（上限的 " + Math.round(CHAPTER.springPct * 100) + "%）") : "你已经是满的了");
+  $("btnSpringDrink").disabled = room <= 0;
+  $("btnSpringDrink").textContent = room > 0 ? "掬一捧喝下" : "喝不下了";
+  $("springNote").textContent = room > 0
     ? "这口泉只够喝一次 —— 喝完它就干了。不想现在喝，它会留在原地等你。"
     : "满血的时候喝它是浪费。留着，等真需要的时候回来。";
   hideAll();
@@ -1223,10 +1246,10 @@ function resolveSpring(drink){
   $("veilSpring").hidden = true;
   G.paused = false;
   if(drink && th){
-    const s = stats(), got = s.maxHp - P.hp;
-    P.hp = s.maxHp;
+    const s = stats(), got = Math.min(s.maxHp - P.hp, springHeal(s));
+    P.hp = Math.min(s.maxHp, P.hp + got);
     floatNum("me", "+" + got, "heal");
-    say("你掬起一捧泉水 —— 生命恢复至满（<b>+" + got + "</b>）。", "good");
+    say("你掬起一捧泉水 —— 回复了 <b>" + got + "</b> 点生命（" + P.hp + " / " + s.maxHp + "）。", "good");
     removeThing(th);
   } else {
     say("泉水留在原地，还冒着气泡。", "sys");
@@ -1448,6 +1471,16 @@ function removeThing(th){
    效果一律在 answer() / nextQuestion() 里用 hasRelic() 分支实现。 */
 var RELIC_MAX = 15;               // 持有上限 —— 满了必须取舍，这是搭配成立的前提
 let pendingSwap = null;           // 等着被换进来的那件
+/* 刚拿到、还没在遗物页上点开看过的那几件 —— 卡片左上角挂个「new」小红点。
+   **纯界面状态，不进存档**：回主城 / 重开一趟就清掉。 */
+let newRelics = [];
+function markNewRelic(id){ if(newRelics.indexOf(id) < 0) newRelics.push(id); }
+function clearNewRelic(id){
+  const i = newRelics.indexOf(id);
+  if(i < 0) return false;
+  newRelics.splice(i, 1);
+  return true;
+}
 
 function hasRelic(id){ return !!(P && P.relics && P.relics.indexOf(id) >= 0); }
 /* 遗物一动，生命上限就可能跟着动。规矩：**上限涨多少，当前血就涨多少** ——
@@ -1478,12 +1511,15 @@ function rarWt(n0, n1, n2, n3, n4){
   for(let r = 0; r < 5; r++) for(let i = 0; i < n[r]; i++) out.push(r);
   return out;
 }
+/* 用户 2026-09：整体**左移一档** —— 高品质以前太容易白捡。
+   神圣权重归零（只能靠合成拿），传奇接原来神圣的份，史诗接原来传奇的份，
+   空出来的那份按普通:稀有当时的比例回填。 */
 function rarityWeights(floor){
-  if(floor <= 10) return rarWt(7, 1, 0, 0, 0);    // 普通 88% · 稀有 12%
-  if(floor <= 20) return rarWt(14, 5, 1, 0, 0);   // 普通 70% · 稀有 25% · 史诗 5%
-  if(floor <= 30) return rarWt(11, 6, 2, 1, 0);   // 传奇 5% 才露头
-  if(floor <= 40) return rarWt(8, 6, 4, 2, 0);    // 传奇 10%，神圣还没有
-  return rarWt(5, 6, 5, 3, 1);                    // 50 层也只有 5% 神圣
+  if(floor <= 10) return rarWt(7, 1, 0, 0, 0);    // 普通 87.5% · 稀有 12.5%
+  if(floor <= 20) return rarWt(15, 5, 0, 0, 0);   // 普通 75% · 稀有 25%
+  if(floor <= 30) return rarWt(12, 7, 1, 0, 0);   // 史诗 5% 才露头
+  if(floor <= 40) return rarWt(10, 8, 2, 0, 0);   // 史诗 10%，传奇还没有
+  return rarWt(7, 9, 3, 1, 0);                    // 50 层也只有 5% 传奇，神圣不掉
 }
 /* 按当前层数抽一件还没拿过的遗物；那个品质抽干了就逐级往下找 */
 function rollRelic(floor){
@@ -1510,6 +1546,7 @@ function sellRelic(id){
   if(i < 0) return;
   const r = relicById(id);
   const g = sellPrice(r);
+  clearNewRelic(id);
   withMaxHp(function(){ P.relics.splice(i, 1); });
   P.gold += g;
   say("你拆了 " + rc(r) + "，换成 <b>" + g + "</b> 金币。", "sys");
@@ -1635,13 +1672,18 @@ function doSwap(dropId){
   if(!ps) return;
   if(dropId){
     const i = P.relics.indexOf(dropId), old = relicById(dropId);
+    /* 换下来的那件**当场分解**（用户 2026-09）：跟手动分解一个价，
+       遗物页上的分解按钮照旧留着。⚠️ 动 P.relics 一律从 withMaxHp() 过。*/
+    const back = old ? sellPrice(old) : 0;
     withMaxHp(function(){
       if(i >= 0) P.relics.splice(i, 1);
       P.relics.push(ps.relic.id);
     });
+    if(back) P.gold += back;
     noteRelicFound(ps.relic, ps.how);
     say("你放下 " + (old ? old.n : "旧遗物") +
-        "，换上了 " + rc(ps.relic) + "。", "crit");
+        "，换上了 " + rc(ps.relic) + "。" +
+        (back ? " 旧的那件碎成了 <b>" + back + "</b> 金币。" : ""), "crit");
   } else {
     const g = sellPrice(ps.relic);          // 不换就当场分解，跟分解价一样
     P.gold += g;
@@ -1653,6 +1695,7 @@ function doSwap(dropId){
 
 /* 跨局图鉴：记首次在第几层拿到、总共拿过几次 */
 function noteRelicFound(r, how){
+  markNewRelic(r.id);                // 遗物页上挂个「new」，点一下那张卡就没了
   const first = !CODEX[r.id];
   CODEX[r.id] = {depth: first ? G.floor : CODEX[r.id].depth, times: (first ? 0 : CODEX[r.id].times) + 1};
   fxRelic(r);                        // 碎屑飞向底部的「遗物」标签
@@ -1720,6 +1763,7 @@ function renderRelics(){
   box.innerHTML = "";
   // 选中的东西可能已经不在手上了（被换掉、被分解），先对一遍
   fuseSel = fuseSel.filter(function(id){ return own.indexOf(id) >= 0; });
+  newRelics = newRelics.filter(function(id){ return own.indexOf(id) >= 0; });
   if(!own.length){
     box.innerHTML = "<div class=\"bagempty\">还没有。每清完一层会让你三选一。</div>";
     fuseOn = false; fuseSel = [];
@@ -1735,9 +1779,12 @@ function renderRelics(){
     const picked = fuseSel.indexOf(id) >= 0;
     // 挑选状态：整张卡可点，品质对不上（或已是神圣）的压暗；分解按钮收起来免得误触
     const off = fuseOn && !picked && (q >= 4 || (fuseSel.length && q !== fuseRar()));
-    d.className = "relic own" + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") + (off ? " off" : "");
+    const isNew = newRelics.indexOf(id) >= 0;
+    d.className = "relic own" + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") +
+                  (off ? " off" : "") + (isNew ? " fresh" : "");
     d.dataset.id = id;
     d.innerHTML =
+      (isNew ? "<span class=\"newdot\">new</span>" : "") +
       "<div class=\"col\">" +
         "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? " · 已选" : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
@@ -1849,6 +1896,7 @@ function goTown(){
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:true, over:true };
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
+  newRelics = [];                        // 「new」红点也是局内的界面状态，不进存档
   commit(false);       // 存档点之三：回到主城 —— 永久数据落盘，续玩档删掉
   hideAll();
   showScene();
@@ -2374,6 +2422,7 @@ $("map").addEventListener("click", function(ev){
   goTo(x, y);
 });
 $("btnSpeak").addEventListener("click", function(){ if(B && B.q) speak(B.q.word.en); });
+$("btnSpellSpeak").addEventListener("click", function(){ if(B && B.q) speak(B.q.word.en); });
 $("btnNextQ").addEventListener("click", function(){
   if(!B) return;
   if(B.won) closeBattleWin();
@@ -2511,6 +2560,9 @@ $("btnLockWager").addEventListener("click", function(){
 
 /* ---- 遗物页：分解 / 合成 ---- */
 $("relicOwned").addEventListener("click", function(ev){
+  // 点一下卡片就把「new」红点摘掉（挑选状态下也算，顺手的事）
+  const hit = ev.target.closest(".relic.own");
+  if(hit && clearNewRelic(hit.dataset.id)){ renderRelics(); }
   const b = ev.target.closest("button[data-sell]");
   if(b){ sellRelic(b.dataset.sell); return; }
   const card = ev.target.closest(".relic.own[data-id]");

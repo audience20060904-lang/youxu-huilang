@@ -158,11 +158,12 @@
 
     <!-- ---------- 遗物 ---------- -->
     <section class="view" id="viewRelic">
-      <div class="panel">
+      <!-- 列表自己滚，合成面板钉在标签页下方（带满 15 件时不用滚半天才看得见） -->
+      <div class="panel grow">
         <div class="phead"><span id="relicHead">遗物 0</span></div>
         <div class="relics own" id="relicOwned"></div>
       </div>
-      <div class="panel">
+      <div class="panel fusebar">
         <div class="phead">合成 · 3 件同品质 + 300 金 → 1 件更高</div>
         <div class="rowb">
           <button class="btn" id="btnFusePick" type="button">选择</button>
@@ -280,7 +281,10 @@
         <em>对了伤害翻倍，错了受伤翻倍</em></button>
     </div>
     <div class="opts" id="opts"></div>
-    <div class="spellrow" id="spellRow" hidden></div>
+    <div class="spellbar" id="spellBar" hidden>
+      <button class="spkline" id="btnSpellSpeak" type="button" aria-label="播放读音">🔊</button>
+      <div class="spellrow" id="spellRow"></div>
+    </div>
     <div class="letters" id="letters" hidden></div>
 
     <div class="verdict" id="verdict"></div>
@@ -289,7 +293,7 @@
       <div class="me" id="meArt"></div>
       <div class="col">
         <div class="hpbar" id="bHpBar"><div class="fill" id="bHpFill"></div><div class="txt" id="bHpTxt"></div></div>
-        <div class="combo none" id="combo">连击 ×0</div>
+        <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
       </div>
     </div>
 
@@ -443,7 +447,7 @@
         <li><b>探索</b>：怪物待在原地不动，你要自己去找。石廊有 <b>50 层</b>，每层 <b>3 只</b>左右的怪。<b>清完这一层的怪</b>，下行阶梯才会出现 —— 就在<b>最后一只怪倒下的地方</b>。</li>
         <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。</li>
-        <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>连对 3 个</b>伤害 +1，<b>连对 5 个</b> +2，答错清零。暴击是双倍。</li>
+        <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>每 5 连击</b>伤害 +2%（可叠加、不封顶），答错清零。暴击是双倍。</li>
         <li><b>拼写题</b>：每题有<b>一成</b>的概率要你把词拼出来。拼对<b>连击 +10、这一场经验翻倍</b>；
           拼错不算白丢 —— 同一个词<b>下一题换成选择题</b>再问你一次。</li>
         <li><b>连击跨怪物保留</b>：打完一只接着打下一只，连击<b>不会归零</b> —— 撤退、走路、下一层都留着。只有<b>答错</b>才断（拿了「长链」就只减半），倒下回镇上才清空。</li>
