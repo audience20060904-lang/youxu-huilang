@@ -760,6 +760,9 @@ function renderSpell(word){
   const letters = word.en.split("");
   const extra = "aeioustrnlm".split("");
   for(let i=0;i<2;i++) letters.push(pick(extra));
+  /* 星期/月份这类专有名词首字母大写，干扰项里也得有一个大写的 ——
+     不然「全场唯一的大写字母」等于直接告诉玩家哪个字母排第一。*/
+  if(/[A-Z]/.test(word.en)) letters[letters.length-1] = letters[letters.length-1].toUpperCase();
   letters.sort(function(){ return Math.random() - .5; });
   drawSpell(word);
   const box = $("letters");
@@ -793,6 +796,8 @@ function renderSpell(word){
 }
 function drawSpell(word){
   const row = $("spellRow");
+  /* 词长到 9 个字母以上，字格要缩一号，否则一行摆不下会折行、把战斗窗顶高 */
+  row.className = "spellrow" + (word.en.length >= 9 ? " long" : "");
   row.innerHTML = "";
   for(let i=0;i<word.en.length;i++){
     const d = document.createElement("div");

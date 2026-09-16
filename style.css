@@ -365,6 +365,9 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   border:1px solid var(--edge);border-bottom:2px solid var(--torch-deep);
   background:#FFFDF7;display:grid;place-items:center;font-family:var(--mono);
   font-size:clamp(18px,3.2vh,25px);color:var(--torch)}
+/* 长词（grandmother / comfortable 这种 11 个字母的）字格缩一号，保证还是一行 */
+.spellrow.long .sbox{width:clamp(20px,3.6vh,27px);height:clamp(28px,5.2vh,38px);
+  font-size:clamp(14px,2.6vh,20px)}
 .letters{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(5px,1vh,8px);
   width:min(100%,52vh,380px);margin-inline:auto}
 .lbtn{width:auto;height:auto;aspect-ratio:1;background:var(--stone-3);border:1px solid var(--edge);
