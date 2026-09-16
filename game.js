@@ -1309,20 +1309,47 @@ function sellRelic(id){
   say("你拆了 " + rc(r) + "，换成 <b>" + g + "</b> 金币。", "sys");
   renderHud();
 }
-/* ---- 合成：3 件同品质 → 1 件更高品质（随机） ---- */
-function fuseRelics(rar){
-  rar = +rar;
-  if(rar >= 4) return;                                   // 神圣封顶，再合无处去
-  const same = P.relics.filter(function(id){ return relicRar(id) === rar; });
-  if(same.length < FUSE_N) return;
+/* ---- 合成：玩家自己挑 3 件同品质的，换一件高一档的（换到哪一件仍是随机） ----
+   遗物页上两个按钮：「选择」进/退挑选状态，「合成」把挑中的三件砸了。
+   挑选状态下整张遗物卡可点，选了第一件之后别的品质就点不动了。 */
+let fuseOn = false;      // 是不是正在挑
+let fuseSel = [];        // 挑中的遗物 id
+
+function fuseRar(){ return fuseSel.length ? relicRar(fuseSel[0]) : -1; }
+function fuseToggleMode(){
+  fuseOn = !fuseOn;
+  fuseSel = [];
+  renderRelics();
+}
+function fusePick(id){
+  if(!fuseOn) return;
+  const i = fuseSel.indexOf(id);
+  if(i >= 0){ fuseSel.splice(i, 1); renderRelics(); return; }
+  const q = relicRar(id);
+  if(q >= 4){ say("神圣已经是顶了，它没法当材料。", "sys"); return; }
+  if(fuseSel.length && q !== fuseRar()){
+    say("得是<b>同一个品质</b>的三件 —— 现在挑的是" + RAR_CN[fuseRar()] + "。", "sys");
+    return;
+  }
+  if(fuseSel.length >= FUSE_N){ say("已经挑满 " + FUSE_N + " 件了。", "sys"); return; }
+  fuseSel.push(id);
+  renderRelics();
+}
+function fuseGo(){
+  if(fuseSel.length !== FUSE_N) return;
+  const rar = fuseRar();
+  if(rar < 0 || rar >= 4) return;
+  // 挑的这三件必须都还在手上（分解过就作废）
+  const eat = fuseSel.filter(function(id){ return P.relics.indexOf(id) >= 0; });
+  if(eat.length !== FUSE_N){ fuseSel = []; renderRelics(); return; }
   const up = relicPool().filter(function(x){ return (x.r || 0) === rar + 1; });
   if(!up.length){ say("更高一档的遗物你已经拿齐了。", "sys"); return; }
-  const eat = same.slice(0, FUSE_N);
   const got = pick(up);
   withMaxHp(function(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
     P.relics.push(got.id);
   });
+  fuseOn = false; fuseSel = [];
   noteRelicFound(got, "合成出");
   say("你把 " + FUSE_N + " 件" + RAR_CN[rar] + "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
   renderHud();
@@ -1461,8 +1488,12 @@ function renderRelics(){
   dot.hidden = own.length === 0;
   const box = $("relicOwned");
   box.innerHTML = "";
+  // 选中的东西可能已经不在手上了（被换掉、被分解），先对一遍
+  fuseSel = fuseSel.filter(function(id){ return own.indexOf(id) >= 0; });
   if(!own.length){
     box.innerHTML = "<div class=\"bagempty\">还没有。每清完一层会让你三选一。</div>";
+    fuseOn = false; fuseSel = [];
+    renderFuse();
     return;
   }
   // 按品质从高到低排，一眼能看出手里有什么
@@ -1471,37 +1502,50 @@ function renderRelics(){
     if(!r) return;
     const q = r.r || 0;
     const d = document.createElement("div");
-    d.className = "relic own";
+    const picked = fuseSel.indexOf(id) >= 0;
+    // 挑选状态：整张卡可点，品质对不上（或已是神圣）的压暗；分解按钮收起来免得误触
+    const off = fuseOn && !picked && (q >= 4 || (fuseSel.length && q !== fuseRar()));
+    d.className = "relic own" + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") + (off ? " off" : "");
+    d.dataset.id = id;
     d.innerHTML =
       "<div class=\"col\">" +
-        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + "</span>" +
+        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? " · 已选" : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
         "<span class=\"rp\">" + r.pw + "</span>" +
       "</div>" +
-      "<button type=\"button\" class=\"melt\" data-sell=\"" + id + "\">分解<em>" +
-        ((RAR_SELL[q] || 4) + Math.floor((G ? G.floor : 1) / 5)) + " 金</em></button>";
+      (fuseOn
+        ? "<span class=\"tick\">" + (picked ? "✓" : "") + "</span>"
+        : "<button type=\"button\" class=\"melt\" data-sell=\"" + id + "\">分解<em>" +
+          ((RAR_SELL[q] || 4) + Math.floor((G ? G.floor : 1) / 5)) + " 金</em></button>");
     box.appendChild(d);
   });
   renderFuse();
 }
 /* 合成面板：每个品质一行，够 3 件就能点 */
+/* 两个按钮的状态 + 一行说明。列表本身由 renderRelics 画，这里只管按钮。 */
 function renderFuse(){
-  const box = $("fuseList");
-  if(!box) return;
-  box.innerHTML = "";
+  const pickBtn = $("btnFusePick"), goBtn = $("btnFuseGo"), note = $("fuseState");
+  if(!pickBtn || !goBtn) return;
   const own = (P && P.relics) || [];
+  // 手上有没有任何一个品质凑得够三件
+  let ready = -1;
   for(let q = 0; q < 4; q++){
-    const n = own.filter(function(id){ return relicRar(id) === q; }).length;
-    const can = n >= FUSE_N;
-    const d = document.createElement("div");
-    d.className = "fuserow" + (can ? " on" : "");
-    d.innerHTML =
-      "<span class=\"fq q" + q + "\">" + RAR_CN[q] + "</span>" +
-      "<span class=\"fn\">× " + n + "</span>" +
-      "<span class=\"fa\">→ " + RAR_CN[q+1] + "</span>" +
-      "<button type=\"button\" class=\"fuseb\" data-fuse=\"" + q + "\"" +
-        (can ? "" : " disabled") + ">" + (can ? "合成" : "还差 " + (FUSE_N - n)) + "</button>";
-    box.appendChild(d);
+    if(own.filter(function(id){ return relicRar(id) === q; }).length >= FUSE_N){ ready = q; break; }
+  }
+  pickBtn.textContent = fuseOn ? "取消选择" : "选择";
+  pickBtn.disabled = !fuseOn && ready < 0;
+  goBtn.disabled = fuseSel.length !== FUSE_N;
+  goBtn.textContent = fuseOn && fuseSel.length ? ("合成（" + fuseSel.length + "/" + FUSE_N + "）") : "合成";
+  if(!note) return;
+  if(fuseOn){
+    note.innerHTML = fuseSel.length
+      ? ("已挑 <b>" + fuseSel.length + " / " + FUSE_N + "</b> 件" + RAR_CN[fuseRar()] +
+         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件）。再点一下可以取消选中。")
+      : "在上面点 <b>" + FUSE_N + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
+  } else {
+    note.innerHTML = ready >= 0
+      ? ("点「选择」，挑 " + FUSE_N + " 件同品质的砸成一件更高的。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
+      : "同一个品质攒够 " + FUSE_N + " 件才能合成。";
   }
 }
 
@@ -1564,6 +1608,7 @@ function goTown(){
         right:0, wrong:0, seenWords:[], combo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:true, over:true };
+  fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
   commit(false);       // 存档点之三：回到主城 —— 永久数据落盘，续玩档删掉
   hideAll();
   showScene();
@@ -2182,12 +2227,12 @@ $("btnLockWager").addEventListener("click", function(){
 /* ---- 遗物页：分解 / 合成 ---- */
 $("relicOwned").addEventListener("click", function(ev){
   const b = ev.target.closest("button[data-sell]");
-  if(b) sellRelic(b.dataset.sell);
+  if(b){ sellRelic(b.dataset.sell); return; }
+  const card = ev.target.closest(".relic.own[data-id]");
+  if(card && fuseOn) fusePick(card.dataset.id);
 });
-$("fuseList").addEventListener("click", function(ev){
-  const b = ev.target.closest("button[data-fuse]");
-  if(b && !b.disabled) fuseRelics(b.dataset.fuse);
-});
+$("btnFusePick").addEventListener("click", fuseToggleMode);
+$("btnFuseGo").addEventListener("click", function(){ if(!this.disabled) fuseGo(); });
 
 /* ---- 带满了的取舍 ---- */
 $("swapList").addEventListener("click", function(ev){

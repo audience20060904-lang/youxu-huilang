@@ -138,18 +138,11 @@
       </div>
       <div class="panel">
         <div class="phead">合成 · 3 件同品质 → 1 件更高</div>
-        <div class="fuse" id="fuseList"></div>
-        <p class="note">合成会<b>吃掉</b>那 3 件，换回一件高一档的随机遗物 —— 净省两个格子。</p>
-      </div>
-      <div class="panel">
-        <div class="phead">遗物怎么来</div>
-        <p class="note">每清完一层三选一；<b>坛</b> 献血换一件；<b>箱</b> 拼对词开出一件；<b>商</b> 用金币买。</p>
-        <p class="note"><b>层数越深，掉的品质越高</b> —— 前十层几乎全是普通，神圣只在深处才有影。
-          普通品质都是纯数值，不带机制；它们也是<b>合成的燃料</b>。</p>
-        <p class="note">遗物是<b>唯一的强化轴</b>，共 48 件、五个品质（普通 / 稀有 / 史诗 / 传奇 / 神圣），但<b>最多只能带 10 件</b> ——
-          满了再拿就得换掉一件，所以得想想自己走哪条路。</p>
-        <p class="note">遗物分成几条成套的路线：<b>冒险</b>、<b>连击</b>、<b>拼写</b>、<b>心魔</b>、<b>弱点</b>、<b>极限</b>、<b>经济</b>。
-          单拿一件平平，凑齐才成型。倒下时全部丢在洞里，只有金币能带回镇上。</p>
+        <div class="rowb">
+          <button class="btn" id="btnFusePick" type="button">选择</button>
+          <button class="btn primary" id="btnFuseGo" type="button" disabled>合成</button>
+        </div>
+        <p class="note" id="fuseState">点「选择」，然后在上面挑 3 件同品质的。</p>
       </div>
     </section>
 

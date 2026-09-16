@@ -513,14 +513,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .relic.own .melt em{font-style:normal;font-size:10px;color:var(--torch)}
 .relic.own .melt:hover{border-color:var(--blood);color:var(--blood)}
 
-/* ===== 合成面板 ===== */
-.fuse{display:flex;flex-direction:column;gap:5px}
-.fuserow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:2px;
-  border:1px solid var(--edge-soft);background:var(--stone-2)}
-.fuserow.on{border-color:var(--torch-deep);background:#FDF6E7}
-.fuserow .fq{font-size:13px;font-weight:600;flex:none;min-width:34px}
-.fuserow .fn{font-family:var(--mono);font-size:12px;color:var(--dim);flex:none;min-width:34px}
-.fuserow .fa{flex:1;font-size:11.5px;color:var(--faint)}
-.fuserow .fuseb{flex:none;font-family:var(--body);font-size:11.5px;padding:5px 10px;border-radius:2px;
-  cursor:pointer;background:var(--torch);color:#FFF9EC;border:1px solid var(--torch-deep);font-weight:600}
-.fuserow .fuseb:disabled{background:var(--stone-3);color:var(--faint);border-color:var(--edge);cursor:default}
+/* ===== 合成 =====
+   面板上只有「选择」「合成」两个按钮；材料是在上面那张遗物列表里点出来的。 */
+.relic.own.pickable{cursor:pointer}
+.relic.own.pickable:hover{border-color:var(--torch-deep);background:#FDF6E7}
+.relic.own.picked{border-color:var(--torch-deep);background:#F6E6C4}
+.relic.own.picked:hover{border-color:var(--torch-deep);background:#F6E6C4}
+.relic.own.off{opacity:.42;cursor:default}
+.relic.own.off:hover{border-color:var(--edge);background:var(--stone-2)}
+.relic.own .tick{flex:none;width:22px;text-align:center;font-size:15px;color:var(--torch-deep);font-weight:700}
