@@ -38,8 +38,10 @@ body{
 .views{flex:1; min-height:0; display:flex}
 .view{flex:1; min-width:0; display:none; flex-direction:column; gap:10px}
 .view.on{display:flex}
-/* 冒险以外的标签页内容是竖着排的列表，自己滚 */
-#viewInfo,#viewBag,#viewSet{overflow-y:auto; padding-bottom:4px}
+/* 冒险以外的标签页内容是竖着排的列表，自己滚。
+   ⚠️ 遗物页以前写的是 #viewBag（早就改名成 #viewRelic 了），结果一直不能滚 ——
+   带满遗物时下面的合成面板直接被挤没。别再漏了。 */
+#viewInfo,#viewRelic,#viewSet{overflow-y:auto; padding-bottom:4px}
 
 /* ===== 底部标签栏 ===== */
 .tabbar{
@@ -176,6 +178,8 @@ body{
 .c.stair{color:var(--venom);font-weight:700}
 .c.stair.locked{color:#A39A87}
 .c.gold{color:var(--torch)}
+/* 走出视野后金币整枚淡下去（描边是固定色，只调 color 淡不下来） */
+.c.mem.gold svg{opacity:.5}
 .c.feat{color:var(--frost)}
 .c.it0{color:var(--r0)}.c.it1{color:var(--r1)}.c.it2{color:var(--r2)}
 .c.it3{color:var(--r3)}.c.it4{color:var(--r4)}

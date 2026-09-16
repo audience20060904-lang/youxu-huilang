@@ -51,16 +51,19 @@ warden:'<svg viewBox="0 0 100 100">' +
  '<path d="M38 78v8M50 78v8M62 78v8" stroke="#F5EEDD" stroke-width="3"/></svg>'
 };
 
-/* 地上的金币。以前是一个 ◎ 字符，跟别的符号混在一起认不出来。
-   现在是一枚立着的币：外圈描边 + 币面内圈 + 一道斜高光，
-   币身用 currentColor（颜色交给 CSS 的 .c.gold，记忆中的格子会自动变淡）。*/
+/* 地上的金币。以前是一个 ◎ 字符，跟别的符号混在一起认不出来；
+   现在是一小堆币：后面压着一枚，前面立着一枚。
+   地图格子只有二三十像素，所以只画得下三样东西 ——
+   厚实的外圈、一圈内缘、中间一颗四角星，再补一道高光和一片影。
+   币身用 currentColor（颜色交给 CSS 的 .c.gold，走出视野会自动变淡）。*/
 var COIN =
 '<svg viewBox="0 0 20 20" aria-hidden="true">' +
- '<ellipse cx="10" cy="16.4" rx="6" ry="1.5" fill="#6B5836" opacity=".22"/>' +           /* 落在地上的影 */
- '<circle cx="10" cy="9.6" r="6.6" fill="currentColor" stroke="#8A5F0C" stroke-width="1.1"/>' +
- '<circle cx="10" cy="9.6" r="4.3" fill="none" stroke="#8A5F0C" stroke-width=".9" opacity=".55"/>' +
- '<path d="M10 6.6v6M8.1 8.1h3.8M8.1 11.1h3.8" stroke="#8A5F0C" stroke-width="1" stroke-linecap="round" opacity=".75"/>' +
- '<path d="M6.4 6.6a4.8 4.8 0 0 1 3.1-2.1" stroke="#FFF3D0" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".85"/>' +
+ '<ellipse cx="10.2" cy="16.6" rx="6.2" ry="1.5" fill="#6B5836" opacity=".18"/>' +        /* 地上的影 */
+ '<circle cx="13.6" cy="12" r="4.4" fill="currentColor" stroke="#7A520C" stroke-width="1"/>' +    /* 压在后面的那枚 */
+ '<circle cx="8.6" cy="9.4" r="6.3" fill="currentColor" stroke="#7A520C" stroke-width="1.2"/>' +  /* 正面这枚 */
+ '<circle cx="8.6" cy="9.4" r="4.4" fill="none" stroke="#7A520C" stroke-width=".9" opacity=".5"/>' +
+ '<path d="M8.6 6.5 9.8 8.8l2.3 1.2-2.3 1.2-1.2 2.3-1.2-2.3L5.1 10l2.3-1.2z" fill="#7A520C" opacity=".8"/>' +
+ '<path d="M4.9 7A5.4 5.4 0 0 1 7.8 4.3" stroke="#FFF4D4" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".9"/>' +
 '</svg>';
 
 /* 粒子用的小图形：金币碎屑 / 遗物碎屑。飞的时候只有几像素大，不用画细。*/

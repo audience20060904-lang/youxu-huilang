@@ -974,7 +974,13 @@ function closeBattleWin(){
   const gained = P.hp - before;
   say(m.name + " 化成了灰。<span class=\"sys\">(+" + m.xp + " EXP，+" + g + " 金" +
       (gained > 0 ? "，回复 " + gained + " 生命" : "") + ")</span>", "good");
-  if(G.mobs.length === 0) say("这一层清空了。阶梯 ▼ 打开了。", "crit");
+  if(G.mobs.length === 0){
+    /* 阶梯直接开在最后一只怪倒下的地方 —— 不用再满地图找那个 ▼。
+       怪站的一定是地板，所以这个位置永远合法。 */
+    G.stair = {x:m.x, y:m.y};
+    G.seen[m.y][m.x] = true;
+    say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
+  }
   fov();
   // 普通怪不再掉东西（金币已经给过了）；遗物统一由清层/房间给
   G.paused = false;
@@ -1251,7 +1257,7 @@ function removeThing(th){
 /* ================= 遗物 =================
    只在这一趟里有效，倒下就没了（P 整个重建）。
    效果一律在 answer() / nextQuestion() 里用 hasRelic() 分支实现。 */
-var RELIC_MAX = 10;               // 持有上限 —— 满了必须取舍，这是搭配成立的前提
+var RELIC_MAX = 15;               // 持有上限 —— 满了必须取舍，这是搭配成立的前提
 let pendingSwap = null;           // 等着被换进来的那件
 
 function hasRelic(id){ return !!(P && P.relics && P.relics.indexOf(id) >= 0); }
@@ -1805,15 +1811,17 @@ function openCodex(tab){
   if(cTab === "leg"){
     const book = CODEX;
     $("codexTitle").textContent = "遗物 " + Object.keys(book).length + " / " + RELICS.length;
+    /* 图鉴**默认全解锁**：名字、效果、铭文一律直接给，没拿过的只是没有计数。
+       （用户定的，别再把没拿过的遮成 ▨▨。）*/
     RELICS.forEach(function(R){
       const rec = book[R.id], d = document.createElement("div");
       d.className = "cx " + (rec ? "found" : "lost");
-      d.innerHTML = rec
-        ? "<div class=\"cn\">" + R.n + "<span class=\"meta\">初见第 " + rec.depth + " 层 · 拿过 " + rec.times + " 次</span></div>" +
-          "<div class=\"cd\" style=\"color:var(--q" + (R.r||0) + ")\">" + R.pw + "</div>" +
-          "<div class=\"cd\" style=\"font-family:var(--flavor);font-style:italic\">" + R.lore + "</div>"
-        : "<div class=\"cn\">▨▨ ▨▨<span class=\"meta\">还没拿到过</span></div>" +
-          "<div class=\"cd\">它还在某一层的黑暗里。</div>";
+      d.innerHTML =
+        "<div class=\"cn\">" + R.n + "<span class=\"meta\">" +
+          (rec ? ("初见第 " + rec.depth + " 层 · 拿过 " + rec.times + " 次") : "还没拿到过") +
+        "</span></div>" +
+        "<div class=\"cd\" style=\"color:var(--q" + (R.r||0) + ")\">" + RAR_CN[R.r||0] + " · " + R.pw + "</div>" +
+        "<div class=\"cd\" style=\"font-family:var(--flavor);font-style:italic\">" + R.lore + "</div>";
       box.appendChild(d);
     });
   } else {
@@ -1830,10 +1838,11 @@ function openCodex(tab){
         const s = r ? (r.str||0) : 0;
         const d = document.createElement("div");
         d.className = "cx " + (!r ? "lost" : s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
-        d.innerHTML = r
-          ? "<div class=\"cn\">" + w.en + "<span class=\"meta stars\">" + "★".repeat(s) + "☆".repeat(5-s) + "</span></div>" +
-            "<div class=\"cd\">" + w.cn + (r.wrong ? "　<span style=\"color:var(--blood)\">上次答错</span>" : "") + "</div>"
-          : "<div class=\"cn\">▨▨▨<span class=\"meta\">还没遇到</span></div>";
+        d.innerHTML =
+          "<div class=\"cn\">" + w.en + "<span class=\"meta " + (r ? "stars" : "") + "\">" +
+            (r ? ("★".repeat(s) + "☆".repeat(5-s)) : "还没遇到") + "</span></div>" +
+          "<div class=\"cd\">" + w.cn +
+            (r && r.wrong ? "　<span style=\"color:var(--blood)\">上次答错</span>" : "") + "</div>";
         box.appendChild(d);
       });
     });
