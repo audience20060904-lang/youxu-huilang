@@ -50,3 +50,19 @@ warden:'<svg viewBox="0 0 100 100">' +
  '<path d="M44 60h12l-6 10z" fill="#F5EEDD"/>' +
  '<path d="M38 78v8M50 78v8M62 78v8" stroke="#F5EEDD" stroke-width="3"/></svg>'
 };
+
+/* 地上的金币。以前是一个 ◎ 字符，跟别的符号混在一起认不出来。
+   现在是一枚立着的币：外圈描边 + 币面内圈 + 一道斜高光，
+   币身用 currentColor（颜色交给 CSS 的 .c.gold，记忆中的格子会自动变淡）。*/
+var COIN =
+'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<ellipse cx="10" cy="16.4" rx="6" ry="1.5" fill="#6B5836" opacity=".22"/>' +           /* 落在地上的影 */
+ '<circle cx="10" cy="9.6" r="6.6" fill="currentColor" stroke="#8A5F0C" stroke-width="1.1"/>' +
+ '<circle cx="10" cy="9.6" r="4.3" fill="none" stroke="#8A5F0C" stroke-width=".9" opacity=".55"/>' +
+ '<path d="M10 6.6v6M8.1 8.1h3.8M8.1 11.1h3.8" stroke="#8A5F0C" stroke-width="1" stroke-linecap="round" opacity=".75"/>' +
+ '<path d="M6.4 6.6a4.8 4.8 0 0 1 3.1-2.1" stroke="#FFF3D0" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".85"/>' +
+'</svg>';
+
+/* 粒子用的小图形：金币碎屑 / 遗物碎屑。飞的时候只有几像素大，不用画细。*/
+var MOTE_COIN = '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.2" fill="currentColor" stroke="#8A5F0C" stroke-width=".9"/></svg>';
+var MOTE_GEM  = '<svg viewBox="0 0 10 10"><path d="M5 .8 9.2 5 5 9.2.8 5z" fill="currentColor"/></svg>';

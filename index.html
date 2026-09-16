@@ -157,8 +157,8 @@
     <section class="view" id="viewSet">
       <div class="panel">
         <div class="phead">设置 Settings</div>
-        <label class="opt"><input type="checkbox" id="optSpeak" checked><span><b>单词发音</b><i>听音辨词题会自动朗读</i></span></label>
-        <label class="opt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
+        <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>单词发音</b><i>听音辨词题会自动朗读</i></span></label>
+        <label class="setopt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
       </div>
       <div class="panel">
         <div class="phead">存档 Save</div>
@@ -283,6 +283,20 @@
   </div>
 </div>
 
+<div class="veil" id="veilSpring" hidden>
+  <div class="sheet">
+    <div class="eyebrow">石缝里的泉</div>
+    <h2>一小汪水，还冒着气泡</h2>
+    <div class="ledger" id="springLedger"></div>
+    <p class="note" id="springNote">这口泉只够喝一次 —— 喝完它就干了。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnSpringSkip" type="button">先留着</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnSpringDrink" type="button">掬一捧喝下</button>
+    </div>
+  </div>
+</div>
+
 <div class="veil" id="veilStair" hidden>
   <div class="sheet">
     <div class="eyebrow" id="stairEyebrow">石廊 第 1 层 · 已清空</div>
@@ -396,7 +410,10 @@
         <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。</li>
         <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>连对 3 个</b>伤害 +1，<b>连对 5 个</b> +2，答错清零。暴击是双倍。</li>
-        <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满。撑不住就先撤退，去别处打一只弱的。</li>
+        <li><b>连击跨怪物保留</b>：打完一只接着打下一只，连击<b>不会归零</b> —— 撤退、走路、下一层都留着。只有<b>答错</b>才断（拿了「长链」就只减半），倒下回镇上才清空。</li>
+        <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满 ——
+          踩上去会<b>先问你喝不喝</b>，不喝就留在原地，等真需要的时候再回来。撑不住就先撤退，去别处打一只弱的。</li>
+        <li><b>生命上限</b>：拿到加生命上限的遗物时，<b>当前血量也跟着涨同样多</b> —— 20/30 拿到「上限 +8」之后是 <b>28/38</b>，不用再去找泉水补。</li>
         <li><b>词汇</b>：第一章全部是 <b>A1 入门词</b>（cat / water / red / run）。答错的词会记进词库，之后<b>出现得更频繁</b>，直到你答对三次。</li>
         <li><b>撤退</b>：战斗里随时可以撤退，怪物身上已经掉的血会留着，你可以回头再打。</li>
         <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就冒。
