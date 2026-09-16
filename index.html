@@ -127,8 +127,11 @@
             <div class="xpbar"><div class="fill" id="xpFill"></div></div>
           </div>
         </div>
-        <!-- 放弃：压在取景框左下角。两步确认，点完直接结算 -->
-        <button class="giveup" id="btnAbandon" type="button">放弃</button>
+        <!-- 取景框左下角的两个按钮：放弃（两步确认，点完直接结算）/ 寻路（走向最近的怪→金币→楼梯） -->
+        <div class="mapacts">
+          <button class="giveup" id="btnAbandon" type="button">放弃</button>
+          <button class="giveup find" id="btnPathfind" type="button">寻路</button>
+        </div>
       </div>
 
       <!-- 地图下面的一行文字按钮 -->

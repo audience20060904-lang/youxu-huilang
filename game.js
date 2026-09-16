@@ -115,6 +115,26 @@ function nextFloor(){
   say(last ? "空气冷得发硬。这一层尽头有东西在等。" : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), last ? "hurt" : "sys");
   commit(true);          // 存档点之二：下一层
 }
+/* ===== 房间图 =====
+   地图切成 SLOT_C × SLOT_R 个槽位，每个槽位 SLOT_W × SLOT_H 格（4×4 个 8×6 的槽，加一圈边墙 = 33×25）。
+   随机挑两个槽位 A、B，用曼哈顿最短路径（随机决定先横后竖还是先竖后横）把它们串成一条**链**，
+   链上经过的槽位就是要开的房间：不足 4 间就从已选槽位的四邻里随机挑空槽补，超过 6 间就重选 A、B。
+   **只有网格上相邻的两间房才连通**，走廊是两间房边缘之间的一小段 —— 不会再有横穿半张地图的中心连线。
+   没被选中的槽位就是实心墙，render() 里连画都不画，玩家看不出地图其实大了一圈。 */
+var SLOT_W = 8, SLOT_H = 6, SLOT_C = 4, SLOT_R = 4, ROOM_MIN = 4, ROOM_MAX = 6;
+function slotChain(){
+  for(let a=0;a<400;a++){
+    const s = {c:ri(0,SLOT_C-1), r:ri(0,SLOT_R-1)}, e = {c:ri(0,SLOT_C-1), r:ri(0,SLOT_R-1)};
+    if(1 + Math.abs(s.c-e.c) + Math.abs(s.r-e.r) > ROOM_MAX) continue;   // 链太长，重选两点
+    const chain = [{c:s.c, r:s.r}];
+    let c = s.c, r = s.r;
+    const goC = function(){ while(c !== e.c){ c += e.c > c ? 1 : -1; chain.push({c:c, r:r}); } };
+    const goR = function(){ while(r !== e.r){ r += e.r > r ? 1 : -1; chain.push({c:c, r:r}); } };
+    if(Math.random() < .5){ goC(); goR(); } else { goR(); goC(); }
+    if(chain.length >= 2) return chain;                                  // 两点撞一块了，重选
+  }
+  return [{c:0,r:0},{c:1,r:0}];      // 兜底，正常走不到
+}
 function genFloor(){
   const map = [], seen = [], vis = [];
   for(let y=0;y<H;y++){
@@ -122,28 +142,65 @@ function genFloor(){
     seen.push(new Array(W).fill(false));
     vis.push(new Array(W).fill(false));
   }
-  const rooms = [];
-  for(let a=0; a<200 && rooms.length<7; a++){
-    const w = ri(4,7), h = ri(3,5), x = ri(1, W-w-2), y = ri(1, H-h-2);
-    let ok = true;
-    for(let i=0;i<rooms.length;i++){
-      const r = rooms[i];
-      if(x-1 < r.x+r.w+1 && x+w+1 > r.x-1 && y-1 < r.y+r.h+1 && y+h+1 > r.y-1){ ok = false; break; }
+  /* 槽位：链 + 补出来的邻居。links 记下哪两间要开走廊（只连相邻的） */
+  const chain = slotChain(), slots = chain.slice(), links = [], used = {};
+  const skey = function(c,r){ return r*SLOT_C + c; };
+  slots.forEach(function(s){ used[skey(s.c,s.r)] = true; });
+  for(let i=1;i<chain.length;i++) links.push([i-1, i]);
+  const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  for(let a=0; slots.length < ROOM_MIN && a < 200; a++){
+    const from = ri(0, slots.length-1), s = slots[from], opts = [];
+    for(let i=0;i<4;i++){
+      const c = s.c + D4[i][0], r = s.r + D4[i][1];
+      if(c<0 || r<0 || c>=SLOT_C || r>=SLOT_R || used[skey(c,r)]) continue;
+      opts.push({c:c, r:r});
     }
-    if(!ok) continue;
-    rooms.push({x:x,y:y,w:w,h:h,cx:x+(w>>1),cy:y+(h>>1)});
-    for(let j=y;j<y+h;j++) for(let i=x;i<x+w;i++) map[j][i] = 1;
+    if(!opts.length) continue;
+    const n = pick(opts);
+    used[skey(n.c,n.r)] = true;
+    slots.push(n);
+    links.push([from, slots.length-1]);
   }
-  for(let i=1;i<rooms.length;i++){
-    const a = rooms[i-1], b = rooms[i];
-    let x = a.cx, y = a.cy;
-    while(x !== b.cx){ x += b.cx > x ? 1 : -1; map[y][x] = 1; }
-    while(y !== b.cy){ y += b.cy > y ? 1 : -1; map[y][x] = 1; }
-  }
+  /* 每个槽位里摆一间房，尺寸照旧，在槽位内随机偏移；再夹一下保证留住外面那圈边墙 */
+  const rooms = slots.map(function(s){
+    const w = ri(4,7), h = ri(3,5), x0 = s.c * SLOT_W, y0 = s.r * SLOT_H;
+    const x = ri(Math.max(1, x0), Math.min(x0 + SLOT_W - w, W - 1 - w));
+    const y = ri(Math.max(1, y0), Math.min(y0 + SLOT_H - h, H - 1 - h));
+    return {x:x, y:y, w:w, h:h, cx:x+(w>>1), cy:y+(h>>1), c:s.c, r:s.r};
+  });
+  rooms.forEach(function(r){
+    for(let j=r.y;j<r.y+r.h;j++) for(let i=r.x;i<r.x+r.w;i++) map[j][i] = 1;
+  });
+  function carveH(y, x1, x2){ for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) map[y][x] = 1; }
+  function carveV(x, y1, y2){ for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) map[y][x] = 1; }
+  /* 两间相邻房之间的短通道：投影对得上就是直的一条，错开了就在中间的空档里拐一下（Z 形）。
+     两头都锚在房间边缘上，整条通道只待在这两个槽位里，碰不到第三间房。*/
+  links.forEach(function(lk){
+    const a = rooms[lk[0]], b = rooms[lk[1]];
+    if(a.r === b.r){                                   // 左右相邻
+      const L = a.x < b.x ? a : b, R = a.x < b.x ? b : a;
+      const xa = L.x + L.w - 1, xb = R.x;
+      const lo = Math.max(L.y, R.y), hi = Math.min(L.y+L.h-1, R.y+R.h-1);
+      if(lo <= hi){ carveH(ri(lo, hi), xa, xb); return; }
+      const ya = ri(L.y, L.y+L.h-1), yb = ri(R.y, R.y+R.h-1);
+      const xm = xb - xa >= 2 ? ri(xa+1, xb-1) : xb;
+      carveH(ya, xa, xm); carveV(xm, ya, yb); carveH(yb, xm, xb);
+    } else {                                           // 上下相邻
+      const U = a.y < b.y ? a : b, D = a.y < b.y ? b : a;
+      const ya = U.y + U.h - 1, yb = D.y;
+      const lo = Math.max(U.x, D.x), hi = Math.min(U.x+U.w-1, D.x+D.w-1);
+      if(lo <= hi){ carveV(ri(lo, hi), ya, yb); return; }
+      const xa = ri(U.x, U.x+U.w-1), xb = ri(D.x, D.x+D.w-1);
+      const ym = yb - ya >= 2 ? ri(ya+1, yb-1) : yb;
+      carveV(xa, ya, ym); carveH(ym, xa, xb); carveV(xb, ym, yb);
+    }
+  });
+
   G.map = map; G.seen = seen; G.vis = vis; G.mobs = []; G.things = [];
+  // 人在链的一端，阶梯的占位在另一端（清空后阶梯会改写到最后一只怪倒下的地方）
   P.x = rooms[0].cx; P.y = rooms[0].cy;
-  const last = rooms[rooms.length-1];
-  G.stair = {x:last.cx, y:last.cy};
+  const tail = rooms[chain.length - 1];
+  G.stair = {x:tail.cx, y:tail.cy};
 
   /* ===== 能放东西的格子 =====
      怪、泉、箱、坛、商、金币都从这里取位置。规矩：**别堵路**。
@@ -172,14 +229,51 @@ function genFloor(){
     else if(nextToCorridor(x, y)) doors.push({x:x, y:y});
     else spots.push({x:x, y:y});
   }
+  /* 连通性守卫：怪和物件全都当成墙。一层现在站着十来只怪，光挑「房间内部」已经不够 ——
+     四只怪在 4 宽的屋里排成一行就把屋子切两半了。每放一个先试着把它当墙做一次 flood fill，
+     剩下的地板必须仍然从脚下连成一片，不成就换个位置。（改生成逻辑后的回归也是这一条。）*/
+  const blocked = [];
+  for(let y=0;y<H;y++) blocked.push(new Array(W).fill(false));
+  function freeLeft(){
+    let n = 0;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(map[y][x] === 1 && !blocked[y][x]) n++;
+    return n;
+  }
+  function reachFrom(sx, sy){
+    const hit = [];
+    for(let y=0;y<H;y++) hit.push(new Array(W).fill(false));
+    const q = [{x:sx, y:sy}];
+    hit[sy][sx] = true;
+    let n = 1, head = 0;
+    while(head < q.length){
+      const c = q[head++];
+      for(let i=0;i<4;i++){
+        const nx = c.x + D4[i][0], ny = c.y + D4[i][1];
+        if(nx<0 || ny<0 || nx>=W || ny>=H) continue;
+        if(map[ny][nx] !== 1 || blocked[ny][nx] || hit[ny][nx]) continue;
+        hit[ny][nx] = true; n++; q.push({x:nx, y:ny});
+      }
+    }
+    return n;
+  }
   function take(){
-    const src = spots.length ? spots : (doors.length ? doors : rest);
-    return src.length ? src.splice(Math.floor(Math.random()*src.length),1)[0] : null;
+    const tiers = [spots, doors, rest];
+    for(let t=0;t<tiers.length;t++){
+      const src = tiers[t];
+      while(src.length){
+        const sp = src.splice(Math.floor(Math.random()*src.length),1)[0];
+        blocked[sp.y][sp.x] = true;
+        if(reachFrom(P.x, P.y) === freeLeft()) return sp;
+        blocked[sp.y][sp.x] = false;      // 这一格会把路切断，丢掉换一个
+      }
+    }
+    return null;
   }
 
   const pool = FOES.filter(function(f){ return f.from <= G.floor; });
   const gate = (G.floor === FLOORS) || (G.floor % 10 === 0);
-  const n = gate ? CHAPTER.mobsPerFloor - 1 : CHAPTER.mobsPerFloor;
+  const mp = CHAPTER.mobsPerFloor;
+  const n = (typeof mp === "number" ? mp : ri(mp.min, mp.max)) - (gate ? 1 : 0);
   for(let i=0;i<n;i++){
     const sp = take(); if(!sp) break;
     G.mobs.push(makeFoe(pick(pool), sp.x, sp.y));
@@ -191,7 +285,7 @@ function genFloor(){
     const sp = take();
     if(sp) G.mobs.push(makeFoe(GATEKEEPER, sp.x, sp.y));   // 每 10 层的守门人
   }
-  for(let i=0, k=ri(3,4); i<k; i++){
+  for(let i=0, k=ri(7,10); i<k; i++){
     const sp = take(); if(!sp) break;
     G.things.push({x:sp.x, y:sp.y, kind:"gold", amt: ri(2,6) + G.floor});
   }
@@ -434,16 +528,20 @@ function cancelWalk(){
   if(G) G.goal = null;
   if(walkTimer){ clearTimeout(walkTimer); walkTimer = null; }
 }
-/* 自动寻路会绕开的东西：泉 / 坛 / 箱 / 商 —— 踩上去就弹窗，是「互动」不是「路过」。
-   金币不算，路过顺手捡了正好。点它们本身当然还是走得过去（终点不受这条限制）。*/
+/* 自动寻路会绕开的东西：泉 / 坛 / 箱 / 商 / **楼梯** —— 踩上去就弹窗，是「互动」不是「路过」。
+   金币不算，路过顺手捡了正好。点它们本身当然还是走得过去（终点不受这条限制）。
+   ⚠️ 楼梯不在 G.things 里（它是 G.stair），所以单开一条分支；而且只有**清空之后**它才存在，
+   清空之前那一格只是个看不见的占位，踩上去什么都不会发生，没必要绕。*/
 function isStop(x, y){
+  if(G.stair && G.mobs.length === 0 && x === G.stair.x && y === G.stair.y) return true;
   const th = thingAt(x, y);
   return !!(th && th.kind !== "gold");
 }
-/* loose = true 时不绕，用来兜底：万一互动物件真把唯一的路堵死了，还能走过去 */
-function findPath(tx, ty, loose){
+/* loose = true 时不绕，用来兜底：万一互动物件真把唯一的路堵死了，还能走过去
+   blind = true 时不管有没有探索过 —— 给取景框上那个「寻路」按钮用的，它会把人领进没走过的走廊 */
+function findPath(tx, ty, loose, blind){
   if(tx === P.x && ty === P.y) return null;
-  if(!G.seen[ty][tx] || G.map[ty][tx] === 0) return null;
+  if((!blind && !G.seen[ty][tx]) || G.map[ty][tx] === 0) return null;
   const key = function(x,y){ return y*W + x; };
   const prev = {}, done = {};
   done[key(P.x,P.y)] = true;
@@ -456,7 +554,7 @@ function findPath(tx, ty, loose){
     for(let i=0;i<4;i++){
       const nx = c.x + DIRS[i][0], ny = c.y + DIRS[i][1];
       if(nx<0 || ny<0 || nx>=W || ny>=H) continue;
-      if(!G.seen[ny][nx] || G.map[ny][nx] === 0) continue;
+      if((!blind && !G.seen[ny][nx]) || G.map[ny][nx] === 0) continue;
       const k = key(nx,ny);
       if(done[k]) continue;
       if(!(nx === tx && ny === ty)){
@@ -479,10 +577,10 @@ function findPath(tx, ty, loose){
   }
   return path.length ? path : null;
 }
-function goTo(tx, ty){
+function goTo(tx, ty, blind){
   if(G.paused || G.over) return;
   // 先按「绕开互动物件」找一条；真绕不过去（被堵死）再退回不绕的老办法
-  const path = findPath(tx, ty) || findPath(tx, ty, true);
+  const path = findPath(tx, ty, false, blind) || findPath(tx, ty, true, blind);
   if(!path){
     if(G.seen[ty][tx] && G.map[ty][tx] === 1) say("那边过不去 —— 有东西挡着路。", "sys");
     return;
@@ -492,6 +590,29 @@ function goTo(tx, ty){
   G.goal = {x:tx, y:ty};
   render();
   stepWalk();
+}
+/* ===== 取景框左下角的「寻路」 =====
+   一层现在有十来只怪、七八堆金币，地图也大了一圈，来回找剩下那一只很烦。
+   优先级：**还有怪 → 最近的怪；没怪了 → 最近的金币；金币也没了 → 楼梯**。
+   泉/箱/坛/商一概不去 —— 它们是玩家自己决定要不要进的（跟自动寻路绕开它们是同一条规矩）。
+   找「最近」按真实脚程算（BFS 的步数），不是直线距离；而且**不管探没探索过**，
+   不然刚进一层雾还没开，按了等于没按。*/
+function nearestBy(list){
+  let best = null, bl = Infinity;
+  for(let i=0;i<list.length;i++){
+    const t = list[i];
+    const p = findPath(t.x, t.y, false, true) || findPath(t.x, t.y, true, true);
+    if(p && p.length < bl){ bl = p.length; best = t; }
+  }
+  return best;
+}
+function autoPath(){
+  if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return;
+  let t = nearestBy(G.mobs);
+  if(!t) t = nearestBy(G.things.filter(function(th){ return th.kind === "gold"; }));
+  if(!t && G.mobs.length === 0 && G.stair) t = G.stair;
+  if(!t || (t.x === P.x && t.y === P.y)) return;
+  goTo(t.x, t.y, true);
 }
 function stepWalk(){
   walkTimer = null;
@@ -1946,7 +2067,9 @@ function enterRoute(id){
 
    所以续玩档存的是「**刚踏进这一层时**的样子」：中途关页面 == 退回本层开头重来，
    这一层里打的怪、捡的金币、拿的遗物都不算数。 */
-var RUN_KEY = "youxu.run.v1", RUN_V = 3;   // v2：地图改成 15×21，旧档行宽对不上，作废
+var RUN_KEY = "youxu.run.v1", RUN_V = 4;   // v2：地图改成 15×21；v4：改成 33×25 的房间图，
+                                           // 存的是压成字符串的地图，行宽一变旧档就对不上，只能作废。
+                                           // 作废的只有「没走完的那一趟」，宝石/熟练度/图鉴/统计都不受影响。
 let booting = false;      // 为真时 commit 空转（整档覆盖后重载的那一小会儿）
 
 /* 四个永久键一起写。导入存档也走这一条（那是存档管理，不动续玩档）。 */
@@ -2611,6 +2734,11 @@ $("btnAbandon").addEventListener("click", function(){
   b.textContent = "放弃";
   b.classList.remove("armed");
   giveUpRun();       // 直接结算：算分、发宝石、弹结算窗
+});
+/* 取景框左下角的「寻路」：怪 → 金币 → 楼梯，就近走一趟 */
+$("btnPathfind").addEventListener("click", function(){
+  if(!gate()) return;
+  autoPath();
 });
 
 /* ---- 导出码 ---- */
