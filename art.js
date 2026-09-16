@@ -108,18 +108,12 @@ var ALTAR =
 '</svg>';
 
 /* ===== 地图上的阶梯 =====
-   四级往下走的台阶，逐级后退、逐级变暗。原来是一个 ▼。
-   ⚠️ 别画成左右对称逐级收窄的 —— 试过，那是个金字塔（或者说圣诞树），不是楼梯。
-   台阶得往**一个方向**退，才读得出是在往下走。*/
+   就是原来那个倒三角（用户 2026-09 要回退）。画成 SVG 而不是 ▼ 字符，
+   只为跟地图上别的东西走同一条路（`art` 收口、尺寸不看字体），**看到的还是那个倒三角**。
+   中间试过画成四级往下退的台阶，用户不要，别再改回去。*/
 var STAIR =
 '<svg viewBox="0 0 20 20" aria-hidden="true">' +
- '<rect x="2.8" y="4.4" width="14.4" height="3.3" rx=".4" fill="currentColor"/>' +
- '<rect x="2.8" y="8.1" width="11" height="3.3" rx=".4" fill="currentColor"/>' +
- '<rect x="2.8" y="8.1" width="11" height="3.3" rx=".4" fill="#000" opacity=".16"/>' +
- '<rect x="2.8" y="11.8" width="7.6" height="3.3" rx=".4" fill="currentColor"/>' +
- '<rect x="2.8" y="11.8" width="7.6" height="3.3" rx=".4" fill="#000" opacity=".32"/>' +
- '<rect x="2.8" y="15.5" width="4.2" height="2.5" rx=".3" fill="currentColor"/>' +
- '<rect x="2.8" y="15.5" width="4.2" height="2.5" rx=".3" fill="#000" opacity=".48"/>' +
+ '<path d="M4.4 5.8h11.2L10 15.6z" fill="currentColor"/>' +
 '</svg>';
 
 /* ===== 地图上的怪 =====
@@ -371,6 +365,69 @@ ghost:'<svg viewBox="0 0 100 100">' +
  '<circle cx="39" cy="46" r="2.2" fill="#BFE3EA" opacity=".85"/>' +
  '<circle cx="61" cy="46" r="2.2" fill="#BFE3EA" opacity=".85"/>' +
  '<ellipse cx="50" cy="63" rx="5.5" ry="8" fill="#2A2620" opacity=".62"/>' +
+'</svg>',
+
+/* 锈钟怪：一口吊着的铜钟成了精，钟裙是它的下摆，钟舌在底下晃。身上带锈斑。
+   不画地影 —— 它是吊着的，脚下没东西。 */
+clock:'<svg viewBox="0 0 100 100">' +
+ '<circle cx="50" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="5"/>' + /* 吊环 */
+ '<path d="M22 74c0-27 8-48 28-48s28 21 28 48z" fill="currentColor"/>' +              /* 钟体 */
+ '<path d="M22 74c0-24 6-43 18-47-7 10-10 26-10 47z" fill="#fff" opacity=".2"/>' +
+ '<path d="M78 74c0-24-6-43-18-47 7 10 10 26 10 47z" fill="#000" opacity=".16"/>' +
+ '<circle cx="67" cy="50" r="5" fill="#000" opacity=".14"/>' +                        /* 锈斑 */
+ '<circle cx="35" cy="64" r="3.5" fill="#000" opacity=".12"/>' +
+ '<path d="M58 34c4 2 5 5 4 8-3-2-5-4-4-8z" fill="#000" opacity=".14"/>' +
+ '<ellipse cx="40" cy="53" rx="7" ry="8" fill="#FBF6E7"/>' +
+ '<circle cx="41" cy="55" r="3.8" fill="#2A2620"/>' +
+ '<ellipse cx="60" cy="53" rx="7" ry="8" fill="#FBF6E7"/>' +
+ '<circle cx="61" cy="55" r="3.8" fill="#2A2620"/>' +
+ /* 眉压着眼、嘴角朝下。⚠️ 没有这两笔它就是个笑脸铃铛，一点都不像怪 */
+ '<path d="M31 41 46 47M69 41 54 47" stroke="#2A2620" stroke-width="4.5" opacity=".55" stroke-linecap="round"/>' +
+ '<path d="M39 70q11-8 22 0" stroke="#2A2620" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".7"/>' +
+ '<path d="M17 74h66v8a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5z" fill="currentColor"/>' +      /* 钟裙 */
+ '<path d="M17 80h66v2a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5z" fill="#000" opacity=".2"/>' +
+ '<rect x="47" y="87" width="6" height="6" fill="currentColor"/>' +                   /* 钟舌 */
+ '<circle cx="50" cy="95" r="5.5" fill="currentColor"/>' +
+'</svg>',
+
+/* 回廊游影：比幽魂凶。尖顶、下摆撕成七条、两道金色斜缝当眼、左右甩出影翼。 */
+warden2:'<svg viewBox="0 0 100 100">' +
+ /* 影翼：两片破布。⚠️ 别画成细斜条，那看着是两根拐棍 */
+ '<path d="M30 46 6 76c6 2 12 0 17-5 5-5 8-13 9-22z" fill="currentColor" opacity=".6"/>' +
+ '<path d="M70 46 94 76c-6 2-12 0-17-5-5-5-8-13-9-22z" fill="currentColor" opacity=".6"/>' +
+ '<path d="M50 4c15 9 24 27 25 47 1 15 1 29-1 41l-6-10-6 10-6-10-6 10-6-10-6 10-6-10-6 10c-2-12-2-26-1-41C26 31 35 13 50 4z" fill="currentColor" opacity=".92"/>' +
+ '<path d="M50 4c15 9 24 27 25 47 1 15 1 29-1 41l-6-10-6 10-6-10-6 10V4z" fill="#000" opacity=".13"/>' +
+ '<ellipse cx="41" cy="27" rx="7" ry="12" fill="#fff" opacity=".18" transform="rotate(18 41 27)"/>' +
+ '<path d="M38 44 48 50M62 44 52 50" stroke="#E0A83A" stroke-width="5" stroke-linecap="round"/>' +
+'</svg>',
+
+/* 吞惧者：一张吞东西的大嘴，上面顶着三只不对称的血眼。 */
+dread:'<svg viewBox="0 0 100 100">' +
+ '<circle cx="50" cy="50" r="36" fill="currentColor"/>' +
+ '<path d="M50 14c20 0 36 16 36 36S70 86 50 86c14-8 22-21 22-36S64 22 50 14z" fill="#000" opacity=".13"/>' +
+ '<ellipse cx="34" cy="30" rx="11" ry="7" fill="#fff" opacity=".22" transform="rotate(-25 34 30)"/>' +
+ '<path d="M16 46h68c0 19-15 34-34 34S16 65 16 46z" fill="#FBF6E7"/>' +               /* 张开的口 */
+ '<path d="M26 58c4 13 13 22 24 22s20-9 24-22z" fill="#2A2620" opacity=".55"/>' +     /* 口里的深处 */
+ '<path d="M18 46l4 9 4-9zM30 46l4.5 10 4.5-10zM43 46l4.5 10 4.5-10zM56 46l4.5 10 4.5-10zM69 46l4 9 4-9z" fill="currentColor"/>' + /* 上牙 */
+ '<path d="M31 70.5 34.5 62l3.5 9.5zM44 76l3.5-9 3.5 9zM58 71.5 61.5 62l3.5 8.5z" fill="currentColor"/>' + /* 下牙 */
+ '<circle cx="34" cy="32" r="4.5" fill="#FBF6E7"/><circle cx="34.5" cy="33" r="2.4" fill="#D8412F"/>' +
+ '<circle cx="52" cy="26" r="3.6" fill="#FBF6E7"/><circle cx="52.5" cy="27" r="2" fill="#D8412F"/>' +
+ '<circle cx="66" cy="33" r="3" fill="#FBF6E7"/><circle cx="66.5" cy="34" r="1.7" fill="#D8412F"/>' +
+'</svg>',
+
+/* 碎色棱：一块菱形晶体，左右棱面一明一暗，核心是只金瞳，周围飘着崩下来的碎片。 */
+prism:'<svg viewBox="0 0 100 100">' +
+ '<path d="M12 26 20 34 12 42 4 34z" fill="currentColor" opacity=".6"/>' +            /* 崩下来的碎片 */
+ '<path d="M88 60 95 68 88 76 81 68z" fill="currentColor" opacity=".55"/>' +
+ '<path d="M77 17 83 23 77 29 71 23z" fill="currentColor" opacity=".45"/>' +
+ '<path d="M50 6 80 50 50 94 20 50z" fill="currentColor"/>' +
+ '<path d="M50 6 20 50 50 94z" fill="#fff" opacity=".16"/>' +                         /* 左棱面亮 */
+ '<path d="M50 6 80 50 50 94z" fill="#000" opacity=".15"/>' +                         /* 右棱面暗 */
+ '<path d="M20 50h60" stroke="#fff" stroke-width="1.6" opacity=".28"/>' +
+ '<path d="M50 6 38 50M50 94 62 50" stroke="#fff" stroke-width="1.2" opacity=".2"/>' + /* 裂纹 */
+ '<path d="M50 33 62.5 50 50 67 37.5 50z" fill="#FBF6E7"/>' +                         /* 核心 */
+ '<path d="M50 39 57.5 50 50 61 42.5 50z" fill="#E0A83A"/>' +
+ '<path d="M50 44.5 53.5 50 50 55.5 46.5 50z" fill="#2A2620"/>' +                     /* 瞳孔 */
 '</svg>',
 
 /* 石廊守卫（BOSS）：双角头盔 + T 形面罩 + 肩甲 + 披风，右手一柄重斧。

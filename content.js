@@ -51,10 +51,10 @@ var FOES = [
  {id:"statue", g:"像", name:"守门石像",   art:"statue", cat:"thing",  hp:16, dmg:2, armor:2, xp:7, from:9},
  {id:"ghost",  g:"魂", name:"低语幽魂",   art:"ghost",  cat:"adj",    hp:12, dmg:4, armor:0, xp:7, from:12},
  /* 下面四只配合新词类（时间/地点/情绪/颜色），深层才出 */
- {id:"clock",  g:"钟", name:"锈钟怪",     art:"statue", cat:"time",   hp:20, dmg:4, armor:1, xp:9,  from:16},
- {id:"warden2",g:"影", name:"回廊游影",   art:"ghost",  cat:"place",  hp:22, dmg:5, armor:0, xp:10, from:22},
- {id:"dread",  g:"惧", name:"吞惧者",     art:"slime",  cat:"feel",   hp:26, dmg:5, armor:1, xp:12, from:30},
- {id:"prism",  g:"棱", name:"碎色棱",     art:"spider", cat:"color",  hp:24, dmg:6, armor:2, xp:13, from:38}
+ {id:"clock",  g:"钟", name:"锈钟怪",     art:"clock", cat:"time",   hp:20, dmg:4, armor:1, xp:9,  from:16},
+ {id:"warden2",g:"影", name:"回廊游影",   art:"warden2",  cat:"place",  hp:22, dmg:5, armor:0, xp:10, from:22},
+ {id:"dread",  g:"惧", name:"吞惧者",     art:"dread",  cat:"feel",   hp:26, dmg:5, armor:1, xp:12, from:30},
+ {id:"prism",  g:"棱", name:"碎色棱",     art:"prism", cat:"color",  hp:24, dmg:6, armor:2, xp:13, from:38}
 ];
 /* 章末 Boss（第 50 层） */
 var BOSS = {id:"warden", g:"卫", name:"石廊守卫", art:"warden", cat:"all",
