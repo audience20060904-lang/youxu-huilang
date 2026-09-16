@@ -68,16 +68,33 @@
 | `youxu.opt.v1` | 设置项（发音、自动下一题） | 永久 |
 | `youxu.run.v1` | 没走完的那一趟（地图压成字符串，怪只存 defId + 状态） | 死透 / 通关 / 放弃就删 |
 
-**存和读都是全自动的**：
-- 存：走路、战斗、拿遗物、买卖、下楼各自都存一次，另外 `pagehide` / `freeze` / `blur` /
-  切后台各补一次，再加一条 `setInterval(saveRun, 15000)` 兜底（前两个事件在某些浏览器上不发）。
+**读是自动的，存只有三下**（用户 2026-09 定的，别再加别的存档时机）：
 - 读：`boot()` 里 `readRun()` 有档就直接 `resumeRun()`，**不弹窗不询问**。
   以前那个「继续 / 重新开始」弹层（`veilResume`）已经删掉了，别再加回来。
+- 存：**只有这三个时刻**，全部走 `game.js` 的 `commit(keepRun)`：
+  1. **进入关卡** —— `enterRoute` → `newRun` → `nextFloor` 里那一次 `commit(true)`
+  2. **下一层** —— `nextFloor()` 末尾 `commit(true)`
+  3. **回到主城** —— `goTown()` 的 `commit(false)`；死亡/通关的结算 `endRun()` 也算这一档（也是 `commit(false)`）
+- 所以续玩档存的是「**刚踏进这一层时**的样子」：中途关页面 = 退回本层开头重来，
+  这一层里打的怪、捡的金币、拿的遗物都不算数。`resumeRun` 的文案已经这么写了。
+- 以前挂在这儿的 `pagehide` / `freeze` / `blur` / `visibilitychange` 四个监听和
+  `setInterval(saveRun, 15000)` **全删了**，走路/战斗/拿遗物/买卖里的 `saveRun()` 也全删了。
+  别再加回来。
+
+代码上的规矩：
+- `LEX`（熟练度）、`CODEX`（图鉴）、`MET`（统计）、`TOWN`（存款）四份**常驻内存**，
+  游戏过程中只改内存对象，落盘交给 `commit()`。别在别处直接 `put(某个_KEY, …)`。
+- `commitPerm()` 只写这四个永久键；`commit(keepRun)` = `commitPerm()` + 写/删续玩档。
+  导入存档走 `commitPerm()`（它不是游戏里的存档点，是存档管理，且不该动层存档）。
+- `meta()` 返回的就是内存里的 `MET`，改完等 `commit()`，不要再单独写 localStorage。
+- 设置项 `OPT` 是例外，改了立刻 `saveOpt()` 落盘 —— 它不是游戏进度。
+- 「清除全部存档」删完 localStorage **必须同时把内存里的 LEX/CODEX/MET/TOWN 清空**，
+  否则紧接着的 `goTown()` 会把旧数据原样写回去。
 - 首次打开**不再自动弹玩法说明**（用户后面要做新手教程关卡替代它）。
   `veilHelp` 本身留着，设置页的「玩法说明」按钮还能打开。
-- 所有落盘都走 `game.js` 的 `put()`：`util.js` 的 `save()` 现在返回布尔，
+- 每一次实际写 localStorage 都过 `game.js` 的 `put()`：`util.js` 的 `save()` 现在返回布尔，
   写不进去（无痕模式、存储被禁、配额满）会顶到页面顶部的报错横幅上（`window.showErr`），
-  不再静默丢档。**新增落盘点请用 `put()`，别直接用 `save()`。**
+  不再静默丢档。**别直接用 `save()`；也别直接用 `put()` —— 走 `commit()`。**
 
 搬家有两条路，都在设置页：
 
@@ -90,8 +107,9 @@
 合并规矩（`mergeData`）：熟练度取高的、图鉴取并集、统计取大值、**存款取大值不相加**（免得来回导两次就富了）、
 续玩档只在本地没有在进行的探索时才接过来。
 
-⚠️ **以后新增任何 localStorage 键，必须同时改四个地方**：`snapshot()`（导出）、`overwriteAll()`（覆盖）、
-`mergeData()`（合并）、设置页「清除全部存档」的键列表。漏了就会出现「导出了但没带过去」的静默 bug。
+⚠️ **以后新增任何 localStorage 键，必须同时改五个地方**：`commit()` / `commitPerm()`（落盘）、
+`snapshot()`（导出）、`overwriteAll()`（覆盖）、`mergeData()`（合并）、设置页「清除全部存档」的键列表。
+漏了就会出现「导出了但没带过去」的静默 bug。
 
 ## 部署机制
 

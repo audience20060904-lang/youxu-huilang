@@ -158,7 +158,7 @@
       <div class="panel">
         <div class="phead">存档 Save</div>
         <div class="ledger" id="saveInfo"></div>
-        <p class="note" id="saveState">本局进度会自动保存。</p>
+        <p class="note" id="saveState">打开网页自动读档；存档只在进入关卡、下一层、回到主城时写。</p>
         <div class="rowb">
           <button class="btn primary" id="btnResumeHere" type="button" hidden>继续上次探索</button>
           <button class="btn" id="btnAbandon" type="button">放弃本次探索，回主城</button>
@@ -389,7 +389,8 @@
         <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> 献 5 点血换一件遗物；
           <span style="color:var(--torch)">箱</span> 拼对一个词才能开，<b>拼错就永久锁死</b>；
           <span style="color:var(--frost)">商</span> 用洞里的金币买东西。</li>
-        <li><b>存档</b>：进度<b>全自动保存</b>，关掉页面下次打开<b>自动接着这一层</b>，不会问你。打到一半关掉 <b>等同于撤退</b> —— 你掉的血和怪掉的血都算数，跑不掉。</li>
+        <li><b>存档</b>：<b>打开网页自动读档</b>，不会问你。存档点只有三个 —— <b>进入关卡、下一层、回到主城</b>。
+          所以一层打到一半关掉页面，下次是<b>从这一层的入口重来</b>：这一层里砍的怪、捡的金币、拿的遗物都不算数。</li>
         <li><b>主城</b>：你从<b>灰岩镇</b>出发，进洞窟选一条路下去。等级和遗物都是<b>进洞之后才有的</b>，只在这一趟里算数。</li>
         <li><b>倒下</b>：会被抬回镇上，<b>遗物全部丢在洞里</b>，等级也归零。但<b>金币带得回来</b>，存进镇上；词汇熟练度和图鉴也永远不会丢。想再下去，回洞窟重新选一条。</li>
       </ul>

@@ -21,7 +21,11 @@ function put(k, v){
   return false;
 }
 
+/* 三份永久数据都常驻内存，游戏过程中只改内存；落盘统一交给 commit()。
+   —— 存档点只有三个：进入关卡 / 下一层 / 回到主城。 */
 let LEX = load(LEX_KEY, {});
+let CODEX = load(CODEX_KEY, {});
+let MET = load(META_KEY, {best:0, runs:0, clears:0, t:0});
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
 let lastAct = 0, lockUntil = 0;
 var OPT_KEY = "youxu.opt.v1";
@@ -42,7 +46,7 @@ function newRun(){
         right:0, wrong:0, seenWords:[],
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:false, over:false };
-  clearRun();
+  // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
   say("石门在身后合上。走廊里只有火把的回声。", "sys");
@@ -92,7 +96,7 @@ function nextFloor(){
   const last = G.floor === FLOORS;
   say("—— " + CHAPTER.name + " 第 " + G.floor + " 层 ——", "crit");
   say(last ? "空气冷得发硬。这一层尽头有东西在等。" : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), last ? "hurt" : "sys");
-  saveRun();
+  commit(true);          // 存档点之二：下一层
 }
 function genFloor(){
   const map = [], seen = [], vis = [];
@@ -434,7 +438,7 @@ function stepWalk(){
   if(G.over){ cancelWalk(); return; }
   if(G.paused || G.floor !== floorBefore){ cancelWalk(); if(!G.paused){ fov(); render(); } return; }
   fov();
-  if(!walkPath.length){ cancelWalk(); saveRun(); }
+  if(!walkPath.length){ cancelWalk(); }
   render();
   if(walkPath && walkPath.length) walkTimer = setTimeout(stepWalk, 108);
 }
@@ -450,7 +454,7 @@ function tryMove(dx, dy, rep){
   P.x = nx; P.y = ny;
   const floorBefore = G.floor;
   onEnter();
-  if(!G.paused && !G.over && G.floor === floorBefore){ fov(); render(); saveRun(); }
+  if(!G.paused && !G.over && G.floor === floorBefore){ fov(); render(); }
 }
 function onEnter(){
   const th = thingAt(P.x, P.y);
@@ -808,8 +812,7 @@ function answer(btn, ok){
     }
     if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; note += " 薪火在胸口炸开 —— 你以 1 点生命站住了。"; }
   }
-  LEX[word.en] = rec;
-  put(LEX_KEY, LEX);
+  LEX[word.en] = rec;          // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   $("verdict").innerHTML = head +
     "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
@@ -820,7 +823,6 @@ function answer(btn, ok){
   say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn, ok ? "good" : "hurt");
   renderBattleBars();
   renderHud();
-  saveRun();
   $("btnFlee").hidden = true;
 
   if(m.hp <= 0){ setTimeout(function(){ finishBattle(true); }, 380); return; }
@@ -885,7 +887,6 @@ function flee(){
   say("你退开了半步。" + m.name + " 留在原地，伤口还在。", "sys");
   lockInput(260);
   render();
-  saveRun();
 }
 function gainXp(n){
   P.xp += n;
@@ -926,12 +927,12 @@ function resolveAltar(pay){
     say("你把手按在浅槽上。石台吸干了那一点血。", "hurt");
     grantRelic(rollRelic(), "石台吐出了");
     lockInput(200);
-    renderHud(); render(); saveRun();
+    renderHud(); render();
     return;
   }
   say("你收回手，绕开了石台。", "sys");
   lockInput(200);
-  renderHud(); render(); saveRun();
+  renderHud(); render();
 }
 
 /* ---- 上锁宝箱：拼对开箱，拼错锁死 ---- */
@@ -1005,7 +1006,7 @@ function judgeChest(){
   rec.seen++;
   if(ok){ rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0; }
   else { rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1; addHaunt(w.en); }
-  LEX[w.en] = rec; put(LEX_KEY, LEX);
+  LEX[w.en] = rec;             // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
       ? "<span class=\"big ok\">咔哒 —— 开了</span>"
       : "<span class=\"big no\">锁咬死了</span>") +
@@ -1028,12 +1029,12 @@ function closeChest(){
     say("木箱开了，里面有 <b>" + g + "</b> 金币。", "good");
     grantRelic(rollRelic(), "箱底压着");
     lockInput(200);
-    renderHud(); render(); saveRun();
+    renderHud(); render();
     return;
   }
   say("锁彻底咬死了。这箱子谁也打不开了。", "hurt");
   lockInput(200);
-  renderHud(); render(); saveRun();
+  renderHud(); render();
 }
 
 /* ---- 游商：局内金币现在有地方花了 ---- */
@@ -1096,14 +1097,13 @@ function buyFrom(i){
   pendingRoom = th;             // 货架还开着，接着选
   renderShop();
   renderHud();
-  saveRun();
 }
 function closeShop(){
   pendingRoom = null;
   $("veilShop").hidden = true;
   G.paused = false;
   lockInput(200);
-  renderHud(); render(); saveRun();
+  renderHud(); render();
 }
 function removeThing(th){
   if(!th) return;
@@ -1154,7 +1154,7 @@ function sellRelic(id){
   P.relics.splice(i, 1);
   P.gold += g;
   say("你拆了 " + rc(r) + "，换成 <b>" + g + "</b> 金币。", "sys");
-  renderHud(); saveRun();
+  renderHud();
 }
 /* ---- 合成：3 件同品质 → 1 件更高品质（随机） ---- */
 function fuseRelics(rar){
@@ -1170,7 +1170,7 @@ function fuseRelics(rar){
   P.relics.push(got.id);
   noteRelicFound(got, "合成出");
   say("你把 " + FUSE_N + " 件" + RAR_CN[rar] + "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
-  renderHud(); saveRun();
+  renderHud();
 }
 /* 遗物名字上色 */
 function rc(r){ return "<span style=\"color:var(--q" + (r.r || 0) + ")\">" + r.n + "</span>"; }
@@ -1233,16 +1233,14 @@ function doSwap(dropId){
     P.gold += g;
     say("你没动手上的东西，" + ps.relic.n + " 折成了 <b>" + g + "</b> 金币。", "sys");
   }
-  renderHud(); render(); saveRun();
+  renderHud(); render();
   maybeRelic();
 }
 
 /* 跨局图鉴：记首次在第几层拿到、总共拿过几次 */
 function noteRelicFound(r, how){
-  const book = load(CODEX_KEY, {});
-  const first = !book[r.id];
-  book[r.id] = {depth: first ? G.floor : book[r.id].depth, times: (first ? 0 : book[r.id].times) + 1};
-  put(CODEX_KEY, book);
+  const first = !CODEX[r.id];
+  CODEX[r.id] = {depth: first ? G.floor : CODEX[r.id].depth, times: (first ? 0 : CODEX[r.id].times) + 1};
   if(first) say("—— 初次发现：" + r.n + " ——", "crit");
 }
 
@@ -1288,7 +1286,7 @@ function takeRelic(id){
   P.relics.push(id);
   noteRelicFound(r, "你拿起了");
   say("你拿起了 " + rc(r) + " —— " + r.pw + "。", "crit");
-  renderHud(); render(); saveRun();
+  renderHud(); render();
 }
 /* 清完一层就给一次；掉落弹窗结束后再触发，免得两个窗打架 */
 function maybeRelic(){
@@ -1373,7 +1371,7 @@ function dropHaunt(en){
    死亡 = 身上一切归零回镇上，**只有金币带得回来**（在 endRun 里结算）。 */
 var TOWN_KEY = "youxu.town.v1";
 var TOWN = load(TOWN_KEY, {gold:0});
-function saveTown(){ put(TOWN_KEY, TOWN); }
+/* TOWN 也常驻内存，改完等 commit() 落盘 */
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -1402,13 +1400,13 @@ function renderTown(){
 /* 回主城：身上的一切清空，重建一个空角色 */
 function goTown(){
   SCENE = "town";
-  clearRun();
   cancelWalk();
   B = null; pendingLoot = null; pendingRoom = null; chestQ = null; reopenShop = null; pendingSwap = null;
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
         right:0, wrong:0, seenWords:[],
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:true, over:true };
+  commit(false);       // 存档点之三：回到主城 —— 永久数据落盘，续玩档删掉
   hideAll();
   showScene();
   renderTown();
@@ -1439,23 +1437,44 @@ function enterRoute(id){
   $("veilCave").hidden = true;
   SCENE = "run";
   showScene();
-  newRun();
+  newRun();            // 存档点之一：进入关卡（落盘在 newRun → nextFloor 里）
   refreshSaveState();
 }
 
 /* ================= 存档 =================
-   分两层：
-   - 永久数据（词汇熟练度 / 图鉴 / 探索记录 / 设置）—— 一直都在存，跨局跨趟
-   - 续玩档 RUN_KEY —— 只存「这一趟」，死透或通关就删
+   规矩就一条：**读是自动的，存只有三下。**
 
-   续玩档只存地图层面的状态，**不存战斗**：血量和怪的伤口都已经存下了，
-   所以中途关页面 == 点「撤退」，玩家侧零新概念，也堵死「打不过就关页面」。 */
+   读：boot() 里有档就直接接着走，不弹窗不询问。
+   存：只有这三个时刻落盘，别的地方（走路、战斗、拿遗物、买卖、切后台、定时器）
+       一律不存 —— 以前那一堆兜底监听全删了，别再加回来。
+         1. 进入关卡（enterRoute → newRun → nextFloor）
+         2. 下一层（nextFloor）
+         3. 回到主城（goTown；死亡 / 通关的结算 endRun 也算这一档）
+   全部落盘走 commit()，一次把四个永久键 + 层存档一起写完。
+
+   所以续玩档存的是「**刚踏进这一层时**的样子」：中途关页面 == 退回本层开头重来，
+   这一层里打的怪、捡的金币、拿的遗物都不算数。 */
 var RUN_KEY = "youxu.run.v1", RUN_V = 3;   // v2：地图改成 15×21，旧档行宽对不上，作废
-let booting = false;      // 为真时 saveRun / clearRun 空转（整档覆盖后重载的那一小会儿）
+let booting = false;      // 为真时 commit 空转（整档覆盖后重载的那一小会儿）
+
+/* 四个永久键一起写。导入存档也走这一条（那是存档管理，不动续玩档）。 */
+function commitPerm(){
+  if(booting) return;
+  MET.t = Date.now();          // 存档信息卡拿它当「上次游玩」
+  put(LEX_KEY, LEX);
+  put(CODEX_KEY, CODEX);
+  put(META_KEY, MET);
+  put(TOWN_KEY, TOWN);
+}
+/* 三个存档点唯一的入口。keepRun=true 写这一层的快照，false 删掉续玩档（回镇上 / 这一趟结束）。 */
+function commit(keepRun){
+  if(booting) return;
+  commitPerm();
+  if(keepRun) writeRun(); else dropRun();
+}
 
 function packRow(row, f){ return row.map(f).join(""); }
-function saveRun(){
-  if(booting) return;
+function writeRun(){
   if(!P || !G || G.over || !G.map) return;
   try{
     put(RUN_KEY, {
@@ -1482,7 +1501,7 @@ function readRun(){
   if(!s.floor || s.floor < 1 || s.floor > FLOORS) return null;
   return s;
 }
-function clearRun(){ if(booting) return; try{ localStorage.removeItem(RUN_KEY); }catch(e){} }
+function dropRun(){ try{ localStorage.removeItem(RUN_KEY); }catch(e){} }
 function foeDef(id){
   if(id === BOSS.id) return BOSS;
   for(let i=0;i<FOES.length;i++) if(FOES[i].id === id) return FOES[i];
@@ -1512,27 +1531,24 @@ function resumeRun(s){
   hideAll();
   fov(); buildGrid(); render(); renderHud();
   say("—— " + CHAPTER.name + " 第 " + G.floor + " 层 ——", "crit");
-  say("你回到了刚才站的地方。伤口和战果都还在。", "sys");
+  say("你回到了踏进这一层时的样子 —— 存档存在每层的入口。", "sys");
   lockInput(320);
 }
 /* ================= 结算 ================= */
-function meta(){ return load(META_KEY, {best:0, runs:0, clears:0, t:0}); }
-/* 永久档每次落盘都盖个时间戳 —— 存档信息卡要拿它当「上次游玩」 */
-function saveMeta(M){ M.t = Date.now(); put(META_KEY, M); }
+/* 返回的就是内存里那一份，改完等 commit() 落盘，别单独写 localStorage */
+function meta(){ return MET; }
 function gameOver(){ endRun(false); }
 function chapterClear(){ endRun(true); }
 function endRun(win){
   G.over = true;
-  clearRun();          // 这一趟真的结束了，续玩档没意义了
   const M = meta();
   M.runs++;
   if(G.floor > M.best) M.best = Math.min(G.floor, FLOORS);
   if(win) M.clears++; else M.deaths = (M.deaths || 0) + 1;
-  saveMeta(M);
   // 装备和背包都留在洞里，只有金币能带回镇上
   const haul = P.gold;
   TOWN.gold += haul;
-  saveTown();
+  commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
   const total = P.right + P.wrong;
   const acc = total ? Math.round(P.right / total * 100) : 0;
   $("endEyebrow").textContent = win ? ("第" + CHAPTER.id + "章 · 通关") : "本次探索结束";
@@ -1583,7 +1599,7 @@ function openCodex(tab){
   const box = $("codexList");
   box.innerHTML = "";
   if(cTab === "leg"){
-    const book = load(CODEX_KEY, {});
+    const book = CODEX;
     $("codexTitle").textContent = "遗物 " + Object.keys(book).length + " / " + RELICS.length;
     RELICS.forEach(function(R){
       const rec = book[R.id], d = document.createElement("div");
@@ -1646,7 +1662,7 @@ function b64dec(s){
 }
 function makeCode(){
   return CODE_TAG + b64enc(JSON.stringify({
-    lex: LEX, codex: load(CODEX_KEY, {}), meta: meta()
+    lex: LEX, codex: CODEX, meta: meta()
   }));
 }
 function applyCode(txt){
@@ -1680,30 +1696,30 @@ function mergeData(o){
       better++;
     }
   }
-  put(LEX_KEY, LEX);
 
-  const book = load(CODEX_KEY, {});
   let legs = 0;
   for(const k in (o.codex || {})){
     const inc = o.codex[k];
     if(!inc) continue;
-    if(!book[k]){ book[k] = inc; legs++; }
-    else book[k] = {depth: Math.min(book[k].depth, inc.depth),
-                    times: Math.max(book[k].times, inc.times)};
+    if(!CODEX[k]){ CODEX[k] = inc; legs++; }
+    else CODEX[k] = {depth: Math.min(CODEX[k].depth, inc.depth),
+                     times: Math.max(CODEX[k].times, inc.times)};
   }
-  put(CODEX_KEY, book);
 
   const M = meta(), im = o.meta || {};
   M.best = Math.max(M.best||0, im.best||0);
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
-  saveMeta(M);
 
   // 镇上存款取多的那边，**不相加** —— 免得来回导两次就凭空富了
   const before = TOWN.gold || 0;
   TOWN.gold = Math.max(before, (o.town && o.town.gold) || 0);
-  saveTown();
+
+  /* 导入是玩家自己点的，就地写一次盘 —— 它不是游戏里的那三个存档点，而是存档管理本身；
+     不马上写的话玩家关掉页面会以为导入没生效。只写永久数据，
+     磁盘上那份层存档一个字节都不动（下面单独判断要不要接管）。 */
+  commitPerm();
 
   // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动
   let gotRun = false;
@@ -1724,11 +1740,12 @@ function mergeData(o){
 var FILE_TAG = "youxu-huilang", FILE_V = 1;
 let pendingFile = null;          // 已经读出来、等玩家点确认的那份存档
 
+/* 导出的是**内存里的现状**（永久数据），加上磁盘上那份层存档。
+   不在这里落盘 —— 存档点只有三个，导出不是其中之一。 */
 function snapshot(){
-  saveRun();                     // 人正在洞里就先落一次盘，免得导出的是上一步的
   return {
     game: FILE_TAG, v: FILE_V, app: "幽墟回廊", ch: CHAPTER.id, t: Date.now(),
-    lex: LEX, codex: load(CODEX_KEY, {}), meta: meta(),
+    lex: LEX, codex: CODEX, meta: meta(),
     town: TOWN, opt: OPT, run: load(RUN_KEY, null)
   };
 }
@@ -1821,7 +1838,7 @@ function takeFile(file){
 /* 整档覆盖：本地几个键全换掉，然后重载页面。
    重载最干净 —— 页面上到处是旧数字；重载完开局流程会自动接着文件里那一趟走。 */
 function overwriteAll(o){
-  booting = true;                  // 拦住 pagehide 里的 saveRun，别把刚导入的续玩档又盖回去
+  booting = true;                  // 重载前锁住 commit，别把刚导入的档又被内存里的旧数据盖回去
   put(LEX_KEY, o.lex || {});
   put(CODEX_KEY, o.codex || {});
   put(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
@@ -1910,7 +1927,10 @@ $("btnWipe").addEventListener("click", function(){
   [LEX_KEY, CODEX_KEY, META_KEY, TOWN_KEY, RUN_KEY].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
+  /* 内存里那几份也得一起清空 —— 不清的话下面 goTown() 的 commit 会把它们原样写回去 */
   LEX = {};
+  CODEX = {};
+  MET = {best:0, runs:0, clears:0, t:0};
   TOWN = {gold:0};
   b.textContent = "已清除";
   setTimeout(function(){ b.textContent = "清除全部存档"; }, 1500);
@@ -1932,13 +1952,14 @@ function refreshSaveState(){
   $("saveInfo").innerHTML = tally({
     // 时间取「续玩档写下的那一刻」，没有续玩档才退回永久档的时间戳
     t: (s && s.t) || 0,
-    lex: LEX, codex: load(CODEX_KEY, {}), meta: meta(), town: TOWN, run: s
+    lex: LEX, codex: CODEX, meta: meta(), town: TOWN, run: s
   });
   $("saveState").innerHTML = inRun
-    ? "你正在洞里。每走一步、每打完一架都会自动存 —— 关掉页面，下次打开<b>直接接着这一层</b>，不会再问你。"
+    ? ("你正在洞里。存档停在<b>第 " + (s ? s.floor : G.floor) + " 层的入口</b> —— " +
+       "游戏只在<b>进入关卡、下一层、回到主城</b>这三个时候存。关掉页面，下次打开自动从这一层开头接着走，不会问你。")
     : s
-      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "）。下次打开会自动接着走，也可以现在就继续。")
-      : "洞里的进度会自动保存，下次打开自动接着上次那一层。你现在在镇上，没有在进行的探索。";
+      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "）的入口。下次打开会自动接着走，也可以现在就继续。")
+      : "存档只在<b>进入关卡、下一层、回到主城</b>这三个时候写，下次打开自动读档。你现在在镇上，没有在进行的探索。";
   $("btnResumeHere").hidden = !(s && !inRun);
   $("btnAbandon").disabled = !s;
 }
@@ -1952,7 +1973,7 @@ $("btnChestLeave").addEventListener("click", function(){
   $("veilChest").hidden = true;
   G.paused = false;
   lockInput(200);
-  render(); saveRun();
+  render();
 });
 $("btnShopLeave").addEventListener("click", closeShop);
 $("shopList").addEventListener("click", function(ev){
@@ -2086,29 +2107,20 @@ $("btnOverwriteFile").addEventListener("click", function(){
 $("btnResumeHere").addEventListener("click", function(){
   const s = readRun();
   if(!s) { refreshSaveState(); return; }
-  SCENE = "run"; showScene(); resumeRun(s); saveRun();
+  SCENE = "run"; showScene(); resumeRun(s);
   refreshSaveState(); showView("viewAdv");
 });
 
-/* ---- 自动存档的兜底时机 ----
-   正常操作（走路、战斗、拿遗物、买卖、下楼）每一步都已经各自存过了，下面这几条是保险：
-   iOS Safari 杀后台标签页之前只给 pagehide 这一次机会，安卓 Chrome 冻结标签页发的是
-   freeze，而这两个事件都有可能不发 —— 所以再加一条定时的。 */
-window.addEventListener("pagehide", saveRun);
-window.addEventListener("freeze", saveRun);
-window.addEventListener("blur", saveRun);
-window.addEventListener("visibilitychange", function(){
-  if(document.visibilityState === "hidden") saveRun();
-});
-/* 15 秒一次。在镇上、局已结束或还没开局时 saveRun 自己会空转，不用另外判断。 */
-setInterval(saveRun, 15000);
+/* 这里以前挂着 pagehide / freeze / blur / visibilitychange 四个监听，外加一条
+   setInterval(saveRun, 15000)。现在存档点只有三个（进入关卡 / 下一层 / 回到主城），
+   全删了 —— 别再加回来。 */
 
 /* ================= 启动 =================
-   打开就自动接着上次那一层 —— 不问、不弹窗。存是自动的，读也该是自动的。
+   打开就自动接着上次存下的那一层 —— 不问、不弹窗。
    不想接着走的话，设置页有「放弃本次探索，回主城」。 */
 (function boot(){
   const s = readRun();
-  if(s){ SCENE = "run"; showScene(); resumeRun(s); saveRun(); return; }
+  if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
   goTown();
 })();
 refreshSaveState();
