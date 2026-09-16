@@ -76,6 +76,119 @@ var SHOP =
  '<path d="M2 9.4a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2 0z" fill="currentColor"/>' + /* 扇贝棚沿 */
 '</svg>';
 
+/* ===== 地图上的怪 =====
+   跟立绘不是一回事：格子只有二三十像素，**这里只有轮廓**——
+   没有地影、没有明暗、没有装饰，一个主形加一对眼睛，别再往里加细节，加了只会糊成一团。
+   区分靠的是外形差异（弓背 / 水滴 / 八条腿 / 方塔 / 吊钟 / 菱形…），不是靠内部花纹。
+   键是 `def.id`，跟 content.js 的 FOES / BOSS / GATEKEEPER 对齐；
+   找不到的 id 会自动退回原来那个汉字，所以加新怪不画图也不会开天窗。*/
+var MOB_ART = {
+
+/* 灰鼠：弓背、尖鼻朝左、圆耳、卷尾 */
+rat:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M15.4 13.4c2.4.4 3.4 1.6 2.9 2.9" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>' +
+ '<circle cx="6.6" cy="5.6" r="2.5" fill="currentColor"/>' +
+ '<path d="M2.4 12.4c.3-1.9 1.7-3.4 3.8-4.2C7.6 5.3 10.3 3.7 13 4.3c3.2.7 5.3 3.3 5.3 6.3 0 3.2-2.9 5.6-6.9 5.6-4.7 0-8.1-1.8-8.9-3.2-.2-.3-.2-.5-.1-.6z" fill="currentColor"/>' +
+ '<circle cx="6.3" cy="10.2" r=".95" fill="#fff" opacity=".9"/>' +
+'</svg>',
+
+/* 泥怪：水滴坐在地上摊开 */
+slime:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M4.6 16.4c-.7-3.5-.4-6.4.8-8.5C6.4 6.2 8 5.1 10 5.1s3.6 1.1 4.6 2.8c1.2 2.1 1.5 5 .8 8.5z" fill="currentColor"/>' +
+ '<ellipse cx="10" cy="16.4" rx="7.2" ry="1.5" fill="currentColor"/>' +
+ '<circle cx="8" cy="10.8" r="1.15" fill="#fff" opacity=".92"/>' +
+ '<circle cx="12" cy="10.8" r="1.15" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 长足蛛：六条腿就够撑出剪影了，八条在这个尺寸下会连成一片 */
+spider:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<g stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none">' +
+  '<path d="M6.8 10.4 2.9 7.4"/><path d="M6.6 12.8 2.3 13.4"/><path d="M7.6 14.8 5.2 17.6"/>' +
+  '<path d="M13.2 10.4 17.1 7.4"/><path d="M13.4 12.8 17.7 13.4"/><path d="M12.4 14.8 14.8 17.6"/></g>' +
+ '<ellipse cx="10" cy="12.6" rx="4.4" ry="4.1" fill="currentColor"/>' +
+ '<circle cx="10" cy="7.4" r="2.7" fill="currentColor"/>' +
+ '<circle cx="8.9" cy="6.9" r=".62" fill="#fff" opacity=".92"/>' +
+ '<circle cx="11.1" cy="6.9" r=".62" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 残骨兵：颅骨 + 分开的下颌 */
+bone:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M10 2.6c-3.5 0-5.8 2.5-5.8 5.6 0 1.9.9 3.4 2.1 4.4v1.3h7.4v-1.3c1.2-1 2.1-2.5 2.1-4.4 0-3.1-2.3-5.6-5.8-5.6z" fill="currentColor"/>' +
+ '<path d="M6.3 14.6h7.4v1.7c0 1-.8 1.8-1.8 1.8H8.1c-1 0-1.8-.8-1.8-1.8z" fill="currentColor"/>' +
+ '<circle cx="7.6" cy="8.2" r="1.75" fill="#fff" opacity=".92"/>' +
+ '<circle cx="12.4" cy="8.2" r="1.75" fill="#fff" opacity=".92"/>' +
+ '<path d="M10 10.5 8.9 12.5h2.2z" fill="#fff" opacity=".85"/>' +
+'</svg>',
+
+/* 守门石像：方头、宽身、一块底座 */
+statue:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<rect x="7.5" y="2.4" width="5" height="4.6" rx=".8" fill="currentColor"/>' +
+ '<path d="M6.2 7.4h7.6l1.3 8.2H4.9z" fill="currentColor"/>' +
+ '<rect x="3.4" y="15.6" width="13.2" height="2.4" rx=".5" fill="currentColor"/>' +
+ '<rect x="8.1" y="4.1" width="1.5" height="1.1" rx=".5" fill="#fff" opacity=".92"/>' +
+ '<rect x="10.4" y="4.1" width="1.5" height="1.1" rx=".5" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 低语幽魂：圆顶 + 撕开的下摆 + 张成 O 的嘴 */
+ghost:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M4.4 17.4V9.2a5.6 5.6 0 0 1 11.2 0v8.2l-1.9-1.7-1.9 1.7-1.8-1.7-1.8 1.7-1.9-1.7z" fill="currentColor"/>' +
+ '<circle cx="7.9" cy="9.2" r="1.25" fill="#fff" opacity=".92"/>' +
+ '<circle cx="12.1" cy="9.2" r="1.25" fill="#fff" opacity=".92"/>' +
+ '<ellipse cx="10" cy="12.9" rx="1" ry="1.5" fill="#fff" opacity=".8"/>' +
+'</svg>',
+
+/* 锈钟怪：吊钟，底下坠着钟舌 */
+clock:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<circle cx="10" cy="2.9" r="1.5" fill="none" stroke="currentColor" stroke-width="1.1"/>' +
+ '<path d="M5.1 14.8c0-4.7 1.5-8.6 4.9-8.6s4.9 3.9 4.9 8.6z" fill="currentColor"/>' +
+ '<rect x="3.7" y="14.6" width="12.6" height="1.8" rx=".7" fill="currentColor"/>' +
+ '<circle cx="10" cy="17.9" r="1.2" fill="currentColor"/>' +
+ '<circle cx="8.3" cy="11.2" r="1.05" fill="#fff" opacity=".92"/>' +
+ '<circle cx="11.7" cy="11.2" r="1.05" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 回廊游影：**尖顶**、更瘦、下摆撕得更碎，眼睛是两道斜缝。
+   ⚠️ 别画成圆顶 —— 圆顶配圆眼就是幽魂，两个在 20px 的格子里根本分不出来。*/
+warden2:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M10 2.2c2.7 1.7 4.3 4.6 4.5 8.1.2 2.7 0 5-.6 7.1l-1.4-2.1-1.3 2.1-1.2-2.1-1.2 2.1-1.4-2.1c-.6-2.1-.8-4.4-.6-7.1C5.7 6.8 7.3 3.9 10 2.2z" fill="currentColor"/>' +
+ '<path d="M7.9 10 9.5 10.9M12.1 10 10.5 10.9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".92"/>' +
+'</svg>',
+
+/* 吞惧者：一张咬开的大嘴 */
+dread:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<circle cx="10" cy="10.4" r="7.2" fill="currentColor"/>' +
+ '<path d="M4.2 9.6h11.6c0 3.3-2.6 5.8-5.8 5.8s-5.8-2.5-5.8-5.8z" fill="#fff" opacity=".9"/>' +
+ '<path d="M5.6 9.6 6.9 11.8 8.2 9.6zM9 9.6l1.3 2.4 1.3-2.4zM12.4 9.6l1.3 2.2 1.3-2.2z" fill="currentColor"/>' +
+ '<circle cx="7.4" cy="6.2" r=".95" fill="#fff" opacity=".92"/>' +
+ '<circle cx="12.6" cy="6.2" r=".95" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 碎色棱：一块菱形晶体，中间裂着一道 */
+prism:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M10 1.8 16.6 10 10 18.2 3.4 10z" fill="currentColor"/>' +
+ '<path d="M10 5.9 12.3 10 10 14.1 7.7 10z" fill="#fff" opacity=".9"/>' +
+ '<path d="M10 1.8v4.1M10 14.1v4.1" stroke="#fff" stroke-width=".9" opacity=".45"/>' +
+'</svg>',
+
+/* 石廊守卫（章末 Boss）：带角的头盔 + 肩 */
+warden:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M2.4 3.2c2.7.7 5 2.8 6.2 5.4l-1.2 1C6.2 6.9 4.4 5 2.4 3.2z" fill="currentColor"/>' +
+ '<path d="M17.6 3.2c-2.7.7-5 2.8-6.2 5.4l1.2 1c1.2-2.7 3-4.6 5-6.4z" fill="currentColor"/>' +
+ '<path d="M10 4.1c-3.1 0-5.2 2.3-5.2 5.2 0 2 .9 3.6 2.3 4.6v1.5h5.8v-1.5c1.4-1 2.3-2.6 2.3-4.6 0-2.9-2.1-5.2-5.2-5.2z" fill="currentColor"/>' +
+ '<path d="M5.8 15.4h8.4l1 2.6H4.8z" fill="currentColor"/>' +
+ '<circle cx="8.2" cy="9.3" r="1.15" fill="#fff" opacity=".92"/>' +
+ '<circle cx="11.8" cy="9.3" r="1.15" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 层间守者：一道堵在路上的拱门，门缝里盯着一只眼 */
+gate:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M3.6 17.8V8.8a6.4 6.4 0 0 1 12.8 0v9z" fill="currentColor"/>' +
+ '<path d="M10 3.1v14.7" stroke="#fff" stroke-width=".9" opacity=".5"/>' +
+ '<circle cx="10" cy="9.6" r="2.1" fill="#fff" opacity=".9"/>' +
+ '<circle cx="10" cy="9.6" r=".95" fill="currentColor"/>' +
+'</svg>'
+};
+
 /* ===== 战斗立绘 =====
    每只都是：地影 → 远侧肢体 → 主体 → 明暗 → 五官 → 高光。
    明暗块的坐标是照着主体轮廓手算的，别随手挪主体不改明暗，会漏色。*/

@@ -329,6 +329,7 @@ function render(){
     const base = isWall ? "wall" : "floor";
     let glyph = isWall ? "" : "·";
     let content = isWall ? "" : "dot";
+    let art = null;              // 这一格画 SVG 而不是字符时，放要画的那张
     /* 阶梯只在这一层清空之后才画。清空前地图上根本没有 ▼ ——
        它会在最后一只怪倒下的那一格出现（见 closeBattleWin）。
        G.stair 在清空前只是个占位，别让它以「上锁的楼梯」露脸。 */
@@ -337,24 +338,26 @@ function render(){
     }
     const th = thingAt(x,y);
     if(th){
-      if(th.kind === "gold"){ glyph = "◎"; content = "gold"; }
-      else if(th.kind === "feat"){ glyph = th.what; content = "feat"; }
+      if(th.kind === "gold"){ content = "gold"; art = COIN; }
+      else if(th.kind === "feat"){ content = "feat"; art = SPRING; }
       else if(th.kind === "altar"){ glyph = "坛"; content = "altar"; }
       else if(th.kind === "chest"){ glyph = "箱"; content = "chest"; }
-      else if(th.kind === "shop"){ glyph = "商"; content = "shop"; }
+      else if(th.kind === "shop"){ content = "shop"; art = SHOP; }
     }
     const mo = mobAt(x,y);
-    if(mo && (visible || mo.seen)){ glyph = mo.g; content = "mob" + (mo.boss ? " boss" : ""); }
+    if(mo && (visible || mo.seen)){
+      content = "mob" + (mo.boss ? " boss" : "");
+      // 没画图的怪退回原来那个汉字，加新怪忘了配图也不会开天窗
+      art = MOB_ART[mo.def && mo.def.id] || null;
+      glyph = art ? "" : mo.g;
+    }
     if(x === P.x && y === P.y){
       c.innerHTML = HERO;
       c.className = "c floor you walkable" + (isGoal ? " goal" : "");
       continue;
     }
-    // 金币、泉、商摊是画出来的，别的（坛/箱/阶梯/怪）还是一个字符
-    if(content === "gold") c.innerHTML = COIN;
-    else if(content === "feat") c.innerHTML = SPRING;
-    else if(content === "shop") c.innerHTML = SHOP;
-    else c.textContent = glyph;
+    // 人、怪、金币、泉、商摊都是画出来的；坛/箱/阶梯/地板点还是一个字符
+    if(art) c.innerHTML = art; else c.textContent = glyph;
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
   }
