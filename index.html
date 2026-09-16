@@ -127,6 +127,8 @@
             <div class="xpbar"><div class="fill" id="xpFill"></div></div>
           </div>
         </div>
+        <!-- 放弃：压在取景框左下角。两步确认，点完直接结算 -->
+        <button class="giveup" id="btnAbandon" type="button">放弃</button>
       </div>
 
       <!-- 地图下面的一行文字按钮 -->
@@ -183,7 +185,6 @@
         <p class="note" id="saveState">打开网页自动读档；存档只在进入关卡、下一层、回到主城时写。</p>
         <div class="rowb">
           <button class="btn primary" id="btnResumeHere" type="button" hidden>继续上次探索</button>
-          <button class="btn" id="btnAbandon" type="button">放弃本次探索，回主城</button>
         </div>
       </div>
       <!-- 本地存档文件 / 跨设备导出码：用户要求先藏起来（代码原样留着，去掉 hidden 就回来） -->

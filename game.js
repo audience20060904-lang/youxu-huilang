@@ -102,6 +102,7 @@ function nextFloor(){
     if(hasRelic("purse")) P.gold += 30;                                // 钱袋
   }
   G.echoUsed = false;      // 「回声」每层一次
+  G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
   if(G.floor > FLOORS){ chapterClear(); return; }
   genFloor();
   fov();
@@ -527,8 +528,8 @@ function onEnter(){
   if(th){
     if(th.kind === "gold"){
       let amt = th.amt;
-      if(hasRelic("greed")) amt = Math.round(amt * 1.1);                    // 拾荒者
-      if(hasRelic("rust")) amt = Math.round(amt * 1.3);                     // 铜锈
+      if(hasRelic("greed")) amt = Math.round(amt * 1.2);                    // 拾荒者 +20%
+      if(hasRelic("rust")) amt = Math.round(amt * 1.1);                     // 铜锈 +10%
       P.gold += amt;
       say("你拾起 <b>" + amt + "</b> 金币。", "sys");
       G.things.splice(G.things.indexOf(th),1);
@@ -1006,7 +1007,13 @@ function answer(btn, ok){
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
       if(B.wager) dmg += 2;                   // 冒险失手
       if(wasHaunted) dmg += 1;                // 心魔又答错
-      if(isSpell && hasRelic("recite")) dmg = 0;                // 默诵：拼写题答错不掉血
+      // 默诵：拼写题答错不掉血，但**每层只有 RECITE_FREE 次**（老续玩档没这个字段，所以 || 0）
+      if(dmg > 0 && isSpell && hasRelic("recite") && (G.reciteFree || 0) < RECITE_FREE){
+        G.reciteFree = (G.reciteFree || 0) + 1;
+        dmg = 0;
+        head = "<span class=\"big no\">默诵替你挡下了</span>";
+        note = "这一层的免伤还剩 " + (RECITE_FREE - G.reciteFree) + " 次。";
+      }
       if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血
         G.echoUsed = true;
         head = "<span class=\"big no\">回声替你挡下了</span>";
@@ -1018,9 +1025,12 @@ function answer(btn, ok){
         head = "<span class=\"big no\">失手 —— 还有一次补救</span>";
         note = "5 秒内点「补救」，把这个词拼对，这 <b>" + dmg + "</b> 点就不掉。";
         openRescue();
-      } else {
+      } else if(dmg > 0){
         head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
-        note = dmg > 0 ? takeHit(dmg, m, wasHaunted) : "这一下没让你掉血。";
+        note = takeHit(dmg, m, wasHaunted);
+      } else if(!head){
+        head = "<span class=\"big no\">失手</span>";
+        note = "这一下没让你掉血。";
       }
       if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
         m.hp -= 2;
@@ -1132,7 +1142,7 @@ function closeBattleWin(){
   P.kills++;
   const xp = m.xp * xpx;
   gainXp(xp);
-  const g = Math.round((ri(2,5) + G.floor) * (hasRelic("greed") ? 1.1 : 1));   // 拾荒者
+  const g = Math.round((ri(2,5) + G.floor) * (hasRelic("greed") ? 1.2 : 1));   // 拾荒者 +20%
   P.gold += g;
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
@@ -1978,6 +1988,9 @@ function resumeRun(s){
 /* 返回的就是内存里那一份，改完等 commit() 落盘，别单独写 localStorage */
 function meta(){ return MET; }
 function gameOver(){ endRun(false); }
+/* 主动放弃：跟倒下一样走结算（用户 2026-09 改的，以前是一颗宝石都不给），
+   但不算一次死亡 —— 统计里只加一次探索。 */
+function giveUpRun(){ if(SCENE === "run" && G && !G.over) endRun(false, true); }
 function chapterClear(){ endRun(true); }
 /* 一趟的结算：局内表现算成分，再乘这一章的难度倍率 = 带回镇上的宝石。
    每一条都摆在结算界面上，玩家能自己把这笔账对一遍。数值在 content.js 的 SCORE 里。 */
@@ -1996,18 +2009,21 @@ function runScore(win){
   const sum = rows.reduce(function(a, r){ return a + r.v; }, 0);
   return {rows:rows, sum:sum, acc:acc, floor:floor, gems: Math.floor(sum * CH.gemMult)};
 }
-function endRun(win){
+function endRun(win, gaveUp){
   G.over = true;
   const M = meta();
   M.runs++;
   if(G.floor > M.best) M.best = Math.min(G.floor, FLOORS);
-  if(win) M.clears++; else M.deaths = (M.deaths || 0) + 1;
+  if(win) M.clears++; else if(!gaveUp) M.deaths = (M.deaths || 0) + 1;
   // 遗物和金币都留在洞里 —— 带回镇上的是结算换来的**宝石**
   const sc = runScore(win);
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
-  $("endTitle").textContent = win ? (CH.boss.name + "倒下了") : ("你倒在第 " + G.floor + " 层");
-  $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关") : "你被抬回了镇上";
+  $("endTitle").textContent = win ? (CH.boss.name + "倒下了")
+                                  : gaveUp ? ("你从第 " + G.floor + " 层退了出来")
+                                           : ("你倒在第 " + G.floor + " 层");
+  $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关")
+                                    : gaveUp ? "主动撤离" : "你被抬回了镇上";
   $("endStats").innerHTML =
     sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
     li("<b>小计</b>", "<b>" + sc.sum + "</b>") +
@@ -2434,7 +2450,8 @@ function refreshSaveState(){
          " 层</b>（Lv." + s.P.lvl + "）的入口。下次打开会自动接着走，也可以现在就继续。")
       : "存档只在<b>进入关卡、下一层、回到主城</b>这三个时候写，下次打开自动读档。你现在在镇上，没有在进行的探索。";
   $("btnResumeHere").hidden = !(s && !inRun);
-  $("btnAbandon").disabled = !s;
+  /* 「放弃」已经挪到取景框左下角，它跟着 stageBox 一起显隐（只有探索时在），
+     不用再按存档状态禁用 —— 以前它住在设置页才需要那一行。 */
 }
 /* ---- 房间：祭坛 / 宝箱 / 游商 ---- */
 /* ---- 下楼确认 ---- */
@@ -2520,19 +2537,23 @@ $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(b && !b.disabled) enterRoute(b.dataset.id);
 });
-/* 放弃本次探索也要两步确认 —— 手滑点掉一趟很伤 */
+/* 取景框左下角的「放弃」：两步确认 —— 手滑点掉一趟很伤 */
 let abandonArmed = 0;
 $("btnAbandon").addEventListener("click", function(){
   const b = this;
   if(Date.now() > abandonArmed){
     abandonArmed = Date.now() + 4000;
-    b.textContent = "再点一次确认放弃";
-    setTimeout(function(){ if(Date.now() > abandonArmed) b.textContent = "放弃本次探索，回主城"; }, 4100);
+    b.textContent = "再点一次";
+    b.classList.add("armed");
+    setTimeout(function(){
+      if(Date.now() > abandonArmed){ b.textContent = "放弃"; b.classList.remove("armed"); }
+    }, 4100);
     return;
   }
   abandonArmed = 0;
-  b.textContent = "放弃本次探索，回主城";
-  goTown();          // 主动放弃：金币也不结算，免得进去捣一把就跑
+  b.textContent = "放弃";
+  b.classList.remove("armed");
+  giveUpRun();       // 直接结算：算分、发宝石、弹结算窗
 });
 
 /* ---- 导出码 ---- */
@@ -2617,7 +2638,7 @@ $("btnResumeHere").addEventListener("click", function(){
 
 /* ================= 启动 =================
    打开就自动接着上次存下的那一层 —— 不问、不弹窗。
-   不想接着走的话，设置页有「放弃本次探索，回主城」。 */
+   不想接着走的话，取景框左下角有「放弃」（两步确认，点完直接结算）。 */
 renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
 (function boot(){
   const s = readRun();

@@ -209,6 +209,16 @@ body{
   .stage{margin-inline:-16px}   /* 正好抵消 .app 的左右 padding，地图撑满整宽 */
 }
 
+/* 取景框左下角的「放弃」：压在地图上，两步确认。
+   .mapui 是 pointer-events:none，这个按钮是它的兄弟节点，照样能点。
+   做得小而淡 —— 它不是常用按钮，但得随时够得着。 */
+.giveup{position:absolute;left:4px;bottom:4px;z-index:3;
+  padding:3px 8px;border:1px solid var(--edge);border-radius:2px;
+  background:rgba(246,241,229,.82);color:var(--faint);cursor:pointer;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;line-height:1}
+.giveup:hover{color:var(--blood);border-color:var(--blood)}
+.giveup.armed{color:var(--blood);border-color:var(--blood);background:rgba(246,241,229,.96);font-weight:600}
+
 /* ===== 地图下面那一行文字按钮 ===== */
 .maptools{display:flex;justify-content:center;gap:14px;flex:0 0 auto}
 .maptools[hidden]{display:none !important}
