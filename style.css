@@ -125,8 +125,10 @@ body{
    石框画在 map 自己身上，这样地图多窄框就多窄，桌面上不会两边空一大片 */
 /* stage = 取景窗：尺寸由 sizeMap 算好写死，超出部分裁掉。
    .map 是完整地图，靠 transform 平移来实现镜头跟随。*/
+/* 背景跟「没探过的格子」同色：镜头永远居中，走到地图边缘时取景窗会露出地图外面，
+   同色才看不出接缝 —— 露出来的那块就像还没走到的黑暗。 */
 .stage{flex:0 1 auto;align-self:center;position:relative;overflow:hidden;
-  border:1px solid var(--edge);background:#C6BAA1;border-radius:3px;
+  border:1px solid var(--edge);background:var(--unseen);border-radius:3px;
   box-shadow:inset 0 1px 5px rgba(90,76,50,.28)}
 .map{position:absolute;top:0;left:0;display:grid;gap:0;width:max-content;
   will-change:transform}
@@ -185,6 +187,15 @@ body{
 @media (max-width:480px){
   .stage{margin-inline:-16px}   /* 正好抵消 .app 的左右 padding，地图撑满整宽 */
 }
+
+/* ===== 地图下面那一行文字按钮 ===== */
+.maptools{display:flex;justify-content:center;gap:14px;flex:0 0 auto}
+.maptools[hidden]{display:none !important}
+.mapbtn{background:none;border:0;padding:2px 4px;cursor:pointer;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;
+  color:var(--faint);border-bottom:1px dashed var(--edge)}
+.mapbtn:hover{color:var(--torch)}
+.mapbtn.on{color:var(--torch-deep);border-bottom-color:var(--torch-deep);font-weight:600}
 
 .log{flex:1;min-height:62px;border:1px solid var(--edge);background:var(--stone);border-radius:2px;padding:9px 11px;
   overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px}
@@ -426,7 +437,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:disabled:hover{border-color:var(--edge)}
 
-/* ===== 弱点 / 心魔 / 押注 ===== */
+/* ===== 弱点 / 心魔 / 冒险 ===== */
 .foe-weak{font-size:11.5px;color:var(--dim);margin-top:1px}
 .foe-weak b{color:var(--venom)}
 .haunt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--blood);

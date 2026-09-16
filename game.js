@@ -16,7 +16,7 @@ function put(k, v){
   if(!saveWarned){
     saveWarned = true;
     if(window.showErr) window.showErr(
-      "存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了；想留住就去设置页「下载存档文件」。");
+      "存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了，换个普通窗口再来。");
   }
   return false;
 }
@@ -29,7 +29,7 @@ let MET = load(META_KEY, {best:0, runs:0, clears:0, t:0});
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
 let lastAct = 0, lockUntil = 0;
 var OPT_KEY = "youxu.opt.v1";
-var OPT = load(OPT_KEY, {speak:true, auto:true});
+var OPT = load(OPT_KEY, {speak:true, auto:true, lock:false});   // lock = 锁定冒险
 function saveOpt(){ put(OPT_KEY, OPT); }
 
 function gate(rep){
@@ -279,9 +279,10 @@ function camera(){
   const m = $("map");
   const cell = parseFloat(getComputedStyle(m).getPropertyValue("--cell")) || 20;
   const VW = VIEW.w, VH = VIEW.h;
-  let cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
-  cx = Math.max(0, Math.min(Math.max(0, W - VW), cx));
-  cy = Math.max(0, Math.min(Math.max(0, H - VH), cy));
+  /* 人永远在取景窗正中：**不夹边界**。
+     以前这里把 cx/cy 夹在 [0, 地图-视野] 里，走到地图上下/左右边缘时镜头就顶住不动了，
+     人会跑到画面边上。现在宁可让取景窗露出地图外的空白，也要保证视角始终居中。 */
+  const cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
   m.style.transform = "translate(" + (-cx * cell) + "px," + (-cy * cell) + "px)";
 }
 function mobAt(x,y){
@@ -479,9 +480,32 @@ function onEnter(){
       say("石门纹丝不动 —— 这一层还剩 <b>" + G.mobs.length + "</b> 只没清。", "hurt");
     } else {
       fov(); render();
-      nextFloor();
+      askStair();
     }
   }
+}
+/* 踩上阶梯不再直接掉下去 —— 先问一句。
+   选「再待一会儿」就留在阶梯上，想走的时候**再点一下脚下那格 ▼** 就是这个窗。 */
+function askStair(){
+  if(!G || G.over || G.mobs.length > 0) return;
+  G.paused = true;
+  const last = G.floor === FLOORS;
+  $("stairEyebrow").textContent = CHAPTER.name + " 第 " + G.floor + " 层 · 已清空";
+  $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + (G.floor + 1) + " 层";
+  $("stairNote").innerHTML = last
+    ? "下面就是这一章的尽头。<b>下去就没有回头路。</b>"
+    : "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
+  hideAll();
+  $("veilStair").hidden = false;
+  $("btnStairGo").focus();
+}
+function closeStair(go){
+  $("veilStair").hidden = true;
+  G.paused = false;
+  if(go){ nextFloor(); return; }
+  say("你在阶梯口停住了。想走的时候，再点一下脚下那格。", "sys");
+  lockInput(200);
+  render();
 }
 
 /* ================= 战斗 ================= */
@@ -572,13 +596,14 @@ function nextQuestion(){
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   B.q = {word:word, type:type, done:false, haunted: !!(P.haunt && P.haunt.indexOf(word.en) >= 0)};
   B.locked = false;
-  B.wager = false;
+  // 「锁定冒险」开着就每题自动押上（拼写题除外，那题本来就不给冒险）
+  B.wager = !!OPT.lock && type !== "spell";
   $("qHaunt").hidden = !B.q.haunted;
   const wr = $("wagerRow"), wb = $("btnWager");
-  wb.classList.remove("on");
+  wb.classList.toggle("on", B.wager);
   wb.disabled = false;
-  wr.hidden = (type === "spell");                             // 拼写题不给押注，太难
-  $("btnWager").textContent = "押注 · 我确定";
+  wr.hidden = (type === "spell");                             // 拼写题不给冒险，太难
+  setWagerLabel();
   $("verdict").innerHTML = "";
   $("btnNextQ").hidden = true;
   $("btnNextQ").textContent = "继续";
@@ -633,6 +658,16 @@ function nextQuestion(){
     b.addEventListener("click", function(){ answer(b, o.en === word.en); });
     box.appendChild(b);
   });
+}
+/* 冒险按钮上的两行字：第一行是按钮自己的文本节点，第二行是里面的 <em>。
+   ⚠️ 别用 textContent 整块赋值 —— 那会把 <em> 一起干掉（以前就是这个 bug）。 */
+function setWagerLabel(){
+  const b = $("btnWager"), on = !!(B && B.wager);
+  if(b.firstChild && b.firstChild.nodeType === 3){
+    b.firstChild.textContent = on ? "冒险中 · 双倍赌注" : "冒险 · 我确定";
+  }
+  const em = b.querySelector("em");
+  if(em) em.textContent = OPT.lock ? "已锁定：每题自动冒险" : "对了伤害翻倍，错了受伤翻倍";
 }
 function renderSpell(word){
   $("qLabel").textContent = "拼出这个词";
@@ -735,7 +770,7 @@ function answer(btn, ok){
     if(B.combo >= 8 && hasRelic("snow")) raw += 3;                           // 滚雪球
     if(hasRelic("ember") && P.hp <= s.maxHp / 3) raw += 4;                   // 残焰
     if(hasRelic("rend")){ raw += 3; P.hp = Math.max(1, P.hp - 1); }          // 割裂（不致死）
-    if(B.wager) raw += hasRelic("gambler") ? 5 : 3;                         // 押中了
+    if(B.wager) raw += hasRelic("gambler") ? 5 : 3;                         // 冒对了
     let surge = false;
     if(hasRelic("surge") && Math.random() < .25){ raw += 2; surge = true; } // 潮汐
     // 暴击率的临时加成（赌骰/节拍）—— 加的是概率，不是第二个乘区
@@ -757,7 +792,7 @@ function answer(btn, ok){
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 2;              // 点金
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
-    head = "<span class=\"big ok\">" + (B.wager ? "押中了！" : crit ? "暴击！" : "命中！") + "</span>";
+    head = "<span class=\"big ok\">" + (B.wager ? "冒对了！" : crit ? "暴击！" : "命中！") + "</span>";
     note = "你砍中 " + m.name + "，造成 <b>" + dmg + "</b> 点伤害" +
            (hitWeak ? "（正中弱点）" : "") +
            (surge ? "，浪涌炸开" : "") + (bonus ? "（连击 +" + bonus + "）" : "") + "。";
@@ -773,7 +808,7 @@ function answer(btn, ok){
     }
   } else {
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
-    // 铁胆：押错不断连击；长链：答错只减半
+    // 铁胆：冒险失手不断连击；长链：答错只减半
     if(B.wager && hasRelic("nerve")){ /* 连击保住 */ }
     else if(hasRelic("chain")) B.combo = Math.floor(B.combo / 2);
     else B.combo = 0;
@@ -788,9 +823,9 @@ function answer(btn, ok){
       head = "<span class=\"big no\">复读者拦下了这一下</span>";
       note = "没有扣血 —— 同一个词马上再来一次。";
     } else {
-      // 受伤也全是加减：怪物伤害 − 护甲，再加上押错/心魔的惩罚
+      // 受伤也全是加减：怪物伤害 − 护甲，再加上冒险失手/心魔的惩罚
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
-      if(B.wager) dmg += 2;                   // 押错了
+      if(B.wager) dmg += 2;                   // 冒险失手
       if(wasHaunted) dmg += 1;                // 心魔又答错
       if(B.q.type === "spell" && hasRelic("recite")) dmg = 0;   // 默诵：拼写题答错不掉血
       // 回声：每层第一次答错不掉血
@@ -800,7 +835,7 @@ function answer(btn, ok){
         note = "这一层的第一次失手，不掉血。";
       } else {
         if(dmg > 0){ P.hp -= dmg; floatNum("me", "-" + dmg, "ouch"); }
-        head = "<span class=\"big no\">" + (B.wager ? "押错了" : "失手") + "</span>";
+        head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
         note = m.name + " 咬中你，你失去 <b>" + dmg + "</b> 点生命" +
                (wasHaunted ? "（心魔加重）" : "") + "。";
       }
@@ -1378,7 +1413,7 @@ let SCENE = "town";
 function showScene(){
   const inRun = SCENE === "run";
   /* hudRow / barsRow 现在住在 stageBox 里面（.mapui 浮层），跟着 stage 一起显隐，不用单独管 */
-  ["stageBox","log"].forEach(function(id){ $(id).hidden = !inRun; });
+  ["stageBox","mapTools","log"].forEach(function(id){ $(id).hidden = !inRun; });
   $("townPanel").hidden = inRun;
   /* 探索时顶栏整块收起 —— 章节名挪进了地图浮层的「层」那一格，省下的高度全给地图 */
   $("topBar").hidden = inRun;
@@ -1637,10 +1672,10 @@ function openCodex(tab){
   $("veilCodex").hidden = false;
 }
 function hideAll(){
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair"].forEach(function(id){ $(id).hidden = true; });
 }
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -1866,7 +1901,10 @@ document.addEventListener("keydown", function(ev){
     if(ev.key === "Enter"){
       const b = v.querySelector(".btn.primary");
       if(b){ ev.preventDefault(); b.click(); }
-    } else if(ev.key === "Escape" && (v.id === "veilCodex" || v.id === "veilHelp")) v.hidden = true;
+    } else if(ev.key === "Escape"){
+      if(v.id === "veilCodex" || v.id === "veilHelp") v.hidden = true;
+      else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
+    }
     return;
   }
   const k = ev.key.toLowerCase(), rep = !!ev.repeat;
@@ -1879,7 +1917,10 @@ document.addEventListener("keydown", function(ev){
 $("map").addEventListener("click", function(ev){
   const c = ev.target.closest(".c");
   if(!c || G.paused || G.over) return;
-  goTo(+c.dataset.x, +c.dataset.y);
+  const x = +c.dataset.x, y = +c.dataset.y;
+  // 站在阶梯上再点一下脚下这格 = 重新问「要不要下去」（上次选了「再待一会儿」的退路）
+  if(x === P.x && y === P.y && G.stair && x === G.stair.x && y === G.stair.y){ askStair(); return; }
+  goTo(x, y);
 });
 $("btnSpeak").addEventListener("click", function(){ if(B && B.q) speak(B.q.word.en); });
 $("btnNextQ").addEventListener("click", function(){
@@ -1964,6 +2005,9 @@ function refreshSaveState(){
   $("btnAbandon").disabled = !s;
 }
 /* ---- 房间：祭坛 / 宝箱 / 游商 ---- */
+/* ---- 下楼确认 ---- */
+$("btnStairGo").addEventListener("click", function(){ closeStair(true); });
+$("btnStairStay").addEventListener("click", function(){ closeStair(false); });
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
 $("btnAltarSkip").addEventListener("click", function(){ resolveAltar(false); });
 $("btnChestDone").addEventListener("click", closeChest);
@@ -1981,12 +2025,32 @@ $("shopList").addEventListener("click", function(ev){
   if(b && !b.disabled) buyFrom(+b.dataset.i);
 });
 
-/* ---- 押注 ---- */
+/* ---- 冒险（以前叫押注）---- */
 $("btnWager").addEventListener("click", function(){
   if(!B || B.locked || !B.q) return;
   B.wager = !B.wager;
   this.classList.toggle("on", B.wager);
-  this.firstChild.textContent = B.wager ? "已押注 · 双倍赌注" : "押注 · 我确定";
+  setWagerLabel();
+});
+/* ---- 锁定冒险：每题自动押上，省得一题点一次 ---- */
+function renderLock(){
+  const b = $("btnLockWager");
+  if(!b) return;
+  b.classList.toggle("on", !!OPT.lock);
+  b.textContent = OPT.lock ? "锁定冒险 · 开（每题双倍）" : "锁定冒险 · 关";
+}
+$("btnLockWager").addEventListener("click", function(){
+  OPT.lock = !OPT.lock;
+  saveOpt();                       // 设置项，立刻落盘（不受三个存档点的限制）
+  renderLock();
+  // 正在答的这题也跟着变，免得开了锁还要等下一题才生效
+  if(B && !B.locked && B.q && B.q.type !== "spell"){
+    B.wager = !!OPT.lock;
+    $("btnWager").classList.toggle("on", B.wager);
+    setWagerLabel();
+  }
+  say(OPT.lock ? "锁定冒险：接下来每题都<b>自动押上</b> —— 对了伤害翻倍，错了受伤翻倍。"
+               : "解除锁定：恢复成每题自己决定要不要冒险。", "sys");
 });
 
 /* ---- 遗物页：分解 / 合成 ---- */
@@ -2118,6 +2182,7 @@ $("btnResumeHere").addEventListener("click", function(){
 /* ================= 启动 =================
    打开就自动接着上次存下的那一层 —— 不问、不弹窗。
    不想接着走的话，设置页有「放弃本次探索，回主城」。 */
+renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
 (function boot(){
   const s = readRun();
   if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }

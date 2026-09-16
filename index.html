@@ -105,6 +105,11 @@
         </div>
       </div>
 
+      <!-- 地图下面的一行文字按钮 -->
+      <div class="maptools" id="mapTools" hidden>
+        <button class="mapbtn" id="btnLockWager" type="button">锁定冒险 · 关</button>
+      </div>
+
       <div class="log" id="log"></div>
     </section>
 
@@ -143,7 +148,7 @@
           普通品质都是纯数值，不带机制；它们也是<b>合成的燃料</b>。</p>
         <p class="note">遗物是<b>唯一的强化轴</b>，共 48 件、五个品质（普通 / 稀有 / 史诗 / 传奇 / 神圣），但<b>最多只能带 10 件</b> ——
           满了再拿就得换掉一件，所以得想想自己走哪条路。</p>
-        <p class="note">遗物分成几条成套的路线：<b>押注</b>、<b>连击</b>、<b>拼写</b>、<b>心魔</b>、<b>弱点</b>、<b>极限</b>、<b>经济</b>。
+        <p class="note">遗物分成几条成套的路线：<b>冒险</b>、<b>连击</b>、<b>拼写</b>、<b>心魔</b>、<b>弱点</b>、<b>极限</b>、<b>经济</b>。
           单拿一件平平，凑齐才成型。倒下时全部丢在洞里，只有金币能带回镇上。</p>
       </div>
     </section>
@@ -164,7 +169,8 @@
           <button class="btn" id="btnAbandon" type="button">放弃本次探索，回主城</button>
         </div>
       </div>
-      <div class="panel">
+      <!-- 本地存档文件 / 跨设备导出码：用户要求先藏起来（代码原样留着，去掉 hidden 就回来） -->
+      <div class="panel" id="panelSaveFile" hidden>
         <div class="phead">本地存档文件</div>
         <p class="note">把这台设备上的<b>全部存档</b>存成一个文件，放在你自己手里 ——
           词汇熟练度、遗物图鉴、探索记录、镇上存款，连没走完的那一趟都在里面。
@@ -189,7 +195,7 @@
         </div>
         <p class="note" id="fileMsg"></p>
       </div>
-      <div class="panel">
+      <div class="panel" id="panelCode" hidden>
         <div class="phead">跨设备 · 导出码</div>
         <p class="note">不方便传文件时用这个：把<b>词汇熟练度、遗物图鉴、探索记录</b>压成一段码，
           粘到另一台设备导入。本局进度不在里面 —— 要连探索一起带走请用上面的存档文件。</p>
@@ -252,7 +258,7 @@
     </div>
 
     <div class="wagerrow" id="wagerRow">
-      <button class="wager" id="btnWager" type="button">押注 · 我确定
+      <button class="wager" id="btnWager" type="button">冒险 · 我确定
         <em>对了伤害翻倍，错了受伤翻倍</em></button>
     </div>
     <div class="opts" id="opts"></div>
@@ -273,6 +279,19 @@
       <button class="btn ghost" id="btnFlee" type="button">撤退</button>
       <span class="sp"></span>
       <button class="btn primary" id="btnNextQ" type="button" hidden>继续</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilStair" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="stairEyebrow">石廊 第 1 层 · 已清空</div>
+    <h2 id="stairTitle">阶梯通向第 2 层</h2>
+    <p class="note" id="stairNote">下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnStairStay" type="button">再待一会儿</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnStairGo" type="button">下去 ▼</button>
     </div>
   </div>
 </div>
@@ -374,12 +393,14 @@
       <ul>
         <li><b>走路</b>：<b>点地图上任何走过的地面，角色会自己找路过去</b>。点怪物就走过去开战，点 <span style="color:var(--venom)">▼</span> 就走去下楼。没探索过的黑暗区域点不了 —— 你还不知道路。走到一半想停下，点别处或按 <span class="kbd">Esc</span>。</li>
         <li><b>探索</b>：怪物待在原地不动，你要自己去找。石廊有 <b>50 层</b>，每层 <b>3 只</b>左右的怪；<b>清完这一层的怪</b>，下行阶梯才会打开。</li>
+        <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。</li>
         <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>连对 3 个</b>伤害 +1，<b>连对 5 个</b> +2，答错清零。暴击是双倍。</li>
         <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满。撑不住就先撤退，去别处打一只弱的。</li>
         <li><b>词汇</b>：第一章全部是 <b>A1 入门词</b>（cat / water / red / run）。答错的词会记进词库，之后<b>出现得更频繁</b>，直到你答对三次。</li>
         <li><b>撤退</b>：战斗里随时可以撤退，怪物身上已经掉的血会留着，你可以回头再打。</li>
-        <li><b>押注</b>：答题前可以点「我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就押。</li>
+        <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就冒。
+          地图下面的<b>「锁定冒险」</b>打开后，<b>每题自动冒险</b>，不用一题点一次（拼写题除外）。</li>
         <li><b>弱点</b>：每只怪都怕一类词（战斗界面有标）。用那一类的词打中，<b>伤害 +2</b>。Boss 的弱点每次都不一样。</li>
         <li><b>遗物</b>：<b>每清完一层三选一</b>，共 48 件分五个品质，<b>最多带 10 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质合成 1 件更高的</b>。
           它们分成几条成套的路线 —— 比如「盲斗 + 刻字 + 默诵」把你变成拼写专家，
