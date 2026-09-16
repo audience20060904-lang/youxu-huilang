@@ -99,9 +99,13 @@
 - **遗物上限 `RELIC_MAX = 15`**（原来 10）。带满时遗物页很长 ——
   `#viewRelic` 必须在 `overflow-y:auto` 那条规则里，否则底下的合成面板会被挤没。
   ⚠️ 这条以前写的是早就改名的 `#viewBag`，白瞎了很久。
-- **怪倒下后自动收**（`finishBattle()` 末尾的 `setTimeout(closeBattleWin, 1000)`）——
-  「收取战利品」那个按钮已经删了，给一秒看清「倒下了」和最后那个词的释义就自动关窗。
-  `B.won` 是那一秒里的闸，别在这期间再手动关一次。
+- **怪倒下没有中间画面**：`finishBattle(true)` 直接 `closeBattleWin()` ——
+  既没有「收取战利品」按钮，也不再弹「XX 倒下了」那一屏。看清最后一题释义的时间
+  留在 `answer()` 那边（最后一击后延时 760ms 再结束）。`B.won` 是防重入的闸。
+- **战斗窗必须整屏放得下**（用户要求"能在屏幕里读完所有信息"）：`.battle` 里立绘、题面字号、
+  选项方块、内外间距**全部用 `clamp(最小, xvh, 最大)`**，选项容器还有个 318px 的像素上限 ——
+  高屏上方块再长大反而会把窗顶出去。改战斗界面的任何尺寸，都要回头量一遍
+  390×667 / 430×740 / 430×900 / 1280×720 这几档还装不装得下。
 - **页面缩放整个钉死**（用户要求"固定住"）：两个 viewport meta 都带
   `maximum-scale=1, user-scalable=no`，CSS 里 `html{touch-action:manipulation}`，
   index.html 顶部还有一段 JS 兜底（iOS 不认 user-scalable）：`gesturestart/change/end` 全 preventDefault，

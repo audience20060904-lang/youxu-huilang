@@ -928,7 +928,8 @@ function answer(btn, ok){
   renderHud();
   $("btnFlee").hidden = true;
 
-  if(m.hp <= 0){ setTimeout(function(){ finishBattle(true); }, 380); return; }
+  // 最后一击：多留一会儿，让人看清这一题的词和释义 —— 之后直接关窗，没有中间画面了
+  if(m.hp <= 0){ setTimeout(function(){ finishBattle(true); }, 760); return; }
   if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
   else $("btnNextQ").hidden = false;
@@ -941,20 +942,14 @@ function finishBattle(win){
     gameOver();
     return;
   }
-  $("verdict").innerHTML = "<span class=\"big ok\">" + m.name + " 倒下了</span>";
-  $("opts").innerHTML = "";
-  $("opts").hidden = true;
-  $("spellRow").hidden = true;
-  $("letters").hidden = true;
-  $("wagerRow").hidden = true;
-  $("qHaunt").hidden = true;
-  $("btnNextQ").hidden = true;          // 不用再点「收取战利品」了
-  $("btnFlee").hidden = true;
+  /* 怪一倒就直接收：不再弹「XX 倒下了」那一屏，也不用点「收取战利品」。
+     answer() 那边已经留了看清最后一题释义的时间，这里立刻关窗结算。
+     B.won 是闸 —— 万一窗已经被别的流程关了（比如通关结算），别再收一次。 */
   B.won = true;
+  $("btnNextQ").hidden = true;
+  $("btnFlee").hidden = true;
   renderBattleBars();
-  /* 怪一倒就自动收：给一秒看清「倒下了」和最后那个词的释义，然后关窗。
-     用 B.won 做闸 —— 这一秒里要是窗已经被别的流程关了（比如通关结算），就别再收一次。 */
-  setTimeout(function(){ if(B && B.won) closeBattleWin(); }, 1000);
+  closeBattleWin();
 }
 function closeBattleWin(){
   const m = B.mob;
