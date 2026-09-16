@@ -72,8 +72,8 @@ function stats(){
   if(hasRelic("vigor")) s.maxHp += 12;
   if(hasRelic("keen"))  s.crit += 15;
   if(hasRelic("edge"))  s.crit += 8;
-  if(hasRelic("hoard")) s.atk += Math.floor((P.gold || 0) / 20);   // 守财：每 20 金 +1 攻
-  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 2;   // 背水
+  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 4;   // 背水
+  /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
 }
 /* ================= 生成 ================= */
@@ -84,7 +84,7 @@ function nextFloor(){
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
     if(hasRelic("lamp"))  P.hp = Math.min(stats().maxHp, P.hp + 5);   // 油灯
-    if(hasRelic("purse")) P.gold += 3;                                 // 钱袋
+    if(hasRelic("purse")) P.gold += 30;                                // 钱袋
   }
   G.echoUsed = false;      // 「回声」每层一次
   if(G.floor > FLOORS){ chapterClear(); return; }
@@ -496,9 +496,9 @@ function onEnter(){
   const th = thingAt(P.x, P.y);
   if(th){
     if(th.kind === "gold"){
-      let amt = Math.round(th.amt * (hasRelic("greed") ? 1.6 : 1));
+      let amt = th.amt;
+      if(hasRelic("greed")) amt = Math.round(amt * 1.1);                    // 拾荒者
       if(hasRelic("rust")) amt = Math.round(amt * 1.3);                     // 铜锈
-      if(hasRelic("narrow")) amt = Math.max(1, Math.round(amt * 0.6));   // 窄视：金币少四成
       P.gold += amt;
       say("你拾起 <b>" + amt + "</b> 金币。", "sys");
       G.things.splice(G.things.indexOf(th),1);
@@ -543,7 +543,8 @@ function startBattle(m){
   /* 连击（P.combo）不在这儿清零 —— 它跟着人走，打完一只接着下一只还算数。
      只有答错、倒下、回主城才断。dice（赌骰层数）仍然是每场一算。 */
   B = {mob:m, q:null, locked:false, asked:0,
-       wager:false, repeatUsed:false, retry:null, optCount:4, dice:0};
+       wager:false, repeatUsed:false, retry:null, optCount:4, dice:0,
+       pend:null, rescue:false, rescueTimer:null};
   G.paused = true;
   $("foeArt").className = "portrait" + (m.boss ? " boss" : "");
   $("foeArt").innerHTML = ART[m.art];
@@ -623,7 +624,8 @@ function nextQuestion(){
   else word = pickQuizWord(m.cat);
   B.asked++;
   let type;
-  if(hasRelic("blind")) type = "spell";                       // 盲斗：全拼写
+  if(hasRelic("blind") || B.rescue) type = "spell";           // 盲斗：全拼写；补救题也是拼写
+  else if(spellRate() && Math.random() * 100 < spellRate()) type = "spell";   // 默诵：拼写出现率
   else if(m.boss && B.asked % 3 === 0) type = "spell";
   else if(CAN_SPEAK && B.asked % 4 === 0) type = "listen";
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
@@ -640,13 +642,14 @@ function nextQuestion(){
   $("verdict").innerHTML = "";
   $("btnNextQ").hidden = true;
   $("btnNextQ").textContent = "继续";
+  $("btnRescue").hidden = true;
   $("btnFlee").hidden = false;
   $("spellRow").hidden = true;
   $("letters").hidden = true;
   $("opts").hidden = false;
   $("btnSpeak").hidden = true;
 
-  B.optCount = hasRelic("narrow") ? 3 : 4;                    // 窄视：选项少一个
+  B.optCount = 4;
   if(type === "spell"){ renderSpell(word); return; }
 
   if(type === "listen"){
@@ -854,56 +857,76 @@ function answer(btn, ok){
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
     P.combo++;
-    // 伤害 =（攻击 + 连击加成）×暴击倍数 − 对方护甲，最低 1
-    // 伤害：先把所有加成加完，**只有暴击一个乘区**，最后减护甲。
-    // 别再往里加乘法 —— 玩家要能一眼算出还要答对几个。
-    const c3 = hasRelic("quick") ? 2 : 3, c5 = hasRelic("quick") ? 4 : 5;   // 速记：连击门槛降一级
-    let raw = s.atk;
-    let bonus = P.combo >= c5 ? CHAPTER.comboAt5 : P.combo >= c3 ? CHAPTER.comboAt3 : 0;
+    /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
+         伤害 =（攻击 + 基础点伤）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
+         额外伤害不进这条式子：无视护甲、不吃暴击，单独从怪血里扣。
+       **只有「×(1+百分比)」和「×暴击倍率」两个乘区，别再加第三个。** */
+
+    // 第一层 · 基础点伤（会被百分比放大）
+    let base = s.atk;
+    let bonus = P.combo >= 5 ? CHAPTER.comboAt5 : P.combo >= 3 ? CHAPTER.comboAt3 : 0;
     if(bonus && hasRelic("spark")) bonus += 1;                              // 火星
-    raw += bonus;
-    if(hitWeak) raw += hasRelic("hunter") ? 3 : 2;                          // 弱点 +2，猎手再 +1
-    if(wasStrong && hasRelic("scholar")) raw += 1;                          // 学者
-    if(hasRelic("blind")) raw += 3;                                         // 盲斗
-    if(B.q.type === "spell" && hasRelic("carve")) raw += 2;                  // 刻字
-    if(P.combo >= 8 && hasRelic("snow")) raw += 3;                           // 滚雪球
-    if(hasRelic("ember") && P.hp <= s.maxHp / 3) raw += 4;                   // 残焰
-    if(hasRelic("rend")){ raw += 3; P.hp = Math.max(1, P.hp - 1); }          // 割裂（不致死）
-    if(B.wager) raw += hasRelic("gambler") ? 5 : 3;                         // 冒对了
+    base += bonus;
+    if(wasStrong && hasRelic("scholar")) base += 1;                         // 学者
+
+    // 第二层 · 百分比（全部相加，最后只乘一次）
+    let pct = 0;
+    if(hasRelic("quick")) pct += Math.min(20, Math.floor(P.combo / 5) * 2); // 速记：每 5 连击 +2%，上限 20%
+    if(B.q.type === "spell" && hasRelic("carve")) pct += 20;                // 刻字
+    if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
+    if(hasRelic("hoard")) pct += Math.min(75, Math.floor((P.gold||0) / 200) * 5);  // 守财：每 200 金 +5%，上限 75%
+    if(hasRelic("blind")) pct += spellRate();                               // 盲斗：吃多少额外拼写率就加多少 %
+
+    // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
+    let flat = 0;
+    if(hitWeak) flat += hasRelic("hunter") ? 3 : 2;                         // 弱点 +2，猎手再 +1
+    if(B.wager) flat += hasRelic("gambler") ? 5 : 3;                        // 冒对了
     let surge = false;
-    if(hasRelic("surge") && Math.random() < .25){ raw += 2; surge = true; } // 潮汐
-    // 暴击率的临时加成（赌骰/节拍）—— 加的是概率，不是第二个乘区
-    let critRate = s.crit;
-    if(hasRelic("dice"))  critRate += (B.dice || 0) * 5;
-    if(hasRelic("tempo") && P.combo >= 3) critRate += 10;
-    const crit = Math.random()*100 < critRate;
-    if(crit) raw *= 2;                                                      // 唯一的乘区
-    // 破绻：打中弱点时无视护甲
-    const armor = (hitWeak && hasRelic("flaw")) ? 0 : m.armor;
+    if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
+
+    // 第四层 · 额外伤害（无视护甲、不吃暴击，单独一笔）
+    let extra = 0;
+    if(hasRelic("blind")) extra += 3;                                       // 盲斗
+    if(hasRelic("rend")){ extra += 3; P.hp = Math.max(1, P.hp - 1); }       // 割裂（不致死）
+    if(B.q.type === "spell" && hasRelic("recite")) extra += 2;              // 默诵
+    if(hasRelic("snow")) extra += P.combo >= 30 ? 9 : P.combo >= 20 ? 6 : P.combo >= 10 ? 3 : 0;  // 滚雪球
+
+    // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
+    let critRate = s.crit, critMult = 2;
+    if(hasRelic("tempo") && P.combo >= 10) critRate += 15;                  // 节拍
+    if(hasRelic("dice")) critRate += (B.dice || 0) * 5;                     // 赌骰
+    if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * 0.1; critRate = 100; }
+    const crit = Math.random() * 100 < critRate;
+
+    let raw = Math.round(base * (1 + pct / 100)) + flat;
+    if(crit) raw = Math.round(raw * critMult);                              // 乘区二
+    const armor = (hitWeak && hasRelic("flaw")) ? 0 : m.armor;              // 破绽：打中弱点时无视护甲
     const dmg = Math.max(1, raw - armor);
-    if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 2);        // 饮血
-    m.hp -= dmg;
-    if(hasRelic("drain")) P.hp = Math.min(s.maxHp, P.hp + 1);               // 吞噬
-    if(B.wager){
-      B.dice = (B.dice || 0) + 1;                                           // 赌骰累层
-      if(hasRelic("allin")) P.hp = Math.min(s.maxHp, P.hp + 2);             // 孤注
+    if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 4);        // 饮血
+    m.hp -= dmg + extra;
+    if(hasRelic("drain")) P.hp = Math.min(s.maxHp, P.hp + 2);               // 吞噬
+    if(hasRelic("dice") && Math.random() < .10) B.dice = (B.dice || 0) + 1; // 赌骰：答对 10% 叠一层
+    if(B.wager && hasRelic("allin") && Math.random() < .10){                // 孤注
+      P.hp = Math.min(s.maxHp, P.hp + Math.max(1, Math.round(s.maxHp * 0.2)));
     }
-    if(hasRelic("midas") && Math.random() < 0.25) P.gold += 2;              // 点金
+    if(hasRelic("midas") && Math.random() < 0.25) P.gold += ri(2, 10);      // 点金
     floatNum("foe", "-" + dmg, "dmg");
+    if(extra > 0) setTimeout(function(){ floatNum("foe", "-" + extra, "dmg"); }, 220);
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
     head = "<span class=\"big ok\">" + (B.wager ? "冒对了！" : crit ? "暴击！" : "命中！") + "</span>";
     note = "你砍中 " + m.name + "，造成 <b>" + dmg + "</b> 点伤害" +
            (hitWeak ? "（正中弱点）" : "") +
-           (surge ? "，浪涌炸开" : "") + (bonus ? "（连击 +" + bonus + "）" : "") + "。";
+           (surge ? "，浪涌炸开" : "") + (bonus ? "（连击 +" + bonus + "）" : "") +
+           (pct ? "（+" + pct + "%）" : "") + "。" +
+           (extra ? " 额外 <b>" + extra + "</b> 点无视护甲。" : "");
+    if(B.rescue){                                     // 补救成功：刚才欠的那一下一笔勾销
+      B.rescue = false; B.pend = null;
+      note += " <span style=\"color:var(--good)\">补救成功 —— 刚才那一下没掉血。</span>";
+    }
     if(B.q.haunted && dropHaunt(word.en)){
-      const back = hasRelic("bind") ? 4 : 2;
+      const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * 0.15)) : 2;
       P.hp = Math.min(s.maxHp, P.hp + back);
       note += " <span style=\"color:var(--venom)\">心魔散了，回 " + back + " 点生命。</span>";
-      if(hasRelic("settle")){
-        m.hp -= 5;
-        floatNum("foe", "-5", "dmg");
-        note += " <span style=\"color:var(--torch)\">旧账一并算了，再砍 5 点。</span>";
-      }
     }
   } else {
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
@@ -915,34 +938,38 @@ function answer(btn, ok){
     const wasHaunted = B.q.haunted;
     addHaunt(word.en);                      // 答错就缠上来
 
-    // 复读者：每场一次，这一题不扣血，立刻重考同一个词
-    if(hasRelic("repeat") && !B.repeatUsed){
-      B.repeatUsed = true;
-      B.retry = word;
-      head = "<span class=\"big no\">复读者拦下了这一下</span>";
-      note = "没有扣血 —— 同一个词马上再来一次。";
+    if(B.rescue){
+      /* 补救题也答错 —— 把刚才欠下的那一下结清，这一题本身不再另算一次 */
+      B.rescue = false;
+      const owe = B.pend; B.pend = null;
+      head = "<span class=\"big no\">补救失败</span>";
+      note = takeHit(owe ? owe.dmg : Math.max(1, m.dmg - s.def), m, owe && owe.haunted);
     } else {
       // 受伤也全是加减：怪物伤害 − 护甲，再加上冒险失手/心魔的惩罚
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
       if(B.wager) dmg += 2;                   // 冒险失手
       if(wasHaunted) dmg += 1;                // 心魔又答错
       if(B.q.type === "spell" && hasRelic("recite")) dmg = 0;   // 默诵：拼写题答错不掉血
-      // 回声：每层第一次答错不掉血
-      if(hasRelic("echo") && !G.echoUsed){
+      if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血
         G.echoUsed = true;
         head = "<span class=\"big no\">回声替你挡下了</span>";
         note = "这一层的第一次失手，不掉血。";
+      } else if(dmg > 0 && hasRelic("repeat") && !B.repeatUsed){
+        /* 复读者：这一下先欠着，给 5 秒的补救窗口（openRescue 里倒计时）。
+           点了补救就把这个词变成拼写题重来一次，拼对免伤，拼错才结清。 */
+        B.pend = {dmg:dmg, haunted:wasHaunted};
+        head = "<span class=\"big no\">失手 —— 还有一次补救</span>";
+        note = "5 秒内点「补救」，把这个词拼对，这 <b>" + dmg + "</b> 点就不掉。";
+        openRescue();
       } else {
-        if(dmg > 0){ P.hp -= dmg; floatNum("me", "-" + dmg, "ouch"); }
         head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
-        note = m.name + " 咬中你，你失去 <b>" + dmg + "</b> 点生命" +
-               (wasHaunted ? "（心魔加重）" : "") + "。";
+        note = dmg > 0 ? takeHit(dmg, m, wasHaunted) : "这一下没让你掉血。";
       }
-    }
-    if(hasRelic("thorns") && !B.retry){
-      m.hp -= 1;
-      note += " 赤鳞反弹了 <b>1</b> 点。";
-      floatNum("foe", "-1", "dmg");
+      if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
+        m.hp -= 2;
+        note += " 赤鳞反弹了 <b>2</b> 点。";
+        floatNum("foe", "-2", "dmg");
+      }
     }
     if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; note += " 薪火在胸口炸开 —— 你以 1 点生命站住了。"; }
   }
@@ -962,11 +989,66 @@ function answer(btn, ok){
   // 最后一击：多留一会儿，让人看清这一题的词和释义 —— 之后直接关窗，没有中间画面了
   if(m.hp <= 0){ setTimeout(function(){ finishBattle(true); }, 760); return; }
   if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
+  if(B.rescueTimer) return;                 // 补救倒计时开着：只留「补救」这一个按钮
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
   else $("btnNextQ").hidden = false;
 }
+/* ---- 挨一下：扣血 + 跳数字，返回写进 verdict 的那句话 ---- */
+function takeHit(dmg, m, haunted){
+  P.hp -= dmg;
+  floatNum("me", "-" + dmg, "ouch");
+  return m.name + " 咬中你，你失去 <b>" + dmg + "</b> 点生命" + (haunted ? "（心魔加重）" : "") + "。";
+}
+/* ---- 复读者的补救窗口（用户 2026-09 选的方案：5 秒内自己点才进）----
+   答错时伤害先欠着（B.pend），这五秒里只有「补救」一个按钮：
+   点了 → 同一个词变成拼写题重来（B.rescue），拼对免伤、拼错结清；
+   没点 → 倒计时归零自动结清，照常掉血。 */
+function openRescue(){
+  const b = $("btnRescue");
+  let left = 5;
+  /* 冒险那一行这时候已经没用了（按钮早禁掉了），收起来腾出 45px ——
+     390×667 的小屏上不收的话，底下这个 5 秒按钮会被挤到屏幕外，等于没有。
+     下一题 nextQuestion() 会把它放回来。 */
+  $("wagerRow").hidden = true;
+  b.textContent = "补救 · " + left + "s";
+  b.hidden = false;
+  $("btnNextQ").hidden = true;
+  B.rescueTimer = setInterval(function(){
+    left--;
+    if(left <= 0){ closeRescue(true); return; }
+    b.textContent = "补救 · " + left + "s";
+  }, 1000);
+}
+function closeRescue(expired){
+  if(B && B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
+  $("btnRescue").hidden = true;
+  if(!B) return;
+  if(!expired){                              // 玩家点了补救
+    B.repeatUsed = true;
+    B.rescue = true;
+    B.retry = B.q.word;
+    nextQuestion();
+    return;
+  }
+  const owe = B.pend; B.pend = null;         // 没点：把欠的那一下结清
+  if(owe){
+    const m = B.mob;
+    const line = takeHit(owe.dmg, m, owe.haunted);
+    $("verdict").insertAdjacentHTML("beforeend", "<span class=\"mean\">没有补救 —— " + line + "</span>");
+    say("没有补救，掉了 " + owe.dmg + " 点生命。", "hurt");
+    if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; say("薪火在胸口炸开 —— 你以 1 点生命站住了。", "crit"); }
+    renderBattleBars();
+    renderHud();
+    if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
+  }
+  $("btnNextQ").hidden = false;
+}
+/* 默诵给的额外拼写率；盲斗吃的也是这个数（每 1% 换 1% 伤害）*/
+function spellRate(){ return hasRelic("recite") ? 30 : 0; }
 function finishBattle(win){
   const m = B.mob;
+  if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
+  $("btnRescue").hidden = true;
   if(!win){
     B = null;
     $("veilBattle").hidden = true;
@@ -990,12 +1072,11 @@ function closeBattleWin(){
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
   gainXp(m.xp);
-  const greed = hasRelic("greed") ? 2 : 1;
-  const g = (ri(2,5) + G.floor) * greed;
+  const g = Math.round((ri(2,5) + G.floor) * (hasRelic("greed") ? 1.1 : 1));   // 拾荒者
   P.gold += g;
   const s0 = stats();
   let heal = CHAPTER.killHeal;
-  if(hasRelic("reap")) heal += 3;
+  if(hasRelic("reap")) heal += 5;
   if(hasRelic("salve")) heal += 2;                                        // 药膏
   const before = P.hp;
   P.hp = Math.min(s0.maxHp, P.hp + heal);
@@ -1018,6 +1099,8 @@ function closeBattleWin(){
 }
 function flee(){
   if(!B || B.locked) return;
+  if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
+  $("btnRescue").hidden = true;
   const m = B.mob;
   B = null;
   $("veilBattle").hidden = true;
@@ -1752,12 +1835,17 @@ function resumeRun(s){
   P = s.P;
   // 旧档的 gear/bag 字段留着也无害，没人读它了                 // 老档兜底
   if(!P.relics) P.relics = [];
+  P.relics = P.relics.filter(function(id){ return !!relicById(id); });   // 遗物被删掉的老档
   if(!P.haunt) P.haunt = [];
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
         vis: [], things: s.things || [], stair: s.stair, mobs: [] };
+  // 游商货架上可能还摆着已经删掉的遗物（老档），先清一遍
+  G.things.forEach(function(th){
+    if(th && th.stock) th.stock = th.stock.filter(function(row){ return row.relic && relicById(row.relic.id); });
+  });
   for(let y=0;y<H;y++) G.vis.push(new Array(W).fill(false));   // 视野是算出来的，不存
   s.mobs.forEach(function(m){
     const def = foeDef(m.d);
@@ -2100,6 +2188,8 @@ document.addEventListener("keydown", function(ev){
       if(/^[1-4]$/.test(ev.key) && B && !B.locked && B.q && B.q.type !== "spell"){
         const b = $("opts").children[+ev.key - 1];
         if(b){ ev.preventDefault(); b.click(); }
+      } else if(ev.key === "Enter" && !$("btnRescue").hidden){
+        ev.preventDefault(); $("btnRescue").click();
       } else if(ev.key === "Enter" && !$("btnNextQ").hidden){
         ev.preventDefault(); $("btnNextQ").click();
       }
@@ -2135,6 +2225,7 @@ $("btnNextQ").addEventListener("click", function(){
   if(B.won) closeBattleWin();
   else nextQuestion();
 });
+$("btnRescue").addEventListener("click", function(){ closeRescue(false); });
 $("btnFlee").addEventListener("click", flee);
 
 /* ---- 底部标签切换 ---- */
