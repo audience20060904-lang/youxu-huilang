@@ -58,10 +58,11 @@ function lockInput(ms){ lockUntil = Math.max(lockUntil, Date.now() + ms); }
 /* ================= 局 ================= */
 function newRun(){
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
-        right:0, wrong:0, seenWords:[], combo:0, maxCombo:0,
+        right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
+  autoOff();
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
@@ -577,19 +578,22 @@ function findPath(tx, ty, loose, blind){
   }
   return path.length ? path : null;
 }
+/* 返回「有没有找到路」—— 自动寻路靠这个判断要不要继续（**别改成看 walkPath**：
+   目标就在脚边时 stepWalk 会同步开战并把 walkPath 清掉，看它等于白走一趟就停）。*/
 function goTo(tx, ty, blind){
-  if(G.paused || G.over) return;
+  if(G.paused || G.over) return false;
   // 先按「绕开互动物件」找一条；真绕不过去（被堵死）再退回不绕的老办法
   const path = findPath(tx, ty, false, blind) || findPath(tx, ty, true, blind);
   if(!path){
     if(G.seen[ty][tx] && G.map[ty][tx] === 1) say("那边过不去 —— 有东西挡着路。", "sys");
-    return;
+    return false;
   }
   cancelWalk();
   walkPath = path;
   G.goal = {x:tx, y:ty};
   render();
   stepWalk();
+  return true;
 }
 /* ===== 取景框左下角的「寻路」 =====
    一层现在有十来只怪、七八堆金币，地图也大了一圈，来回找剩下那一只很烦。
@@ -607,12 +611,48 @@ function nearestBy(list){
   return best;
 }
 function autoPath(){
-  if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return;
+  if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return false;
   let t = nearestBy(G.mobs);
   if(!t) t = nearestBy(G.things.filter(function(th){ return th.kind === "gold"; }));
   if(!t && G.mobs.length === 0 && G.stair) t = G.stair;
-  if(!t || (t.x === P.x && t.y === P.y)) return;
-  goTo(t.x, t.y, true);
+  if(!t || (t.x === P.x && t.y === P.y)) return false;
+  return goTo(t.x, t.y, true);
+}
+/* 「寻路」是**开关**，不是点一下走一段（用户 2026-09 要求）：
+   开着就一路走下去 —— 打完一场接着找下一只，捡完金币接着捡，清完层走到楼梯边停住。
+   实现上就是一个 160ms 的轮询：弹层开着（战斗 / 三选一 / 下楼确认 / 商店）就等着，
+   还在走就不打扰，停下来了就挑下一个目标。**没目标可去时自己关掉**。
+   ⚠️ 下楼照旧要确认 —— 走到楼梯上会弹 `askStair()`，它不会替玩家按「下去」；
+   玩家自己按了下去，新的一层它会接着走。
+   玩家一动手（方向键 / 点地图 / 放弃）就自动关，手动操作永远优先。 */
+var autoOn = false, autoTimer = null;
+function autoWake(ms){
+  if(autoTimer) clearTimeout(autoTimer);
+  autoTimer = setTimeout(autoTick, ms || 160);
+}
+function autoTick(){
+  autoTimer = null;
+  if(!autoOn) return;
+  if(!P || !G || !G.map || G.over || SCENE !== "run"){ autoOff(); return; }
+  if(G.paused){ autoWake(400); return; }                  // 弹层开着，等它关
+  if(walkPath && walkPath.length){ autoWake(160); return; }   // 还在走，别插手
+  if(!autoPath()){ autoOff(); return; }                   // 没地方可去了，自己关掉
+  autoWake(200);
+}
+function autoOff(){
+  if(autoTimer){ clearTimeout(autoTimer); autoTimer = null; }
+  if(!autoOn) return;
+  autoOn = false;
+  const b = $("btnPathfind");
+  if(b){ b.classList.remove("on"); b.setAttribute("aria-pressed", "false"); }
+}
+function autoToggle(){
+  if(autoOn){ autoOff(); cancelWalk(); render(); return; }
+  if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+  autoOn = true;
+  const b = $("btnPathfind");
+  if(b){ b.classList.add("on"); b.setAttribute("aria-pressed", "true"); }
+  autoTick();
 }
 function stepWalk(){
   walkTimer = null;
@@ -634,6 +674,7 @@ function stepWalk(){
 function tryMove(dx, dy, rep){
   if(G.paused || G.over) return;
   if(!gate(!!rep)) return;
+  autoOff();        // 手动走一步 = 关掉自动寻路，手动操作永远优先
   cancelWalk();
   const nx = P.x + dx, ny = P.y + dy;
   if(nx<0 || ny<0 || nx>=W || ny>=H) return;
@@ -769,6 +810,15 @@ function scopeToLevel(pool, want){
 function scopeByLevel(pool){
   return scopeToLevel(pool, chapterLv());
 }
+/* **一趟之内答对过的词不再出第二次**（用户 2026-09）——「除了答错的」：
+   答对就记进 `P.used`，答错（或先对后错）就从里面拿掉，于是错过的词照样会再来找你。
+   心魔那条分支是故意不过滤的：它本来就是「这趟答错过的词」。
+   ⚠️ 一章 500 词，一趟问得完 —— 挑空了就**清空 P.used 开新一轮**（弱点类挑空了先退回全池）。*/
+function unused(pool){
+  const out = [];
+  for(let i=0;i<pool.length;i++) if(!P.used || !P.used[pool[i].en]) out.push(pool[i]);
+  return out;
+}
 function pickQuizWord(cat){
   // 心魔：这一趟答错过的词，有 35% 直接被拽出来重考
   const hauntRate = hasRelic("bind") ? 0.7 : 0.35;      // 缚魂：心魔出现率翻倍
@@ -776,9 +826,13 @@ function pickQuizWord(cat){
     const en = pick(P.haunt), w = WMAP[en];
     if(w && !(B && B.q && B.q.word.en === en)) return w;
   }
+  if(!P.used) P.used = {};
   const catRate = hasRelic("scent") ? 0.9 : 0.7;        // 嗅迹：多出弱点类的词
+  const all = scopeByLevel(ALLW);
   let pool = (cat !== "all" && Math.random() < catRate && BYCAT[cat]) ? BYCAT[cat] : ALLW;
-  pool = scopeByLevel(pool);
+  pool = unused(scopeByLevel(pool));
+  if(!pool.length) pool = unused(all);                  // 这一类问完了，退回全池
+  if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
   const bag = [];
   pool.forEach(function(w){
     const r = LEX[w.en], s = r ? (r.str || 0) : 0;
@@ -1039,6 +1093,9 @@ function answer(btn, ok){
   const rec = LEX[word.en] || {str:0, seen:0, wrong:0};
   rec.seen++;
   if(P.seenWords.indexOf(word.en) < 0) P.seenWords.push(word.en);
+  // 一趟之内：答对过就不再出（记进 P.used），答错就放回池子里接着找你
+  if(!P.used) P.used = {};
+  if(ok) P.used[word.en] = 1; else delete P.used[word.en];
 
   if(B.q.type !== "spell"){
     Array.prototype.forEach.call($("opts").children, function(b){
@@ -1318,6 +1375,7 @@ function closeBattleWin(){
 }
 function flee(){
   if(!B || B.locked) return;
+  autoOff();          // 主动撤退就是「我不想打这只」，别让自动寻路扭头又走回去
   if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
   $("btnRescue").hidden = true;
   const m = B.mob;
@@ -2011,9 +2069,10 @@ function renderTown(){
 function goTown(){
   SCENE = "town";
   cancelWalk();
+  autoOff();
   B = null; pendingLoot = null; pendingRoom = null; chestQ = null; reopenShop = null; pendingSwap = null;
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
-        right:0, wrong:0, seenWords:[], combo:0, maxCombo:0,
+        right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
         relics:[], haunt:[], undying:false };
   G = { floor:0, paused:true, over:true };
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
@@ -2137,6 +2196,7 @@ function resumeRun(s){
   if(!P.haunt) P.haunt = [];
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
+  if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
@@ -2541,6 +2601,7 @@ $("map").addEventListener("click", function(ev){
   if(!c || G.paused || G.over) return;
   const x = +c.dataset.x, y = +c.dataset.y;
   // 站在阶梯上再点一下脚下这格 = 重新问「要不要下去」（上次选了「再待一会儿」的退路）
+  autoOff();        // 自己点了地图 = 关掉自动寻路
   if(x === P.x && y === P.y && G.stair && x === G.stair.x && y === G.stair.y){ askStair(); return; }
   goTo(x, y);
 });
@@ -2733,13 +2794,13 @@ $("btnAbandon").addEventListener("click", function(){
   abandonArmed = 0;
   b.textContent = "放弃";
   b.classList.remove("armed");
+  autoOff();
   giveUpRun();       // 直接结算：算分、发宝石、弹结算窗
 });
-/* 取景框左下角的「寻路」：怪 → 金币 → 楼梯，就近走一趟 */
-$("btnPathfind").addEventListener("click", function(){
-  if(!gate()) return;
-  autoPath();
-});
+/* 取景框左下角的「寻路」：开关式。开着就一路走 —— 怪 → 金币 → 楼梯。
+   ⚠️ **不过 `gate()`** —— 战斗刚结束那 260ms 的输入锁会把「停下」这一下吃掉，
+   而玩家按停就是想马上停。连点两下 = 关了又开，无害。*/
+$("btnPathfind").addEventListener("click", autoToggle);
 
 /* ---- 导出码 ---- */
 $("btnGenCode").addEventListener("click", function(){

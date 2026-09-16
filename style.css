@@ -227,6 +227,9 @@ body{
 .giveup.armed{color:var(--blood);border-color:var(--blood);background:rgba(246,241,229,.96);font-weight:600}
 /* 寻路不是危险操作，hover 用火把色，别跟「放弃」的血色混 */
 .giveup.find:hover{color:var(--torch);border-color:var(--torch)}
+/* 寻路是**开关**：开着的时候亮起来，一眼能看出它还在跑 */
+.giveup.find.on{color:var(--torch);border-color:var(--torch);
+  background:rgba(246,241,229,.96);font-weight:600}
 
 /* ===== 地图下面那一行文字按钮 ===== */
 .maptools{display:flex;justify-content:center;gap:14px;flex:0 0 auto}
