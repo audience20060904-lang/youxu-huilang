@@ -373,6 +373,14 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   background:var(--stone-2);border:1px solid var(--edge-soft);border-radius:2px;
   padding:7px 8px;resize:vertical;word-break:break-all}
 .code:focus{outline:2px solid var(--torch);outline-offset:1px}
+/* 本地存档文件：拖放区 + 读出来的信息卡 */
+.drop{border:1px dashed var(--edge);border-radius:2px;background:var(--stone-2);
+  padding:14px 10px;text-align:center;font-size:11.5px;color:var(--faint);transition:.12s}
+.drop.over{border-color:var(--torch);color:var(--torch);background:#FBF3E0}
+.filecard{display:flex;flex-direction:column;gap:9px;border:1px solid var(--edge);
+  border-left:2px solid var(--torch);border-radius:2px;background:var(--stone-2);padding:10px}
+.filecard[hidden]{display:none !important}
+.filecard .eyebrow{word-break:break-all;text-transform:none;letter-spacing:.08em}
 .fallline{margin:0;font-family:var(--flavor);font-style:italic;font-size:14px;color:var(--dim)}
 
 /* ===== 主城 ===== */

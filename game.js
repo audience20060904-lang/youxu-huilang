@@ -1503,10 +1503,7 @@ function resumeRun(s){
   lockInput(320);
 }
 function describeRun(s){
-  const mins = Math.max(1, Math.round((Date.now() - (s.t || Date.now())) / 60000));
-  const ago = mins < 60 ? (mins + " 分钟前")
-            : mins < 1440 ? (Math.round(mins/60) + " 小时前")
-            : (Math.round(mins/1440) + " 天前");
+  const ago = agoText(s.t || Date.now());
   return li("停在", CHAPTER.name + " 第 " + s.floor + " / " + FLOORS + " 层")
        + li("等级 / 生命", "Lv." + s.P.lvl + "　" + Math.max(0, s.P.hp) + " 血")
        + li("这趟答对 / 答错", s.P.right + " / " + s.P.wrong)
@@ -1514,7 +1511,9 @@ function describeRun(s){
 }
 
 /* ================= 结算 ================= */
-function meta(){ return load(META_KEY, {best:0, runs:0, clears:0}); }
+function meta(){ return load(META_KEY, {best:0, runs:0, clears:0, t:0}); }
+/* 永久档每次落盘都盖个时间戳 —— 存档信息卡要拿它当「上次游玩」 */
+function saveMeta(M){ M.t = Date.now(); save(META_KEY, M); }
 function gameOver(){ endRun(false); }
 function chapterClear(){ endRun(true); }
 function endRun(win){
@@ -1524,7 +1523,7 @@ function endRun(win){
   M.runs++;
   if(G.floor > M.best) M.best = Math.min(G.floor, FLOORS);
   if(win) M.clears++; else M.deaths = (M.deaths || 0) + 1;
-  save(META_KEY, M);
+  saveMeta(M);
   // 装备和背包都留在洞里，只有金币能带回镇上
   const haul = P.gold;
   TOWN.gold += haul;
@@ -1646,16 +1645,27 @@ function makeCode(){
   }));
 }
 function applyCode(txt){
-  txt = (txt || "").replace(/\s+/g, "");          // 粘贴常带换行，先洗掉
+  txt = (txt || "").trim();
   if(!txt) return "先把码粘进来。";
-  if(txt.indexOf(CODE_TAG) !== 0) return "这串码不对 —— 应该以 " + CODE_TAG + " 开头。";
   let o;
-  try{ o = JSON.parse(b64dec(txt.slice(CODE_TAG.length))); }
-  catch(e){ return "这串码读不出来，多半是复制时漏了一截。"; }
+  if(txt.charAt(0) === "{"){                       // 存档文件的内容被直接粘进来了，也认
+    try{ o = JSON.parse(txt); }
+    catch(e){ return "这段文本读不出来 —— 像是存档文件但缺了一截。"; }
+  } else {
+    txt = txt.replace(/\s+/g, "");                 // 粘贴常带换行，先洗掉
+    if(txt.indexOf(CODE_TAG) !== 0) return "这串码不对 —— 应该以 " + CODE_TAG + " 开头。";
+    try{ o = JSON.parse(b64dec(txt.slice(CODE_TAG.length))); }
+    catch(e){ return "这串码读不出来，多半是复制时漏了一截。"; }
+  }
   if(!o || typeof o !== "object" || !o.lex) return "这串码里没有词汇数据。";
-
+  const r = mergeData(o);
+  return "导入成功：更新了 " + r.words + " 个词，补上 " + r.legs + " 件传说。";
+}
+/* 合并取优 —— 导出码和本地存档文件共用这一套。
+   吃 {lex, codex, meta, town, run}，缺哪块跳过哪块，任何一块都不会让这台设备倒退。 */
+function mergeData(o){
   let better = 0;
-  for(const k in o.lex){
+  for(const k in (o.lex || {})){
     const inc = o.lex[k], cur = LEX[k];
     if(!inc || typeof inc !== "object") continue;
     // 取熟练度高的那份；平手就取见得多的
@@ -1683,10 +1693,138 @@ function applyCode(txt){
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
-  save(META_KEY, M);
+  saveMeta(M);
+
+  // 镇上存款取多的那边，**不相加** —— 免得来回导两次就凭空富了
+  const before = TOWN.gold || 0;
+  TOWN.gold = Math.max(before, (o.town && o.town.gold) || 0);
+  saveTown();
+
+  // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动
+  let gotRun = false;
+  if(o.run && o.run.P && !readRun() && !(SCENE === "run" && G && !G.over)){
+    if(o.run.v === RUN_V && o.run.ch === CHAPTER.id){ save(RUN_KEY, o.run); gotRun = true; }
+  }
 
   renderHud();
-  return "导入成功：更新了 " + better + " 个词，补上 " + legs + " 件传说。";
+  if(SCENE === "town") renderTown();
+  refreshSaveState();
+  return {words:better, legs:legs, gold:(TOWN.gold - before), run:gotRun};
+}
+
+/* ================= 本地存档文件 =================
+   导出码只带永久数据；这里是「整台设备的存档」—— 连没走完的那一趟一起打成一个 .json 文件，
+   文件在玩家自己手里：换浏览器、清过缓存、换设备，选回文件就接着玩。
+   选中（或拖进来）之后**立刻把文件读出来**，先把里面有什么摊在卡片上，再让玩家决定合并还是覆盖。 */
+var FILE_TAG = "youxu-huilang", FILE_V = 1;
+let pendingFile = null;          // 已经读出来、等玩家点确认的那份存档
+
+function snapshot(){
+  saveRun();                     // 人正在洞里就先落一次盘，免得导出的是上一步的
+  return {
+    game: FILE_TAG, v: FILE_V, app: "幽墟回廊", ch: CHAPTER.id, t: Date.now(),
+    lex: LEX, codex: load(CODEX_KEY, {}), meta: meta(),
+    town: TOWN, opt: OPT, run: load(RUN_KEY, null)
+  };
+}
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function fmtTime(t){
+  if(!t) return "不详";
+  const d = new Date(t);
+  return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()) +
+         " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+}
+function agoText(t){
+  if(!t) return "不详";
+  const mins = Math.max(1, Math.round((Date.now() - t) / 60000));
+  return mins < 60 ? (mins + " 分钟前")
+       : mins < 1440 ? (Math.round(mins/60) + " 小时前")
+       : (Math.round(mins/1440) + " 天前");
+}
+/* 一份存档（本地的或刚读出来的文件）摊成信息表 —— 导入前后看的是同一张表，好对数 */
+function tally(o){
+  const lex = o.lex || {}, keys = Object.keys(lex);
+  const mastered = keys.filter(function(k){ return (lex[k].str||0) >= 3; }).length;
+  const M = o.meta || {}, r = o.run;
+  return li("存档时间", fmtTime(o.t || M.t))
+       + li("上次游玩", agoText(o.t || M.t))
+       + li("词汇", "掌握 " + mastered + " / 遇到 " + keys.length + " / 共 " + WORDS.length)
+       + li("遗物图鉴", Object.keys(o.codex || {}).length + " / " + RELICS.length + " 件")
+       + li("最深 / 通关 / 探索", "第 " + (M.best||0) + " 层　" + (M.clears||0) + " 次　" + (M.runs||0) + " 趟")
+       + li("镇上存款", ((o.town && o.town.gold) || 0) + " 枚")
+       + li("没走完的探索", r && r.P ? ("第 " + r.floor + " 层 · Lv." + r.P.lvl + " · " + Math.max(0, r.P.hp) + " 血") : "无");
+}
+function fileMsg(t){ $("fileMsg").textContent = t || ""; }
+function closeFileCard(){ pendingFile = null; $("fileCard").hidden = true; $("fileIn").value = ""; }
+
+function downloadSave(){
+  const txt = JSON.stringify(snapshot());
+  const name = "youxu-huilang-" + (function(d){
+    return d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()) + "-" + pad2(d.getHours()) + pad2(d.getMinutes());
+  })(new Date()) + ".json";
+  try{
+    const url = URL.createObjectURL(new Blob([txt], {type:"application/json"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 8000);
+    return "已导出 " + name + "（约 " + Math.max(1, Math.round(txt.length/1024)) + " KB）—— 去浏览器的下载列表里找它。";
+  }catch(e){
+    $("codeOut").value = txt;      // 下载被挡了就退回文本框，至少能手动复制走
+    return "这个浏览器挡了下载。存档已经放进下面「导出码」的框里，手动复制走一样能用。";
+  }
+}
+/* 认三种东西：本游戏的存档文件、存成文本的导出码、以及裸 JSON（有 lex 就行） */
+function parseSave(txt){
+  txt = (txt || "").replace(/^\uFEFF/, "").trim();
+  if(!txt) return {err:"这个文件是空的。"};
+  let o = null;
+  if(txt.charAt(0) === "{"){
+    try{ o = JSON.parse(txt); }
+    catch(e){ return {err:"这个文件读不出来 —— 内容不完整，或者根本不是存档。"}; }
+  } else if(txt.indexOf(CODE_TAG) === 0){
+    try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
+    catch(e){ return {err:"文件里的导出码读不出来，多半是复制时漏了一截。"}; }
+  } else {
+    return {err:"这不是幽墟回廊的存档文件。"};
+  }
+  if(!o || typeof o !== "object") return {err:"这不是幽墟回廊的存档文件。"};
+  if(o.game && o.game !== FILE_TAG) return {err:"这是别的东西的存档，不是幽墟回廊的。"};
+  if(!o.lex || typeof o.lex !== "object") return {err:"文件里没有词汇数据，不像是这个游戏的存档。"};
+  return {data:o};
+}
+/* 选中就读 —— 不用再点一次「读取」，读完直接把信息摊出来 */
+function takeFile(file){
+  closeFileCard();
+  if(!file) return;
+  if(file.size > 8 * 1024 * 1024){ fileMsg("这个文件有 " + Math.round(file.size/1048576) + "MB，太大了，不像是存档。"); return; }
+  fileMsg("正在读 " + file.name + " …");
+  const fr = new FileReader();
+  fr.onerror = function(){ fileMsg("这个文件读不出来 —— 换一份试试。"); };
+  fr.onload = function(){
+    const r = parseSave(String(fr.result || ""));
+    if(r.err){ fileMsg(r.err); return; }
+    pendingFile = r.data;
+    $("fileName").textContent = file.name;
+    $("fileInfo").innerHTML = tally(r.data);
+    $("fileCard").hidden = false;
+    fileMsg("读出来了 —— 对一眼上面的数字，再决定怎么导入。");
+  };
+  fr.readAsText(file);
+}
+/* 整档覆盖：本地几个键全换掉，然后重载页面。
+   重载最干净 —— 页面上到处是旧数字，而开局流程本来就会问要不要接着走那一趟。 */
+function overwriteAll(o){
+  booting = true;                  // 拦住 pagehide 里的 saveRun，别把刚导入的续玩档又盖回去
+  save(LEX_KEY, o.lex || {});
+  save(CODEX_KEY, o.codex || {});
+  save(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
+  save(TOWN_KEY, o.town || {gold:0});
+  if(o.opt && typeof o.opt === "object") save(OPT_KEY, o.opt);
+  if(o.run && o.run.P && o.run.v === RUN_V && o.run.ch === CHAPTER.id) save(RUN_KEY, o.run);
+  else try{ localStorage.removeItem(RUN_KEY); }catch(e){}
+  setTimeout(function(){ try{ location.reload(); }catch(e){} }, 700);
 }
 
 /* ================= 事件 ================= */
@@ -1739,6 +1877,8 @@ function showView(id){
   });
   // 地图在隐藏时量不到尺寸，切回来必须重算一次
   if(id === "viewAdv") sizeMap();
+  // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
+  if(id === "viewSet") refreshSaveState();
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
@@ -1783,10 +1923,18 @@ window.addEventListener("resize", sizeMap);
 
 /* ---- 存档相关按钮 ---- */
 function refreshSaveState(){
-  const s = readRun();
-  $("saveState").innerHTML = s
-    ? ("洞里的进度会自动保存。当前档：<b>第 " + s.floor + " 层</b>，Lv." + s.P.lvl + "。")
-    : "洞里的进度会自动保存。你现在在镇上，没有在进行的探索。";
+  const s = readRun(), inRun = (SCENE === "run" && G && !G.over);
+  $("saveInfo").innerHTML = tally({
+    // 时间取「续玩档写下的那一刻」，没有续玩档才退回永久档的时间戳
+    t: (s && s.t) || 0,
+    lex: LEX, codex: load(CODEX_KEY, {}), meta: meta(), town: TOWN, run: s
+  });
+  $("saveState").innerHTML = inRun
+    ? "你正在洞里。每走一步、每打完一架都会自动存 —— 中途关掉页面也丢不了。"
+    : s
+      ? ("上次的探索停在<b>第 " + s.floor + " 层</b>（Lv." + s.P.lvl + "），随时能接着走。")
+      : "洞里的进度会自动保存。你现在在镇上，没有在进行的探索。";
+  $("btnResumeHere").hidden = !(s && !inRun);
   $("btnAbandon").disabled = !s;
 }
 $("btnResume").addEventListener("click", function(){
@@ -1897,6 +2045,58 @@ $("btnImport").addEventListener("click", function(){
   const msg = applyCode($("codeIn").value);
   $("codeMsg").textContent = msg;
   if(msg.indexOf("成功") >= 0) $("codeIn").value = "";
+});
+
+/* ---- 本地存档文件 ---- */
+$("btnSaveFile").addEventListener("click", function(){ fileMsg(downloadSave()); });
+$("btnPickFile").addEventListener("click", function(){ $("fileIn").click(); });
+$("fileIn").addEventListener("change", function(){ takeFile(this.files && this.files[0]); });
+$("dropZone").addEventListener("click", function(){ $("fileIn").click(); });
+["dragenter","dragover"].forEach(function(t){
+  $("dropZone").addEventListener(t, function(ev){ ev.preventDefault(); this.classList.add("over"); });
+});
+["dragleave","drop"].forEach(function(t){
+  $("dropZone").addEventListener(t, function(ev){ ev.preventDefault(); this.classList.remove("over"); });
+});
+$("dropZone").addEventListener("drop", function(ev){
+  const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+  takeFile(f);
+});
+/* 页面别的地方接住误拖的文件，免得浏览器直接把 json 打开、把游戏顶掉 */
+["dragover","drop"].forEach(function(t){
+  window.addEventListener(t, function(ev){ if(ev.target.id !== "dropZone") ev.preventDefault(); });
+});
+$("btnCancelFile").addEventListener("click", function(){ closeFileCard(); fileMsg("已取消，什么都没动。"); });
+$("btnMergeFile").addEventListener("click", function(){
+  if(!pendingFile){ fileMsg("先选一个存档文件。"); return; }
+  const r = mergeData(pendingFile);
+  closeFileCard();
+  fileMsg("合并完成：更新 " + r.words + " 个词，补上 " + r.legs + " 件遗物"
+        + (r.gold ? ("，存款 +" + r.gold + " 枚") : "")
+        + (r.run ? "，还接回了一趟没走完的探索。" : "。"));
+});
+/* 覆盖是抹掉这台设备的进度，两步确认 —— 跟「清除全部存档」一个规矩 */
+let overArmed = 0;
+$("btnOverwriteFile").addEventListener("click", function(){
+  if(!pendingFile){ fileMsg("先选一个存档文件。"); return; }
+  const b = this;
+  if(Date.now() > overArmed){
+    overArmed = Date.now() + 4000;
+    b.textContent = "再点一次确认覆盖";
+    setTimeout(function(){ if(Date.now() > overArmed) b.textContent = "整档覆盖"; }, 4100);
+    return;
+  }
+  overArmed = 0;
+  b.textContent = "整档覆盖";
+  fileMsg("正在覆盖，马上重新载入…");
+  overwriteAll(pendingFile);
+});
+/* 镇上也能接着走上次那一趟 —— 以前只有刚打开页面时才问一次 */
+$("btnResumeHere").addEventListener("click", function(){
+  const s = readRun();
+  if(!s) { refreshSaveState(); return; }
+  SCENE = "run"; showScene(); resumeRun(s); saveRun();
+  refreshSaveState(); showView("viewAdv");
 });
 
 /* ---- 手机切后台 / 关标签页前补存一次 ----

@@ -155,13 +155,42 @@
       </div>
       <div class="panel">
         <div class="phead">存档 Save</div>
+        <div class="ledger" id="saveInfo"></div>
         <p class="note" id="saveState">本局进度会自动保存。</p>
-        <button class="btn" id="btnAbandon" type="button">放弃本次探索，回主城</button>
+        <div class="rowb">
+          <button class="btn primary" id="btnResumeHere" type="button" hidden>继续上次探索</button>
+          <button class="btn" id="btnAbandon" type="button">放弃本次探索，回主城</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead">本地存档文件</div>
+        <p class="note">把这台设备上的<b>全部存档</b>存成一个文件，放在你自己手里 ——
+          词汇熟练度、遗物图鉴、探索记录、镇上存款，连没走完的那一趟都在里面。
+          换设备、换浏览器、清过缓存，选回这个文件就能接着玩。</p>
+        <div class="rowb">
+          <button class="btn" id="btnSaveFile" type="button">下载存档文件</button>
+          <button class="btn" id="btnPickFile" type="button">读取存档文件…</button>
+        </div>
+        <input type="file" id="fileIn" accept=".json,.txt,application/json" hidden>
+        <div class="drop" id="dropZone">把存档文件拖到这里也行</div>
+        <div class="filecard" id="fileCard" hidden>
+          <div class="eyebrow" id="fileName">存档文件</div>
+          <div class="ledger" id="fileInfo"></div>
+          <div class="rowb">
+            <button class="btn primary" id="btnMergeFile" type="button">合并导入</button>
+            <button class="btn danger" id="btnOverwriteFile" type="button">整档覆盖</button>
+            <span class="sp"></span>
+            <button class="btn ghost" id="btnCancelFile" type="button">取消</button>
+          </div>
+          <p class="note"><b>合并导入</b>两边取更好的那份，不会弄丢这台设备上的进度；
+            <b>整档覆盖</b>把这台设备上的存档整个换成文件里的，无法撤销。</p>
+        </div>
+        <p class="note" id="fileMsg"></p>
       </div>
       <div class="panel">
         <div class="phead">跨设备 · 导出码</div>
-        <p class="note">把<b>词汇熟练度、遗物图鉴、探索记录</b>压成一段码，粘到另一台设备导入。
-          本局进度不在里面 —— 换设备是为了接着背词，不是接着这一趟。</p>
+        <p class="note">不方便传文件时用这个：把<b>词汇熟练度、遗物图鉴、探索记录</b>压成一段码，
+          粘到另一台设备导入。本局进度不在里面 —— 要连探索一起带走请用上面的存档文件。</p>
         <textarea class="code" id="codeOut" readonly rows="3" placeholder="点下面的按钮生成"></textarea>
         <div class="rowb">
           <button class="btn" id="btnGenCode" type="button">生成导出码</button>
