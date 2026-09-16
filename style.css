@@ -3,7 +3,7 @@
   --void:#F1EBDD; --stone:#FCF8F0; --stone-2:#F6F1E5; --stone-3:#ECE5D5;
   --edge:#CDC0A7; --edge-soft:#E0D7C4;
   --bone:#2E2A23; --dim:#655D50; --faint:#7E7566;
-  --torch:#9C6A10; --torch-deep:#7A520C;
+  --torch:#9C6A10; --torch-deep:#7A520C; --coin:#E3B23C;
   --blood:#A93729; --venom:#47702F; --frost:#266F7B;
   --hero:#245E8C;
   --floor:#FCF8ED; --floor-dim:#EEE7D8; --wall:#B7A78A; --wall-dim:#CCC1AA;
@@ -179,8 +179,9 @@ body{
 .c.mob{color:var(--blood)}
 .c.mob.boss{color:#8C2418;font-weight:700}
 .c.stair{color:var(--venom);font-weight:700}
-.c.stair.locked{color:#A39A87}
-.c.gold{color:var(--torch)}
+/* 以前有个「上锁的阶梯」的淡色状态，现在清空前压根不画阶梯，用不上了 */
+/* 金币要一眼看出是金的 —— --torch 偏棕，单独给一个亮金 */
+.c.gold{color:var(--coin)}
 /* 走出视野后金币整枚淡下去（描边是固定色，只调 color 淡不下来） */
 .c.mem.gold svg{opacity:.5}
 .c.feat{color:var(--frost)}
@@ -315,7 +316,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 
 /* ===== 捡东西的碎屑 =====
    挂在 body 上飞，飞完就删。纯装饰，一律不挡点击。 */
-.mote{position:fixed;z-index:60;pointer-events:none;color:var(--torch);
+.mote{position:fixed;z-index:60;pointer-events:none;color:var(--coin);
   filter:drop-shadow(0 1px 1px rgba(90,70,30,.35))}
 .mote svg{width:100%;height:100%;display:block}
 /* 碎屑落进去的那个数字/标签，自己跳一下 */

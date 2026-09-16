@@ -59,10 +59,10 @@ warden:'<svg viewBox="0 0 100 100">' +
 var COIN =
 '<svg viewBox="0 0 20 20" aria-hidden="true">' +
  '<ellipse cx="10.2" cy="16.6" rx="6.2" ry="1.5" fill="#6B5836" opacity=".18"/>' +        /* 地上的影 */
- '<circle cx="13.6" cy="12" r="4.4" fill="currentColor" stroke="#7A520C" stroke-width="1"/>' +    /* 压在后面的那枚 */
- '<circle cx="8.6" cy="9.4" r="6.3" fill="currentColor" stroke="#7A520C" stroke-width="1.2"/>' +  /* 正面这枚 */
- '<circle cx="8.6" cy="9.4" r="4.4" fill="none" stroke="#7A520C" stroke-width=".9" opacity=".5"/>' +
- '<path d="M8.6 6.5 9.8 8.8l2.3 1.2-2.3 1.2-1.2 2.3-1.2-2.3L5.1 10l2.3-1.2z" fill="#7A520C" opacity=".8"/>' +
+ '<circle cx="13.6" cy="12" r="4.4" fill="currentColor" stroke="#8C6412" stroke-width="1"/>' +    /* 压在后面的那枚 */
+ '<circle cx="8.6" cy="9.4" r="6.3" fill="currentColor" stroke="#8C6412" stroke-width="1.2"/>' +  /* 正面这枚 */
+ '<circle cx="8.6" cy="9.4" r="4.4" fill="none" stroke="#8C6412" stroke-width=".9" opacity=".5"/>' +
+ '<path d="M8.6 6.5 9.8 8.8l2.3 1.2-2.3 1.2-1.2 2.3-1.2-2.3L5.1 10l2.3-1.2z" fill="#8C6412" opacity=".8"/>' +
  '<path d="M4.9 7A5.4 5.4 0 0 1 7.8 4.3" stroke="#FFF4D4" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".9"/>' +
 '</svg>';
 

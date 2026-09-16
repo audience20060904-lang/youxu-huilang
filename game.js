@@ -304,8 +304,11 @@ function render(){
     const base = isWall ? "wall" : "floor";
     let glyph = isWall ? "" : "·";
     let content = isWall ? "" : "dot";
-    if(!isWall && x === G.stair.x && y === G.stair.y){
-      glyph = "▼"; content = "stair" + (cleared ? "" : " locked");
+    /* 阶梯只在这一层清空之后才画。清空前地图上根本没有 ▼ ——
+       它会在最后一只怪倒下的那一格出现（见 closeBattleWin）。
+       G.stair 在清空前只是个占位，别让它以「上锁的楼梯」露脸。 */
+    if(!isWall && cleared && x === G.stair.x && y === G.stair.y){
+      glyph = "▼"; content = "stair";
     }
     const th = thingAt(x,y);
     if(th){
@@ -474,13 +477,10 @@ function onEnter(){
     else if(th.kind === "chest"){ openChest(th); return; }
     else if(th.kind === "shop"){ openShop(th); return; }
   }
-  if(P.x === G.stair.x && P.y === G.stair.y){
-    if(G.mobs.length > 0){
-      say("石门纹丝不动 —— 这一层还剩 <b>" + G.mobs.length + "</b> 只没清。", "hurt");
-    } else {
-      fov(); render();
-      askStair();
-    }
+  // 清空之后阶梯才存在，踩上去才问。清空前那一格看着就是普通地面，别弹莫名其妙的提示。
+  if(G.mobs.length === 0 && P.x === G.stair.x && P.y === G.stair.y){
+    fov(); render();
+    askStair();
   }
 }
 /* 踩上阶梯不再直接掉下去 —— 先问一句。
