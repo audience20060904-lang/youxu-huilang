@@ -842,11 +842,15 @@ function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
   G.paused = true;
   const last = G.floor === FLOORS;
+  // 盲斗会一口气往下走 BLIND_STEP 层 —— 门上写的层数得跟真正会落到的那一层对上
+  const to = (!last && hasRelic("blind")) ? Math.min(G.floor + BLIND_STEP, FLOORS) : G.floor + 1;
   $("stairEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 已清空";
-  $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + (G.floor + 1) + " 层";
+  $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + to + " 层";
   $("stairNote").innerHTML = last
     ? "下面就是这一章的尽头。<b>下去就没有回头路。</b>"
-    : "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
+    : (isBossFloor(to) ? "下面是一间屋子，里面<b>只有一只 BOSS</b>。" : "") +
+      (to > G.floor + 1 ? "盲斗会把中间几层一起烧穿。" : "") +
+      "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
   hideAll();
   $("veilStair").hidden = false;
   $("btnStairGo").focus();
