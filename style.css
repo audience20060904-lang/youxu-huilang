@@ -21,7 +21,9 @@
 html,body{height:100%}
 /* 双击不放大、也不给页面回弹的空间 —— 整个界面是固定一屏的游戏画面。
    manipulation 只砍掉「双击缩放」这一项，单击、滚动、长按全都照常。 */
-html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* ⚠️ tap-highlight 一并关掉：iOS 点完按钮会留一块灰罩子，看着就像选项上糊了一层阴影。 */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent}
 body{
   background:var(--void);
   background-image:radial-gradient(95% 60% at 50% 0%, #FDFAF3 0%, var(--void) 75%);
@@ -103,6 +105,8 @@ body{
 .hi i{font-style:normal;font-size:10.5px;color:var(--faint);flex:none}
 .hi b{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;
   letter-spacing:.02em}
+/* Boss 房那一层（第 10/20/30/40/50 层）在顶栏写成 `10*`，血色（用户 2026-09） */
+.hi b.bossfloor{color:var(--blood)}
 .hi.gold b{color:var(--torch)}
 .hi.left b{color:var(--blood)}
 .hi.done b{color:var(--venom);font-size:12px}
@@ -357,7 +361,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .opt .n{position:absolute;left:5px;top:5px;width:16px;height:16px;flex:none;
   display:grid;place-items:center;border:1px solid var(--edge);border-radius:2px;
   background:var(--stone);font-family:var(--mono);font-size:10px;color:var(--faint)}
-.opt:hover:not(:disabled){border-color:var(--torch-deep);background:var(--stone-3)}
+/* ⚠️ 选项/字母键的 hover **必须关进 @media (hover:hover)**：触屏上的 hover 是「粘住」的 ——
+   手指点完那一格，hover 底色会一直留到下次点别处，而下一题的新按钮又长在同一个位置上，
+   看着就像上一题在这儿留了块阴影（用户 2026-09 报的那个 bug）。鼠标那一侧照旧。 */
+@media (hover:hover){
+  .opt:hover:not(:disabled){border-color:var(--torch-deep);background:var(--stone-3)}
+}
 .opt:disabled{cursor:default;opacity:.55}
 .opt.right{background:#DFEDD0;border-color:var(--venom);color:#2F5220;opacity:1;font-weight:600}
 .opt.wrong{background:#F6DCD7;border-color:var(--blood);color:#7E2618;opacity:1}
@@ -457,7 +466,9 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .lbtn{width:auto;height:auto;aspect-ratio:1;background:var(--stone-3);border:1px solid var(--edge);
   color:var(--bone);border-radius:3px;font-family:var(--mono);
   font-size:clamp(17px,2.9vh,23px);cursor:pointer;padding:0}
-.lbtn:hover:not(:disabled){border-color:var(--torch-deep);background:var(--stone-2)}
+@media (hover:hover){
+  .lbtn:hover:not(:disabled){border-color:var(--torch-deep);background:var(--stone-2)}
+}
 .lbtn:disabled{opacity:.25;cursor:default}
 
 /* ===== 卡片 / 图鉴 ===== */
@@ -493,6 +504,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .cx.lost .cn{color:var(--faint)}
 .cx .cd{font-size:12px;color:var(--dim);line-height:1.45}
 .cx .stars{color:var(--torch);letter-spacing:.08em}
+/* 图鉴的搜索框（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找 */
+.find{width:100%;box-sizing:border-box;margin:2px 0 0;padding:7px 10px;
+  border:1px solid var(--edge);border-radius:2px;background:#FFFDF7;color:var(--bone);
+  font-family:var(--body);font-size:13px;-webkit-appearance:none;appearance:none}
+.find:focus{outline:none;border-color:var(--torch-deep)}
+.find::placeholder{color:var(--faint)}
 .tally{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
 .tally b{color:var(--torch);font-weight:600}
 

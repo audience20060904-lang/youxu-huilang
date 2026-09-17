@@ -401,7 +401,7 @@
     <div class="eyebrow">带不下了</div>
     <h2 id="swapTitle">换掉哪一件？</h2>
     <div class="relic hot" id="swapNew"></div>
-    <p class="note">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，或者放弃新的。</p>
+    <p class="note">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
     <div class="relics" id="swapList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
   </div>
@@ -446,7 +446,7 @@
 <!-- 合成完的二选一：材料已经砸了，所以这个窗只能挑，没有关闭钮 -->
 <div class="veil" id="veilFuseGot" hidden>
   <div class="sheet">
-    <div class="eyebrow">合成</div>
+    <div class="eyebrow" id="fuseGotEyebrow">合成</div>
     <h2 id="fuseGotTitle">两件，挑一件</h2>
     <div class="relics" id="fuseGotList"></div>
   </div>
@@ -461,6 +461,8 @@
     </div>
     <h2 id="codexTitle">词库</h2>
     <div class="tally" id="codexTally"></div>
+    <input class="find" id="codexFind" type="search" autocomplete="off"
+           placeholder="搜索：英文 / 中文 / 遗物名">
     <div class="codex" id="codexList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseCodex" type="button">关闭</button></div>
   </div>
