@@ -59,7 +59,9 @@ function lockInput(ms){ lockUntil = Math.max(lockUntil, Date.now() + ms); }
 function newRun(){
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
-        relics:[], haunt:[], hauntAt:{}, undying:false };
+        relics:[], haunt:[], hauntAt:{}, undying:false,
+        // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
+        spent:0, bonusAtk:0, bonusHp:0, chew:false };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   autoOff();
@@ -70,7 +72,11 @@ function newRun(){
   say("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。", "sys");
   nextFloor();
 }
-function xpNeed(l){ return 5 + l * 3; }
+/* 升一级要多少经验。「速成」在这儿减 20% —— HUD 的经验条和 gainXp 都走它，一处改两处生效。*/
+function xpNeed(l){
+  const n = 5 + l * 3;
+  return hasRelic("adept") ? Math.max(1, Math.ceil(n * 0.8)) : n;   // 速成
+}
 /* 属性只有两个来源：等级 + 遗物。装备系统已删。
    幸运也一并去掉了 —— 它只影响过掉宝品质，现在没宝可掉。*/
 function stats(){
@@ -89,6 +95,11 @@ function stats(){
   if(hasRelic("vigor")) s.maxHp += 12;
   if(hasRelic("keen"))  s.crit += 15;
   if(hasRelic("edge"))  s.crit += 8;
+  /* 成长线：拿到「烙印」「铭心」之后每升一级攒下来的，记在 P 上（gainXp 里加） */
+  if(P.bonusAtk) s.atk += P.bonusAtk;                        // 烙印：每级 +1 攻击
+  if(P.bonusHp)  s.maxHp += P.bonusHp;                       // 铭心：每级 +3 上限
+  /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
+  if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 4;   // 背水
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
@@ -106,6 +117,8 @@ function nextFloor(){
   }
   G.echoUsed = false;      // 「回声」每层一次
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
+  G.holdUsed = 0;          // 「屏息」每层 HOLD_FREE 次
+  G.rerollUsed = false;    // 「重掷」每层一次
   if(G.floor > FLOORS){ chapterClear(); return; }
   genFloor();
   fov();
@@ -287,7 +300,8 @@ function genFloor(){
     const sp = take();
     if(sp) G.mobs.push(makeFoe(GATEKEEPER, sp.x, sp.y));   // 每 10 层的守门人
   }
-  for(let i=0, k=ri(7,10); i<k; i++){
+  // 金币堆 7~10 堆，「掘金」再多 3 堆
+  for(let i=0, k=ri(7,10) + (hasRelic("dig") ? 3 : 0); i<k; i++){
     const sp = take(); if(!sp) break;
     G.things.push({x:sp.x, y:sp.y, kind:"gold", amt: ri(2,6) + G.floor});
   }
@@ -1114,6 +1128,7 @@ function answer(btn, ok){
   B.locked = true;
   $("btnWager").disabled = true;
   const word = B.q.word, m = B.mob, s = stats();
+  const firstSeen = !LEX[word.en];          // 课业：这个存档从没见过的生词（LEX 里没记录）
   const rec = LEX[word.en] || {str:0, seen:0, wrong:0};
   rec.seen++;
   if(P.seenWords.indexOf(word.en) < 0) P.seenWords.push(word.en);
@@ -1150,17 +1165,34 @@ function answer(btn, ok){
   const hitWeak = !!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak);
   const isSpell = B.q.type === "spell";
   let head, note = "";
+  /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
+     接到底下那条 say() 后面 —— 想让玩家在战斗窗里当场看见，就只能写进 head。*/
+  let relicLog = "";
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
     P.combo++;
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
-    if(isSpell){ P.combo += SPELL_COMBO; B.xpx = SPELL_XPX; }
+    if(isSpell){ P.combo += SPELL_COMBO * (hasRelic("boom") ? 2 : 1); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
          额外伤害不进这条式子：无视护甲、不吃暴击，单独从怪血里扣。
        **只有「×(1+百分比)」和「×暴击倍率」两个乘区，别再加第三个。** */
+
+    /* 无常（神圣）：每答对随机触发一档。伤害那一档攒在 B.whim 上，**只在这一场有效**，
+       而且是在下面的百分比桶里跟别的 % 一起相加 —— 没有新乘区。*/
+    let whim = "";
+    if(hasRelic("whim")){
+      const roll = ri(1, 3);
+      if(roll === 1){ B.whim = (B.whim || 0) + 8; whim = "伤害 +8%（本场累计 " + B.whim + "%）"; }
+      else if(roll === 2){
+        const back = Math.max(1, Math.ceil(s.maxHp * 0.05));
+        P.hp = Math.min(s.maxHp, P.hp + back);
+        whim = "回 " + back + " 点生命";
+      } else { P.gold += 60; whim = "+60 金"; }
+      relicLog += " <span class=\"sys\">(无常 · " + whim + ")</span>";
+    }
 
     // 第一层 · 基础点伤（会被百分比放大）
     let base = s.atk;
@@ -1175,6 +1207,13 @@ function answer(btn, ok){
     if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
     if(hasRelic("hoard")) pct += Math.min(75, Math.floor((P.gold||0) / 200) * 5);  // 守财：每 200 金 +5%，上限 75%
     if(hasRelic("blind")) pct += spellBonusPct();                           // 盲斗：吃多少额外拼写率就加多少 %
+    // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
+    if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * 5;      // 空手：每少带一件 +5%
+    if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
+    if(hasRelic("offer")) pct += 60;                                        // 献身（生命减半在 stats() 里）
+    if(hasRelic("slay") && m.boss) pct += 25;                               // 弑主：Boss 和守层者
+    if(hasRelic("delve")) pct += Math.min(40, G.floor * 0.5);               // 踏层：每下一层 +0.5%
+    if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
@@ -1195,7 +1234,9 @@ function answer(btn, ok){
     if(hasRelic("tempo") && P.combo >= 10) critRate += 15;                  // 节拍
     if(hasRelic("dice")) critRate += (B.dice || 0) * 5;                     // 赌骰
     if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * 0.1; critRate = 100; }
-    const crit = Math.random() * 100 < critRate;
+    // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
+    const forceCrit = hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0;
+    const crit = forceCrit || Math.random() * 100 < critRate;
 
     let raw = Math.round(base * (1 + pct / 100)) + flat;
     if(crit) raw = Math.round(raw * critMult);                              // 乘区二
@@ -1203,12 +1244,23 @@ function answer(btn, ok){
     const dmg = Math.max(1, raw - armor);
     if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 4);        // 饮血
     m.hp -= dmg + extra;
+    /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
+       （不重新掷暴击、不再算额外伤害、不加连击），所以还是那两个乘区。*/
+    let hall = 0;
+    if(hasRelic("hall") && Math.random() < 0.5){
+      hall = dmg;
+      m.hp -= hall;
+      setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
+      relicLog += " <span class=\"sys\">(回响之厅又补了 " + hall + " 点)</span>";
+    }
     if(hasRelic("drain")) P.hp = Math.min(s.maxHp, P.hp + 2);               // 吞噬
     if(hasRelic("dice") && Math.random() < .10) B.dice = (B.dice || 0) + 1; // 赌骰：答对 10% 叠一层
     if(B.wager && hasRelic("allin") && Math.random() < .10){                // 孤注
       P.hp = Math.min(s.maxHp, P.hp + Math.max(1, Math.round(s.maxHp * 0.2)));
     }
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
+    if(wasStrong && hasRelic("tome")) P.gold += 8;                          // 典藏：答对掌握过的词
+    if(firstSeen && hasRelic("lesson")) P.gold += 10;                       // 课业：这个存档第一次见的生词
     floatNum("foe", "-" + dmg, "dmg");
     if(extra > 0) setTimeout(function(){ floatNum("foe", "-" + extra, "dmg"); }, 220);
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
@@ -1219,6 +1271,13 @@ function answer(btn, ok){
            (surge ? "，浪涌炸开" : "") +
            (pct ? "（+" + pct + "%" + (cbo ? "，其中连击 +" + cbo + "%" : "") + "）" : "") + "。" +
            (extra ? " 额外 <b>" + extra + "</b> 点无视护甲。" : "");
+    /* 反刍：上一题答错了，这一题答对就回一口血 */
+    if(P.chew && hasRelic("chew")){
+      P.chew = false;
+      const back = Math.max(1, Math.ceil(s.maxHp * 0.08));
+      P.hp = Math.min(s.maxHp, P.hp + back);
+      relicLog += " <span class=\"sys\">(反刍回了 " + back + " 点生命)</span>";
+    }
     if(B.rescue){                                     // 补救成功：刚才欠的那一下一笔勾销
       B.rescue = false; B.pend = null;
       note += " <span style=\"color:var(--good)\">补救成功 —— 刚才那一下没掉血。</span>";
@@ -1237,6 +1296,7 @@ function answer(btn, ok){
     else if(isSpell || hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
     else P.combo = 0;
     B.dice = 0;                       // 赌骰层数清零
+    if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
     const wasHaunted = B.q.haunted;
     addHaunt(word.en);                      // 答错就缠上来
 
@@ -1260,18 +1320,30 @@ function answer(btn, ok){
       }
       if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血
         G.echoUsed = true;
+        dmg = 0;
         head = "<span class=\"big no\">回声替你挡下了</span>";
         note = "这一层的第一次失手，不掉血。";
-      } else if(dmg > 0 && hasRelic("repeat") && !B.repeatUsed){
-        /* 复读者：这一下先欠着，给 5 秒的补救窗口（openRescue 里倒计时）。
-           点了补救就把这个词变成拼写题重来一次，拼对免伤，拼错才结清。 */
-        B.pend = {dmg:dmg, haunted:wasHaunted};
-        head = "<span class=\"big no\">失手 —— 还有一次补救</span>";
-        note = "5 秒内点「补救」，把这个词拼对，这 <b>" + dmg + "</b> 点就不掉。";
-        openRescue();
-      } else if(dmg > 0){
-        head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
-        note = takeHit(dmg, m, wasHaunted);
+      }
+      /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。
+         复读者欠下的那一下存的是**已经减过的**伤害，所以补救失败结清时不用再算一遍。*/
+      if(dmg > 0){
+        const mit = mitigate(dmg, s);
+        dmg = mit.dmg;
+        if(mit.dodged){
+          head = "<span class=\"big no\">错身 —— 没碰到你</span>";
+          note = "你侧了半步，这一下落空了（连击照断）。";
+        } else if(hasRelic("repeat") && !B.repeatUsed){
+          /* 复读者：这一下先欠着，给 5 秒的补救窗口（openRescue 里倒计时）。
+             点了补救就把这个词变成拼写题重来一次，拼对免伤，拼错才结清。 */
+          B.pend = {dmg:dmg, haunted:wasHaunted};
+          head = "<span class=\"big no\">失手 —— 还有一次补救</span>";
+          note = "5 秒内点「补救」，把这个词拼对，这 <b>" + dmg + "</b> 点就不掉。";
+          openRescue();
+        } else {
+          head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
+          note = takeHit(dmg, m, wasHaunted);
+          relicLog += mit.why;
+        }
       } else if(!head){
         head = "<span class=\"big no\">失手</span>";
         note = "这一下没让你掉血。";
@@ -1298,7 +1370,7 @@ function answer(btn, ok){
   if(isSpell) spellLog = ok
     ? " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>"
     : (B.toChoice ? " <span class=\"sys\">(下一题换成选择题再认一次)</span>" : "");
-  say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn + spellLog, ok ? "good" : "hurt");
+  say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn + spellLog + relicLog, ok ? "good" : "hurt");
   renderBattleBars();
   renderHud();
   $("btnFlee").hidden = true;
@@ -1309,6 +1381,30 @@ function answer(btn, ok){
   if(B.rescueTimer) return;                 // 补救倒计时开着：只留「补救」这一个按钮
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
   else $("btnNextQ").hidden = false;
+}
+/* ---- 挨打这一侧的减伤链（2026-09 的防御线）----
+   顺序写死在这儿：软甲 −10% → 屏息每层前 HOLD_FREE 次减半 → 钝痛把单次封在上限 10% →
+   错身 25% 完全躲开。返回 {dmg, dodged, why}，why 是接在受伤那句话后面的说明。
+   ⚠️ **只在真的要掉血的时候调**（默诵/回声先挡，挡掉了就别进来）——
+   不然会白白吃掉屏息的次数、白掷一次错身。
+   ⚠️ 这条线里**没有固定减伤**：第 1 层的怪只打 1~2 点，「每次少挨 3 点」就是开局无敌，
+   到后期又等于没有 —— 跟 content.js 里「不给后面的章加护甲」是同一个数学。 */
+function mitigate(dmg, s0){
+  const s = s0 || stats();
+  let out = dmg, why = "";
+  if(hasRelic("soft")) out = Math.ceil(out * 0.9);                        // 软甲 −10%
+  if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
+    G.holdUsed = (G.holdUsed || 0) + 1;
+    out = Math.max(1, Math.ceil(out / 2));
+    why += " <span class=\"sys\">(屏息卸掉一半，这一层还剩 " + (HOLD_FREE - G.holdUsed) + " 次)</span>";
+  }
+  if(hasRelic("blunt")){                                                  // 钝痛：单次封顶
+    const cap = Math.max(1, Math.ceil(s.maxHp * 0.1));
+    if(out > cap){ out = cap; why += " <span class=\"sys\">(钝痛把这一下压到 " + cap + " 点)</span>"; }
+  }
+  out = Math.max(1, out);
+  if(hasRelic("slip") && Math.random() < 0.25) return {dmg:0, dodged:true, why:""};   // 错身
+  return {dmg:out, dodged:false, why:why};
 }
 /* ---- 挨一下：扣血 + 跳数字，返回写进 verdict 的那句话 ---- */
 function takeHit(dmg, m, haunted){
@@ -1384,8 +1480,7 @@ function closeBattleWin(){
   const i = G.mobs.indexOf(m);
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
-  const xp = m.xp * xpx;
-  gainXp(xp);
+  const xp = gainXp(m.xp * xpx);     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
   const g = Math.round((ri(2,5) + G.floor) * (hasRelic("greed") ? 1.2 : 1));   // 拾荒者 +20%
   P.gold += g;
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
@@ -1426,15 +1521,22 @@ function flee(){
   lockInput(260);
   render();
 }
+/* 返回**实际到手**的经验（求知加成之后），调用方拿它去写日志 */
 function gainXp(n){
+  if(hasRelic("study")) n = Math.round(n * 1.2);        // 求知 +20%
   P.xp += n;
   while(P.xp >= xpNeed(P.lvl)){
     P.xp -= xpNeed(P.lvl);
     P.lvl++;
+    /* 成长线：拿到之后升的级才算，累在 P 上（stats() 里读）。
+       铭心涨的是上限，按老规矩当前血也跟着补上。*/
+    if(hasRelic("brand")) P.bonusAtk = (P.bonusAtk || 0) + 1;                 // 烙印
+    if(hasRelic("engrave")){ P.bonusHp = (P.bonusHp || 0) + 3; P.hp += 3; }   // 铭心
     const s = stats();
     P.hp = Math.min(s.maxHp, P.hp + CHAPTER.levelHeal);
     say("<b>等级提升！</b>你现在是 " + P.lvl + " 级 —— 攻击 " + s.atk + "，生命上限 " + s.maxHp + "。", "good");
   }
+  return n;
 }
 
 /* ================= 房间：祭坛 / 上锁宝箱 / 游商 =================
@@ -1632,6 +1734,11 @@ function openShop(th){
   hideAll();
   $("veilShop").hidden = false;
 }
+/* 游商的实际标价：货是进店那一刻定下的（存在 th.stock 上），
+   「熟客」的折扣**不写进货架**，每次现算 —— 这样进店之后才拿到熟客也能立刻便宜。*/
+function shopPrice(row){
+  return Math.max(1, Math.round(row.price * (hasRelic("regular") ? 0.85 : 1)));
+}
 function renderShop(){
   const th = pendingRoom;
   if(!th) return;
@@ -1644,6 +1751,7 @@ function renderShop(){
   }
   th.stock.forEach(function(row, i){
     const r = row.relic;
+    const price = shopPrice(row);
     const d = document.createElement("div");
     d.className = "shopit" + (row.sold ? " sold" : "");
     d.innerHTML =
@@ -1653,8 +1761,8 @@ function renderShop(){
         "<div class=\"sd\">" + r.pw + "</div>" +
       "</div>" +
       "<button type=\"button\" class=\"buy\" data-i=\"" + i + "\"" +
-        (row.sold || P.gold < row.price ? " disabled" : "") + ">" +
-        (row.sold ? "已售" : row.price + " 金") + "</button>";
+        (row.sold || P.gold < price ? " disabled" : "") + ">" +
+        (row.sold ? "已售" : price + " 金") + "</button>";
     box.appendChild(d);
   });
 }
@@ -1663,10 +1771,13 @@ function buyFrom(i){
   pendingRoom = null;
   if(!th) return;
   const row = th.stock[i];
-  if(!row || row.sold || P.gold < row.price) return;
-  P.gold -= row.price;
+  if(!row) return;
+  const price = shopPrice(row);               // 熟客的折扣在这儿现算
+  if(row.sold || P.gold < price) return;
+  P.gold -= price;
+  P.spent = (P.spent || 0) + price;           // 散财：这一趟花出去多少
   row.sold = true;
-  say("你付了 <b>" + row.price + "</b> 金币。", "sys");
+  say("你付了 <b>" + price + "</b> 金币。", "sys");
   grantRelic(row.relic, "游商递给你");
   pendingRoom = th;             // 货架还开着，接着选
   renderShop();
@@ -1689,6 +1800,9 @@ function removeThing(th){
    只在这一趟里有效，倒下就没了（P 整个重建）。
    效果一律在 answer() / nextQuestion() 里用 hasRelic() 分支实现。 */
 var RELIC_MAX = 15;               // 持有上限 —— 满了必须取舍，这是搭配成立的前提
+/* 实际上限：「行囊」+3。⚠️ 判满、遗物页的计数、取舍弹窗全走这一个口，别再直接读 RELIC_MAX
+   （只有「空手」故意按 15 这个基准算，见 answer()）。*/
+function relicCap(){ return RELIC_MAX + (hasRelic("pack") ? 3 : 0); }
 let pendingSwap = null;           // 等着被换进来的那件
 /* 刚拿到、还没在遗物页上点开看过的那几件 —— 卡片左上角挂个「new」小红点。
    **纯界面状态，不进存档**：回主城 / 重开一趟就清掉。 */
@@ -1774,6 +1888,9 @@ function sellRelic(id){
 /* ---- 合成：玩家自己挑 3 件同品质的，换一件高一档的（换到哪一件仍是随机） ----
    遗物页上两个按钮：「选择」进/退挑选状态，「合成」把挑中的三件砸了。
    挑选状态下整张遗物卡可点，选了第一件之后别的品质就点不动了。 */
+/* 合成的两个数：「配方」把件数 3 → 2、金币减半。所有地方都走这两个函数，别直接读常量。 */
+function fuseN(){ return hasRelic("recipe") ? 2 : FUSE_N; }
+function fuseCost(){ return hasRelic("recipe") ? Math.round(FUSE_COST / 2) : FUSE_COST; }
 let fuseOn = false;      // 是不是正在挑
 let fuseSel = [];        // 挑中的遗物 id
 
@@ -1793,49 +1910,51 @@ function fusePick(id){
     say("得是<b>同一个品质</b>的三件 —— 现在挑的是" + RAR_CN[fuseRar()] + "。", "sys");
     return;
   }
-  if(fuseSel.length >= FUSE_N){ say("已经挑满 " + FUSE_N + " 件了。", "sys"); return; }
+  if(fuseSel.length >= fuseN()){ say("已经挑满 " + fuseN() + " 件了。", "sys"); return; }
   fuseSel.push(id);
   renderRelics();
 }
-/* 点「合成」先弹一个二选一的确认窗 —— 合成要花 FUSE_COST 金，砸下去不可撤销 */
+/* 点「合成」先弹一个二选一的确认窗 —— 合成要花钱，砸下去不可撤销 */
 function askFuse(){
-  if(fuseSel.length !== FUSE_N) return;
+  if(fuseSel.length !== fuseN()) return;
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
   const gold = (P && P.gold) || 0;
   const names = fuseSel.map(function(id){ const r = relicById(id); return r ? r.n : "?"; }).join("、");
-  $("fuseTitle").textContent = FUSE_N + " 件" + RAR_CN[rar] + " → 1 件" + RAR_CN[rar + 1];
+  $("fuseTitle").textContent = fuseN() + " 件" + RAR_CN[rar] + " → 1 件" + RAR_CN[rar + 1];
   $("fuseLedger").innerHTML =
     li("砸掉", names) +
-    li("花费", FUSE_COST + " 金（你有 " + gold + "）") +
+    li("花费", fuseCost() + " 金（你有 " + gold + "）") +
     li("换回", "随机一件" + RAR_CN[rar + 1]);
   const yes = $("btnFuseYes");
-  yes.disabled = gold < FUSE_COST;
-  yes.textContent = yes.disabled ? "金币不够" : "花 " + FUSE_COST + " 金合成";
+  yes.disabled = gold < fuseCost();
+  yes.textContent = yes.disabled ? "金币不够" : "花 " + fuseCost() + " 金合成";
   $("veilFuse").hidden = false;
   (yes.disabled ? $("btnFuseNo") : yes).focus();
 }
 function closeFuseAsk(){ $("veilFuse").hidden = true; }
 function fuseGo(){
   closeFuseAsk();
-  if(fuseSel.length !== FUSE_N) return;
+  if(fuseSel.length !== fuseN()) return;
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
-  if(!P || P.gold < FUSE_COST){ say("合成要 <b>" + FUSE_COST + "</b> 金，你还不够。", "sys"); return; }
+  if(!P || P.gold < fuseCost()){ say("合成要 <b>" + fuseCost() + "</b> 金，你还不够。", "sys"); return; }
   // 挑的这三件必须都还在手上（分解过就作废）
   const eat = fuseSel.filter(function(id){ return P.relics.indexOf(id) >= 0; });
-  if(eat.length !== FUSE_N){ fuseSel = []; renderRelics(); return; }
+  if(eat.length !== fuseN()){ fuseSel = []; renderRelics(); return; }
   const up = relicPool().filter(function(x){ return (x.r || 0) === rar + 1; });
   if(!up.length){ say("更高一档的遗物你已经拿齐了。", "sys"); return; }
   const got = pick(up);
-  P.gold -= FUSE_COST;
+  const cost = fuseCost();
+  P.gold -= cost;
+  P.spent = (P.spent || 0) + cost;        // 散财：合成的钱也算花出去了
   withMaxHp(function(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
     P.relics.push(got.id);
   });
   fuseOn = false; fuseSel = [];
   noteRelicFound(got, "合成出");
-  say("你付了 <b>" + FUSE_COST + "</b> 金，把 " + FUSE_N + " 件" + RAR_CN[rar] +
+  say("你付了 <b>" + fuseCost() + "</b> 金，把 " + fuseN() + " 件" + RAR_CN[rar] +
       "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
   renderHud();
 }
@@ -1849,7 +1968,7 @@ function relicPool(){
 /* 直接给一件（祭坛/宝箱/游商走这里），没得给就折成金币 */
 function grantRelic(r, how){
   // 带满了：弹窗让玩家选换掉哪一件，或者放弃
-  if(r && P.relics.length >= RELIC_MAX){ offerSwap(r, how); return; }
+  if(r && P.relics.length >= relicCap()){ offerSwap(r, how); return; }
   if(!r){
     const g = 8 + G.floor * 2;
     P.gold += g;
@@ -1865,7 +1984,7 @@ function grantRelic(r, how){
 function offerSwap(r, how){
   pendingSwap = {relic:r, how:how};
   G.paused = true;
-  $("swapMax").textContent = RELIC_MAX;
+  $("swapMax").textContent = relicCap();
   $("swapNew").innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
     "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>";
   const box = $("swapList");
@@ -1950,6 +2069,9 @@ function offerRelics(){
       "<span class=\"rl\">" + r.lore + "</span>";
     box.appendChild(d);
   });
+  /* 「重掷」：每层一次，换一批三选一（G.rerollUsed 在 nextFloor 里清） */
+  const rb = $("btnRelicRedraw");
+  if(rb) rb.hidden = !(hasRelic("redraw") && !G.rerollUsed);
   hideAll();
   $("veilRelic").hidden = false;
   return true;
@@ -1959,7 +2081,7 @@ function takeRelic(id){
   if(!r) return;
   G.relicDone = true;
   $("veilRelic").hidden = true;
-  if(P.relics.length >= RELIC_MAX){ offerSwap(r, "你拿起了"); return; }
+  if(P.relics.length >= relicCap()){ offerSwap(r, "你拿起了"); return; }
   G.paused = false;
   withMaxHp(function(){ P.relics.push(id); });
   noteRelicFound(r, "你拿起了");
@@ -1975,7 +2097,7 @@ function maybeRelic(){
 }
 function renderRelics(){
   const own = (P && P.relics) || [];
-  $("relicHead").textContent = "遗物 " + own.length + " / " + RELIC_MAX;
+  $("relicHead").textContent = "遗物 " + own.length + " / " + relicCap();
   const dot = $("bagDot");
   dot.textContent = own.length;
   dot.hidden = own.length === 0;
@@ -2027,22 +2149,25 @@ function renderFuse(){
   // 手上有没有任何一个品质凑得够三件
   let ready = -1;
   for(let q = 0; q < 4; q++){
-    if(own.filter(function(id){ return relicRar(id) === q; }).length >= FUSE_N){ ready = q; break; }
+    if(own.filter(function(id){ return relicRar(id) === q; }).length >= fuseN()){ ready = q; break; }
   }
+  // 标题也跟着「配方」变（2 件 + 150 金）
+  const fh = $("fuseHead");
+  if(fh) fh.textContent = "合成 · " + fuseN() + " 件同品质 + " + fuseCost() + " 金 → 1 件更高";
   pickBtn.textContent = fuseOn ? "取消选择" : "选择";
   pickBtn.disabled = !fuseOn && ready < 0;
-  goBtn.disabled = fuseSel.length !== FUSE_N;
-  goBtn.textContent = fuseOn && fuseSel.length ? ("合成（" + fuseSel.length + "/" + FUSE_N + "）") : "合成";
+  goBtn.disabled = fuseSel.length !== fuseN();
+  goBtn.textContent = fuseOn && fuseSel.length ? ("合成（" + fuseSel.length + "/" + fuseN() + "）") : "合成";
   if(!note) return;
   if(fuseOn){
     note.innerHTML = fuseSel.length
-      ? ("已挑 <b>" + fuseSel.length + " / " + FUSE_N + "</b> 件" + RAR_CN[fuseRar()] +
-         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件），另付 <b>" + FUSE_COST + "</b> 金。")
-      : "在上面点 <b>" + FUSE_N + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
+      ? ("已挑 <b>" + fuseSel.length + " / " + fuseN() + "</b> 件" + RAR_CN[fuseRar()] +
+         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件），另付 <b>" + fuseCost() + "</b> 金。")
+      : "在上面点 <b>" + fuseN() + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
   } else {
     note.innerHTML = ready >= 0
-      ? ("点「选择」，挑 " + FUSE_N + " 件同品质的砸成一件更高的（另付 <b>" + FUSE_COST + "</b> 金）。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
-      : "同一个品质攒够 " + FUSE_N + " 件，再加 <b>" + FUSE_COST + "</b> 金才能合成。";
+      ? ("点「选择」，挑 " + fuseN() + " 件同品质的砸成一件更高的（另付 <b>" + fuseCost() + "</b> 金）。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
+      : "同一个品质攒够 " + fuseN() + " 件，再加 <b>" + fuseCost() + "</b> 金才能合成。";
   }
 }
 
@@ -2834,6 +2959,13 @@ $("btnSwapSkip").addEventListener("click", function(){ doSwap(null); });
 $("relicList").addEventListener("click", function(ev){
   const b = ev.target.closest(".relic");
   if(b && b.dataset.id) takeRelic(b.dataset.id);
+});
+/* 「重掷」：窗不关，就地换一批（每层一次） */
+$("btnRelicRedraw").addEventListener("click", function(){
+  if(!G || G.rerollUsed || !hasRelic("redraw")) return;
+  G.rerollUsed = true;
+  say("你把这三样推了回去 —— 换一批。", "sys");
+  offerRelics();
 });
 
 /* ---- 主城 与 洞窟 ---- */
