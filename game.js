@@ -33,7 +33,7 @@ var OPT = load(OPT_KEY, {speak:true, auto:true, lock:false});   // lock = 锁定
 function saveOpt(){ put(OPT_KEY, OPT); }
 
 /* ================= 章节 =================
-   CH 是**当前这一章**（content.js 的 CHAPTERS 里的一条）。两章共用地图尺寸和主角数值
+   CH 是**当前这一章**（content.js 的 CHAPTERS 里的一条）。四章共用地图尺寸和主角数值
    （那些在 CHAPTER 里），各章不同的只有：名字、词难度 wordLv、宝石倍率 gemMult、
    怪物加成 foeBonus、章末 Boss。**换章只能走 setChapter()**。 */
 function chapterById(id){
@@ -465,9 +465,12 @@ function render(){
     }
     const mo = mobAt(x,y);
     if(mo && (visible || mo.seen)){
-      content = "mob" + (mo.boss ? " boss" : "");
+      // 再挂一个 m-<id>，给需要单独上色的怪用（现在只有三四章的两个 Boss，
+      // 别的怪没写规则就照旧吃 .c.mob / .c.mob.boss 那两条）
+      const mid = mo.def && mo.def.id;
+      content = "mob" + (mo.boss ? " boss" : "") + (mid ? " m-" + mid : "");
       // 没画图的怪退回原来那个汉字，加新怪忘了配图也不会开天窗
-      art = MOB_ART[mo.def && mo.def.id] || null;
+      art = MOB_ART[mid] || null;
       glyph = art ? "" : mo.g;
     }
     if(x === P.x && y === P.y){
@@ -792,7 +795,7 @@ function renderCombo(){
     "<span class=\"cmb-p" + (pct ? "" : " off") + "\">伤害 +" + pct + "%</span>" +
     "<span class=\"cmb-next\">再对 " + need + " 个 +" + CHAPTER.comboPct + "%</span>";
 }
-/* **一章只出一个难度的词**（第一章 A1、第二章 A2，B1 留给第三章）——
+/* **一章只出一个难度的词**（第一章 A1、第二章 A2、第三章 B1、第四章 B2）——
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
    难度写在 content.js 的 CHAPTERS[].wordLv 上。*/
 function chapterLv(){ return (CH && CH.wordLv) || 1; }
@@ -1910,6 +1913,7 @@ function offerRelics(){
 
   G.paused = true;
   $("relicEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 清干净了";
+  $("relicTitle").textContent = CH.name + "给了你一样东西";   // 四章各叫各的名字
   const box = $("relicList");
   box.innerHTML = "";
   picks.forEach(function(r){

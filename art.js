@@ -226,6 +226,25 @@ gate:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
  '<path d="M10 3.1v14.7" stroke="#fff" stroke-width=".9" opacity=".5"/>' +
  '<circle cx="10" cy="9.6" r="2.1" fill="#fff" opacity=".9"/>' +
  '<circle cx="10" cy="9.6" r=".95" fill="currentColor"/>' +
+'</svg>',
+
+/* 烬渊祭司（第三章 Boss）：尖兜帽 + 平底的袍子，身侧一根带火的杖。
+   ⚠️ 跟回廊游影（warden2）都是尖顶，靠**平底 + 杖头那颗火**分开，别把杖删了。*/
+priest:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M10 2.4c-3.2 2.4-5 5.9-5 10 0 2.2.2 4.1.6 5.8h8.8c.4-1.7.6-3.6.6-5.8 0-4.1-1.8-7.6-5-10z" fill="currentColor"/>' +
+ '<path d="M16.5 6.6 15.3 17.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+ '<circle cx="16.9" cy="4.1" r="2.1" fill="#E0A83A"/>' +
+ '<circle cx="8.3" cy="9.8" r="1.15" fill="#fff" opacity=".92"/>' +
+ '<circle cx="11.7" cy="9.8" r="1.15" fill="#fff" opacity=".92"/>' +
+'</svg>',
+
+/* 墟心冕者（第四章 Boss）：头顶五枚尖刺的冕，胸口一颗亮着的墟心 */
+crown:'<svg viewBox="0 0 20 20" aria-hidden="true">' +
+ '<path d="M4.4 18 6 9.2h8l1.6 8.8z" fill="currentColor"/>' +
+ '<path d="M5.6 9.6 4.7 2.4 7.6 5.3 10 1.4 12.4 5.3 15.3 2.4 14.4 9.6z" fill="currentColor"/>' +
+ '<circle cx="8.3" cy="12" r="1.1" fill="#fff" opacity=".92"/>' +
+ '<circle cx="11.7" cy="12" r="1.1" fill="#fff" opacity=".92"/>' +
+ '<path d="M10 14.2 11.4 16.1 10 18 8.6 16.1z" fill="#E0A83A"/>' +
 '</svg>'
 };
 
@@ -465,6 +484,79 @@ warden:'<svg viewBox="0 0 100 100">' +
  '<path d="M37 33h26v8H37z" fill="#2A2620" opacity=".8"/>' +                          /* 面罩横缝 */
  '<path d="M46 33h8v23h-8z" fill="#2A2620" opacity=".8"/>' +                          /* 面罩竖缝 */
  '<circle cx="41.5" cy="37" r="3.4" fill="#E0A83A"/><circle cx="58.5" cy="37" r="3.4" fill="#E0A83A"/>' +
+'</svg>',
+
+/* 烬渊祭司（第三章 BOSS）：兜帽祭司，右手一根杖，杖头吊着烧着的香炉。
+   剪影跟守卫（角 + 斧）完全不撞：尖兜帽 + 铺到地上的袍子 + 身侧那根杖。
+   立绘颜色被 .portrait.boss 换成 #8A3223，所以身上不许有写死的灰。 */
+priest:'<svg viewBox="0 0 100 100">' +
+ '<ellipse cx="48" cy="96" rx="33" ry="4" fill="#000" opacity=".12"/>' +
+ /* 袍子：肩窄、下摆铺到地上，是个梯形 */
+ '<path d="M50 34c-12 0-19 8-23 24l-6 36h58l-6-36c-4-16-11-24-23-24z" fill="currentColor"/>' +
+ '<path d="M50 34c-12 0-19 8-23 24l-6 36h12l4-36c2-13 6-21 13-24z" fill="#fff" opacity=".16"/>' +
+ '<path d="M50 34c12 0 19 8 23 24l6 36H67l-4-36c-2-13-6-21-13-24z" fill="#000" opacity=".16"/>' +
+ '<path d="M44 58h12l2 36H42z" fill="#000" opacity=".14"/>' +
+ '<path d="M30 92h40" stroke="#000" opacity=".12" stroke-width="3"/>' +
+ /* 两只袖子 */
+ '<path d="M30 60c-9 5-13 14-13 27l12 2 5-23z" fill="currentColor"/>' +
+ '<path d="M70 60c9 5 13 14 13 27l-12 2-5-23z" fill="currentColor"/>' +
+ '<path d="M70 60c9 5 13 14 13 27h-6c0-11-3-19-9-24z" fill="#000" opacity=".15"/>' +
+ '<path d="M30 60c-9 5-13 14-13 27h6c0-11 3-19 9-24z" fill="#fff" opacity=".16"/>' +
+ /* 兜帽：尖顶，罩住整张脸 */
+ '<path d="M50 6c-13 8-20 21-20 35 0 5 .7 9 2 13h36c1.3-4 2-8 2-13 0-14-7-27-20-35z" fill="currentColor"/>' +
+ '<path d="M50 6c-13 8-20 21-20 35 0 5 .7 9 2 13h7c-1.4-4-2.2-8-2.2-13 0-13 5-25 13-33z" fill="#fff" opacity=".18"/>' +
+ '<path d="M50 6c13 8 20 21 20 35 0 5-.7 9-2 13h-7c1.4-4 2.2-8 2.2-13 0-13-5-25-13-33z" fill="#000" opacity=".15"/>' +
+ /* 帽子里是一团空洞，只剩两点火 */
+ '<path d="M50 20c-8 0-13 8-13 18 0 5 1 10 3 13h20c2-3 3-8 3-13 0-10-5-18-13-18z" fill="#2A2620" opacity=".9"/>' +
+ '<circle cx="44" cy="37" r="3.4" fill="#E0A83A"/><circle cx="56" cy="37" r="3.4" fill="#E0A83A"/>' +
+ /* 法杖 + 吊炉，握在右手里（画在最后，压在袖子上面） */
+ '<path d="M85 28v62" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>' +
+ '<rect x="76" y="66" width="16" height="9" rx="3" fill="currentColor"/>' +
+ '<rect x="76" y="66" width="16" height="9" rx="3" fill="#000" opacity=".14"/>' +
+ '<path d="M76 26h18l-3 10a6.5 6.5 0 0 1-12 0z" fill="currentColor"/>' +
+ '<path d="M76 26h18l-1 3.4H77z" fill="#000" opacity=".2"/>' +
+ '<path d="M85 4c5 7 8 12 8 16a8 8 0 0 1-16 0c0-4 3-9 8-16z" fill="#E0A83A"/>' +
+ '<path d="M85 11c2.6 4 4 7 4 9.4a4 4 0 0 1-8 0c0-2.4 1.4-5.4 4-9.4z" fill="#FBF6E7"/>' +
+ /* 飘起来的余烬 */
+ '<circle cx="19" cy="30" r="2.2" fill="#E0A83A" opacity=".6"/>' +
+ '<circle cx="13" cy="47" r="1.5" fill="#E0A83A" opacity=".45"/>' +
+ '<circle cx="24" cy="15" r="1.6" fill="#E0A83A" opacity=".4"/>' +
+'</svg>',
+
+/* 墟心冕者（第四章 BOSS）：五枚尖刺的冕 + 宽大氅 + 胸口那颗亮着的墟心。
+   跟守卫、祭司都不撞：它是「宽肩 + 头顶一圈尖刺 + 胸前一颗菱形的光」。
+   ⚠️ 面甲只有**一只**眼（守卫和祭司都是两只），小尺寸下靠这个认。 */
+crown:'<svg viewBox="0 0 100 100">' +
+ '<ellipse cx="50" cy="96" rx="34" ry="4" fill="#000" opacity=".12"/>' +
+ '<circle cx="50" cy="38" r="32" fill="none" stroke="currentColor" stroke-width="3" opacity=".3" stroke-dasharray="15 10"/>' +
+ /* 大氅 */
+ '<path d="M50 44c-17 0-28 9-32 26l-4 24h72l-4-24c-4-17-15-26-32-26z" fill="currentColor"/>' +
+ '<path d="M50 44c-17 0-28 9-32 26l-4 24h13l3-24c2-15 8-23 20-26z" fill="#fff" opacity=".16"/>' +
+ '<path d="M50 44c17 0 28 9 32 26l4 24H73l-3-24c-2-15-8-23-20-26z" fill="#000" opacity=".16"/>' +
+ /* 肩甲 */
+ '<path d="M22 56c-9 4-14 12-15 23h21l3-21z" fill="currentColor"/>' +
+ '<path d="M78 56c9 4 14 12 15 23H72l-3-21z" fill="currentColor"/>' +
+ '<path d="M78 56c9 4 14 12 15 23h-6c-1-9-5-16-10-19z" fill="#000" opacity=".16"/>' +
+ '<path d="M22 56c-9 4-14 12-15 23h6c1-9 5-16 10-19z" fill="#fff" opacity=".16"/>' +
+ /* 胸口的墟心 */
+ '<path d="M50 56 61 74 50 92 39 74z" fill="#2A2620" opacity=".5"/>' +
+ '<path d="M50 61 57 74 50 87 43 74z" fill="#E0A83A"/>' +
+ '<path d="M50 66.5 53.5 74 50 81.5 46.5 74z" fill="#FBF6E7"/>' +
+ '<g stroke="#E0A83A" stroke-width="1.5" opacity=".4" fill="none" stroke-linecap="round">' +
+  '<path d="M39 74 28 69"/><path d="M61 74 72 69"/><path d="M50 92l3 6"/></g>' +
+ /* 头 + 面甲 */
+ '<path d="M50 16c-9 0-14 7-14 16 0 8 5 14 14 17 9-3 14-9 14-17 0-9-5-16-14-16z" fill="currentColor"/>' +
+ '<path d="M50 16c-9 0-14 7-14 16 0 8 5 14 14 17z" fill="#fff" opacity=".17"/>' +
+ '<path d="M37 29h26v8H37z" fill="#2A2620" opacity=".85"/>' +
+ '<circle cx="50" cy="33" r="5.4" fill="#FBF6E7"/>' +
+ '<circle cx="50" cy="33" r="3" fill="#E0A83A"/>' +
+ '<circle cx="50" cy="33" r="1.3" fill="#2A2620"/>' +
+ /* 冕：五枚尖刺，中间最高 */
+ '<path d="M33 24 32 6 41 14 50 2 59 14 68 6 67 24z" fill="currentColor"/>' +
+ '<path d="M33 24 32 6 41 14 50 2v22z" fill="#fff" opacity=".17"/>' +
+ '<path d="M32 18h36v6H32z" fill="#000" opacity=".16"/>' +
+ '<circle cx="50" cy="9" r="2.4" fill="#E0A83A"/>' +
+ '<circle cx="32.6" cy="12" r="1.7" fill="#E0A83A"/><circle cx="67.4" cy="12" r="1.7" fill="#E0A83A"/>' +
 '</svg>'
 };
 

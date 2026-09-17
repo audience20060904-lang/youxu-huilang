@@ -6,7 +6,7 @@
 "use strict";
 
 /* ===== 章节 =====
-   CHAPTER 是**两章共用**的那套数值（地图大小、主角、成长曲线）。
+   CHAPTER 是**四章共用**的那套数值（地图大小、主角、成长曲线）。
    ⚠️ W / H / floors / view 在 game.js 开头就被取成了 const，**各章不能各来一套** ——
    想让某一章换地图尺寸，得先改 game.js。
    每章自己的东西（名字、词难度、宝石倍率、怪物加成、Boss）写在下面的 CHAPTERS 里。 */
@@ -50,10 +50,15 @@ var CHAPTER = {
 /* ===== 每一章 =====
    **一个难度就是一章，章与章之间的词不重复**（用户定的）：
    wordLv 就是这一章唯一会出的词难度（1=A1 2=A2 3=B1 4=B2），出题只从这一桶里抽。
-   gemMult 是结算时的难度倍率 —— 第一章 100%，A2 章 125%，以后的 B1 章 150%。
+   gemMult 是结算时的难度倍率 —— 100% / 125% / 150% / 175%，一章一档。
    foeBonus 是这一章所有怪（除了章末 Boss，它自己一套数值）的固定加成，整数加法。
-   加第三章：往数组里再抄一条（wordLv:3、gemMult:1.5），再往 ROUTES 里加一条路就行。
-   第四章同理（wordLv:4，B2 词库已经备好）。 */
+   一章一档，步长就是第一章到第二章那一档：**每章 +4 血 +1 伤害 +2 经验**。
+   ⚠️ **armor 这一档一直留在 0，别给后面的章加护甲**：
+   玩家攻击是靠等级长出来的（第 1 层只有 3 点），护甲在第 1 层是「每刀少打 1」，
+   到第 20 层攻击四十几的时候等于没有 —— 它只会把最难的一下压在**刚进章的第一只怪**身上。
+   算过：armor +1 时第四章第 1 层的灰鼠要砍 10 刀，+2 要砍 20 刀，而中后期一点感觉都没有。
+   后面几章的压力全部交给 hp / dmg（见下面每一章的注释）。
+   加第五章：往数组里再抄一条，再往 ROUTES 里加一条路就行（词库那边要先有那一档的桶）。 */
 var CHAPTERS = [
   {id:1, name:"石廊", level:"A1", wordLv:1, gemMult:1.00,
    foeBonus:{hp:0, dmg:0, armor:0, xp:0},
@@ -62,7 +67,19 @@ var CHAPTERS = [
   {id:2, name:"锈庭", level:"A2", wordLv:2, gemMult:1.25,
    foeBonus:{hp:4, dmg:1, armor:0, xp:2},
    boss:{id:"steward", g:"庭", name:"锈庭主事", art:"warden", cat:"all",
-         hp:300, dmg:18, armor:4, xp:90, boss:true, fixed:true}}
+         hp:300, dmg:18, armor:4, xp:90, boss:true, fixed:true}},
+  /* 第三章：B1。怪 +8 血 +2 伤害 +4 经验；Boss 440 血，第 50 层大概要砍 6 刀。
+     实测（50 层跑完、不带遗物、按 10~13 只/层）：第 1 层容错 7.5 次，Boss 容错 8.3 次。 */
+  {id:3, name:"烬渊", level:"B1", wordLv:3, gemMult:1.50,
+   foeBonus:{hp:8, dmg:2, armor:0, xp:4},
+   boss:{id:"priest", g:"渊", name:"烬渊祭司", art:"priest", cat:"all",
+         hp:440, dmg:22, armor:5, xp:120, boss:true, fixed:true}},
+  /* 第四章：B2，最深的一章。怪 +12 血 +3 伤害 +6 经验；Boss 560 血，7 刀。
+     实测：第 1 层容错 6.4 次（全游戏最紧的一下），Boss 容错 7.4 次。 */
+  {id:4, name:"墟心", level:"B2", wordLv:4, gemMult:1.75,
+   foeBonus:{hp:12, dmg:3, armor:0, xp:6},
+   boss:{id:"crown", g:"墟", name:"墟心冕者", art:"crown", cat:"all",
+         hp:560, dmg:26, armor:6, xp:150, boss:true, fixed:true}}
 ];
 var CH = CHAPTERS[0];        // 当前这一章。game.js 的 setChapter() 负责换，别在别处赋值
 
@@ -115,7 +132,8 @@ var FOES = [
  {id:"prism",  g:"棱", name:"碎色棱",     art:"prism", cat:"color",  hp:24, dmg:6, armor:2, xp:13, from:38}
 ];
 /* 章末 Boss 挪进 CHAPTERS 了（每章一只）。game.js 里用 CH.boss 取当前这一只。
-   每 10 层的守层者（第 10/20/30/40 层）—— 比普通怪硬，弱点随机，两章共用 */
+   每 10 层的守层者（第 10/20/30/40 层）—— 比普通怪硬，弱点随机，各章共用
+   （它不是 fixed，所以照样吃这一章的 foeBonus 和层数成长）*/
 var GATEKEEPER = {id:"gate", g:"门", name:"层间守者", art:"warden", cat:"all",
             hp:34, dmg:5, armor:1, xp:20, boss:true};
 
@@ -130,6 +148,12 @@ var ROUTES = [
    open:true},
   {id:"rust", ch:2, name:"锈庭", tag:"第二章 · A2",
    desc:"A2 进阶词 · 50 层 · 怪更硬，宝石 ×1.25",
+   open:true},
+  {id:"ember", ch:3, name:"烬渊", tag:"第三章 · B1",
+   desc:"B1 中阶词 · 50 层 · 尽头有烬渊祭司，宝石 ×1.5",
+   open:true},
+  {id:"core", ch:4, name:"墟心", tag:"第四章 · B2",
+   desc:"B2 高阶词 · 50 层 · 最深的一章，宝石 ×1.75",
    open:true}
 ];
 
