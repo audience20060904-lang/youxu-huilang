@@ -175,6 +175,9 @@ body{
 
 /* 地格底色：先定底 */
 .c.dark{background:var(--unseen);color:transparent}
+/* 离地板两格以上的实心墙：跟 .stage 的底同色，等于不画（用户 2026-09「墙体只要一格」）。
+   墙于是只剩贴着房间和走廊的那一圈。见 game.js 的 wallEdge。 */
+.c.void{background:var(--unseen);color:transparent}
 .c.wall{background:var(--wall);color:transparent}
 .c.floor{background:var(--floor)}
 .c.mem.wall{background:var(--wall-dim)}
@@ -308,6 +311,15 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .qcard{position:relative;border:1px solid var(--edge-soft);background:#FFFDF7;border-radius:3px;
   padding:clamp(8px,1.6vh,16px) 12px;
   display:flex;flex-direction:column;gap:clamp(4px,0.9vh,8px);align-items:center}
+/* 7 秒读条：**绝对定位压在题面卡片的顶边**，不占纵向空间 ——
+   它只在选择题出现、答完就收，放回文档流的话战斗窗会在答题瞬间缩一下。
+   最后 2 秒变红（.hot）。*/
+.qtimer{position:absolute;left:0;right:0;top:0;height:3px;background:#E7E0CF;
+  border-radius:3px 3px 0 0;overflow:hidden}
+.qtimer i{display:block;height:100%;width:100%;background:var(--torch);
+  transition:width .1s linear}
+.qtimer.hot i{background:var(--blood)}
+@media (prefers-reduced-motion:reduce){.qtimer i{transition:none}}
 .qlabel{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
 .qword{font-family:var(--mono);font-size:clamp(21px,4.2vh,30px);font-weight:600;letter-spacing:.04em;
   color:var(--bone);text-align:center;word-break:break-word;line-height:1.15}
@@ -322,9 +334,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 /* 心魔标签也是半路才出现的，藏起来时照样占位 —— 免得每题窗高都在跳。别改回 display:none。 */
 .haunt[hidden]{display:block !important;visibility:hidden;pointer-events:none}
 
-/* 四个选项排成 2×2 的正方块。宽度用 vh 卡住，免得矮屏上两行方块把弹窗顶出去 */
+/* 四个选项排成 2×2 的正方块。宽度用 vh 卡住，免得矮屏上两行方块把弹窗顶出去。
+   ⚠️ 方块是正方形，所以**这条宽度上限就是选项区的高度上限** —— 它是战斗窗唯一的调节阀。
+   连击条 2026-09 从窗底挪到怪物血条下面，自己占了一整行（比原来在 .mybar 里挤着高十来像素），
+   所以这里从 33vh 再收到 31vh 让出来。390×667 上量过：不收就会出滚动条。*/
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:clamp(5px,1vh,8px);
-  width:min(100%, 33vh, 318px);margin-inline:auto}
+  width:min(100%, 31vh, 318px);margin-inline:auto}
 .opt{position:relative;aspect-ratio:1;text-align:center;
   background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);
   border-radius:3px;padding:8px;font-size:clamp(14px,2.1vh,16px);cursor:pointer;font-family:var(--body);
@@ -361,12 +376,31 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .mybar .me svg{width:100%;height:100%}
 .mybar .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 /* 连击条：三段常驻（连了几次 / 现在加百分之几 / 再对几个进下一档）。
-   ⚠️ 三段永远都在，只有数字变 —— 答题前后行数一致，战斗窗才不会跳高。 */
+   ⚠️ 三段永远都在，只有数字变 —— 答题前后行数一致，战斗窗才不会跳高。
+   位置是**怪物血条下面**（用户 2026-09 从战斗窗底下挪上来的），所以它自己是一整行。
+   ⚠️ 动效只用 transform/opacity，不动布局 —— 放大那一下不能把底下的题面顶开。 */
 .combo{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;line-height:1.25;
   font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--torch);
   min-height:clamp(15px,2.4vh,19px)}
-.combo .cmb-n{flex:none;color:var(--dim)}
-.combo .cmb-n b{font-size:clamp(13px,2.1vh,16px);color:var(--torch);font-weight:700;letter-spacing:.02em}
+/* ⚠️ 放大的是**「连击 ×N」那一小段**，不是整行 ——
+   整行是满宽的，scale 一下右边会顶出去，弹层当场多一条横向滚动条。
+   整行只做不影响宽度的事（淡一下、变灰）。 */
+.combo .cmb-n{position:relative;z-index:1;transform-origin:left center}
+/* 涨了：数字弹一下，还闪一下绿 */
+.combo.up .cmb-n{animation:cmbUp .46s cubic-bezier(.3,1.5,.5,1)}
+.combo.up .cmb-n b{animation:cmbUpN .46s cubic-bezier(.3,1.6,.5,1)}
+/* 掉了（答错 / 超时 / 清零）：数字缩下去，整条淡一下再回来 */
+.combo.down .cmb-n{animation:cmbDownN .46s ease-out}
+.combo.down{animation:cmbDown .46s ease-out}
+@keyframes cmbUp{0%{transform:scale(1)}38%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes cmbUpN{0%{transform:scale(1)}38%{transform:scale(1.3);color:var(--venom)}100%{transform:scale(1)}}
+@keyframes cmbDownN{0%{transform:scale(1)}45%{transform:scale(.68)}100%{transform:scale(1)}}
+@keyframes cmbDown{0%{opacity:1}45%{opacity:.25;filter:grayscale(1)}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .combo.up,.combo.down,.combo.up .cmb-n,.combo.up .cmb-n b,.combo.down .cmb-n{animation:none}}
+.combo .cmb-n{flex:none;display:inline-block;color:var(--dim)}
+.combo .cmb-n b{display:inline-block;font-size:clamp(13px,2.1vh,16px);color:var(--torch);
+  font-weight:700;letter-spacing:.02em}
 .combo .cmb-p{flex:none;padding:0 5px;border-radius:2px;font-weight:700;
   background:#F6E6C4;border:1px solid var(--torch-deep);color:var(--torch-deep)}
 .combo .cmb-p.off{background:none;border-color:var(--edge);color:var(--faint);font-weight:400}
@@ -465,6 +499,25 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .rules ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:6px}
 .kbd{font-family:var(--mono);background:var(--stone-3);border:1px solid var(--edge);border-radius:2px;
   padding:0 5px;color:var(--bone);font-size:11.5px}
+
+/* ===== 游商的货架 =====
+   照**三选一那种遗物卡**摆（用户 2026-09，以前是一行小字 + 右边一个按钮，太挤）：
+   品质 / 名字 / 效果 / 传说各一行，买的按钮压在右下角。五件竖着排，弹层自己会滚。 */
+.shop{display:flex;flex-direction:column;gap:8px}
+.shopit{position:relative;display:flex;flex-direction:column;gap:2px;
+  border:1px solid var(--edge);background:var(--stone-2);border-radius:3px;
+  padding:9px 11px;padding-right:96px}
+.shopit .rt{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em}
+.shopit .rn{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:.04em}
+.shopit .rp{font-size:12.5px;color:var(--bone)}
+.shopit .rl{font-family:var(--flavor);font-style:italic;font-size:11.5px;color:var(--faint);margin-top:2px}
+.shopit .buy{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-family:var(--body);font-size:13px;padding:8px 12px;border-radius:2px;cursor:pointer;
+  background:var(--torch);color:#FFF9EC;border:1px solid var(--torch-deep);font-weight:600;white-space:nowrap}
+.shopit .buy:hover:not(:disabled){background:#B57C15}
+.shopit .buy:disabled{background:var(--stone-3);color:var(--faint);border-color:var(--edge);
+  cursor:default;font-weight:400}
+.shopit.sold{opacity:.5}
 
 /* ===== 背包 ===== */
 .bag{display:flex;flex-direction:column;gap:6px}

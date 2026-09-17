@@ -64,6 +64,7 @@ function newRun(){
         spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0 };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
+  comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
   autoOff();
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
@@ -313,7 +314,8 @@ function genFloor(){
   }
   // 三种房间，各自独立掷骰；都不是必出，免得每层长一个样
   if(Math.random() < 0.45){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"chest"}); }
-  if(Math.random() < 0.30){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"altar"}); }
+  // 祭坛 ALTAR_FROM 层之后才出（用户 2026-09）；有一成概率长成「熔炉」，在 openAltar 里定
+  if(G.floor >= ALTAR_FROM && Math.random() < 0.30){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"altar"}); }
   if(G.floor >= 2 && Math.random() < 0.35){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"shop"}); }
 }
 function makeFoe(def, x, y){
@@ -350,30 +352,34 @@ function say(t, cls){
 }
 
 /* ================= 视野 ================= */
-function los(x0,y0,x1,y1){
-  let dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
-  let sx = x0<x1?1:-1, sy = y0<y1?1:-1, err = dx-dy, x = x0, y = y0;
-  while(true){
-    if(x===x1 && y===y1) return true;
-    if(!(x===x0 && y===y0) && G.map[y][x] === 0) return false;
-    const e2 = 2*err;
-    if(e2 > -dy){ err -= dy; x += sx; }
-    if(e2 < dx){ err += dx; y += sy; }
-  }
-}
+/* **地牢里没有光源这回事**（用户 2026-09）：取景框里的一切都是亮的 ——
+   墙、地板、怪、物件，走到哪看到哪，不再有「黑下去的雾」和「走出视野淡一档」。
+   看得见多少由**镜头**决定（CHAPTER.view / viewMax，9×13 起步），不由半径决定。
+   所以 G.vis / G.seen 现在恒为 true：两张表留着是因为
+   render()、findPath()、续玩档都按它们写的，抹掉要动一片地方，没必要。
+   ⚠️ 别再把「半径 R + 视线遮挡（los）」那一套加回来，是用户明确不要的。 */
 function fov(){
-  const R = 6;
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++) G.vis[y][x] = false;
-  for(let y=Math.max(0,P.y-R); y<=Math.min(H-1,P.y+R); y++){
-    for(let x=Math.max(0,P.x-R); x<=Math.min(W-1,P.x+R); x++){
-      if(Math.sqrt((x-P.x)*(x-P.x)+(y-P.y)*(y-P.y)) > R + .4) continue;
-      if(los(P.x,P.y,x,y)){ G.vis[y][x] = true; G.seen[y][x] = true; }
-    }
-  }
-  G.mobs.forEach(function(m){ if(G.vis[m.y][m.x]) m.seen = true; });
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ G.vis[y][x] = true; G.seen[y][x] = true; }
+  G.mobs.forEach(function(m){ m.seen = true; });
 }
 
 /* ================= 渲染 ================= */
+/* **墙只画贴着地板的那一圈**（用户 2026-09：「墙体只要一格」）——
+   地图是「16 个槽位里挑 4~6 个放房间」生成的，槽位之间是成片的实心墙；
+   地牢全亮之后那一大片糊在一起很难看。所以这里只画**八邻里有地板的墙格**，
+   再往里的实心墙画成 `.c.void`（跟取景框同色的底，看不见），
+   每间房、每条走廊就都只剩一格厚的墙。
+   ⚠️ 这只是**画法**，G.map 一点没动：寻路、生成、续玩档看的还是原来那张图。
+   ⚠️ 八邻（带斜角）不能改成四邻 —— 房间的四个角会漏出一个缺口。 */
+function wallEdge(x, y){
+  for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+    const nx = x + dx, ny = y + dy;
+    if(nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+    if(G.map[ny][nx] === 1) return true;
+  }
+  return false;
+}
+
 function buildGrid(){
   const m = $("map");
   m.innerHTML = "";
@@ -461,6 +467,8 @@ function render(){
     if(!G.seen[y][x]){ c.textContent = ""; c.className = "c dark"; continue; }
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
+    // 离地板两格以上的实心墙不画，露出取景框的底（见上面 wallEdge）
+    if(isWall && !wallEdge(x, y)){ c.textContent = ""; c.className = "c void"; continue; }
     const base = isWall ? "wall" : "floor";
     let glyph = "";              // 地图上已经没有字符了；留着是给没配图的怪兜底
     let content = isWall ? "" : "dot";   // 空地板上那个点是 CSS 画的（.c.dot::before），不占内容
@@ -767,6 +775,7 @@ function startBattle(m){
   B = {mob:m, q:null, locked:false, asked:0,
        wager:false, repeatUsed:false, retry:null, optCount:4, dice:0,
        pend:null, rescue:false, rescueTimer:null};
+  clearQTimer();          // 上一场要是被别的路子掐断了，读条可能还挂着
   G.paused = true;
   $("foeArt").className = "portrait" + (m.boss ? " boss" : "");
   $("foeArt").innerHTML = ART[m.art];
@@ -803,8 +812,14 @@ function comboPct(combo){
   const c = combo == null ? ((P && P.combo) || 0) : combo;
   return Math.floor(c / comboStep()) * CHAPTER.comboPct;
 }
-/* 战斗窗底下那一条。玩家一眼要看见三件事：连了几次、现在加了百分之几、再对几个进下一档。
-   ⚠️ 三段都常驻（数字变、行数不变），答题前后窗高才不会跳。*/
+/* 连击那一条（用户 2026-09 从战斗窗底下挪到**怪物血条下面**）。
+   玩家一眼要看见三件事：连了几次、现在加了百分之几、再对几个进下一档。
+   ⚠️ 三段都常驻（数字变、行数不变），答题前后窗高才不会跳。
+   ⚠️ 涨了就放大回弹（.up），掉了就缩一下、淡一下（.down）——
+      纯装饰，系统开了「减少动态效果」就整段跳过。
+   comboShown 记着上一次画出来的数，靠它判断是涨是掉；
+   开新一趟时要清成 null（newRun 里），否则新局第一场会白播一次「掉了」。*/
+let comboShown = null;
 function renderCombo(){
   const c = $("combo");
   if(!c) return;
@@ -815,6 +830,13 @@ function renderCombo(){
     "<span class=\"cmb-n\">连击 <b>×" + n + "</b></span>" +
     "<span class=\"cmb-p" + (pct ? "" : " off") + "\">伤害 +" + pct + "%</span>" +
     "<span class=\"cmb-next\">再对 " + need + " 个 +" + CHAPTER.comboPct + "%</span>";
+  const was = comboShown;
+  comboShown = n;
+  if(was === null || was === n || REDUCE_MOTION) return;
+  void c.offsetWidth;                       // 强制回流，连着涨两次也能再播一遍
+  const cls = n > was ? "up" : "down";
+  c.classList.add(cls);
+  setTimeout(function(){ c.classList.remove(cls); }, 460);
 }
 /* **一章只出一个难度的词**（第一章 A1、第二章 A2、第三章 B1、第四章 B2）——
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
@@ -843,7 +865,7 @@ function scopeByLevel(pool){
 /* **一趟之内答对过的词不再出第二次**（用户 2026-09）——「除了答错的」：
    答对就记进 `P.used`，答错（或先对后错）就从里面拿掉，于是错过的词照样会再来找你。
    心魔那条分支是故意不过滤的：它本来就是「这趟答错过的词」。
-   ⚠️ 一章的词是问得完的（A1/A2 各 500 上下，B1/B2 各 1000）—— 挑空了就**清空 P.used 开新一轮**
+   ⚠️ 一章的词是问得完的（A1/A2 各 500 上下，B1/B2 各 2000）—— 挑空了就**清空 P.used 开新一轮**
       （弱点类挑空了先退回全池）。*/
 function unused(pool){
   const out = [];
@@ -893,18 +915,70 @@ function spellBonusPct(){
   if(hasRelic("recite")) p += RECITE_SPELL_RATE * 100;    // 默诵 +30
   return Math.round(p);
 }
+/* ---- 答题读条（用户 2026-09）----
+   选择题给 QUIZ_TIME 秒，读条走完还没作答 = 怪咬你一口，**题目原样留着、读条从头再走**（见 timeUp）。
+   ⚠️ **拼写题不限时**（字母要一个一个点，本来就慢），复读者的补救题也一样。
+   ⚠️ 条子是**绝对定位压在题面卡片顶边**的，不占纵向空间 ——
+      「战斗窗答题前后一样高」那条规矩还在，别把它放回文档流里。
+   计时器存在模块级的 qTimer 上，不挂 B —— B 随时会被清成 null，那样就关不掉了。*/
+let qTimer = null;
+function clearQTimer(){
+  if(qTimer){ clearInterval(qTimer); qTimer = null; }
+  const t = $("qTimer");
+  if(t) t.hidden = true;
+}
+function startQTimer(){
+  clearQTimer();
+  if(!B || !B.q || B.q.type === "spell") return;
+  const t = $("qTimer"), fill = $("qTimerFill");
+  if(!t || !fill) return;
+  const total = Math.max(1, QUIZ_TIME) * 1000, t0 = Date.now();
+  t.hidden = false;
+  t.classList.remove("hot");
+  fill.style.width = "100%";
+  qTimer = setInterval(function(){
+    if(!B || !B.q || B.locked){ clearQTimer(); return; }
+    const left = total - (Date.now() - t0);
+    if(left <= 0){ clearQTimer(); timeUp(); return; }
+    fill.style.width = (left / total * 100) + "%";
+    t.classList.toggle("hot", left <= 2000);
+  }, 100);
+}
+/* 读条走完还没作答（用户 2026-09 改的）：**怪咬你一口，仅此而已**。
+   - **不算一次答错**：熟练度、心魔、P.used、连击、赌骰全都不动；
+   - **不刷新题目**：题面、四个选项、冒险按钮原样留着，答案也不揭晓；
+   - 读条**从头再走一遍**，下一次超时就再咬一口，直到答出来（或者被咬死）为止。
+   挨的那一下走的还是跟答错一样的减伤链（护甲 → mitigate）。
+   ⚠️ 别再往这里加「揭晓正确答案 / 禁用选项 / 露出继续钮」那一套 —— 那是判错的做法。*/
+function timeUp(){
+  if(!B || !B.q || B.locked) return;
+  const m = B.mob, s = stats();
+  const mit = mitigate(Math.max(1, m.dmg - s.def), s);
+  if(mit.dodged){
+    say("时间到 —— 你侧了半步躲开。题还在，接着答。", "hurt");
+  } else {
+    takeHit(mit.dmg, m, false);
+    say("时间到，" + m.name + " 咬了你 <b>" + mit.dmg + "</b> 点。题还在，接着答。", "hurt");
+  }
+  if(P.hp <= 0 && hasRelic("undying") && !P.undying){
+    P.undying = true; P.hp = 1;
+    say("薪火在胸口炸开 —— 你以 1 点生命站住了。", "crit");
+  }
+  renderBattleBars();
+  renderHud();
+  if(P.hp <= 0){ B.locked = true; setTimeout(function(){ finishBattle(false); }, 480); return; }
+  startQTimer();          // 题不换，读条重新开始
+}
 function nextQuestion(){
+  clearQTimer();
   const m = B.mob;
   let word;
-  // 拼错退回来的那个词优先（它这次只能是选择题），其次才是复读者的重考
-  const backToChoice = B.toChoice; B.toChoice = null;
-  if(backToChoice) word = backToChoice;
-  else if(B.retry){ word = B.retry; B.retry = null; }   // 复读者：重考刚才那个
+  // 复读者的重考优先，其它都现挑一个
+  if(B.retry){ word = B.retry; B.retry = null; }   // 复读者：重考刚才那个
   else word = pickQuizWord(m.cat);
   B.asked++;
   let type;
   if(B.rescue) type = "spell";                                // 复读者的补救题：一定是拼写
-  else if(backToChoice) type = "zh2en";                       // 拼错的词退回成选择题
   else if(hasRelic("blind")) type = "spell";                  // 盲斗：全拼写
   else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
@@ -968,6 +1042,7 @@ function nextQuestion(){
     b.addEventListener("click", function(){ answer(b, o.en === word.en); });
     box.appendChild(b);
   });
+  startQTimer();          // 选择题才有读条（startQTimer 自己会放过拼写题）
 }
 /* 冒险按钮上的两行字：第一行是按钮自己的文本节点，第二行是里面的 <em>。
    ⚠️ 别用 textContent 整块赋值 —— 那会把 <em> 一起干掉（以前就是这个 bug）。 */
@@ -1158,6 +1233,7 @@ function floatNum(where, txt, cls){
 function answer(btn, ok){
   if(B.locked) return;
   B.locked = true;
+  clearQTimer();                 // 答了就把读条收掉，别让它在判定画面上继续走
   $("btnWager").disabled = true;
   const word = B.q.word, m = B.mob, s = stats();
   const firstSeen = !LEX[word.en];          // 课业：这个存档从没见过的生词（LEX 里没记录）
@@ -1203,11 +1279,18 @@ function answer(btn, ok){
   let relicLog = "";
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
-    P.combo++;
+    /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
+    P.combo += B.wager ? 2 : 1;
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
     if(isSpell){ P.combo += SPELL_COMBO * (hasRelic("boom") ? 2 : 1); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
     if(hitWeak && hasRelic("chase")) P.combo += 2;          // 追猎：打中弱点多攒两下
+    /* 续弦：5% 把连击接回这一趟最长的那一串。**必须在下面更新 maxCombo 之前判**，
+       不然 P.combo 刚好就是 maxCombo，接回来等于没接。*/
+    if(hasRelic("restring") && P.combo < (P.maxCombo || 0) && Math.random() < 0.05){
+      P.combo = P.maxCombo;
+      relicLog += " <span class=\"sys\">(续弦 · 连击接回 ×" + P.combo + ")</span>";
+    }
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
@@ -1398,8 +1481,6 @@ function answer(btn, ok){
         floatNum("foe", "-2", "dmg");
       }
     }
-    // 拼错不算白丢：同一个词下一题退回成选择题，再认一次（复读者的补救题不算）
-    if(isSpell && !B.retry && !B.rescue) B.toChoice = word;
     if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; note += " 薪火在胸口炸开 —— 你以 1 点生命站住了。"; }
   }
   LEX[word.en] = rec;          // 只改内存，下一个存档点（下楼 / 回主城）才落盘
@@ -1411,9 +1492,10 @@ function answer(btn, ok){
     if(OPT.speak) speak(word.en);                  // 设置里开着就自动念一遍
   }
   let spellLog = "";
-  if(isSpell) spellLog = ok
-    ? " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>"
-    : (B.toChoice ? " <span class=\"sys\">(下一题换成选择题再认一次)</span>" : "");
+  /* 拼错不再当场退回成选择题（用户 2026-09）—— 跟别的答错一样进心魔，
+     熬满 HAUNT_DELAY 题才回来找你。*/
+  if(isSpell && ok) spellLog =
+    " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>";
   say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn + spellLog + relicLog, ok ? "good" : "hurt");
   renderBattleBars();
   renderHud();
@@ -1461,6 +1543,7 @@ function takeHit(dmg, m, haunted){
    点了 → 同一个词变成拼写题重来（B.rescue），拼对免伤、拼错结清；
    没点 → 倒计时归零自动结清，照常掉血。 */
 function openRescue(){
+  clearQTimer();               // 补救窗口自己有 5 秒倒计时，读条别跟它抢
   const b = $("btnRescue");
   let left = 5;
   b.textContent = "补救 · " + left + "s";
@@ -1480,7 +1563,6 @@ function closeRescue(expired){
     B.repeatUsed = true;
     B.rescue = true;
     B.retry = B.q.word;
-    B.toChoice = null;               // 补救题就是拼写，别被「拼错退回选择题」抢走
     nextQuestion();
     return;
   }
@@ -1499,6 +1581,7 @@ function closeRescue(expired){
 }
 function finishBattle(win){
   const m = B.mob;
+  clearQTimer();
   if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
   $("btnRescue").hidden = true;
   if(!win){
@@ -1558,17 +1641,26 @@ function closeBattleWin(){
   render();
   maybeRelic();
 }
+/* 撤退**要付一半的最大生命**（用户 2026-09，以前是白撤）：转身那一下露空门。
+   最低留 1 点 —— 撤退不会把人撤死，但撤完基本只能去找泉水。
+   怪身上掉的血照旧留着，回头还能接着打。*/
 function flee(){
   if(!B || B.locked) return;
   autoOff();          // 主动撤退就是「我不想打这只」，别让自动寻路扭头又走回去
+  clearQTimer();
   if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
   $("btnRescue").hidden = true;
-  const m = B.mob;
+  const m = B.mob, s = stats();
+  const before = P.hp;
+  P.hp = Math.max(1, P.hp - Math.max(1, Math.round(s.maxHp * FLEE_HP_PCT)));
+  const lost = before - P.hp;
   B = null;
   $("veilBattle").hidden = true;
   G.paused = false;
-  say("你退开了半步。" + m.name + " 留在原地，伤口还在。", "sys");
+  say("你转身退开 —— 空门露了一下，失去 <b>" + lost + "</b> 点生命。" +
+      m.name + " 留在原地，伤口还在。", "hurt");
   lockInput(260);
+  renderHud();
   render();
 }
 /* 返回**实际到手**的经验（求知加成之后），调用方拿它去写日志 */
@@ -1631,7 +1723,15 @@ function resolveSpring(drink){
   renderHud(); render();
 }
 
+/* 石台有两副面孔（用户 2026-09）：
+   寻常的血祭坛（献 5 点血换一件遗物），和 ALTAR_FORGE_RATE 概率的**熔炉** ——
+   献祭身上的一件遗物，三分之一升一档、三分之一同档换一件、三分之一降一档。
+   ⚠️ 是哪一种**第一次踩上去就定死、记在物件上**（th.forge，跟着续玩档走），
+      走开再回来还是同一个 —— 不然玩家可以反复踩着刷。
+   身上一件遗物都没有时熔炉没东西可吃，退回成寻常祭坛。*/
 function openAltar(th){
+  if(th.forge == null) th.forge = Math.random() < ALTAR_FORGE_RATE;
+  if(th.forge && P.relics && P.relics.length){ openForge(th); return; }
   G.paused = true;
   pendingRoom = th;
   const s = stats();
@@ -1660,6 +1760,74 @@ function resolveAltar(pay){
     return;
   }
   say("你收回手，绕开了石台。", "sys");
+  lockInput(200);
+  renderHud(); render();
+}
+
+/* ---- 熔炉：献祭一件遗物，升一档 / 同档换一件 / 降一档，各三分之一 ---- */
+function openForge(th){
+  G.paused = true;
+  pendingRoom = th;
+  const box = $("forgeList");
+  box.innerHTML = "";
+  P.relics.forEach(function(id){
+    const r = relicById(id);
+    if(!r) return;
+    const d = document.createElement("button");
+    d.type = "button"; d.className = "relic"; d.dataset.id = id;
+    d.innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
+                  "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span>" +
+                  "<span class=\"rp\">" + r.pw + "</span>" +
+                  "<span class=\"rl\">点它 → 扔进炉子</span>";
+    box.appendChild(d);
+  });
+  hideAll();
+  $("veilForge").hidden = false;
+}
+/* 献祭一件。掷一次：1 升一档 / 2 同档 / 3 降一档。
+   那一档已经没有还没拿过的遗物了，就按 想要的 → 原档 → 更高 → 更低 的顺序找个有货的档；
+   全都没货（遗物快被拿光了）才折成金币。*/
+function forgePick(id){
+  const th = pendingRoom; pendingRoom = null;
+  $("veilForge").hidden = true;
+  G.paused = false;
+  const old = relicById(id), at = P.relics.indexOf(id);
+  if(!old || at < 0){ lockInput(200); render(); return; }
+  removeThing(th);                                   // 炉子用过就没了
+  const roll = ri(1, 3);
+  const want = Math.max(0, Math.min(4, (old.r || 0) + (roll === 1 ? 1 : roll === 3 ? -1 : 0)));
+  const pool = relicPool().filter(function(x){ return x.id !== id; });
+  let got = null;
+  [want, (old.r || 0), want + 1, want - 1, 0, 1, 2, 3, 4].forEach(function(t){
+    if(got || t < 0 || t > 4) return;
+    const hit = pool.filter(function(x){ return (x.r || 0) === t; });
+    if(hit.length) got = pick(hit);
+  });
+  clearNewRelic(id);
+  if(!got){
+    const g = sellPrice(old);
+    withMaxHp(function(){ P.relics.splice(P.relics.indexOf(id), 1); });
+    P.gold += g;
+    say("炉火吞了 " + rc(old) + "，什么也没吐出来 —— 只剩 <b>" + g + "</b> 金币。", "sys");
+  } else {
+    withMaxHp(function(){
+      P.relics.splice(P.relics.indexOf(id), 1);
+      P.relics.push(got.id);
+    });
+    noteRelicFound(got, "炉子吐出了");
+    const up = (got.r || 0) - (old.r || 0);
+    say("你把 " + rc(old) + " 扔进炉子 —— " +
+        (up > 0 ? "火苗窜起来，它<b>升了一档</b>" : up < 0 ? "火舌卷下去，它<b>降了一档</b>" : "形状变了，还是同一档") +
+        "：" + rc(got) + " —— " + got.pw + "。", up < 0 ? "hurt" : "crit");
+  }
+  lockInput(200);
+  renderHud(); render();
+}
+function closeForge(){
+  const th = pendingRoom; pendingRoom = null;
+  $("veilForge").hidden = true;
+  G.paused = false;
+  say("炉膛里的火还亮着。你什么也没扔进去。", "sys");
   lockInput(200);
   renderHud(); render();
 }
@@ -1777,14 +1945,16 @@ function openShop(th){
   if(!th.stock){
     // 进店那一刻定下货，存在物件上 —— 再进来不会重 roll
     th.stock = [];
-    for(let i=0;i<3;i++){
+    for(let i=0;i<5;i++){          // 货架 5 件（用户 2026-09 从 3 件加到 5 件）
       let r = null;
       for(let g=0; g<30 && !r; g++){
         const c = rollRelic();
         if(c && !th.stock.some(function(x){ return x.relic === c; })) r = c;
       }
       if(!r) break;
-      th.stock.push({relic:r, price: (10 + (r.r || 0) * 12 + G.floor) * SHOP_MULT, sold:false});
+      // 标价 = 这件的分解价 × SHOP_MARKUP（1.3）—— 买进来再拆掉永远是亏的，
+      // 别改回那套 (10 + 品质×12 + 层数) × 5 的老公式：低品质在浅层比分解价还便宜。
+      th.stock.push({relic:r, price: Math.ceil(sellPrice(r) * SHOP_MARKUP), sold:false});
     }
   }
   renderShop();
@@ -1806,17 +1976,18 @@ function renderShop(){
     box.innerHTML = "<div class=\"bagempty\">他的布上空空如也 —— 你已经什么都有了。</div>";
     return;
   }
+  /* 货架照**三选一那种遗物卡**摆（用户 2026-09）：品质、名字、效果、传说各一行，
+     买的按钮压在卡片右下角。五件竖着排，弹层自己会滚。*/
   th.stock.forEach(function(row, i){
-    const r = row.relic;
+    const r = row.relic, q = r.r || 0;
     const price = shopPrice(row);
     const d = document.createElement("div");
     d.className = "shopit" + (row.sold ? " sold" : "");
     d.innerHTML =
-      "<div class=\"col\">" +
-        "<div class=\"sk\">" + RAR_CN[r.r || 0] + " · 遗物</div>" +
-        "<div class=\"sn\" style=\"color:var(--q" + (r.r || 0) + ")\">" + r.n + "</div>" +
-        "<div class=\"sd\">" + r.pw + "</div>" +
-      "</div>" +
+      "<span class=\"rt q" + q + "\">" + RAR_CN[q] + " · 遗物</span>" +
+      "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
+      "<span class=\"rp\">" + r.pw + "</span>" +
+      "<span class=\"rl\">" + r.lore + "</span>" +
       "<button type=\"button\" class=\"buy\" data-i=\"" + i + "\"" +
         (row.sold || P.gold < price ? " disabled" : "") + ">" +
         (row.sold ? "已售" : price + " 金") + "</button>";
@@ -1982,7 +2153,7 @@ function askFuse(){
   $("fuseLedger").innerHTML =
     li("砸掉", names) +
     li("花费", fuseCost() + " 金（你有 " + gold + "）") +
-    li("换回", "随机一件" + RAR_CN[rar + 1]);
+    li("换回", RAR_CN[rar + 1] + " · 两件里挑一件");
   const yes = $("btnFuseYes");
   yes.disabled = gold < fuseCost();
   yes.textContent = yes.disabled ? "金币不够" : "花 " + fuseCost() + " 金合成";
@@ -1990,29 +2161,63 @@ function askFuse(){
   (yes.disabled ? $("btnFuseNo") : yes).focus();
 }
 function closeFuseAsk(){ $("veilFuse").hidden = true; }
+/* 砸下去之后**在两件里挑一件**（用户 2026-09，以前是随机塞一件）：
+   材料和金币先结清，再弹 veilFuseGot 让玩家挑。
+   更高一档只剩一件没拿过时就直接给，不弹那个窗。*/
+let fusePicks = [];
 function fuseGo(){
   closeFuseAsk();
   if(fuseSel.length !== fuseN()) return;
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
   if(!P || P.gold < fuseCost()){ say("合成要 <b>" + fuseCost() + "</b> 金，你还不够。", "sys"); return; }
-  // 挑的这三件必须都还在手上（分解过就作废）
+  // 挑的这几件必须都还在手上（分解过就作废）
   const eat = fuseSel.filter(function(id){ return P.relics.indexOf(id) >= 0; });
   if(eat.length !== fuseN()){ fuseSel = []; renderRelics(); return; }
   const up = relicPool().filter(function(x){ return (x.r || 0) === rar + 1; });
   if(!up.length){ say("更高一档的遗物你已经拿齐了。", "sys"); return; }
-  const got = pick(up);
   const cost = fuseCost();
   P.gold -= cost;
   P.spent = (P.spent || 0) + cost;        // 散财：合成的钱也算花出去了
   withMaxHp(function(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
-    P.relics.push(got.id);
   });
   fuseOn = false; fuseSel = [];
+  say("你付了 <b>" + cost + "</b> 金，把 " + fuseN() + " 件" + RAR_CN[rar] + "遗物砸在一起。", "sys");
+  const bag = up.slice(), picks = [];
+  for(let i = 0; i < FUSE_PICK && bag.length; i++){
+    picks.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+  }
+  renderHud();
+  if(picks.length <= 1){ fuseTake(picks[0] ? picks[0].id : null); return; }
+  openFusePick(picks, rar + 1);
+}
+function openFusePick(picks, rar){
+  fusePicks = picks.map(function(r){ return r.id; });
+  $("fuseGotTitle").textContent = "两件" + RAR_CN[rar] + "，挑一件";
+  const box = $("fuseGotList");
+  box.innerHTML = "";
+  picks.forEach(function(r){
+    const d = document.createElement("button");
+    d.type = "button"; d.className = "relic"; d.dataset.id = r.id;
+    d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + RAR_CN[r.r || 0] + "</span>" +
+      "<span class=\"rn q" + (r.r || 0) + "\">" + r.n + "</span>" +
+      "<span class=\"rp\">" + r.pw + "</span>" +
+      "<span class=\"rl\">" + r.lore + "</span>";
+    box.appendChild(d);
+  });
+  $("veilFuseGot").hidden = false;
+}
+/* 挑定了（或者本来就只有一件）。材料已经砸掉了，所以格子一定够，不用走取舍窗。*/
+function fuseTake(id){
+  $("veilFuseGot").hidden = true;
+  const ok = fusePicks.indexOf(id) >= 0 || (fusePicks.length === 0 && id);
+  fusePicks = [];
+  const got = ok ? relicById(id) : null;
+  if(!got){ renderHud(); return; }
+  withMaxHp(function(){ P.relics.push(got.id); });
   noteRelicFound(got, "合成出");
-  say("你付了 <b>" + fuseCost() + "</b> 金，把 " + fuseN() + " 件" + RAR_CN[rar] +
-      "遗物砸在一起 —— " + rc(got) + " 成了。", "crit");
+  say("—— " + rc(got) + " 成了：" + got.pw + "。", "crit");
   renderHud();
 }
 /* 遗物名字上色 */
@@ -2210,7 +2415,7 @@ function renderFuse(){
   }
   // 标题也跟着「配方」变（2 件 + 150 金）
   const fh = $("fuseHead");
-  if(fh) fh.textContent = "合成 · " + fuseN() + " 件同品质 + " + fuseCost() + " 金 → 1 件更高";
+  if(fh) fh.textContent = "合成 · " + fuseN() + " 件同品质 + " + fuseCost() + " 金 → " + FUSE_PICK + " 选 1";
   pickBtn.textContent = fuseOn ? "取消选择" : "选择";
   pickBtn.disabled = !fuseOn && ready < 0;
   goBtn.disabled = fuseSel.length !== fuseN();
@@ -2219,7 +2424,7 @@ function renderFuse(){
   if(fuseOn){
     note.innerHTML = fuseSel.length
       ? ("已挑 <b>" + fuseSel.length + " / " + fuseN() + "</b> 件" + RAR_CN[fuseRar()] +
-         "，合成后换回一件<b>" + RAR_CN[fuseRar() + 1] + "</b>（随机一件），另付 <b>" + fuseCost() + "</b> 金。")
+         "，合成后在两件<b>" + RAR_CN[fuseRar() + 1] + "</b>里挑一件，另付 <b>" + fuseCost() + "</b> 金。")
       : "在上面点 <b>" + fuseN() + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
   } else {
     note.innerHTML = ready >= 0
@@ -2599,10 +2804,13 @@ function openCodex(tab){
   $("veilCodex").hidden = false;
 }
 function hideAll(){
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring","veilFuse"].forEach(function(id){ $(id).hidden = true; });
+  clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse"].forEach(function(id){ $(id).hidden = true; });
 }
+/* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
+   它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilChest","veilShop","veilStair","veilSpring","veilFuse"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -2885,31 +3093,10 @@ $("optSpeak").checked = OPT.speak !== false;
 $("optAuto").checked = OPT.auto !== false;
 $("optSpeak").addEventListener("change", function(){ OPT.speak = this.checked; saveOpt(); });
 $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; saveOpt(); });
-/* 两步确认：artifact 跑在沙箱 iframe 里，confirm() 未必可用 */
-let wipeArmed = 0;
-$("btnWipe").addEventListener("click", function(){
-  const b = this;
-  if(Date.now() > wipeArmed){
-    wipeArmed = Date.now() + 4000;
-    b.textContent = "再点一次确认清除";
-    setTimeout(function(){
-      if(Date.now() > wipeArmed){ b.textContent = "清除全部存档"; }
-    }, 4100);
-    return;
-  }
-  wipeArmed = 0;
-  [LEX_KEY, CODEX_KEY, META_KEY, TOWN_KEY, RUN_KEY].forEach(function(k){
-    try{ localStorage.removeItem(k); }catch(e){}
-  });
-  /* 内存里那几份也得一起清空 —— 不清的话下面 goTown() 的 commit 会把它们原样写回去 */
-  LEX = {};
-  CODEX = {};
-  MET = {best:0, runs:0, clears:0, t:0};
-  TOWN = {gem:0};
-  b.textContent = "已清除";
-  setTimeout(function(){ b.textContent = "清除全部存档"; }, 1500);
-  goTown();
-});
+/* 「清除全部存档」那个按钮**已经删掉了**（用户 2026-09）——
+   连同它两步确认的那一段。要再开一个抹档的口子，记得内存里的
+   LEX / CODEX / MET / TOWN 得跟 localStorage 一起清，
+   不然紧接着的 goTown() 会把旧数据原样写回去。 */
 $("btnAgain").addEventListener("click", goTown);
 $("btnCodex").addEventListener("click", function(){ openCodex(); });
 $("btnCloseCodex").addEventListener("click", function(){ $("veilCodex").hidden = true; });
@@ -2947,6 +3134,12 @@ $("btnStairGo").addEventListener("click", function(){ closeStair(true); });
 $("btnStairStay").addEventListener("click", function(){ closeStair(false); });
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
 $("btnAltarSkip").addEventListener("click", function(){ resolveAltar(false); });
+/* 熔炉：点身上的一件遗物就是把它扔进去 */
+$("forgeList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".relic");
+  if(b && b.dataset.id) forgePick(b.dataset.id);
+});
+$("btnForgeSkip").addEventListener("click", closeForge);
 $("btnChestDone").addEventListener("click", closeChest);
 $("btnChestLeave").addEventListener("click", function(){
   // 还没拼就走：箱子留在原地，以后可以再来
@@ -3004,6 +3197,11 @@ $("btnFusePick").addEventListener("click", fuseToggleMode);
 $("btnFuseGo").addEventListener("click", function(){ if(!this.disabled) askFuse(); });
 $("btnFuseNo").addEventListener("click", closeFuseAsk);
 $("btnFuseYes").addEventListener("click", function(){ if(!this.disabled) fuseGo(); });
+/* 合成完的二选一：只能挑，没有关闭钮（材料已经砸了） */
+$("fuseGotList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".relic");
+  if(b && b.dataset.id) fuseTake(b.dataset.id);
+});
 
 /* ---- 带满了的取舍 ---- */
 $("swapList").addEventListener("click", function(ev){
