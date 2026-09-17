@@ -980,8 +980,8 @@ var WORDS = [
 ["landing","楼梯平台","place",3,"n"],["lounge","休息室","place",3,"n"],["metropolis","大都会","place",3,"n"],
 ["orphanage","孤儿院","place",3,"n"],["pasture","牧草地","place",3,"n"],["pavement","人行道","place",3,"n"],
 ["porch","门廊","place",3,"n"],["rooftop","屋顶","place",3,"n"],["scene","现场","place",3,"n"],
-["seaside","海边","place",3,"n"],["shed","棚屋","place",3,"n"],["site","场址","place",3,"n"],
-["spot","地点","place",3,"n"],["stairway","楼梯间","place",3,"n"],["stall","摊档","place",3,"n"],
+["seaside","海边","place",3,"n"],["shed","棚屋","place",3,"n"],["site","地点","place",3,"n"],
+["spot","地方","place",3,"n"],["stairway","楼梯间","place",3,"n"],["stall","摊档","place",3,"n"],
 ["threshold","门槛","place",3,"n"],["veranda","游廊","place",3,"n"],["workplace","工作场所","place",3,"n"],
 /* 情绪 85 */
 ["fear","恐惧","feel",3,"n"],["hope","希望","feel",3,"n"],["anger","愤怒","feel",3,"n"],

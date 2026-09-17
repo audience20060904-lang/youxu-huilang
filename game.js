@@ -109,7 +109,11 @@ function stats(){
 function nextFloor(){
   cancelWalk();
   autoOff();       // 下一层要重新手动开寻路（用户 2026-09），别自己接着冲
-  G.floor++;
+  /* 盲斗：每下一层楼梯**直接往下 BLIND_STEP 层**（用户 2026-09）。
+     ⚠️ 撞到章末那一层就停在那儿 —— 不能让人跳过章末 Boss 直接通关。*/
+  const from = G.floor;
+  const jump = (P && P.relics && from > 0 && from < FLOORS && hasRelic("blind")) ? BLIND_STEP : 1;
+  G.floor = jump > 1 ? Math.min(from + jump, FLOORS) : from + 1;
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
@@ -128,8 +132,12 @@ function nextFloor(){
   render();
   lockInput(320);
   const last = G.floor === FLOORS;
-  say("—— " + CH.name + " 第 " + G.floor + " 层 ——", "crit");
-  say(last ? "空气冷得发硬。这一层尽头有东西在等。" : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), last ? "hurt" : "sys");
+  const bossRoom = isBossFloor(G.floor);
+  if(G.floor > from + 1) say("盲斗把楼梯烧穿了 —— 你一口气落到了第 " + G.floor + " 层。", "crit");
+  say("—— " + CH.name + " 第 " + G.floor + " 层" + (bossRoom ? " · BOSS" : "") + " ——", "crit");
+  say(last ? "空气冷得发硬。这一层尽头有东西在等。"
+     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
+     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom) ? "hurt" : "sys");
   commit(true);          // 存档点之二：下一层
 }
 /* ===== 房间图 =====
@@ -152,7 +160,35 @@ function slotChain(){
   }
   return [{c:0,r:0},{c:1,r:0}];      // 兜底，正常走不到
 }
+/* 每 BOSS_EVERY 层就是一层 Boss 房（第 10/20/30/40/50 层）。顶栏那层写成 `10*`，血色。 */
+function isBossFloor(f){ return f > 0 && f % BOSS_EVERY === 0; }
+/* ===== Boss 房 =====
+   下了楼梯只有**一间屋子**，屋里**只有一只 Boss** —— 没有别的怪，也没有金币/泉/箱/坛/商。
+   人在屋子一头，Boss 在另一头。阶梯照旧在它倒下的地方裂开（closeBattleWin 那一套不动）。
+   ⚠️ 房间图那一套（slotChain / links / take）整段跳过，这里是手写的一间屋。 */
+function genBossRoom(){
+  const map = [], seen = [], vis = [];
+  for(let y=0;y<H;y++){
+    map.push(new Array(W).fill(0));
+    seen.push(new Array(W).fill(false));
+    vis.push(new Array(W).fill(false));
+  }
+  /* 屋子按取景框（9×13）挑的：**一进来就该看见那只东西**，不是进来再满屋子找。
+     人在门这一侧，Boss 在屋子正中，隔三格 —— 取景框里两个都在。*/
+  const w = Math.min(9, W - 4), h = Math.min(7, H - 4);
+  const x0 = Math.floor((W - w) / 2), y0 = Math.floor((H - h) / 2);
+  for(let j=y0;j<y0+h;j++) for(let i=x0;i<x0+w;i++) map[j][i] = 1;
+  G.map = map; G.seen = seen; G.vis = vis; G.mobs = []; G.things = [];
+  G.rooms = [{x:x0, y:y0, w:w, h:h}];
+  const my = y0 + (h >> 1);
+  P.x = x0 + 1; P.y = my;
+  const bx = x0 + (w >> 1), by = my;
+  G.stair = {x:bx, y:by};          // 清空前只是个占位，Boss 倒下的地方才是真阶梯
+  const def = (G.floor === FLOORS) ? CH.boss : GATEKEEPER;
+  G.mobs.push(makeBossFoe(def, bx, by));
+}
 function genFloor(){
+  if(isBossFloor(G.floor)){ genBossRoom(); return; }
   const map = [], seen = [], vis = [];
   for(let y=0;y<H;y++){
     map.push(new Array(W).fill(0));
@@ -214,6 +250,8 @@ function genFloor(){
   });
 
   G.map = map; G.seen = seen; G.vis = vis; G.mobs = []; G.things = [];
+  // 房间的矩形留一份在 G 上：自动寻路要「先扫完当前这间屋子」（跟着续玩档存，老档没有就退回全图最近）
+  G.rooms = rooms.map(function(r){ return {x:r.x, y:r.y, w:r.w, h:r.h}; });
   // 人在链的一端，阶梯的占位在另一端（清空后阶梯会改写到最后一只怪倒下的地方）
   P.x = rooms[0].cx; P.y = rooms[0].cy;
   const tail = rooms[chain.length - 1];
@@ -287,20 +325,14 @@ function genFloor(){
     return null;
   }
 
+  /* Boss（章末）和守层者都搬进 Boss 房了（isBossFloor 那一层单独生成），
+     所以到这儿的一定是普通层，怪数不用再给它们让位。 */
   const pool = FOES.filter(function(f){ return f.from <= G.floor; });
-  const gate = (G.floor === FLOORS) || (G.floor % 10 === 0);
   const mp = CHAPTER.mobsPerFloor;
-  const n = (typeof mp === "number" ? mp : ri(mp.min, mp.max)) - (gate ? 1 : 0);
+  const n = (typeof mp === "number" ? mp : ri(mp.min, mp.max));
   for(let i=0;i<n;i++){
     const sp = take(); if(!sp) break;
     G.mobs.push(makeFoe(pick(pool), sp.x, sp.y));
-  }
-  if(G.floor === FLOORS){
-    const sp = take();
-    if(sp) G.mobs.push(makeFoe(CH.boss, sp.x, sp.y));
-  } else if(G.floor % 10 === 0){
-    const sp = take();
-    if(sp) G.mobs.push(makeFoe(GATEKEEPER, sp.x, sp.y));   // 每 10 层的守门人
   }
   // 金币堆 7~10 堆，「掘金」再多 3 堆
   for(let i=0, k=ri(7,10) + (hasRelic("dig") ? 3 : 0); i<k; i++){
@@ -318,18 +350,42 @@ function genFloor(){
   if(G.floor >= ALTAR_FROM && Math.random() < 0.30){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"altar"}); }
   if(G.floor >= 2 && Math.random() < 0.35){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"shop"}); }
 }
+/* 这一层落在哪一段（content.js 的 FOE_BANDS）。只有会成长的怪吃这个倍率 */
+function foeBand(floor){
+  for(let i=0;i<FOE_BANDS.length;i++) if(floor <= FOE_BANDS[i].to) return FOE_BANDS[i];
+  return {hp:1, dmg:1};
+}
+/* 一只怪在第 floor 层的数值：基础 + 层数成长 + 章节 foeBonus，**最后**再乘一次分段倍率。
+   抽出来是因为 Boss 房要「参照上一层的小怪」现算一遍（refFoe）。 */
+function foeNums(def, floor){
+  const gw = CHAPTER.grow;
+  // def.fixed = 章末 Boss，数值写死不随层数长、也不吃分段倍率；别的（含守层者）都要长
+  const step = def.fixed ? 0 : Math.max(0, floor - 1);
+  const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
+  const band = def.fixed ? {hp:1, dmg:1} : foeBand(floor);
+  return {
+    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp)),
+    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg)),
+    armor: def.armor + fb.armor,
+    xp: def.xp + Math.floor(step / gw.xpEvery) + fb.xp
+  };
+}
+/* 第 floor 层「一只普通小怪」的平均数值 —— Boss 房就是照着上一层的这个数放大的 */
+function refFoe(floor){
+  const f = Math.max(1, floor);
+  let list = FOES.filter(function(d){ return d.from <= f; });
+  if(!list.length) list = [FOES[0]];
+  let hp = 0, dmg = 0, xp = 0;
+  list.forEach(function(d){ const n = foeNums(d, f); hp += n.hp; dmg += n.dmg; xp += n.xp; });
+  return {hp: hp / list.length, dmg: dmg / list.length, xp: xp / list.length};
+}
 function makeFoe(def, x, y){
-  // 成长曲线在 CHAPTER.grow 里，全是整数加法。
+  // 成长曲线在 CHAPTER.grow 里，全是整数加法（分段倍率在 foeNums 末尾乘一次）。
   // 守层者也要涨（不然第 40 层的门跟第 10 层一样弱），只有章末 Boss 固定。
   // step 按**绝对层数**算，不是“距离首次出现几层”。
   // 否则第 38 层登场的怪在第 40 层只长了 2 层，一出场就是纸糊。
   // def.from 只决定**什么时候出现**，def.hp 决定它在同层怪里的相对硬度。
-  const gw = CHAPTER.grow;
-  // def.fixed = 章末 Boss，数值写死不随层数长；别的（含守层者）都要长
-  const step = def.fixed ? 0 : Math.max(0, G.floor - 1);
-  // 章节加成：第二章的怪整体更硬一点（章末 Boss 自己一套数值，不加）
-  const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
-  const hp = def.hp + step * gw.hpPerFloor + fb.hp;
+  const n = foeNums(def, G.floor);
   // 弱点：**普通怪按类别**（就是它自己那一类），**Boss 按词性**随机（用户 2026-09 改的，
   // 逼你换着词性背）。weakPos 标明这一只的 weak 是词性还是类别 —— showWeak / answer 都看它。
   // ⚠️ 只能从**这一章真的有词**的词性/类别里挑 —— 挑到没词的等于白给一个弱点
@@ -337,8 +393,21 @@ function makeFoe(def, x, y){
   const weak = boss ? pick(chapterPos()) : def.cat;
   return { x:x, y:y, def:def, g:def.g, name:def.name, art:def.art, cat:def.cat, boss:boss,
            weak:weak, weakPos:boss,
-           hp:hp, max:hp, dmg:def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg, armor:def.armor + fb.armor,
-           xp:def.xp + Math.floor(step / gw.xpEvery) + fb.xp, seen:false };
+           hp:n.hp, max:n.hp, dmg:n.dmg, armor:n.armor, xp:n.xp, loot:0, seen:false };
+}
+/* Boss 房里那一只：**参照上一层的小怪**，血量 ×BOSS_HP_X、伤害 ×BOSS_DMG_X。
+   一整层就它一只，所以经验和金币要顶掉一层十来只的量（见 content.js 的注释）。
+   章末 Boss（fixed）只借这间屋子的布局，数值还是它自己那一套。 */
+function makeBossFoe(def, x, y){
+  const m = makeFoe(def, x, y);
+  if(!def.fixed){
+    const ref = refFoe(G.floor - 1);
+    m.hp = m.max = Math.max(1, Math.round(ref.hp * BOSS_HP_X));
+    m.dmg = Math.max(1, Math.round(ref.dmg * BOSS_DMG_X));
+    m.xp = Math.max(1, Math.round(ref.xp * BOSS_XP_X));
+  }
+  m.loot = Math.round((ri(2,5) + G.floor) * BOSS_GOLD_X);
+  return m;
 }
 
 /* ================= 日志 ================= */
@@ -517,7 +586,10 @@ function renderHud(){
     renderSheets(s);
     return;
   }
-  $("hFloor").textContent = G.floor + "/" + FLOORS;
+  // Boss 房那一层在顶栏写成 `10*`，并且是血色的（用户 2026-09）
+  const bossFloor = isBossFloor(G.floor);
+  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + FLOORS;
+  $("hFloor").classList.toggle("bossfloor", bossFloor);
   $("hLevel").textContent = P.lvl;
   $("hGold").textContent = P.gold;
   const left = G.mobs.length;
@@ -542,9 +614,10 @@ function renderSheets(s){
     st("攻击", s.atk) + st("护甲", s.def) + st("暴击", s.crit + "%");
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
   const keys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });
-  let mastered = 0, weak = 0;
-  keys.forEach(function(k){ const v = LEX[k].str || 0; if(v >= 3) mastered++; else if(LEX[k].wrong) weak++; });
-  $("vocab").innerHTML = st("已掌握", mastered + "/" + WORDS.length) + st("要复习", weak);
+  let mastered = 0;
+  keys.forEach(function(k){ if((LEX[k].str || 0) >= 3) mastered++; });
+  // 三项各占一格（用户 2026-09）：掌握过的 / 遇见过的 / 词库一共多少
+  $("vocab").innerHTML = st("已掌握", mastered) + st("已遇见", keys.length) + st("总数", WORDS.length);
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
   $("runStats").innerHTML = st("答对", P.right) + st("答错", P.wrong) +
     st("正确率", acc) + st("击杀", P.kills) +
@@ -641,13 +714,32 @@ function nearestBy(list){
   }
   return best;
 }
+/* 脚下这一格属于哪间屋子（G.rooms 是 genFloor 存下来的矩形；老续玩档没有就返回 null）*/
+function roomOf(x, y){
+  const rs = G && G.rooms;
+  if(!rs) return null;
+  for(let i=0;i<rs.length;i++){
+    const r = rs[i];
+    if(x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return r;
+  }
+  return null;
+}
+function inRoom(r, t){ return !!r && t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y < r.y + r.h; }
 /* 目标是**怪和金币一起比，谁近去谁**（用户 2026-09 改的，以前是「先把怪清完再捡钱」）——
    顺路的一堆金币不该等你横穿半张地图回来捡。
+   ⚠️ **先把当前这间屋子扫干净**（用户 2026-09）：脚下这间屋里还有怪或金币，就只在屋里挑最近的；
+   屋里空了才去下一间（还是按脚程挑全图最近的）。老续玩档没存 G.rooms，自然退回原来的全图最近。
    两样都没有了才去楼梯；泉/箱/坛/商一概不去，要不要进那些是玩家自己决定的。 */
 function autoPath(){
   if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return false;
   const goals = G.mobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
-  let t = nearestBy(goals);
+  const here = roomOf(P.x, P.y);
+  let t = null;
+  if(here){
+    const mine = goals.filter(function(g){ return inRoom(here, g); });
+    if(mine.length) t = nearestBy(mine);
+  }
+  if(!t) t = nearestBy(goals);
   if(!t && G.mobs.length === 0 && G.stair) t = G.stair;
   if(!t || (t.x === P.x && t.y === P.y)) return false;
   return goTo(t.x, t.y, true);
@@ -908,7 +1000,7 @@ function spellChance(){
   return Math.min(1, SPELL_RATE + spellBonusPct() / 100);
 }
 /* 遗物给的**额外**拼写率（不含底子的 SPELL_RATE）。
-   盲斗吃的就是这个数：每 1% 换 1% 伤害。 */
+   ⚠️ 盲斗以前吃这个数换伤害，2026-09 改成「一击必杀」之后就不吃了 —— 这里只管出题概率。 */
 function spellBonusPct(){
   let p = 0;
   if(hasRelic("carve")) p += SPELL_RELIC_RATE * 100;      // 刻字 +15
@@ -1277,6 +1369,13 @@ function answer(btn, ok){
   /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
      接到底下那条 say() 后面 —— 想让玩家在战斗窗里当场看见，就只能写进 head。*/
   let relicLog = "";
+  /* 割裂：**每答一题**（不论对错）自伤 1 点，但**累计割掉 REND_CAP 点就停手**（用户 2026-09）。
+     不会致死，最低留 1 点。P.rend 记的是这一趟一共割掉多少，跟着 P 进续玩档（读处 || 0）。*/
+  if(hasRelic("rend") && (P.rend || 0) < REND_CAP){
+    P.rend = (P.rend || 0) + 1;
+    P.hp = Math.max(1, P.hp - 1);
+    if(P.rend >= REND_CAP) relicLog += " <span class=\"sys\">(割裂割满 " + REND_CAP + " 点，从此不再割)</span>";
+  }
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
     /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
@@ -1323,7 +1422,6 @@ function answer(btn, ok){
     if(isSpell && hasRelic("carve")) pct += 20;                             // 刻字
     if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
     if(hasRelic("hoard")) pct += Math.min(75, Math.floor((P.gold||0) / 200) * 5);  // 守财：每 200 金 +5%，上限 75%
-    if(hasRelic("blind")) pct += spellBonusPct();                           // 盲斗：吃多少额外拼写率就加多少 %
     // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
     if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * 5;      // 空手：每少带一件 +5%
     if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
@@ -1345,8 +1443,7 @@ function answer(btn, ok){
 
     // 第四层 · 额外伤害（无视护甲、不吃暴击，单独一笔）
     let extra = 0;
-    if(hasRelic("blind")) extra += 3;                                       // 盲斗
-    if(hasRelic("rend")){ extra += 5; P.hp = Math.max(1, P.hp - 1); }       // 割裂（不致死）
+    if(hasRelic("rend")) extra += REND_EXTRA;                               // 割裂（自伤在上面，每题一次）
     if(isSpell && hasRelic("recite")) extra += 2;                           // 默诵
     if(hasRelic("snow")) extra += P.combo >= 30 ? 9 : P.combo >= 20 ? 6 : P.combo >= 10 ? 3 : 0;  // 滚雪球
 
@@ -1371,6 +1468,12 @@ function answer(btn, ok){
     const dmg = Math.max(1, raw - armor);
     if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 4);        // 饮血
     m.hp -= dmg + extra;
+    /* 盲斗：答对**一击必杀**（用户 2026-09）。代价是所有题都变成拼写题 ——
+       它现在是「拼得出就砍得死」的速通件，不再走伤害那条线。*/
+    if(hasRelic("blind") && m.hp > 0){
+      m.hp = 0;
+      relicLog += " <span class=\"sys\">(盲斗 · 一击必杀)</span>";
+    }
     /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
        （不重新掷暴击、不再算额外伤害、不加连击），所以还是那两个乘区。*/
     let hall = 0;
@@ -1608,7 +1711,8 @@ function closeBattleWin(){
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
   const xp = gainXp(m.xp * xpx);     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
-  const g = Math.round((ri(2,5) + G.floor) * (hasRelic("greed") ? 1.2 : 1));   // 拾荒者 +20%
+  // Boss 房一整层就它一只，身上压着一层份的金币（m.loot，makeBossFoe 里定的）
+  const g = Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (hasRelic("greed") ? 1.2 : 1));   // 拾荒者 +20%
   P.gold += g;
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
@@ -1916,10 +2020,12 @@ function judgeChest(){
   $("btnChestDone").hidden = false;
   $("btnChestDone").textContent = opened ? "拿走" : "认了";
   chestQ.ok = opened;
+  chestQ.spelled = ok;          // 钥匙的二选一只认真的拼对了的那一次
 }
 function closeChest(){
   const th = pendingRoom; pendingRoom = null;
   const ok = chestQ && chestQ.ok;
+  const spelled = !!(chestQ && chestQ.spelled);   // 真的拼对了（钥匙撬开的不算）
   chestQ = null;
   $("veilChest").hidden = true;
   G.paused = false;
@@ -1928,6 +2034,26 @@ function closeChest(){
     const g = 4 + G.floor * 2;
     P.gold += g;
     say("木箱开了，里面有 <b>" + g + "</b> 金币。", "good");
+    /* 钥匙的第二个机制（用户 2026-09）：**拼对**的话箱底那件遗物二选一。
+       ⚠️ 只给真的拼对了的（chestQ.spelled）—— 钥匙撬开的那一次不算，撬的是锁，不是那个词。*/
+    if(spelled && hasRelic("key")){
+      const picks = [];
+      for(let i=0; i<2; i++){
+        const c = rollRelic();
+        if(c && picks.indexOf(c) < 0) picks.push(c);
+      }
+      if(picks.length > 1){
+        G.paused = true;                      // 挑完（fuseTake）才放开
+        openFusePick(picks, picks[0].r || 0,
+          {via:"grant", how:"箱底压着", eyebrow:"钥匙 · 箱底有两件", title:"挑一件带走"});
+        renderHud(); render();
+        return;
+      }
+      grantRelic(picks[0] || null, "箱底压着");
+      lockInput(200);
+      renderHud(); render();
+      return;
+    }
     grantRelic(rollRelic(), "箱底压着");
     lockInput(200);
     renderHud(); render();
@@ -2164,7 +2290,7 @@ function closeFuseAsk(){ $("veilFuse").hidden = true; }
 /* 砸下去之后**在两件里挑一件**（用户 2026-09，以前是随机塞一件）：
    材料和金币先结清，再弹 veilFuseGot 让玩家挑。
    更高一档只剩一件没拿过时就直接给，不弹那个窗。*/
-let fusePicks = [];
+let fusePicks = [], fuseVia = null, fuseHow = "合成出";
 function fuseGo(){
   closeFuseAsk();
   if(fuseSel.length !== fuseN()) return;
@@ -2192,9 +2318,15 @@ function fuseGo(){
   if(picks.length <= 1){ fuseTake(picks[0] ? picks[0].id : null); return; }
   openFusePick(picks, rar + 1);
 }
-function openFusePick(picks, rar){
+/* 两件挑一件的窗子。合成走的是老路（fuseVia 空 = 材料已经砸了，格子一定够，直接塞进背包）；
+   宝箱的「钥匙」二选一走 fuseVia="grant" —— 要过 grantRelic，带满了才会弹取舍窗。*/
+function openFusePick(picks, rar, opt){
+  const o = opt || {};
+  fuseVia = o.via || null;
+  fuseHow = o.how || "合成出";
   fusePicks = picks.map(function(r){ return r.id; });
-  $("fuseGotTitle").textContent = "两件" + RAR_CN[rar] + "，挑一件";
+  $("fuseGotEyebrow").textContent = o.eyebrow || "合成";
+  $("fuseGotTitle").textContent = o.title || ("两件" + RAR_CN[rar] + "，挑一件");
   const box = $("fuseGotList");
   box.innerHTML = "";
   picks.forEach(function(r){
@@ -2208,15 +2340,26 @@ function openFusePick(picks, rar){
   });
   $("veilFuseGot").hidden = false;
 }
-/* 挑定了（或者本来就只有一件）。材料已经砸掉了，所以格子一定够，不用走取舍窗。*/
+/* 挑定了（或者本来就只有一件）。
+   合成：材料已经砸掉了，格子一定够，直接塞进背包。
+   宝箱（fuseVia="grant"）：背包可能是满的，所以要从 grantRelic 走一遍（它会弹取舍窗）。*/
 function fuseTake(id){
   $("veilFuseGot").hidden = true;
+  const via = fuseVia, how = fuseHow;
+  fuseVia = null; fuseHow = "合成出";
   const ok = fusePicks.indexOf(id) >= 0 || (fusePicks.length === 0 && id);
   fusePicks = [];
   const got = ok ? relicById(id) : null;
+  if(via === "grant"){
+    if(G) G.paused = false;      // grantRelic 里要是弹取舍窗，它自己会再 paused 回去
+    if(got) grantRelic(got, how);
+    lockInput(200);
+    renderHud(); render();
+    return;
+  }
   if(!got){ renderHud(); return; }
   withMaxHp(function(){ P.relics.push(got.id); });
-  noteRelicFound(got, "合成出");
+  noteRelicFound(got, how);
   say("—— " + rc(got) + " 成了：" + got.pw + "。", "crit");
   renderHud();
 }
@@ -2247,8 +2390,11 @@ function offerSwap(r, how){
   pendingSwap = {relic:r, how:how};
   G.paused = true;
   $("swapMax").textContent = relicCap();
+  /* 点这件新的 = 不要了，当场分解（用户 2026-09）——
+     跟底下那个「不要了，折成金币」是同一条路（doSwap(null)），少走一趟视线。*/
   $("swapNew").innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
-    "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>";
+    "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>" +
+    "<span class=\"rl\">点它 → 直接卖掉，换 " + sellPrice(r) + " 金</span>";
   const box = $("swapList");
   box.innerHTML = "";
   P.relics.forEach(function(id){
@@ -2606,10 +2752,11 @@ function writeRun(){
       map:  G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
       seen: G.seen.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
       stair: G.stair,
+      rooms: G.rooms || null,        // 自动寻路要「先扫完当前这间屋子」，老档没有就退回全图最近
       // 怪只存 defId + 当前状态，读档时重新链回 FOES
       mobs: G.mobs.map(function(m){
         return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-                dmg:m.dmg, armor:m.armor, xp:m.xp, s:m.seen};
+                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, s:m.seen};
       }),
       things: G.things
     });
@@ -2648,7 +2795,7 @@ function resumeRun(s){
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
-        vis: [], things: s.things || [], stair: s.stair, mobs: [] };
+        vis: [], things: s.things || [], stair: s.stair, rooms: s.rooms || null, mobs: [] };
   // 游商货架上可能还摆着已经删掉的遗物（老档），先清一遍
   G.things.forEach(function(th){
     if(th && th.stock) th.stock = th.stock.filter(function(row){ return row.relic && relicById(row.relic.id); });
@@ -2663,7 +2810,7 @@ function resumeRun(s){
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max,
-                 dmg:m.dmg, armor:m.armor, xp:m.xp, seen:!!m.s});
+                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
   });
   $("log").innerHTML = "";
   hideAll();
@@ -2686,8 +2833,9 @@ function runScore(win){
   const total = P.right + P.wrong;
   const acc = total ? Math.round(P.right / total * 100) : 0;
   const floor = Math.min(G.floor, FLOORS);
+  /* 到达的层数**不再是一项加分，它是主倍率**（用户 2026-09）：
+     宝石 =（下面这几项相加）× 层数倍率 × 这一章的难度系数。两个乘区，没有第三个。*/
   const rows = [
-    {k:"到达第 " + floor + " 层",        v: floor * SCORE.perFloor},
     {k:"最大连击 " + (P.maxCombo || 0),  v: (P.maxCombo || 0) * SCORE.perCombo},
     {k:"击败 " + P.kills + " 只",        v: P.kills * SCORE.perKill},
     {k:"正确率 " + acc + "%",            v: Math.floor(acc / SCORE.accDiv)},
@@ -2695,7 +2843,9 @@ function runScore(win){
   ];
   if(win) rows.push({k:"通关", v: SCORE.clear});
   const sum = rows.reduce(function(a, r){ return a + r.v; }, 0);
-  return {rows:rows, sum:sum, acc:acc, floor:floor, gems: Math.floor(sum * CH.gemMult)};
+  const fmul = Math.max(SCORE.floorMin, floor / SCORE.floorDiv);
+  return {rows:rows, sum:sum, acc:acc, floor:floor, fmul:fmul,
+          gems: Math.floor(sum * fmul * CH.gemMult)};
 }
 function endRun(win, gaveUp){
   G.over = true;
@@ -2715,6 +2865,7 @@ function endRun(win, gaveUp){
   $("endStats").innerHTML =
     sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
     li("<b>小计</b>", "<b>" + sc.sum + "</b>") +
+    li("到达第 " + sc.floor + " 层", "×" + sc.fmul.toFixed(1)) +
     li("难度 · 第" + CH.id + "章 " + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
     li("<b>获得宝石</b>", "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
     li("宝石合计", TOWN.gem) +
@@ -2747,6 +2898,12 @@ function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><
 
 /* ================= 图鉴 ================= */
 let cTab = "word";
+/* 搜索词（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找。
+   纯界面状态，不进存档；每次打开图鉴都清空。 */
+function codexFind(){
+  const el = $("codexFind");
+  return el ? el.value.trim().toLowerCase() : "";
+}
 function openCodex(tab){
   cTab = tab || cTab;
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
@@ -2763,9 +2920,14 @@ function openCodex(tab){
        （用户定的，别再把没拿过的遮成 ▨▨。）
        顺序按品质**普通 → 神圣**排（content.js 里是按搭配线分组的，看图鉴时对不上）。
        同品质保持 RELICS 里的原顺序，所以用带下标的稳定排序。*/
+    const q = codexFind();
     RELICS.map(function(R, i){ return {r:R, i:i}; })
       .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
       .map(function(x){ return x.r; })
+      .filter(function(R){
+        if(!q) return true;
+        return (R.n + R.pw + R.lore + (RAR_CN[R.r||0] || "")).toLowerCase().indexOf(q) >= 0;
+      })
       .forEach(function(R){
       const rec = book[R.id], d = document.createElement("div");
       d.className = "cx " + (rec ? "found" : "lost");
@@ -2778,16 +2940,21 @@ function openCodex(tab){
       box.appendChild(d);
     });
   } else {
-    const lexKeys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });   // 删掉的词不算
-    const met = lexKeys.length;
-    const mastered = lexKeys.filter(function(k){ return (LEX[k].str||0) >= 3; }).length;
-    $("codexTitle").textContent = "词库 " + mastered + " 掌握 / " + met + " 遇到 / " + WORDS.length + " 总数";
+    /* 标题只剩「词库」两个字（用户 2026-09）——
+       掌握 / 遇见 / 总数三个数搬到了信息页那块「本章词汇」上，别在这儿再摆一遍。*/
+    $("codexTitle").textContent = "词库";
+    const q = codexFind();
     Object.keys(BYCAT).forEach(function(cat){
+      const hit = q ? BYCAT[cat].filter(function(w){
+        return w.en.toLowerCase().indexOf(q) >= 0 || w.cn.indexOf(q) >= 0 ||
+               (CAT_CN[cat] || "").indexOf(q) >= 0;
+      }) : BYCAT[cat];
+      if(!hit.length) return;               // 这一类一个都没命中，连类名都别画
       const h = document.createElement("div");
       h.className = "eyebrow"; h.style.marginTop = "4px";
       h.textContent = CAT_CN[cat];
       box.appendChild(h);
-      BYCAT[cat].forEach(function(w){
+      hit.forEach(function(w){
         const r = LEX[w.en];
         const s = r ? (r.str||0) : 0;
         const d = document.createElement("div");
@@ -2800,6 +2967,10 @@ function openCodex(tab){
         box.appendChild(d);
       });
     });
+  }
+  if(!box.children.length){
+    box.innerHTML = "<div class=\"cx lost\"><div class=\"cn\">没找到「" +
+      ($("codexFind") ? $("codexFind").value.trim() : "") + "」</div></div>";
   }
   $("veilCodex").hidden = false;
 }
@@ -3025,6 +3196,12 @@ document.addEventListener("keydown", function(ev){
   if(ev.metaKey || ev.ctrlKey || ev.altKey) return;
   const v = anyVeil();
   if(v){
+    // 正在输入框里打字（图鉴搜索）：键盘全交给它，别被 Enter/Esc 的快捷键抢走
+    const tag = ev.target && ev.target.tagName;
+    if(tag === "INPUT" || tag === "TEXTAREA"){
+      if(ev.key === "Escape") ev.target.blur();
+      return;
+    }
     if(v.id === "veilBattle"){
       if(/^[1-4]$/.test(ev.key) && B && !B.locked && B.q && B.q.type !== "spell"){
         const b = $("opts").children[+ev.key - 1];
@@ -3098,7 +3275,14 @@ $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; sav
    LEX / CODEX / MET / TOWN 得跟 localStorage 一起清，
    不然紧接着的 goTown() 会把旧数据原样写回去。 */
 $("btnAgain").addEventListener("click", goTown);
-$("btnCodex").addEventListener("click", function(){ openCodex(); });
+/* 图鉴的搜索框：边打边筛。⚠️ 从按钮进来的时候先清空，别让上次的搜索词把图鉴筛成空的 */
+$("btnCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
+var findTimer = null;
+$("codexFind").addEventListener("input", function(){
+  // 词库有四千多张卡，每敲一下都重画会卡 —— 停手 150ms 再筛
+  if(findTimer) clearTimeout(findTimer);
+  findTimer = setTimeout(function(){ findTimer = null; openCodex(); }, 150);
+});
 $("btnCloseCodex").addEventListener("click", function(){ $("veilCodex").hidden = true; });
 Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
   b.addEventListener("click", function(){ openCodex(b.dataset.tab); });
@@ -3209,6 +3393,8 @@ $("swapList").addEventListener("click", function(ev){
   if(b && b.dataset.id) doSwap(b.dataset.id);
 });
 $("btnSwapSkip").addEventListener("click", function(){ doSwap(null); });
+// 点上面那件新的 = 直接卖掉它（跟「不要了，折成金币」一个意思）
+$("swapNew").addEventListener("click", function(){ if(pendingSwap) doSwap(null); });
 
 /* ---- 遗物三选一 ---- */
 $("relicList").addEventListener("click", function(ev){
@@ -3226,7 +3412,7 @@ $("btnRelicRedraw").addEventListener("click", function(){
 /* ---- 主城 与 洞窟 ---- */
 $("btnCave").addEventListener("click", openCave);
 $("btnCloseCave").addEventListener("click", function(){ $("veilCave").hidden = true; });
-$("btnTownCodex").addEventListener("click", function(){ openCodex(); });
+$("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(b && !b.disabled) enterRoute(b.dataset.id);
