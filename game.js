@@ -312,10 +312,13 @@ function makeFoe(def, x, y){
   // 章节加成：第二章的怪整体更硬一点（章末 Boss 自己一套数值，不加）
   const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
   const hp = def.hp + step * gw.hpPerFloor + fb.hp;
-  // 弱点词类：普通怪就是它自己那类，Boss 每次随机（逼你换着类背）
-  // ⚠️ 只能从**这一章有词的类**里挑 —— 挑到没词的类等于白给一个弱点
-  const weak = def.boss ? pick(chapterCats()) : def.cat;
-  return { x:x, y:y, def:def, g:def.g, name:def.name, art:def.art, cat:def.cat, boss:!!def.boss, weak:weak,
+  // 弱点：**普通怪按类别**（就是它自己那一类），**Boss 按词性**随机（用户 2026-09 改的，
+  // 逼你换着词性背）。weakPos 标明这一只的 weak 是词性还是类别 —— showWeak / answer 都看它。
+  // ⚠️ 只能从**这一章真的有词**的词性/类别里挑 —— 挑到没词的等于白给一个弱点
+  const boss = !!def.boss;
+  const weak = boss ? pick(chapterPos()) : def.cat;
+  return { x:x, y:y, def:def, g:def.g, name:def.name, art:def.art, cat:def.cat, boss:boss,
+           weak:weak, weakPos:boss,
            hp:hp, max:hp, dmg:def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg, armor:def.armor + fb.armor,
            xp:def.xp + Math.floor(step / gw.xpEvery) + fb.xp, seen:false };
 }
@@ -510,7 +513,8 @@ function paintHp(bar, fill, txt, hp, max){
 function renderSheets(s){
   $("stats").innerHTML =
     st("攻击", s.atk) + st("护甲", s.def) + st("暴击", s.crit + "%");
-  const keys = Object.keys(LEX);
+  // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
+  const keys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });
   let mastered = 0, weak = 0;
   keys.forEach(function(k){ const v = LEX[k].str || 0; if(v >= 3) mastered++; else if(LEX[k].wrong) weak++; });
   $("vocab").innerHTML = st("已掌握", mastered + "/" + WORDS.length) + st("要复习", weak);
@@ -753,11 +757,13 @@ function startBattle(m){
   renderBattleBars();
   nextQuestion();
 }
+/* Boss 的弱点是**词性**（POS_CN），普通怪的弱点是**类别**（CAT_CN）—— 看 m.weakPos */
 function showWeak(m){
   const el = $("foeWeak");
-  if(!m.weak || !CAT_CN[m.weak]){ el.hidden = true; return; }
+  const cn = m.weak && (m.weakPos ? POS_CN[m.weak] : CAT_CN[m.weak]);
+  if(!cn){ el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = "弱点 · <b>" + CAT_CN[m.weak] + "</b>类词伤害更高";
+  el.innerHTML = "弱点 · <b>" + cn + "</b>类词伤害更高";
 }
 function renderBattleBars(){
   const m = B.mob, s = stats();
@@ -790,14 +796,14 @@ function renderCombo(){
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
    难度写在 content.js 的 CHAPTERS[].wordLv 上。*/
 function chapterLv(){ return (CH && CH.wordLv) || 1; }
-/* 这一章**真的有词**的类别（出 Boss 弱点时只在这里面挑）。
-   A1 的时间/地点/情绪词是后来补的，就是为了让这几类怪在第一章也有弱点可打。*/
-function chapterCats(){
+/* 这一章**真的有词**的词性（Boss 弱点只在这里面挑，用户 2026-09 从「按类别」改过来的）。
+   每个难度的每个词性都补到了 ≥6（词库文件顶上的规矩），所以正常不会退回全表。*/
+function chapterPos(){
   const lv = chapterLv(), out = [];
-  Object.keys(BYCAT).forEach(function(c){
-    if(BYCAT[c].filter(function(w){ return (w.lv || 1) === lv; }).length >= 6) out.push(c);
+  Object.keys(BYPOS).forEach(function(p){
+    if(BYPOS[p].filter(function(w){ return (w.lv || 1) === lv; }).length >= 6) out.push(p);
   });
-  return out.length ? out : Object.keys(BYCAT);
+  return out.length ? out : Object.keys(BYPOS);
 }
 /* 先按权重抽一个难度（数组里重复几次就是几倍权重），再按这个难度筛词。
    筛得太窄就逐级回退，**永远不返回空数组** —— 出不出题直接关系到能不能打。*/
@@ -833,6 +839,10 @@ function pickQuizWord(cat){
   pool = unused(scopeByLevel(pool));
   if(!pool.length) pool = unused(all);                  // 这一类问完了，退回全池
   if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
+  /* **没学过的新词权重 80%**（用户 2026-09）：LEX 里没有记录 = 这个存档从没遇到过。
+     掷中就只在生词里挑；这一章的生词问完了（fresh 空）自然落回下面那个熟练度加权袋。*/
+  const fresh = pool.filter(function(w){ return !LEX[w.en]; });
+  if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
   const bag = [];
   pool.forEach(function(w){
     const r = LEX[w.en], s = r ? (r.str || 0) : 0;
@@ -1109,7 +1119,8 @@ function answer(btn, ok){
   }
 
   const wasStrong = (rec.str || 0) >= 3;          // 学者：看的是答题前的熟练度
-  const hitWeak = m.weak && word.cat === m.weak;
+  // Boss 的弱点是词性，普通怪的弱点是类别（makeFoe 里的 weakPos 标着是哪一种）
+  const hitWeak = !!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak);
   const isSpell = B.q.type === "spell";
   let head, note = "";
   if(ok){
@@ -2209,8 +2220,12 @@ function resumeRun(s){
   s.mobs.forEach(function(m){
     const def = foeDef(m.d);
     if(!def) return;                     // 怪被删掉了就当它不存在，别崩
+    // 弱点不进存档（makeFoe 里现算的），读档时照样式补一个：普通怪是自己那类，
+    // Boss 重新掷一个词性 —— 以前这里整个漏了，读档后 Boss 就没有弱点了
+    const boss = !!def.boss;
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
-                 cat:def.cat, boss:!!def.boss, hp:m.hp, max:m.max,
+                 cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
+                 hp:m.hp, max:m.max,
                  dmg:m.dmg, armor:m.armor, xp:m.xp, seen:!!m.s});
   });
   $("log").innerHTML = "";
@@ -2326,8 +2341,9 @@ function openCodex(tab){
       box.appendChild(d);
     });
   } else {
-    const met = Object.keys(LEX).length;
-    const mastered = Object.keys(LEX).filter(function(k){ return (LEX[k].str||0) >= 3; }).length;
+    const lexKeys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });   // 删掉的词不算
+    const met = lexKeys.length;
+    const mastered = lexKeys.filter(function(k){ return (LEX[k].str||0) >= 3; }).length;
     $("codexTitle").textContent = "词库 " + mastered + " 掌握 / " + met + " 遇到 / " + WORDS.length + " 总数";
     Object.keys(BYCAT).forEach(function(cat){
       const h = document.createElement("div");
