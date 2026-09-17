@@ -49,10 +49,11 @@ var CHAPTER = {
 
 /* ===== 每一章 =====
    **一个难度就是一章，章与章之间的词不重复**（用户定的）：
-   wordLv 就是这一章唯一会出的词难度（1=A1 2=A2 3=B1），出题只从这一桶里抽。
+   wordLv 就是这一章唯一会出的词难度（1=A1 2=A2 3=B1 4=B2），出题只从这一桶里抽。
    gemMult 是结算时的难度倍率 —— 第一章 100%，A2 章 125%，以后的 B1 章 150%。
    foeBonus 是这一章所有怪（除了章末 Boss，它自己一套数值）的固定加成，整数加法。
-   加第三章：往数组里再抄一条（wordLv:3、gemMult:1.5），再往 ROUTES 里加一条路就行。 */
+   加第三章：往数组里再抄一条（wordLv:3、gemMult:1.5），再往 ROUTES 里加一条路就行。
+   第四章同理（wordLv:4，B2 词库已经备好）。 */
 var CHAPTERS = [
   {id:1, name:"石廊", level:"A1", wordLv:1, gemMult:1.00,
    foeBonus:{hp:0, dmg:0, armor:0, xp:0},

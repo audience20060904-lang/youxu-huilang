@@ -1203,9 +1203,10 @@ function answer(btn, ok){
     }
   } else {
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
-    // 铁胆：冒险失手不断连击；长链：答错只减半
+    /* 铁胆：冒险失手不断连击；长链：答错只减半；
+       **拼写题拼错也只减半**（用户 2026-09：拼写比选择难，错一次不该把长链清零）*/
     if(B.wager && hasRelic("nerve")){ /* 连击保住 */ }
-    else if(hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
+    else if(isSpell || hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
     else P.combo = 0;
     B.dice = 0;                       // 赌骰层数清零
     const wasHaunted = B.q.haunted;
