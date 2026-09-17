@@ -351,27 +351,15 @@ function say(t, cls){
 }
 
 /* ================= 视野 ================= */
-function los(x0,y0,x1,y1){
-  let dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
-  let sx = x0<x1?1:-1, sy = y0<y1?1:-1, err = dx-dy, x = x0, y = y0;
-  while(true){
-    if(x===x1 && y===y1) return true;
-    if(!(x===x0 && y===y0) && G.map[y][x] === 0) return false;
-    const e2 = 2*err;
-    if(e2 > -dy){ err -= dy; x += sx; }
-    if(e2 < dx){ err += dx; y += sy; }
-  }
-}
+/* **地牢里没有光源这回事**（用户 2026-09）：取景框里的一切都是亮的 ——
+   墙、地板、怪、物件，走到哪看到哪，不再有「黑下去的雾」和「走出视野淡一档」。
+   看得见多少由**镜头**决定（CHAPTER.view / viewMax，9×13 起步），不由半径决定。
+   所以 G.vis / G.seen 现在恒为 true：两张表留着是因为
+   render()、findPath()、续玩档都按它们写的，抹掉要动一片地方，没必要。
+   ⚠️ 别再把「半径 R + 视线遮挡（los）」那一套加回来，是用户明确不要的。 */
 function fov(){
-  const R = 6;
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++) G.vis[y][x] = false;
-  for(let y=Math.max(0,P.y-R); y<=Math.min(H-1,P.y+R); y++){
-    for(let x=Math.max(0,P.x-R); x<=Math.min(W-1,P.x+R); x++){
-      if(Math.sqrt((x-P.x)*(x-P.x)+(y-P.y)*(y-P.y)) > R + .4) continue;
-      if(los(P.x,P.y,x,y)){ G.vis[y][x] = true; G.seen[y][x] = true; }
-    }
-  }
-  G.mobs.forEach(function(m){ if(G.vis[m.y][m.x]) m.seen = true; });
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ G.vis[y][x] = true; G.seen[y][x] = true; }
+  G.mobs.forEach(function(m){ m.seen = true; });
 }
 
 /* ================= 渲染 ================= */
@@ -909,7 +897,7 @@ function spellBonusPct(){
   return Math.round(p);
 }
 /* ---- 答题读条（用户 2026-09）----
-   选择题给 QUIZ_TIME 秒，读条走完还没作答 = 白挨怪一口、连击减半（见 timeUp）。
+   选择题给 QUIZ_TIME 秒，读条走完还没作答 = 怪咬你一口，**题目原样留着、读条从头再走**（见 timeUp）。
    ⚠️ **拼写题不限时**（字母要一个一个点，本来就慢），复读者的补救题也一样。
    ⚠️ 条子是**绝对定位压在题面卡片顶边**的，不占纵向空间 ——
       「战斗窗答题前后一样高」那条规矩还在，别把它放回文档流里。
@@ -937,45 +925,30 @@ function startQTimer(){
     t.classList.toggle("hot", left <= 2000);
   }, 100);
 }
-/* 读条走完还没作答。**不算一次答错**（熟练度、心魔、P.used 都不动，这个词以后照样会再出），
-   但怪照样咬你一口（跟答错走同一条减伤链），连击按 TIMEOUT_COMBO_KEEP 打折。*/
+/* 读条走完还没作答（用户 2026-09 改的）：**怪咬你一口，仅此而已**。
+   - **不算一次答错**：熟练度、心魔、P.used、连击、赌骰全都不动；
+   - **不刷新题目**：题面、四个选项、冒险按钮原样留着，答案也不揭晓；
+   - 读条**从头再走一遍**，下一次超时就再咬一口，直到答出来（或者被咬死）为止。
+   挨的那一下走的还是跟答错一样的减伤链（护甲 → mitigate）。
+   ⚠️ 别再往这里加「揭晓正确答案 / 禁用选项 / 露出继续钮」那一套 —— 那是判错的做法。*/
 function timeUp(){
   if(!B || !B.q || B.locked) return;
-  B.locked = true;
-  $("btnWager").disabled = true;
-  const word = B.q.word, m = B.mob, s = stats();
-  const list = B.q.opts || [];
-  Array.prototype.forEach.call($("opts").children, function(b, i){
-    b.disabled = true;
-    if(list[i] && list[i].en === word.en) b.classList.add("right");
-  });
-  P.combo = Math.floor(P.combo * TIMEOUT_COMBO_KEEP);
-  B.dice = 0;                                  // 赌骰跟答错一样清零
-  let head = "<span class=\"big no\">时间到</span>";
+  const m = B.mob, s = stats();
   const mit = mitigate(Math.max(1, m.dmg - s.def), s);
   if(mit.dodged){
-    head = "<span class=\"big no\">时间到 —— 错身躲开了</span>";
-    say("没来得及作答 —— 你侧了半步躲开，但连击断了一半。", "hurt");
+    say("时间到 —— 你侧了半步躲开。题还在，接着答。", "hurt");
   } else {
     takeHit(mit.dmg, m, false);
-    say("没来得及作答，" + m.name + " 咬了你 <b>" + mit.dmg + "</b> 点，连击减半。", "hurt");
+    say("时间到，" + m.name + " 咬了你 <b>" + mit.dmg + "</b> 点。题还在，接着答。", "hurt");
   }
   if(P.hp <= 0 && hasRelic("undying") && !P.undying){
     P.undying = true; P.hp = 1;
     say("薪火在胸口炸开 —— 你以 1 点生命站住了。", "crit");
   }
-  $("verdict").innerHTML = head +
-    "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn +
-    "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
-  if(CAN_SPEAK){
-    $("btnSpeak").hidden = false;
-    if(OPT.speak) speak(word.en);
-  }
   renderBattleBars();
   renderHud();
-  $("btnFlee").hidden = true;
-  if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
-  $("btnNextQ").hidden = false;       // 挨了一下就别自动翻篇了，让玩家自己按
+  if(P.hp <= 0){ B.locked = true; setTimeout(function(){ finishBattle(false); }, 480); return; }
+  startQTimer();          // 题不换，读条重新开始
 }
 function nextQuestion(){
   clearQTimer();
@@ -1904,7 +1877,9 @@ function openShop(th){
         if(c && !th.stock.some(function(x){ return x.relic === c; })) r = c;
       }
       if(!r) break;
-      th.stock.push({relic:r, price: (10 + (r.r || 0) * 12 + G.floor) * SHOP_MULT, sold:false});
+      // 标价 = 这件的分解价 × SHOP_MARKUP（1.3）—— 买进来再拆掉永远是亏的，
+      // 别改回那套 (10 + 品质×12 + 层数) × 5 的老公式：低品质在浅层比分解价还便宜。
+      th.stock.push({relic:r, price: Math.ceil(sellPrice(r) * SHOP_MARKUP), sold:false});
     }
   }
   renderShop();
