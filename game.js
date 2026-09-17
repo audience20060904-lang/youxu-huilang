@@ -61,7 +61,7 @@ function newRun(){
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
         relics:[], haunt:[], hauntAt:{}, undying:false,
         // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
-        spent:0, bonusAtk:0, bonusHp:0, chew:false };
+        spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0 };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   autoOff();
@@ -119,6 +119,7 @@ function nextFloor(){
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
   G.holdUsed = 0;          // 「屏息」每层 HOLD_FREE 次
   G.rerollUsed = false;    // 「重掷」每层一次
+  G.openUsed = false;      // 「开场」每层一次
   if(G.floor > FLOORS){ chapterClear(); return; }
   genFloor();
   fov();
@@ -993,13 +994,20 @@ function renderSpell(word){
   speakQueued(word.en);
   B.spell = "";
   const letters = word.en.split("");
-  const extra = "aeioustrnlm".split("");
-  for(let i=0;i<2;i++) letters.push(pick(extra));
-  /* 星期/月份这类专有名词首字母大写，干扰项里也得有一个大写的 ——
-     不然「全场唯一的大写字母」等于直接告诉玩家哪个字母排第一。*/
-  if(/[A-Z]/.test(word.en)) letters[letters.length-1] = letters[letters.length-1].toUpperCase();
+  /* 净写：不再给那两个干扰字母，键盘上只剩这个词自己的字母 */
+  if(!hasRelic("clean")){
+    const extra = "aeioustrnlm".split("");
+    for(let i=0;i<2;i++) letters.push(pick(extra));
+    /* 星期/月份这类专有名词首字母大写，干扰项里也得有一个大写的 ——
+       不然「全场唯一的大写字母」等于直接告诉玩家哪个字母排第一。
+       ⚠️ 这一句改的是**最后一个干扰项**，所以整段必须待在 clean 的判断里面 ——
+       没有干扰项时它会把词本身的字母改成大写，拼出来就对不上了。*/
+    if(/[A-Z]/.test(word.en)) letters[letters.length-1] = letters[letters.length-1].toUpperCase();
+  }
   letters.sort(function(){ return Math.random() - .5; });
-  drawSpell(word);
+  /* 笔顺：随机挑一格白送。轮到那一格时 giftFill() 自己填上，玩家不用按也退不掉。
+     没有这件遗物就是 null。*/
+  B.gift = hasRelic("stroke") ? ri(0, word.en.length - 1) : null;
   const box = $("letters");
   box.innerHTML = "";
   letters.forEach(function(ch){
@@ -1008,10 +1016,7 @@ function renderSpell(word){
     b.addEventListener("click", function(){
       if(B.locked || B.spell.length >= word.en.length) return;
       B.spell += ch; b.disabled = true; b.dataset.used = "1";
-      drawSpell(word);
-      if(B.spell.length === word.en.length){
-        setTimeout(function(){ answer(null, B.spell === word.en); }, 180);
-      }
+      spellStep(word, box);
     });
     box.appendChild(b);
   });
@@ -1019,15 +1024,42 @@ function renderSpell(word){
   back.type = "button"; back.className = "lbtn"; back.textContent = "⌫";
   back.addEventListener("click", function(){
     if(B.locked || !B.spell.length) return;
-    const ch = B.spell.slice(-1);
-    B.spell = B.spell.slice(0,-1);
-    Array.prototype.some.call(box.children, function(b){
-      if(b.disabled && b.textContent === ch){ b.disabled = false; delete b.dataset.used; return true; }
-      return false;
-    });
+    spellPop(box);
+    /* 笔顺送的那一格不能挡着退格：退到它头上就连它一起退掉，
+       不然它下一拍又被自动填回来，前面那个字母就永远改不了了。*/
+    if(typeof B.gift === "number" && B.spell.length === B.gift && B.spell.length > 0) spellPop(box);
+    if(typeof B.gift === "number" && B.spell.length === B.gift) giftFill(word, box);  // 第 0 格那种：马上补回来
     drawSpell(word);
   });
   box.appendChild(back);
+  spellStep(word, box);        // 「笔顺」可能就送在第一格，进来先走一拍
+}
+/* 拼写题走一步：先补上「笔顺」送的那一格，再重画；填满了就判这一题 */
+function spellStep(word, box){
+  giftFill(word, box);
+  drawSpell(word);
+  if(B.spell.length && B.spell.length === word.en.length){
+    setTimeout(function(){ answer(null, B.spell === word.en); }, 180);
+  }
+}
+/* 笔顺：轮到 B.gift 那一格就自动填上，并把对应的字母键按掉（键盘上的字母数要对得上） */
+function giftFill(word, box){
+  if(typeof B.gift !== "number" || B.spell.length !== B.gift) return;
+  const ch = word.en[B.gift];
+  B.spell += ch;
+  Array.prototype.some.call(box.children, function(b){
+    if(!b.disabled && b.textContent === ch){ b.disabled = true; b.dataset.used = "1"; return true; }
+    return false;
+  });
+}
+/* 退一格：把最后那个字母还回键盘 */
+function spellPop(box){
+  const ch = B.spell.slice(-1);
+  B.spell = B.spell.slice(0, -1);
+  Array.prototype.some.call(box.children, function(b){
+    if(b.disabled && b.textContent === ch){ b.disabled = false; delete b.dataset.used; return true; }
+    return false;
+  });
 }
 function drawSpell(word){
   const row = $("spellRow");
@@ -1162,7 +1194,8 @@ function answer(btn, ok){
 
   const wasStrong = (rec.str || 0) >= 3;          // 学者：看的是答题前的熟练度
   // Boss 的弱点是词性，普通怪的弱点是类别（makeFoe 里的 weakPos 标着是哪一种）
-  const hitWeak = !!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak);
+  // 通感：每一题都算打中弱点（弱点的点伤、猎手、破绽、追猎全都跟着生效）
+  const hitWeak = hasRelic("synes") || (!!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak));
   const isSpell = B.q.type === "spell";
   let head, note = "";
   /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
@@ -1174,6 +1207,7 @@ function answer(btn, ok){
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
     if(isSpell){ P.combo += SPELL_COMBO * (hasRelic("boom") ? 2 : 1); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
+    if(hitWeak && hasRelic("chase")) P.combo += 2;          // 追猎：打中弱点多攒两下
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
@@ -1214,6 +1248,10 @@ function answer(btn, ok){
     if(hasRelic("slay") && m.boss) pct += 25;                               // 弑主：Boss 和守层者
     if(hasRelic("delve")) pct += Math.min(40, G.floor * 0.5);               // 踏层：每下一层 +0.5%
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
+    /* 节奏件：「×2」「×1.5」都摊成②层的百分比 —— 全局仍然只有两个乘区。
+       两件同时触发就是 +150%（相加，不是相乘）。*/
+    if(hasRelic("opening") && !G.openUsed){ pct += 100; G.openUsed = true; }   // 开场：每层第一次答对
+    if(hasRelic("greet") && !B.greetUsed){ pct += 50; B.greetUsed = true; }    // 见面礼：每场第一次答对
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
@@ -1231,16 +1269,22 @@ function answer(btn, ok){
 
     // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
     let critRate = s.crit, critMult = 2;
+    if(hasRelic("maul")) critMult += 0.4;                                   // 重锤：暴击伤害 ×2 → ×2.4
     if(hasRelic("tempo") && P.combo >= 10) critRate += 15;                  // 节拍
     if(hasRelic("dice")) critRate += (B.dice || 0) * 5;                     // 赌骰
+    if(hasRelic("charge")) critRate += (P.charge || 0) * 8;                 // 蓄势：攒了几刀没暴就加几个 8%
     if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * 0.1; critRate = 100; }
     // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
     const forceCrit = hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0;
     const crit = forceCrit || Math.random() * 100 < critRate;
+    // 蓄势：暴了就清零，没暴就再攒一层（跨怪物保留，跟连击一个道理）
+    if(hasRelic("charge")) P.charge = crit ? 0 : (P.charge || 0) + 1;
 
     let raw = Math.round(base * (1 + pct / 100)) + flat;
     if(crit) raw = Math.round(raw * critMult);                              // 乘区二
-    const armor = (hitWeak && hasRelic("flaw")) ? 0 : m.armor;              // 破绽：打中弱点时无视护甲
+    // 破绽：打中弱点时无视护甲；碎颅：暴击时无视护甲
+    const noArmor = (hitWeak && hasRelic("flaw")) || (crit && hasRelic("crush"));
+    const armor = noArmor ? 0 : m.armor;
     const dmg = Math.max(1, raw - armor);
     if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 4);        // 饮血
     m.hp -= dmg + extra;
@@ -1500,6 +1544,12 @@ function closeBattleWin(){
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
     say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
+    if(hasRelic("finale")){                       // 收尾：清完一层回 20% 上限
+      const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
+      const was = P.hp;
+      P.hp = Math.min(stats().maxHp, P.hp + back);
+      if(P.hp > was) say("这一层干净了 —— 收尾替你补了 <b>" + (P.hp - was) + "</b> 点生命。", "good");
+    }
   }
   fov();
   // 普通怪不再掉东西（金币已经给过了）；遗物统一由清层/房间给
@@ -1542,6 +1592,8 @@ function gainXp(n){
 /* ================= 房间：祭坛 / 上锁宝箱 / 游商 =================
    都挂在 G.things 上，靠 kind 分支。进格子时 onEnter 弹窗，处理完 G.paused 放开。 */
 var ALTAR_COST = 5;
+/* 祭坛要付多少血 —— 「祭余」把它砍到 1 点。判断、扣血、文案都走这一个口 */
+function altarCost(){ return hasRelic("spare") ? 1 : ALTAR_COST; }
 
 /* ---- 泉水：踩上去先问一句，不喝就留在原地，回头还能来 ----
    用户 2026-09 从「回满血」改成**回复最大生命的 CHAPTER.springPct**（向上取整、最少 1 点）。*/
@@ -1583,9 +1635,9 @@ function openAltar(th){
   G.paused = true;
   pendingRoom = th;
   const s = stats();
-  const enough = P.hp > ALTAR_COST;
+  const cost = altarCost(), enough = P.hp > cost;
   $("altarCost").innerHTML =
-    li("代价", ALTAR_COST + " 点生命（你现在 " + P.hp + " / " + s.maxHp + "）") +
+    li("代价", cost + " 点生命（你现在 " + P.hp + " / " + s.maxHp + "）") +
     li("回报", "一件遗物");
   $("btnAltarPay").disabled = !enough;
   $("btnAltarPay").textContent = enough ? "割一刀" : "血不够";
@@ -1596,9 +1648,10 @@ function resolveAltar(pay){
   const th = pendingRoom; pendingRoom = null;
   $("veilAltar").hidden = true;
   G.paused = false;
-  if(pay && P.hp > ALTAR_COST){
-    P.hp -= ALTAR_COST;
-    floatNum("me", "-" + ALTAR_COST, "ouch");
+  const cost = altarCost();
+  if(pay && P.hp > cost){
+    P.hp -= cost;
+    floatNum("me", "-" + cost, "ouch");
     removeThing(th);
     say("你把手按在浅槽上。石台吸干了那一点血。", "hurt");
     grantRelic(rollRelic(), "石台吐出了");
@@ -1677,6 +1730,8 @@ function buildChestLetters(word){
 }
 function judgeChest(){
   const w = chestQ.word, ok = chestQ.spell === w.en;
+  // 钥匙：拼错也照样开箱。⚠️ 熟练度和心魔照常按「拼错」记 —— 撬开的是锁，不是这个词
+  const opened = ok || hasRelic("key");
   chestQ.done = true;
   const rec = LEX[w.en] || {str:0, seen:0, wrong:0};
   rec.seen++;
@@ -1685,12 +1740,14 @@ function judgeChest(){
   LEX[w.en] = rec;             // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
       ? "<span class=\"big ok\">咔哒 —— 开了</span>"
-      : "<span class=\"big no\">锁咬死了</span>") +
+      : opened
+        ? "<span class=\"big ok\">拼错了 —— 钥匙替你撬开了</span>"
+        : "<span class=\"big no\">锁咬死了</span>") +
     "<span class=\"mean\"><b>" + w.en + "</b>　" + w.cn + "</span>";
   $("btnChestLeave").hidden = true;
   $("btnChestDone").hidden = false;
-  $("btnChestDone").textContent = ok ? "拿走" : "认了";
-  chestQ.ok = ok;
+  $("btnChestDone").textContent = opened ? "拿走" : "认了";
+  chestQ.ok = opened;
 }
 function closeChest(){
   const th = pendingRoom; pendingRoom = null;
