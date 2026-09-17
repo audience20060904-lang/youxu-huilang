@@ -456,7 +456,8 @@
 - **Claude 的 GitHub App 不能创建仓库**（`POST /user/repos` 返回 403）。需要新仓库时让用户自己建。
 - **workflow 是显式列举要发布哪些文件的**（`cp index.html style.css *.js .nojekyll _site/`）。
   新增任何需要上线的文件，**必须同时加进这个 cp 列表**，否则不会出现在网站上。
-  ⚠️ 特别是以后绑定自定义域名时 GitHub 会生成的 `CNAME` 文件 —— 漏了域名就会失效。
+  ⚠️ 自定义域名的 `CNAME` 文件是例外：cp 那一步已经加了 `if [ -f CNAME ]` 的分支，
+  仓库根有就自动带上、没有就跳过，绑域名时不用再改 workflow。
 - **Claude 的沙盒访问不了 `*.github.io`**（代理返回 `403 to CONNECT`）。
   所以没法用 curl 自测线上网站，只能看 Actions 日志判断部署是否成功，或者请用户帮忙打开确认。
   本地自测可以：`python3 -m http.server` 然后用 Playwright 打开（Chromium 在 `/opt/pw-browsers`）。
@@ -515,7 +516,8 @@
 
 - [ ] **网站图标**：现在没有 favicon，浏览器标签页空白，请求 `/favicon.ico` 会 404。原 Artifact 的图标是 🗡🔥
 - [ ] **自定义域名**：用户想绑 `www.xxx.com`，还没买域名。买了之后：Settings → Pages 填域名 →
-      DNS 加 CNAME 指向 `audience20060904-lang.github.io` → **把 `CNAME` 加进 workflow 的 cp 列表** → 勾 Enforce HTTPS
+      DNS 里 `www` 加 CNAME 指向 `audience20060904-lang.github.io` → 勾 Enforce HTTPS。
+      （workflow 已经会自动带上仓库根的 `CNAME` 文件，这一步不用再动。）
 
 ## 新会话怎么接手
 
