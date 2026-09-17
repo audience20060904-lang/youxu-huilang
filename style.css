@@ -175,6 +175,9 @@ body{
 
 /* 地格底色：先定底 */
 .c.dark{background:var(--unseen);color:transparent}
+/* 离地板两格以上的实心墙：跟 .stage 的底同色，等于不画（用户 2026-09「墙体只要一格」）。
+   墙于是只剩贴着房间和走廊的那一圈。见 game.js 的 wallEdge。 */
+.c.void{background:var(--unseen);color:transparent}
 .c.wall{background:var(--wall);color:transparent}
 .c.floor{background:var(--floor)}
 .c.mem.wall{background:var(--wall-dim)}

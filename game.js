@@ -363,6 +363,22 @@ function fov(){
 }
 
 /* ================= 渲染 ================= */
+/* **墙只画贴着地板的那一圈**（用户 2026-09：「墙体只要一格」）——
+   地图是「16 个槽位里挑 4~6 个放房间」生成的，槽位之间是成片的实心墙；
+   地牢全亮之后那一大片糊在一起很难看。所以这里只画**八邻里有地板的墙格**，
+   再往里的实心墙画成 `.c.void`（跟取景框同色的底，看不见），
+   每间房、每条走廊就都只剩一格厚的墙。
+   ⚠️ 这只是**画法**，G.map 一点没动：寻路、生成、续玩档看的还是原来那张图。
+   ⚠️ 八邻（带斜角）不能改成四邻 —— 房间的四个角会漏出一个缺口。 */
+function wallEdge(x, y){
+  for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+    const nx = x + dx, ny = y + dy;
+    if(nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+    if(G.map[ny][nx] === 1) return true;
+  }
+  return false;
+}
+
 function buildGrid(){
   const m = $("map");
   m.innerHTML = "";
@@ -450,6 +466,8 @@ function render(){
     if(!G.seen[y][x]){ c.textContent = ""; c.className = "c dark"; continue; }
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
+    // 离地板两格以上的实心墙不画，露出取景框的底（见上面 wallEdge）
+    if(isWall && !wallEdge(x, y)){ c.textContent = ""; c.className = "c void"; continue; }
     const base = isWall ? "wall" : "floor";
     let glyph = "";              // 地图上已经没有字符了；留着是给没配图的怪兜底
     let content = isWall ? "" : "dot";   // 空地板上那个点是 CSS 画的（.c.dot::before），不占内容
