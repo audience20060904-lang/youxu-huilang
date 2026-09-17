@@ -117,6 +117,14 @@ body{
 .hpbar .txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.04em;
   color:#2B2620;text-shadow:0 1px 0 rgba(255,255,255,.6);font-variant-numeric:tabular-nums}
+/* 护盾：压在血条上的一段冷色，盾满上限时正好铺满一条。
+   ⚠️ 它在 .fill 之后、.txt 之前 —— 盖得住血、盖不住字。宽度按「盾 / 生命上限」算并夹在 100%，
+   盾可以比上限还高（凝盾能攒到 300），铺满就是铺满。 */
+/* ⚠️ 盾只占**上半条**：凝盾能攒到 300，铺满整条的话红色的血就整个被盖住，
+   低血告警（.low / .crit 那两条）等于失效。压上半条，血色永远还露着下半截。*/
+.hpbar .sh{position:absolute;left:0;top:0;height:42%;width:0;background:var(--frost);opacity:.6;
+  border-bottom:1px solid rgba(255,255,255,.45);transition:width .22s ease}
+.hpbar .shn{color:#DFF1F4;margin-left:6px;text-shadow:0 1px 1px rgba(0,0,0,.45)}
 /* 血量告急：颜色变深，并轻轻搏动 */
 .hpbar.low .fill{background:linear-gradient(180deg,#D4604F,#B03726)}
 .hpbar.low .txt{color:#FFF1ED;text-shadow:0 1px 1px rgba(0,0,0,.45)}

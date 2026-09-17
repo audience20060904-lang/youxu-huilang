@@ -61,7 +61,9 @@ function newRun(){
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
         relics:[], haunt:[], hauntAt:{}, undying:false,
         // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
-        spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0 };
+        spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
+        // 护盾（第四批）：先扣盾再扣血。shield 是当前盾，aegisN 是凝盾数到第几题了
+        shield:0, aegisN:0 };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -94,6 +96,8 @@ function stats(){
   if(hasRelic("heart")) s.maxHp += 6;
   if(hasRelic("ward"))  s.maxHp += 8;
   if(hasRelic("vigor")) s.maxHp += 12;
+  if(hasRelic("pad"))   s.maxHp += 10;                       // 棉衬
+  if(hasRelic("callus")){ s.def += 1; s.maxHp += 4; }        // 硬茧
   if(hasRelic("keen"))  s.crit += 15;
   if(hasRelic("edge"))  s.crit += 8;
   /* 成长线：拿到「烙印」「铭心」之后每升一级攒下来的，记在 P 上（gainXp 里加） */
@@ -121,6 +125,14 @@ function nextFloor(){
   G.holdUsed = 0;          // 「屏息」每层 HOLD_FREE 次
   G.rerollUsed = false;    // 「重掷」每层一次
   G.openUsed = false;      // 「开场」每层一次
+  G.fleeFree = false;      // 「脱壳」每层第一次撤退不掉血
+  G.glassCut = 0;          // 「沙漏」这一层被超时削掉了几秒读条
+  /* 盾誓：每进一层把护盾**补到**上限的 SHIELD_FLOOR_PCT —— 取大值而不是直接赋值，
+     免得把「凝盾」辛苦攒下的一大堆盾按回去。*/
+  if(hasRelic("vow")){
+    const want = Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT));
+    if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
+  }
   if(G.floor > FLOORS){ chapterClear(); return; }
   genFloor();
   fov();
@@ -523,7 +535,7 @@ function renderHud(){
   const left = G.mobs.length;
   $("hLeft").textContent = left === 0 ? "已清" : left;
   $("hLeft").parentNode.className = "hi " + (left === 0 ? "done" : "left");
-  paintHp($("hpBar"), $("hpFill"), $("hpTxt"), P.hp, s.maxHp);
+  paintHp($("hpBar"), $("hpFill"), $("hpTxt"), P.hp, s.maxHp, $("hpShield"));
   const need = xpNeed(P.lvl);
   $("xpFill").style.width = Math.min(100, P.xp / need * 100) + "%";
 
@@ -531,10 +543,14 @@ function renderHud(){
 }
 function st(k,v){ return "<span class=\"s\">" + k + "<b>" + v + "</b></span>"; }
 /* 血条：低于 35% 变深红，低于 15% 再加搏动。地牢和战斗界面共用一套 */
-function paintHp(bar, fill, txt, hp, max){
+function paintHp(bar, fill, txt, hp, max, sh){
   const v = Math.max(0, hp), r = max > 0 ? v / max : 0;
+  const shield = Math.max(0, (P && P.shield) || 0);
   fill.style.width = (r * 100) + "%";
-  txt.textContent = v + " / " + max;
+  // 护盾：条子上压一段冷色 + 文字后面缀一个数。没有盾就什么都不显示
+  if(sh) sh.style.width = (shield > 0 && max > 0 ? Math.min(100, shield / max * 100) : 0) + "%";
+  txt.innerHTML = v + " / " + max +
+    (shield > 0 ? " <span class=\"shn\">盾 " + shield + "</span>" : "");
   if(bar) bar.className = "hpbar" + (r <= 0.15 ? " low crit" : r <= 0.35 ? " low" : "");
 }
 function renderSheets(s){
@@ -802,7 +818,7 @@ function renderBattleBars(){
   const m = B.mob, s = stats();
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
-  paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp);
+  paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp, $("bHpShield"));
   renderCombo();
 }
 /* ---- 连击：每 comboStep 次 +comboPct%，可叠加不封顶（火星把 step 减 1）---- */
@@ -927,12 +943,17 @@ function clearQTimer(){
   const t = $("qTimer");
   if(t) t.hidden = true;
 }
+/* 这一题的读条有几秒：底子 QUIZ_TIME，「沙漏」每替你挡一次超时就短 GLASS_CUT 秒
+   （只在这一层有效，nextFloor 里清零），最短 QUIZ_TIME_MIN 秒。*/
+function qSeconds(){
+  return Math.max(QUIZ_TIME_MIN, QUIZ_TIME - (G && G.glassCut ? G.glassCut : 0));
+}
 function startQTimer(){
   clearQTimer();
   if(!B || !B.q || B.q.type === "spell") return;
   const t = $("qTimer"), fill = $("qTimerFill");
   if(!t || !fill) return;
-  const total = Math.max(1, QUIZ_TIME) * 1000, t0 = Date.now();
+  const total = Math.max(1, qSeconds()) * 1000, t0 = Date.now();
   t.hidden = false;
   t.classList.remove("hot");
   fill.style.width = "100%";
@@ -953,6 +974,14 @@ function startQTimer(){
 function timeUp(){
   if(!B || !B.q || B.locked) return;
   const m = B.mob, s = stats();
+  /* 沙漏：超时那一下完全不掉血，代价是这一层的读条永久短一截。
+     ⚠️ 要在减伤链之前就返回 —— 不然会白白吃掉屏息的次数、白掷一次错身。*/
+  if(hasRelic("glass")){
+    G.glassCut = (G.glassCut || 0) + GLASS_CUT;
+    say("沙漏替你咽下了这一下 —— 这一层的读条只剩 <b>" + qSeconds() + "</b> 秒了。", "hurt");
+    startQTimer();
+    return;
+  }
   const mit = mitigate(Math.max(1, m.dmg - s.def), s);
   if(mit.dodged){
     say("时间到 —— 你侧了半步躲开。题还在，接着答。", "hurt");
@@ -1386,6 +1415,16 @@ function answer(btn, ok){
       P.hp = Math.min(s.maxHp, P.hp + Math.max(1, Math.round(s.maxHp * 0.2)));
     }
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
+    /* 凝盾：每答对 AEGIS_EVERY 题攒 AEGIS_GAIN 点护盾，攒到 AEGIS_MAX 封顶 */
+    if(hasRelic("aegis")){
+      P.aegisN = (P.aegisN || 0) + 1;
+      if(P.aegisN >= AEGIS_EVERY){
+        P.aegisN = 0;
+        const before = P.shield || 0;
+        P.shield = Math.min(AEGIS_MAX, before + AEGIS_GAIN);
+        if(P.shield > before) relicLog += " <span class=\"sys\">(凝盾 · 护盾 " + P.shield + ")</span>";
+      }
+    }
     if(wasStrong && hasRelic("tome")) P.gold += 8;                          // 典藏：答对掌握过的词
     if(firstSeen && hasRelic("lesson")) P.gold += 10;                       // 课业：这个存档第一次见的生词
     floatNum("foe", "-" + dmg, "dmg");
@@ -1419,7 +1458,11 @@ function answer(btn, ok){
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
     /* 铁胆：冒险失手不断连击；长链：答错只减半；
        **拼写题拼错也只减半**（用户 2026-09：拼写比选择难，错一次不该把长链清零）*/
+    /* 断链：连击攒够 UNCHAIN_AT 就能拿它挡一下 —— 完全免伤，连击只减 UNCHAIN_CUT。
+       ⚠️ **必须在下面动 P.combo 之前判**，不然连击已经清零/减半了，条件就永远不成立。*/
+    const unchain = hasRelic("unchain") && P.combo >= UNCHAIN_AT;
     if(B.wager && hasRelic("nerve")){ /* 连击保住 */ }
+    else if(unchain) P.combo = Math.max(0, P.combo - UNCHAIN_CUT);
     else if(isSpell || hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
     else P.combo = 0;
     B.dice = 0;                       // 赌骰层数清零
@@ -1438,6 +1481,12 @@ function answer(btn, ok){
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
       if(B.wager) dmg += 2;                   // 冒险失手
       if(wasHaunted) dmg += 1;                // 心魔又答错
+      /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
+      if(dmg > 0 && unchain){
+        dmg = 0;
+        head = "<span class=\"big no\">断链 —— 链子替你挨了</span>";
+        note = "连击 −" + UNCHAIN_CUT + "，血一点没掉。";
+      }
       // 默诵：拼写题答错不掉血，但**每层只有 RECITE_FREE 次**（老续玩档没这个字段，所以 || 0）
       if(dmg > 0 && isSpell && hasRelic("recite") && (G.reciteFree || 0) < RECITE_FREE){
         G.reciteFree = (G.reciteFree || 0) + 1;
@@ -1518,7 +1567,14 @@ function answer(btn, ok){
 function mitigate(dmg, s0){
   const s = s0 || stats();
   let out = dmg, why = "";
-  if(hasRelic("soft")) out = Math.ceil(out * 0.9);                        // 软甲 −10%
+  /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
+     跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
+  let cut = 0;
+  if(hasRelic("soft")) cut += 10;                                         // 软甲
+  if(hasRelic("hide")) cut += 5;                                          // 皮甲
+  /* ⚠️ 这一步**向下取整**（玩家占便宜）：向上取整的话 5% 在小数字上等于没有 ——
+     早期怪只打 5~6 点，ceil(6×0.95)=6，皮甲就成了一件骗人的遗物。最低仍然掉 1 点（下面兜）。*/
+  if(cut) out = Math.floor(out * (1 - cut / 100));
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
     out = Math.max(1, Math.ceil(out / 2));
@@ -1532,11 +1588,24 @@ function mitigate(dmg, s0){
   if(hasRelic("slip") && Math.random() < 0.25) return {dmg:0, dodged:true, why:""};   // 错身
   return {dmg:out, dodged:false, why:why};
 }
-/* ---- 挨一下：扣血 + 跳数字，返回写进 verdict 的那句话 ---- */
+/* ---- 挨一下：先扣护盾、剩下的才扣血，跳数字，返回写进 verdict 的那句话 ----
+   ⚠️ **所有真的要掉血的路都必须从这儿过**（答错、超时、补救失败结清），
+   护盾才不会被某一条路绕过去。
+   ⚠️ 不走这儿的两处是**故意**的：撤退（那是掉一半上限，不是挨打，由「脱壳」管）
+   和「割裂」的自伤（自己割的，盾挡不住）。 */
 function takeHit(dmg, m, haunted){
-  P.hp -= dmg;
+  let left = dmg, ate = 0;
+  if((P.shield || 0) > 0){
+    ate = Math.min(P.shield, left);
+    P.shield -= ate;
+    left -= ate;
+  }
+  if(left > 0) P.hp -= left;
   floatNum("me", "-" + dmg, "ouch");
-  return m.name + " 咬中你，你失去 <b>" + dmg + "</b> 点生命" + (haunted ? "（心魔加重）" : "") + "。";
+  return m.name + " 咬中你，" +
+    (ate ? ("护盾吃掉 <b>" + ate + "</b> 点" + (left ? "，你失去 <b>" + left + "</b> 点生命" : "，血一点没掉") + "")
+         : ("你失去 <b>" + left + "</b> 点生命")) +
+    (haunted ? "（心魔加重）" : "") + "。";
 }
 /* ---- 复读者的补救窗口（用户 2026-09 选的方案：5 秒内自己点才进）----
    答错时伤害先欠着（B.pend），这五秒里只有「补救」一个按钮：
@@ -1651,14 +1720,19 @@ function flee(){
   if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
   $("btnRescue").hidden = true;
   const m = B.mob, s = stats();
+  // 脱壳：每层第一次撤退不付那半条命
+  const free = hasRelic("shed") && !G.fleeFree;
+  if(free) G.fleeFree = true;
   const before = P.hp;
-  P.hp = Math.max(1, P.hp - Math.max(1, Math.round(s.maxHp * FLEE_HP_PCT)));
+  if(!free) P.hp = Math.max(1, P.hp - Math.max(1, Math.round(s.maxHp * FLEE_HP_PCT)));
   const lost = before - P.hp;
   B = null;
   $("veilBattle").hidden = true;
   G.paused = false;
-  say("你转身退开 —— 空门露了一下，失去 <b>" + lost + "</b> 点生命。" +
-      m.name + " 留在原地，伤口还在。", "hurt");
+  say(free
+      ? ("你把壳留在原地，人退了出来 —— 这一层的第一次撤退不掉血。" + m.name + " 伤口还在。")
+      : ("你转身退开 —— 空门露了一下，失去 <b>" + lost + "</b> 点生命。" +
+         m.name + " 留在原地，伤口还在。"), "hurt");
   lockInput(260);
   renderHud();
   render();
@@ -2643,6 +2717,8 @@ function resumeRun(s){
   if(!P.haunt) P.haunt = [];
   if(!P.hauntAt) P.hauntAt = {};                 // 老档没记心魔的答错时间，hauntReady 会当成熬到了
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
+  if(typeof P.shield !== "number") P.shield = 0; // 护盾（第四批），老档没有
+  if(typeof P.aegisN !== "number") P.aegisN = 0;
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   G = { floor: s.floor, paused:false, over:false,
