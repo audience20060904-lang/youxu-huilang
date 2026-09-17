@@ -96,6 +96,7 @@ function stats(){
 /* ================= 生成 ================= */
 function nextFloor(){
   cancelWalk();
+  autoOff();       // 下一层要重新手动开寻路（用户 2026-09），别自己接着冲
   G.floor++;
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
@@ -617,16 +618,21 @@ function nearestBy(list){
   }
   return best;
 }
+/* 目标是**怪和金币一起比，谁近去谁**（用户 2026-09 改的，以前是「先把怪清完再捡钱」）——
+   顺路的一堆金币不该等你横穿半张地图回来捡。
+   两样都没有了才去楼梯；泉/箱/坛/商一概不去，要不要进那些是玩家自己决定的。 */
 function autoPath(){
   if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return false;
-  let t = nearestBy(G.mobs);
-  if(!t) t = nearestBy(G.things.filter(function(th){ return th.kind === "gold"; }));
+  const goals = G.mobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
+  let t = nearestBy(goals);
   if(!t && G.mobs.length === 0 && G.stair) t = G.stair;
   if(!t || (t.x === P.x && t.y === P.y)) return false;
   return goTo(t.x, t.y, true);
 }
 /* 「寻路」是**开关**，不是点一下走一段（用户 2026-09 要求）：
-   开着就一路走下去 —— 打完一场接着找下一只，捡完金币接着捡，清完层走到楼梯边停住。
+   开着就一路走下去 —— 怪和金币按脚程就近挑，清完层走到楼梯边停住。
+   ⚠️ **下一层要重新手动开**（用户 2026-09）：`nextFloor()` 里 `autoOff()`，
+   新一层的怪在哪都还不知道，别让它自己就冲出去了。
    实现上就是一个 160ms 的轮询：弹层开着（战斗 / 三选一 / 下楼确认 / 商店）就等着，
    还在走就不打扰，停下来了就挑下一个目标。**没目标可去时自己关掉**。
    ⚠️ 下楼照旧要确认 —— 走到楼梯上会弹 `askStair()`，它不会替玩家按「下去」；
@@ -822,7 +828,8 @@ function scopeByLevel(pool){
 /* **一趟之内答对过的词不再出第二次**（用户 2026-09）——「除了答错的」：
    答对就记进 `P.used`，答错（或先对后错）就从里面拿掉，于是错过的词照样会再来找你。
    心魔那条分支是故意不过滤的：它本来就是「这趟答错过的词」。
-   ⚠️ 一章 500 词，一趟问得完 —— 挑空了就**清空 P.used 开新一轮**（弱点类挑空了先退回全池）。*/
+   ⚠️ 一章的词是问得完的（A1/A2 各 500 上下，B1/B2 各 1000）—— 挑空了就**清空 P.used 开新一轮**
+      （弱点类挑空了先退回全池）。*/
 function unused(pool){
   const out = [];
   for(let i=0;i<pool.length;i++) if(!P.used || !P.used[pool[i].en]) out.push(pool[i]);
