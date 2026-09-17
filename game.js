@@ -59,7 +59,7 @@ function lockInput(ms){ lockUntil = Math.max(lockUntil, Date.now() + ms); }
 function newRun(){
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
-        relics:[], haunt:[], undying:false };
+        relics:[], haunt:[], hauntAt:{}, undying:false };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   autoOff();
@@ -836,10 +836,11 @@ function unused(pool){
   return out;
 }
 function pickQuizWord(cat){
-  // 心魔：这一趟答错过的词，有 35% 直接被拽出来重考
+  // 心魔：这一趟答错过的词，**熬过 HAUNT_DELAY 次答题之后**才有 35% 被拽出来重考
+  const ready = readyHaunts();
   const hauntRate = hasRelic("bind") ? 0.7 : 0.35;      // 缚魂：心魔出现率翻倍
-  if(P.haunt && P.haunt.length && Math.random() < hauntRate){
-    const en = pick(P.haunt), w = WMAP[en];
+  if(ready.length && Math.random() < hauntRate){
+    const en = pick(ready), w = WMAP[en];
     if(w && !(B && B.q && B.q.word.en === en)) return w;
   }
   if(!P.used) P.used = {};
@@ -893,7 +894,7 @@ function nextQuestion(){
   else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
-  B.q = {word:word, type:type, done:false, haunted: !!(P.haunt && P.haunt.indexOf(word.en) >= 0)};
+  B.q = {word:word, type:type, done:false, haunted: hauntReady(word.en)};
   B.locked = false;
   // 「锁定冒险」开着就每题自动押上（拼写题除外，那题本来就不给冒险）
   B.wager = !!OPT.lock && type !== "spell";
@@ -941,6 +942,7 @@ function nextQuestion(){
     opts.push(c);
   }
   opts.sort(function(){ return Math.random() - .5; });
+  B.q.opts = opts;          // 答错时要照这个顺序把每个选项的中英都摊开（answer 里）
   const box = $("opts");
   box.innerHTML = "";
   opts.forEach(function(o, i){
@@ -970,9 +972,11 @@ function renderSpell(word){
   $("spellBar").hidden = false;
   $("letters").hidden = false;
   /* 拼写题旁边那个 🔊：进来先自动念一遍（用户 2026-09 要的），之后随时能再点。
-     它不跟设置里的「答完自动朗读」挂钩 —— 那条管的是答完之后那一次。*/
+     它不跟设置里的「答完自动朗读」挂钩 —— 那条管的是答完之后那一次。
+     ⚠️ 走 speakQueued：**等上一题那次朗读念完了再念**（用户 2026-09），
+        直接 speak() 会把上一段掐断，两个词叠在一起听。*/
   $("btnSpellSpeak").hidden = !CAN_SPEAK;
-  if(CAN_SPEAK) speak(word.en);
+  speakQueued(word.en);
   B.spell = "";
   const letters = word.en.split("");
   const extra = "aeioustrnlm".split("");
@@ -1118,10 +1122,23 @@ function answer(btn, ok){
   if(ok) P.used[word.en] = 1; else delete P.used[word.en];
 
   if(B.q.type !== "spell"){
-    Array.prototype.forEach.call($("opts").children, function(b){
+    /* 答错了就把**每个选项的中英两边都摊开**（用户 2026-09）——
+       字写在方块里面（方块本来就是正方形，装得下第二行），
+       **不往 verdict 加行**，战斗窗答题前后照旧同高。
+       对号用的是 B.q.opts 的下标，不再去解析按钮文字。*/
+    const list = B.q.opts || [];
+    Array.prototype.forEach.call($("opts").children, function(b, i){
       b.disabled = true;
-      const label = b.textContent.replace(/^\d/, "");
-      if(label === (B.q.type === "zh2en" ? word.en : word.cn)) b.classList.add("right");
+      const o = list[i];
+      if(!o) return;
+      if(o.en === word.en) b.classList.add("right");
+      if(!ok){
+        const sub = document.createElement("span");
+        sub.className = "sub";
+        sub.textContent = (B.q.type === "zh2en") ? o.cn : o.en;
+        b.appendChild(sub);
+        b.classList.add("two");
+      }
     });
     if(!ok && btn) btn.classList.add("wrong");
   } else {
@@ -1206,7 +1223,8 @@ function answer(btn, ok){
       B.rescue = false; B.pend = null;
       note += " <span style=\"color:var(--good)\">补救成功 —— 刚才那一下没掉血。</span>";
     }
-    if(B.q.haunted && dropHaunt(word.en)){
+    const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
+    if(B.q.haunted && hauntGone){
       const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * 0.15)) : 2;
       P.hp = Math.min(s.maxHp, P.hp + back);
       note += " <span style=\"color:var(--venom)\">心魔散了，回 " + back + " 点生命。</span>";
@@ -2030,20 +2048,39 @@ function renderFuse(){
 
 /* ================= 心魔 =================
    这一趟答错过的词会缠上来：抽题时优先出现，答对驱散并回血，再答错额外掉 1 点。
-   数据用的是现成的 P.haunt（只存 en 字符串）。 */
+   名单是 P.haunt（只存 en 字符串），每个词记下答错时的答题数 P.hauntAt[en]。 */
 var HAUNT_MAX = 6;
+/* **答错之后要再过 10 次答题，这个词才会以心魔的身份回来**（用户 2026-09）——
+   以前是下一题就可能被拽出来重考，刚错完立刻再问一遍太黏人。
+   计时用的是这一趟的答题总数（P.right + P.wrong），所以跨战斗照样在走。*/
+var HAUNT_DELAY = 10;
+function answered(){ return (P.right || 0) + (P.wrong || 0); }
 function addHaunt(en){
   if(!P.haunt) P.haunt = [];
+  if(!P.hauntAt) P.hauntAt = {};
   const i = P.haunt.indexOf(en);
   if(i >= 0) P.haunt.splice(i, 1);
   P.haunt.push(en);
-  while(P.haunt.length > HAUNT_MAX) P.haunt.shift();
+  P.hauntAt[en] = answered();      // addHaunt 是在 P.wrong++ 之后调的，含这一题
+  while(P.haunt.length > HAUNT_MAX) delete P.hauntAt[P.haunt.shift()];
+}
+/* 这个词熬到时候了没有 —— 战斗窗那条「心魔」标签、额外 1 点伤害、驱散回血都看它。
+   老续玩档没记时间（hauntAt 里没这个键），当成已经熬到。*/
+function hauntReady(en){
+  if(!P.haunt || P.haunt.indexOf(en) < 0) return false;
+  const at = P.hauntAt ? P.hauntAt[en] : undefined;
+  return typeof at !== "number" || answered() - at >= HAUNT_DELAY;
+}
+function readyHaunts(){
+  if(!P.haunt) return [];
+  return P.haunt.filter(hauntReady);
 }
 function dropHaunt(en){
   if(!P.haunt) return false;
   const i = P.haunt.indexOf(en);
   if(i < 0) return false;
   P.haunt.splice(i, 1);
+  if(P.hauntAt) delete P.hauntAt[en];
   return true;
 }
 
@@ -2096,7 +2133,7 @@ function goTown(){
   B = null; pendingLoot = null; pendingRoom = null; chestQ = null; reopenShop = null; pendingSwap = null;
   P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
-        relics:[], haunt:[], undying:false };
+        relics:[], haunt:[], hauntAt:{}, undying:false };
   G = { floor:0, paused:true, over:true };
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
   newRelics = [];                        // 「new」红点也是局内的界面状态，不进存档
@@ -2217,6 +2254,7 @@ function resumeRun(s){
   if(!P.relics) P.relics = [];
   P.relics = P.relics.filter(function(id){ return !!relicById(id); });   // 遗物被删掉的老档
   if(!P.haunt) P.haunt = [];
+  if(!P.hauntAt) P.hauntAt = {};                 // 老档没记心魔的答错时间，hauntReady 会当成熬到了
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」

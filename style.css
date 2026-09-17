@@ -340,6 +340,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .opt.wrong{background:#F6DCD7;border-color:var(--blood);color:#7E2618;opacity:1}
 .opt.right .n{border-color:var(--venom);color:#2F5220;background:#EDF5E4}
 .opt.wrong .n{border-color:var(--blood);color:#7E2618;background:#FBEBE7}
+/* 答错之后每个方块里多出一行，把这个选项的另一半（中文题给英文、英文题给中文）也写出来。
+   ⚠️ 这一行只在**方块内部**长，verdict 不加行 —— 战斗窗答题前后必须同高。
+   方块是正方形（aspect-ratio:1），两行加起来还有余量，四档屏幕上量过。 */
+.opt.two{flex-direction:column;gap:2px}
+.opt .sub{font-family:var(--mono);font-size:clamp(11px,1.6vh,12.5px);
+  font-weight:400;opacity:.72;line-height:1.2;word-break:break-word}
 
 /* 答完题这里会多出两行（判定 + 释义）。**高度提前留够**，不然答完窗就长高、出滚动条。 */
 .verdict{text-align:center;font-size:13.5px;min-height:clamp(52px,7.6vh,62px);
