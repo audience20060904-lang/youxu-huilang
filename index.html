@@ -234,8 +234,6 @@
       <div class="panel">
         <div class="phead">别的</div>
         <button class="btn" id="btnHelp" type="button">玩法说明</button>
-        <button class="btn danger" id="btnWipe" type="button">清除全部存档</button>
-        <p class="note">清除会抹掉词汇熟练度、遗物图鉴和最深层数，并重开一局，且无法撤销。设置项不受影响。</p>
       </div>
     </section>
 
@@ -272,7 +270,14 @@
       </div>
     </div>
 
+    <!-- 连击：用户 2026-09 从战斗窗底下挪到这儿（怪物血条下面）。
+         三段常驻，只有数字变；涨了放大回弹、掉了缩一下（class up / down，JS 里加）。 -->
+    <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
+
     <div class="qcard" id="qcard">
+      <!-- 7 秒读条：绝对定位压在卡片顶边，不占纵向空间（战斗窗答题前后必须同高）。
+           拼写题不上它。 -->
+      <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
       <div class="qlabel" id="qLabel">这个词是什么意思？</div>
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
       <div class="qword" id="qWord">cat</div>
@@ -296,12 +301,11 @@
       <div class="me" id="meArt"></div>
       <div class="col">
         <div class="hpbar" id="bHpBar"><div class="fill" id="bHpFill"></div><div class="txt" id="bHpTxt"></div></div>
-        <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
       </div>
     </div>
 
     <div class="rowb">
-      <button class="btn ghost" id="btnFlee" type="button">撤退</button>
+      <button class="btn ghost" id="btnFlee" type="button">撤退 · 掉一半血</button>
       <span class="sp"></span>
       <button class="btn primary" id="btnRescue" type="button" hidden>补救 · 5s</button>
       <button class="btn primary" id="btnNextQ" type="button" hidden>继续</button>
@@ -347,6 +351,17 @@
       <span class="sp"></span>
       <button class="btn primary" id="btnAltarPay" type="button">割一刀</button>
     </div>
+  </div>
+</div>
+
+<!-- 熔炉：祭坛有两成概率长成这个。献祭一件遗物，升一档 / 同档换一件 / 降一档，各三分之一 -->
+<div class="veil" id="veilForge" hidden>
+  <div class="sheet">
+    <div class="eyebrow">石台 · 炉膛还热着</div>
+    <h2>把一件遗物扔进去？</h2>
+    <p class="note">三分之一<b>升一档</b>，三分之一<b>换一件同档的</b>，三分之一<b>降一档</b>。扔进去就收不回来了。</p>
+    <div class="relics" id="forgeList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnForgeSkip" type="button">什么也不扔</button></div>
   </div>
 </div>
 
@@ -427,6 +442,15 @@
   </div>
 </div>
 
+<!-- 合成完的二选一：材料已经砸了，所以这个窗只能挑，没有关闭钮 -->
+<div class="veil" id="veilFuseGot" hidden>
+  <div class="sheet">
+    <div class="eyebrow">合成</div>
+    <h2 id="fuseGotTitle">两件，挑一件</h2>
+    <div class="relics" id="fuseGotList"></div>
+  </div>
+</div>
+
 <div class="veil" id="veilCodex" hidden>
   <div class="sheet">
     <div class="eyebrow">图鉴 · 跨局永久记录</div>
@@ -450,26 +474,29 @@
         <li><b>走路</b>：<b>点地图上任何走过的地面，角色会自己找路过去</b>。点怪物就走过去开战，点 <span style="color:var(--venom)">▼</span> 就走去下楼（清空前地图上没有 ▼）。没探索过的黑暗区域点不了 —— 你还不知道路。走到一半想停下，点别处或按 <span class="kbd">Esc</span>。</li>
         <li><b>探索</b>：怪物待在原地不动，你要自己去找。每一章 <b>50 层</b>，每层 <b>十来只</b>怪。<b>清完这一层的怪</b>，下行阶梯才会出现 —— 就在<b>最后一只怪倒下的地方</b>。</li>
         <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
-        <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。</li>
+        <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。
+          题面上边有一条 <b>7 秒读条</b>：走完还没作答，怪白咬你一口、<b>连击减半</b>。<b>拼写题不限时。</b></li>
         <li><b>数值</b>：你 <b>20 点血</b>，一刀 <b>3 点</b>伤害；灰鼠 8 点血，三刀就倒。<b>每 5 连击</b>伤害 +2%（可叠加、不封顶），答错清零。暴击是双倍。</li>
-        <li><b>拼写题</b>：每题有<b>一成</b>的概率要你把词拼出来。拼对<b>连击 +10、这一场经验翻倍</b>；
-          拼错不算白丢 —— 同一个词<b>下一题换成选择题</b>再问你一次。</li>
+        <li><b>拼写题</b>：每题有一小成的概率要你把词拼出来，<b>不限时</b>。拼对<b>连击 +10、这一场经验翻倍</b>；
+          拼错跟别的答错一样 —— 那个词记进<b>心魔</b>，再答 10 题之后回来找你。</li>
         <li><b>连击跨怪物保留</b>：打完一只接着打下一只，连击<b>不会归零</b> —— 撤退、走路、下一层都留着。只有<b>答错</b>才断（拿了「长链」就只减半），倒下回镇上才清空。</li>
-        <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 能一次回满 ——
+        <li><b>回血</b>：没有药水。<b>每击败一只怪回 3 点</b>，升级回 5 点；地上的 <span style="color:var(--frost)">泉</span> 回<b>生命上限的 15%</b> ——
           踩上去会<b>先问你喝不喝</b>，不喝就留在原地，等真需要的时候再回来。撑不住就先撤退，去别处打一只弱的。</li>
         <li><b>生命上限</b>：拿到加生命上限的遗物时，<b>当前血量也跟着涨同样多</b> —— 20/30 拿到「上限 +8」之后是 <b>28/38</b>，不用再去找泉水补。</li>
         <li><b>词汇</b>：<b>一章只出一个难度的词，章与章之间不重复</b> —— 第一章 <b>A1 入门词</b>（cat / water / red / run），
           第二章 <b>A2 进阶词</b>，第三章 <b>B1 中阶词</b>，第四章 <b>B2 高阶词</b>。答错的词会记进词库，之后<b>出现得更频繁</b>，直到你答对三次。</li>
-        <li><b>撤退</b>：战斗里随时可以撤退，怪物身上已经掉的血会留着，你可以回头再打。</li>
-        <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍，答错受伤也翻倍</b>。真背熟了就冒。
+        <li><b>撤退</b>：战斗里随时可以撤退，怪物身上已经掉的血会留着，你可以回头再打 ——
+          但转身要付代价：<b>掉一半的生命上限</b>（最低留 1 点）。</li>
+        <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍、连击记 2 点，答错受伤也翻倍</b>。真背熟了就冒。
           地图下面的<b>「锁定冒险」</b>打开后，<b>每题自动冒险</b>，不用一题点一次（拼写题除外）。</li>
         <li><b>弱点</b>：每只怪都怕一类词（战斗界面有标）。用那一类的词打中，<b>伤害 +2</b>。Boss 的弱点每次都不一样。</li>
-        <li><b>遗物</b>：<b>每清完一层三选一</b>，共 48 件分五个品质，<b>最多带 15 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质 + 300 金合成 1 件更高的</b>。
+        <li><b>遗物</b>：<b>每清完一层三选一</b>，共 72 件分五个品质，<b>最多带 15 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质 + 500 金</b>合成一件更高的 —— 合成出来的<b>在两件里自己挑</b>。
           它们分成几条成套的路线 —— 比如「盲斗 + 刻字 + 默诵」把你变成拼写专家，
           「铁胆 + 孤注 + 赌骰」让你每题都敲下去。只在这一趟里管用。</li>
         <li><b>变强的唯一途径</b>：<b>遗物</b>。没有装备、没有背包，不用管属性搭配 ——伤害就是一条加法，<b>只有暴击会翻倍</b>。</li>
         <li><b>心魔</b>：这一趟答错过的词，<b>再答 10 题之后会缠上来重考</b>。重遇时答对就驱散并回 2 点血；再答错会多掉 1 点。</li>
-        <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> 献 5 点血换一件遗物；
+        <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> <b>第 10 层之后</b>才有，献 5 点血换一件遗物 ——
+          它有两成概率是<b>熔炉</b>：献祭身上的一件遗物，三分之一升一档、三分之一同档换一件、三分之一降一档；
           <span style="color:var(--torch)">箱</span> 拼对一个词才能开，<b>拼错就永久锁死</b>；
           <span style="color:var(--frost)">商</span> 用洞里的金币买东西。
           <b>自动寻路会绕开它们</b>，想用就直接点它。</li>
