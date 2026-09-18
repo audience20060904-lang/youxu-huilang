@@ -135,11 +135,38 @@ body{
 .hpbar.crit .fill{background:linear-gradient(180deg,#C13B26,#8E1F0F);animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.62}}
 @media (prefers-reduced-motion:reduce){.hpbar.crit .fill{animation:none}}
+/* 掉血 / 回血各播一次 0.65s 的反馈（用户 2026-09）——
+   game.js 的 paintHp 一发现数变了就挂 .hurt / .heal，HP_FX_MS 之后摘掉。
+   ⚠️ 只用 transform 和一层 ::after 的闪光，**不许动布局**：血条上下都贴着别的东西，一顶就跳。 */
+/* ⚠️ 闪光走 ::after，**不能用 inset box-shadow** —— .fill / .sh / .txt 都是定位子元素，
+   会把父元素的内阴影整个盖住。::after 是最后一个生成盒，压在所有子元素上面。*/
+.hpbar::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:transparent}
+.hpbar.hurt{animation:hphurt .65s ease-out}
+.hpbar.heal{animation:hpheal .65s ease-out}
+.hpbar.hurt::after{background:var(--blood);animation:hpflash .65s ease-out}
+.hpbar.heal::after{background:var(--venom);animation:hpflash .65s ease-out}
+@keyframes hpflash{0%{opacity:.5}100%{opacity:0}}
+@keyframes hphurt{
+  0%,100%{transform:translateX(0)}
+  14%{transform:translateX(-3px)}
+  32%{transform:translateX(3px)}
+  50%{transform:translateX(-2px)}
+  68%{transform:translateX(1px)}
+}
+@keyframes hpheal{
+  0%,100%{transform:scaleY(1)}
+  32%{transform:scaleY(1.1)}
+}
+@media (prefers-reduced-motion:reduce){
+  .hpbar.hurt,.hpbar.heal,.hpbar.hurt::after,.hpbar.heal::after{animation:none}
+}
 
-.xpbar{height:5px;border:1px solid var(--edge-soft);background:#EAE4D5;border-radius:2px;
+/* 经验条：用户 2026-09 把它加粗一倍（5 → 10px，浮层里 3 → 6px）并改成金色。
+   ⚠️ 加粗的是条子本身的高度 —— 它横向本来就铺满，没有别的「宽度」可翻。*/
+.xpbar{height:10px;border:1px solid var(--edge-soft);background:#EAE4D5;border-radius:2px;
   position:relative;overflow:hidden}
 .xpbar .fill{position:absolute;inset:0;width:0;
-  background:linear-gradient(180deg,#C2D69C,#9DB772);transition:width .22s ease}
+  background:linear-gradient(180deg,#F0CE72,var(--coin));transition:width .22s ease}
 
 .strip{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 @media (max-width:700px){.strip{grid-template-columns:1fr}}
@@ -174,7 +201,7 @@ body{
 /* 血条在浮层里收薄一点；战斗界面那条用的是同一个 .hpbar，别去动基类 */
 .mapui .hpbar{height:15px;background:rgba(231,224,207,.88)}
 .mapui .hpbar .txt{font-size:11px}
-.mapui .xpbar{height:3px}
+.mapui .xpbar{height:6px}
 .c{display:grid;place-items:center;font-family:var(--mono);line-height:1;user-select:none;
    width:var(--cell);height:var(--cell);font-size:calc(var(--cell) * .68);font-weight:600;
    position:relative;transition:background .12s ease;background:var(--unseen)}
@@ -436,6 +463,24 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .mote{position:fixed;z-index:60;pointer-events:none;color:var(--coin);
   filter:drop-shadow(0 1px 1px rgba(90,70,30,.35))}
 .mote svg{width:100%;height:100%;display:block}
+/* ===== 升级：一圈光晕荡开 + 一圈金色粒子（1.5s，用户 2026-09）=====
+   都挂在 body 上、定位到主角那一格、1.5s 后一起删（见 game.js 的 fxLevelUp）。
+   z-index 要压过弹层（战斗中升级时地图在 veil 底下）。 */
+.lvring{position:fixed;z-index:61;pointer-events:none;width:0;height:0;
+  border-radius:50%;animation:lvring 1.5s cubic-bezier(.2,.7,.35,1) forwards}
+@keyframes lvring{
+  0%{box-shadow:0 0 0 2px currentColor, 0 0 14px 2px currentColor;opacity:.95;
+     width:8px;height:8px;margin:-4px 0 0 -4px}
+  60%{opacity:.5}
+  100%{box-shadow:0 0 0 2px currentColor, 0 0 26px 6px currentColor;opacity:0;
+     width:150px;height:150px;margin:-75px 0 0 -75px}
+}
+.lvmote{position:fixed;z-index:61;pointer-events:none;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;
+  border-radius:50%;background:currentColor;opacity:.95;
+  filter:drop-shadow(0 1px 2px rgba(90,70,30,.45));
+  transition:transform 1.3s cubic-bezier(.15,.75,.3,1), opacity 1.3s ease-out}
+@media (prefers-reduced-motion:reduce){.lvring,.lvmote{animation:none;transition:none;display:none}}
+
 /* 碎屑落进去的那个数字/标签，自己跳一下 */
 .pop{animation:pop .4s ease-out}
 @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
@@ -512,6 +557,29 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .find::placeholder{color:var(--faint)}
 .tally{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
 .tally b{color:var(--torch);font-weight:600}
+
+/* 结算顶上那块强调：本局正确率 vs 这一层历史上的平均正确率（用户 2026-09）。
+   两个数一样大、中间一个小小的 vs，底下一行写差了多少。*/
+.accbox{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
+  border:1px solid var(--edge);border-radius:3px;background:#FFFCF2;padding:11px 12px}
+.accone{display:flex;flex-direction:column;gap:2px;text-align:center;min-width:0}
+.accone i{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+  color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.accone b{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--bone);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.accvs{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint)}
+.accdiff{font-size:12px;color:var(--dim);text-align:center;margin-top:5px}
+.accdiff.up{color:var(--venom)}
+.accdiff.down{color:var(--blood)}
+
+/* ===== 练习模式的开关（洞窟弹层，路线列表底下）===== */
+.practice{width:100%;display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
+  font-family:var(--body);font-size:13px;color:var(--dim);
+  border:1px dashed var(--edge);background:var(--stone-2);border-radius:3px;padding:9px 12px}
+.practice em{font-style:normal;font-size:11.5px;color:var(--faint)}
+.practice.on{border-style:solid;border-color:var(--frost);background:#EAF3F4;color:var(--bone)}
+.practice.on em{color:var(--frost)}
+@media (hover:hover){.practice:hover{border-color:var(--torch-deep)}}
 
 .ledger{border:1px solid var(--edge-soft);border-radius:2px;background:#FFFDF7}
 .ledger .li{display:flex;justify-content:space-between;gap:12px;padding:6px 11px;font-size:13px;

@@ -25,7 +25,11 @@ function put(k, v){
    —— 存档点只有三个：进入关卡 / 下一层 / 回到主城。 */
 let LEX = load(LEX_KEY, {});
 let CODEX = load(CODEX_KEY, {});
-let MET = load(META_KEY, {best:0, runs:0, clears:0, t:0});
+/* accF：**按层累计的答题记录**（用户 2026-09 的「历史平均正确率（该层）」）——
+   形如 {"23":{r:340,w:80}}，跨存档累计，结算时拿来跟本局正确率对比。
+   它是 MET 里的一个字段，跟着四个永久键一起落盘，不用新开 localStorage 键。*/
+let MET = load(META_KEY, {best:0, runs:0, clears:0, t:0, accF:{}});
+if(!MET.accF || typeof MET.accF !== "object") MET.accF = {};   // 老档没有这个字段
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
 let lastAct = 0, lockUntil = 0;
 var OPT_KEY = "youxu.opt.v1";
@@ -63,21 +67,29 @@ function newRun(){
         // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
         spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
         // 护盾（第四批）：先扣盾再扣血。shield 是当前盾，aegisN 是凝盾数到第几题了
-        shield:0, aegisN:0 };
+        shield:0, aegisN:0,
+        // 练习模式：进洞之前在洞窟弹层里勾的，整趟有效（stats() 里读）
+        practice: !!practiceOn,
+        // 这一趟按层记的答题数，结算时并进 MET.accF
+        accF:{} };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
+  resetHpFx();                // 血条动效同理，新的一趟别一进门就播一下
   autoOff();
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
   say("石门在身后合上。走廊里只有火把的回声。", "sys");
   say("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。", "sys");
+  if(P.practice) say("<b>练习模式</b>：护甲 +50，攻击减半。", "sys");
   nextFloor();
 }
 /* 升一级要多少经验。「速成」在这儿减 20% —— HUD 的经验条和 gainXp 都走它，一处改两处生效。*/
 function xpNeed(l){
-  const n = 5 + l * 3;
+  let n = 5 + l * 3;
+  // 1~20 级的这一段 ×1.5（用户 2026-09）—— 前期升级太快，怪很快就打成纸糊的
+  if(l <= CHAPTER.xpEarlyTo) n = Math.ceil(n * CHAPTER.xpEarlyMult);
   return hasRelic("adept") ? Math.max(1, Math.ceil(n * 0.8)) : n;   // 速成
 }
 /* 属性只有两个来源：等级 + 遗物。装备系统已删。
@@ -105,7 +117,14 @@ function stats(){
   if(P.bonusHp)  s.maxHp += P.bonusHp;                       // 铭心：每级 +3 上限
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
-  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 4;   // 背水
+  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 3;   // 背水
+  /* 练习模式（用户 2026-09）：选关卡时勾的，跟着 P 进续玩档。
+     固定 +50 护甲（挨打那条链最低仍掉 1 点）、攻击减半 —— 拿来纯背词用。
+     ⚠️ 放在最后：所有遗物和等级都算完了再压这一刀。*/
+  if(P.practice){
+    s.def += CHAPTER.practiceDef;
+    s.atk = Math.max(1, Math.round(s.atk * CHAPTER.practiceAtkMult));
+  }
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
 }
@@ -121,7 +140,10 @@ function nextFloor(){
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
-    if(hasRelic("lamp"))  P.hp = Math.min(stats().maxHp, P.hp + 5);   // 油灯
+    if(hasRelic("lamp")){                                              // 油灯：回最大生命的 5%
+      const lm = stats().maxHp;
+      P.hp = Math.min(lm, P.hp + Math.max(1, Math.ceil(lm * CHAPTER.lampPct)));
+    }
     if(hasRelic("purse")) P.gold += 30;                                // 钱袋
   }
   G.echoUsed = false;      // 「回声」每层一次
@@ -349,7 +371,9 @@ function genFloor(){
   // 金币堆 7~10 堆，「掘金」再多 3 堆
   for(let i=0, k=ri(7,10) + (hasRelic("dig") ? 3 : 0); i<k; i++){
     const sp = take(); if(!sp) break;
-    G.things.push({x:sp.x, y:sp.y, kind:"gold", amt: ri(2,6) + G.floor});
+    // 用户 2026-09：地上的金币减少 60%（CHAPTER.goldMult），最少留 1 枚
+    G.things.push({x:sp.x, y:sp.y, kind:"gold",
+                   amt: Math.max(1, Math.round((ri(2,6) + G.floor) * CHAPTER.goldMult))});
   }
   const springs = G.floor >= 3 ? 2 : 1;
   for(let i=0;i<springs;i++){
@@ -615,6 +639,14 @@ function renderHud(){
 }
 function st(k,v){ return "<span class=\"s\">" + k + "<b>" + v + "</b></span>"; }
 /* 血条：低于 35% 变深红，低于 15% 再加搏动。地牢和战斗界面共用一套 */
+/* 回血/掉血的动效基准存在血条自己的 data-hp 上（两条血条各记各的）。
+   换一趟、读档、回主城都要清一次，不然进门就会白播一下。*/
+function resetHpFx(){
+  ["hpBar", "bHpBar"].forEach(function(id){
+    const el = $(id);
+    if(el){ delete el.dataset.hp; el.classList.remove("hurt", "heal"); }
+  });
+}
 function paintHp(bar, fill, txt, hp, max, sh){
   const v = Math.max(0, hp), r = max > 0 ? v / max : 0;
   const shield = Math.max(0, (P && P.shield) || 0);
@@ -623,7 +655,18 @@ function paintHp(bar, fill, txt, hp, max, sh){
   if(sh) sh.style.width = (shield > 0 && max > 0 ? Math.min(100, shield / max * 100) : 0) + "%";
   txt.innerHTML = v + " / " + max +
     (shield > 0 ? " <span class=\"shn\">盾 " + shield + "</span>" : "");
-  if(bar) bar.className = "hpbar" + (r <= 0.15 ? " low crit" : r <= 0.35 ? " low" : "");
+  if(bar){
+    /* ⚠️ className 是整块重写的，动效那个类必须**写在它后面**再挂上去 */
+    const prev = bar.dataset.hp === undefined ? null : +bar.dataset.hp;
+    bar.className = "hpbar" + (r <= 0.15 ? " low crit" : r <= 0.35 ? " low" : "");
+    bar.dataset.hp = v;
+    if(prev !== null && prev !== v && !REDUCE_MOTION){
+      const cls = v > prev ? "heal" : "hurt";
+      void bar.offsetWidth;                      // 强制回流，连着掉两下也能再播一遍
+      bar.classList.add(cls);
+      setTimeout(function(){ bar.classList.remove(cls); }, HP_FX_MS);
+    }
+  }
 }
 function renderSheets(s){
   $("stats").innerHTML =
@@ -632,8 +675,13 @@ function renderSheets(s){
   const keys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });
   let mastered = 0;
   keys.forEach(function(k){ if((LEX[k].str || 0) >= 3) mastered++; });
-  // 三项各占一格（用户 2026-09）：掌握过的 / 遇见过的 / 词库一共多少
-  $("vocab").innerHTML = st("已掌握", mastered) + st("已遇见", keys.length) + st("总数", WORDS.length);
+  /* 四项各占一格：掌握过的 / 遇见过的 / 词库一共多少 / **累计学词**。
+     累计学词 = 熟练度表里所有词被问过的总次数（LEX[k].seen 之和），
+     跨存档一直累加，是这块面板从「本章词汇」改叫「词汇记录」之后加的那一项（用户 2026-09）。*/
+  let studied = 0;
+  keys.forEach(function(k){ studied += (LEX[k].seen || 0); });
+  $("vocab").innerHTML = st("已掌握", mastered) + st("已遇见", keys.length) +
+                         st("总数", WORDS.length) + st("累计学词", studied + " 次");
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
   $("runStats").innerHTML = st("答对", P.right) + st("答错", P.wrong) +
     st("正确率", acc) + st("击杀", P.kills) +
@@ -813,7 +861,7 @@ function stepWalk(){
   fov();
   if(!walkPath.length){ cancelWalk(); }
   render();
-  if(walkPath && walkPath.length) walkTimer = setTimeout(stepWalk, 108);
+  if(walkPath && walkPath.length) walkTimer = setTimeout(stepWalk, CHAPTER.stepMs);
 }
 function tryMove(dx, dy, rep){
   if(G.paused || G.over) return;
@@ -993,7 +1041,9 @@ function pickQuizWord(cat){
     if(w && !(B && B.q && B.q.word.en === en)) return w;
   }
   if(!P.used) P.used = {};
-  const catRate = hasRelic("scent") ? 0.9 : 0.7;        // 嗅迹：多出弱点类的词
+  /* 用户 2026-09：**默认不再往怪的弱点类偏**（原来是 70%），词照全池抽。
+     「嗅迹」是唯一的例外 —— 拿到它才把弱点类的出现率拉到 90%。*/
+  const catRate = hasRelic("scent") ? 0.9 : 0;         // 嗅迹：多出弱点类的词
   const all = scopeByLevel(ALLW);
   let pool = (cat !== "all" && Math.random() < catRate && BYCAT[cat]) ? BYCAT[cat] : ALLW;
   pool = unused(scopeByLevel(pool));
@@ -1278,6 +1328,9 @@ function drawSpell(word){
    金币 → 顶上那个「金」，遗物 → 底部的「遗物」标签。飞完那个目标自己跳一下。
    纯装饰：粒子挂在 body 上、pointer-events:none，飞完就删；
    系统开了「减少动态效果」就整段跳过，只留目标跳一下都不做。 */
+/* 回血/掉血的动效 0.65s、升级光圈 1.5s（用户 2026-09 指定的时长）。
+   CSS 里 .hpbar.hurt / .hpbar.heal / .lvring / .lvmote 的动画时长要跟这两个数对上。*/
+var HP_FX_MS = 650, LEVEL_FX_MS = 1500;
 var REDUCE_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function rectOf(el){
@@ -1324,6 +1377,50 @@ function fxFly(fromEl, toEl, kind, n, color){
   }
   setTimeout(function(){ popTarget(toEl); }, 60 + n * 34 + 380);
 }
+/* 升级：一圈光晕从人身上荡开，外加一圈金色粒子（用户 2026-09）。
+   起点优先用地图上主角那一格；战斗中地图看不见，就落到战斗窗的血条上。
+   纯装饰、挂在 body 上、LEVEL_FX_MS 之后全删，REDUCE_MOTION 开着就整段跳过。*/
+function fxLevelUp(){
+  if(REDUCE_MOTION) return;
+  const host = (P && cells && cells[P.y * W + P.x]) || null;
+  const from = rectOf(host) ? host
+             : rectOf($("bHpBar")) ? $("bHpBar")
+             : $("stageBox");
+  const a = rectOf(from);
+  if(!a) return;
+  const cx = a.left + a.width / 2, cy = a.top + a.height / 2;
+  const gold = getComputedStyle(document.documentElement)
+                 .getPropertyValue("--coin").trim() || "#E3B23C";
+  const ring = document.createElement("div");
+  ring.className = "lvring";
+  ring.style.left = cx + "px";
+  ring.style.top  = cy + "px";
+  ring.style.color = gold;
+  document.body.appendChild(ring);
+  // 粒子：从中心向四周散开，慢慢淡掉
+  for(let i = 0; i < 14; i++){
+    const d = document.createElement("div");
+    d.className = "lvmote";
+    d.style.left = cx + "px";
+    d.style.top  = cy + "px";
+    d.style.color = gold;
+    document.body.appendChild(d);
+    const ang = (Math.PI * 2 / 14) * i + Math.random() * 0.4;
+    const dist = 52 + Math.random() * 46;
+    setTimeout(function(){
+      d.style.transform = "translate(" + Math.cos(ang) * dist + "px," +
+                          (Math.sin(ang) * dist - 16) + "px) scale(.4)";
+      d.style.opacity = "0";
+    }, 20 + i * 12);
+  }
+  const tab = $("hLevel");
+  if(tab) setTimeout(function(){ popTarget(tab); }, 240);
+  setTimeout(function(){
+    Array.prototype.forEach.call(document.querySelectorAll(".lvring,.lvmote"), function(el){
+      if(el.parentNode) el.parentNode.removeChild(el);
+    });
+  }, LEVEL_FX_MS);
+}
 /* 捡金币：从那一格飞到顶上的「金」 */
 function fxGold(x, y){
   const cell = cells[y * W + x];
@@ -1368,6 +1465,12 @@ function answer(btn, ok){
   // 一趟之内：答对过就不再出（记进 P.used），答错就放回池子里接着找你
   if(!P.used) P.used = {};
   if(ok) P.used[word.en] = 1; else delete P.used[word.en];
+  /* 这一趟按层记一笔（结算时跟 MET.accF 里的历史比）。
+     ⚠️ 先只记在 P 上，endRun 里才并进 MET —— 不然「历史平均」里就掺了本局自己。*/
+  if(!P.accF) P.accF = {};
+  const fk = String(G.floor);
+  if(!P.accF[fk]) P.accF[fk] = {r:0, w:0};
+  if(ok) P.accF[fk].r++; else P.accF[fk].w++;
 
   if(B.q.type !== "spell"){
     /* 答错了就把**每个选项的中英两边都摊开**（用户 2026-09）——
@@ -1464,13 +1567,17 @@ function answer(btn, ok){
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
     /* 节奏件：「×2」「×1.5」都摊成②层的百分比 —— 全局仍然只有两个乘区。
        两件同时触发就是 +150%（相加，不是相乘）。*/
+    /* 冒险（用户 2026-09 报的 bug：开了跟没开一样）——
+       按钮上写的就是「对了伤害翻倍」，所以它是②层的 +100%，不是原来那个 +3 点伤。
+       ⚠️ 摊进百分比桶，别给它开第三个乘区。*/
+    if(B.wager) pct += 100;
     if(hasRelic("opening") && !G.openUsed){ pct += 100; G.openUsed = true; }   // 开场：每层第一次答对
     if(hasRelic("greet") && !B.greetUsed){ pct += 50; B.greetUsed = true; }    // 见面礼：每场第一次答对
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
     if(hitWeak) flat += hasRelic("hunter") ? 3 : 2;                         // 弱点 +2，猎手再 +1
-    if(B.wager) flat += hasRelic("gambler") ? 5 : 3;                        // 冒对了
+    if(B.wager && hasRelic("gambler")) flat += 2;                           // 赌徒：冒对了再 +2 点伤
     let surge = false;
     if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
 
@@ -1586,7 +1693,7 @@ function answer(btn, ok){
     } else {
       // 受伤也全是加减：怪物伤害 − 护甲，再加上冒险失手/心魔的惩罚
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
-      if(B.wager) dmg += 2;                   // 冒险失手
+      if(B.wager) dmg *= 2;                   // 冒险失手 —— 按钮写的是「错了受伤翻倍」
       if(wasHaunted) dmg += 1;                // 心魔又答错
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
@@ -1791,7 +1898,8 @@ function closeBattleWin(){
   const s0 = stats();
   let heal = CHAPTER.killHeal;
   if(hasRelic("reap")) heal += 5;
-  if(hasRelic("salve")) heal += 2;                                        // 药膏
+  // 药膏（用户 2026-09 提到稀有）：75% 概率回 4 点，不是每次都给
+  if(hasRelic("salve") && Math.random() < SALVE_RATE) heal += SALVE_HEAL;
   const before = P.hp;
   P.hp = Math.min(s0.maxHp, P.hp + heal);
   const gained = P.hp - before;
@@ -1858,6 +1966,7 @@ function gainXp(n){
     if(hasRelic("engrave")){ P.bonusHp = (P.bonusHp || 0) + 3; P.hp += 3; }   // 铭心
     const s = stats();
     P.hp = Math.min(s.maxHp, P.hp + CHAPTER.levelHeal);
+    fxLevelUp();
     say("<b>等级提升！</b>你现在是 " + P.lvl + " 级 —— 攻击 " + s.atk + "，生命上限 " + s.maxHp + "。", "good");
   }
   return n;
@@ -2746,6 +2855,7 @@ function goTown(){
         right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
         relics:[], haunt:[], hauntAt:{}, undying:false };
   G = { floor:0, paused:true, over:true };
+  resetHpFx();                           // 回主城重建了角色，血条动效的基准跟着清
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
   newRelics = [];                        // 「new」红点也是局内的界面状态，不进存档
   commit(false);       // 存档点之三：回到主城 —— 永久数据落盘，续玩档删掉
@@ -2756,7 +2866,20 @@ function goTown(){
   refreshSaveState();
   showView("viewAdv");
 }
+/* 练习模式的开关：**纯局前选项**，不进设置存档 ——
+   勾了之后 newRun() 把它写进 P.practice，那一趟才算数（数值在 stats() 里）。*/
+let practiceOn = false;
+function renderPractice(){
+  const b = $("btnPractice");
+  if(!b) return;
+  b.classList.toggle("on", practiceOn);
+  b.setAttribute("aria-pressed", practiceOn ? "true" : "false");
+  if(b.firstChild && b.firstChild.nodeType === 3){
+    b.firstChild.textContent = practiceOn ? "练习模式 · 开" : "练习模式 · 关";
+  }
+}
 function openCave(){
+  renderPractice();
   const box = $("routeList");
   box.innerHTML = "";
   ROUTES.forEach(function(r){
@@ -2872,6 +2995,9 @@ function resumeRun(s){
   if(typeof P.aegisN !== "number") P.aegisN = 0;
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
+  if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
+  if(!P.accF) P.accF = {};                                   // 老档没有按层的答题记录
+  resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
@@ -2927,6 +3053,25 @@ function runScore(win){
   return {rows:rows, sum:sum, acc:acc, floor:floor, fmul:fmul,
           gems: Math.floor(sum * fmul * CH.gemMult)};
 }
+/* 这一层历史上的平均正确率（**不含本局** —— 本局的那一笔在 endRun 里才并进去）。
+   没有历史记录就返回 null，界面上写「—」。 */
+function histAcc(floor){
+  const rec = MET.accF && MET.accF[String(floor)];
+  if(!rec) return null;
+  const t = (rec.r || 0) + (rec.w || 0);
+  return t ? Math.round(rec.r / t * 100) : null;
+}
+/* 本局按层记下的答题数并进历史。只在一趟结束时调一次。 */
+function foldAcc(){
+  if(!P || !P.accF) return;
+  if(!MET.accF) MET.accF = {};
+  for(const k in P.accF){
+    const inc = P.accF[k];
+    if(!MET.accF[k]) MET.accF[k] = {r:0, w:0};
+    MET.accF[k].r += inc.r || 0;
+    MET.accF[k].w += inc.w || 0;
+  }
+}
 function endRun(win, gaveUp){
   G.over = true;
   const M = meta();
@@ -2935,6 +3080,9 @@ function endRun(win, gaveUp){
   if(win) M.clears++; else if(!gaveUp) M.deaths = (M.deaths || 0) + 1;
   // 遗物和金币都留在洞里 —— 带回镇上的是结算换来的**宝石**
   const sc = runScore(win);
+  /* 历史平均要**在并进本局之前**算，不然等于跟自己比 */
+  const hAcc = histAcc(sc.floor);
+  foldAcc();
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
   $("endTitle").textContent = win ? (CH.boss.name + "倒下了")
@@ -2942,6 +3090,21 @@ function endRun(win, gaveUp){
                                            : ("你倒在第 " + G.floor + " 层");
   $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关")
                                     : gaveUp ? "主动撤离" : "你被抬回了镇上";
+  /* 强调这一块（用户 2026-09）：本局正确率 vs 这一层历史上的平均正确率。
+     高了标绿、低了标红，没有历史记录就写「—」。 */
+  const dv = hAcc == null ? null : sc.acc - hAcc;
+  $("endAcc").innerHTML =
+    "<div class=\"accbox\">" +
+      "<div class=\"accone\"><i>本局正确率</i><b>" + sc.acc + "%</b></div>" +
+      "<div class=\"accvs\">vs</div>" +
+      "<div class=\"accone\"><i>历史平均 · 第 " + sc.floor + " 层</i><b>" +
+        (hAcc == null ? "—" : hAcc + "%") + "</b></div>" +
+    "</div>" +
+    (dv == null ? "<div class=\"accdiff\">这一层还没有历史记录，这一趟就是第一笔。</div>"
+                : "<div class=\"accdiff " + (dv > 0 ? "up" : dv < 0 ? "down" : "") + "\">" +
+                  (dv > 0 ? "比你在这一层的平均高 " + dv + " 个百分点"
+                          : dv < 0 ? "比你在这一层的平均低 " + (-dv) + " 个百分点"
+                                   : "跟你在这一层的平均持平") + "</div>");
   $("endStats").innerHTML =
     sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
     li("<b>小计</b>", "<b>" + sc.sum + "</b>") +
@@ -2949,6 +3112,7 @@ function endRun(win, gaveUp){
     li("难度 · 第" + CH.id + "章 " + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
     li("<b>获得宝石</b>", "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
     li("宝石合计", TOWN.gem) +
+    (P.practice ? li("练习模式", "护甲 +50 · 攻击 −50%") : "") +
     li("丢在洞里", (P.relics.length || 0) + " 件遗物 · " + P.gold + " 金币") +
     li("这趟遇到的词", P.seenWords.length + " 个") +
     li("累计掌握", Object.keys(LEX).filter(function(k){ return (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
@@ -3132,6 +3296,16 @@ function mergeData(o){
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
+  /* 每层答题记录（历史平均正确率用的）：两边**相加** ——
+     它是「一共答过多少题」，不是进度，取大值会白丢一边的记录。*/
+  if(!M.accF) M.accF = {};
+  for(const fk in (im.accF || {})){
+    const inc = im.accF[fk];
+    if(!inc) continue;
+    if(!M.accF[fk]) M.accF[fk] = {r:0, w:0};
+    M.accF[fk].r += inc.r || 0;
+    M.accF[fk].w += inc.w || 0;
+  }
 
   // 镇上存款取多的那边，**不相加** —— 免得来回导两次就凭空富了
   const before = TOWN.gem || 0;
@@ -3493,6 +3667,10 @@ $("btnRelicRedraw").addEventListener("click", function(){
 $("btnCave").addEventListener("click", openCave);
 $("btnCloseCave").addEventListener("click", function(){ $("veilCave").hidden = true; });
 $("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
+$("btnPractice").addEventListener("click", function(){
+  practiceOn = !practiceOn;
+  renderPractice();
+});
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(b && !b.disabled) enterRoute(b.dataset.id);
