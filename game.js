@@ -63,7 +63,7 @@ function newRun(){
         // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
         spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
         // 护盾（第四批）：先扣盾再扣血。shield 是当前盾，aegisN 是凝盾数到第几题了
-        shield:0, aegisN:0 };
+        shield:0, aegisN:0, recoil:0 };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -121,7 +121,7 @@ function nextFloor(){
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
-    if(hasRelic("lamp"))  P.hp = Math.min(stats().maxHp, P.hp + 5);   // 油灯
+    if(hasRelic("lamp"))  healUp(5);                                   // 油灯
     if(hasRelic("purse")) P.gold += 30;                                // 钱袋
   }
   G.echoUsed = false;      // 「回声」每层一次
@@ -137,8 +137,10 @@ function nextFloor(){
     const want = Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT));
     if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
   }
+  if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
   if(G.floor > FLOORS){ chapterClear(); return; }
   genFloor();
+  if(hasRelic("water")) drinkAll();     // 「水」：泉是 genFloor 摆的，所以只能放在它后面
   fov();
   buildGrid();
   render();
@@ -1437,7 +1439,7 @@ function answer(btn, ok){
       if(roll === 1){ B.whim = (B.whim || 0) + 8; whim = "伤害 +8%（本场累计 " + B.whim + "%）"; }
       else if(roll === 2){
         const back = Math.max(1, Math.ceil(s.maxHp * 0.05));
-        P.hp = Math.min(s.maxHp, P.hp + back);
+        healUp(back, s);
         whim = "回 " + back + " 点生命";
       } else { P.gold += 60; whim = "+60 金"; }
       relicLog += " <span class=\"sys\">(无常 · " + whim + ")</span>";
@@ -1462,6 +1464,9 @@ function answer(btn, ok){
     if(hasRelic("slay") && m.boss) pct += 25;                               // 弑主：Boss 和守层者
     if(hasRelic("delve")) pct += Math.min(40, G.floor * 0.5);               // 踏层：每下一层 +0.5%
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
+    if(hasRelic("bastion")) pct += (s.def || 0) * BASTION_PER;              // 铁壁：每 1 点护甲 +3%
+    const recoil = hasRelic("recoil") ? (P.recoil || 0) * RECOIL_PCT : 0;   // 反震：挨几下就攒几层
+    pct += recoil;
     /* 节奏件：「×2」「×1.5」都摊成②层的百分比 —— 全局仍然只有两个乘区。
        两件同时触发就是 +150%（相加，不是相乘）。*/
     if(hasRelic("opening") && !G.openUsed){ pct += 100; G.openUsed = true; }   // 开场：每层第一次答对
@@ -1473,6 +1478,8 @@ function answer(btn, ok){
     if(B.wager) flat += hasRelic("gambler") ? 5 : 3;                        // 冒对了
     let surge = false;
     if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
+    // 镜盾：每 MIRROR_PER 点护盾 +1 点伤（③层：吃暴击、被护甲减，不被百分比放大）
+    if(hasRelic("mirror")) flat += Math.floor((P.shield || 0) / MIRROR_PER);
 
     // 第四层 · 额外伤害（无视护甲、不吃暴击，单独一笔）
     let extra = 0;
@@ -1499,7 +1506,7 @@ function answer(btn, ok){
     const noArmor = (hitWeak && hasRelic("flaw")) || (crit && hasRelic("crush"));
     const armor = noArmor ? 0 : m.armor;
     const dmg = Math.max(1, raw - armor);
-    if(crit && hasRelic("vamp")) P.hp = Math.min(s.maxHp, P.hp + 4);        // 饮血
+    if(crit && hasRelic("vamp")) healUp(4, s);                              // 饮血
     m.hp -= dmg + extra;
     /* 盲斗：答对**一击必杀**（用户 2026-09）。代价是所有题都变成拼写题 ——
        它现在是「拼得出就砍得死」的速通件，不再走伤害那条线。*/
@@ -1516,10 +1523,17 @@ function answer(btn, ok){
       setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
       relicLog += " <span class=\"sys\">(回响之厅又补了 " + hall + " 点)</span>";
     }
-    if(hasRelic("drain")) P.hp = Math.min(s.maxHp, P.hp + 2);               // 吞噬
+    if(recoil){ P.recoil = 0; relicLog += " <span class=\"sys\">(反震 +" + recoil + "% 打了出去)</span>"; }
+    if(hasRelic("drain")) healUp(2, s);                                     // 吞噬
+    /* 不死鸟：血掉到 PHOENIX_AT 以下之后，每答对回一大口。
+       ⚠️ 判断放在饮血/吞噬**之后** —— 那两件先垫一口，还在线下才轮到它 */
+    if(hasRelic("phoenix") && P.hp <= s.maxHp * PHOENIX_AT){
+      const r = healUp(Math.max(1, Math.ceil(s.maxHp * PHOENIX_HEAL)), s);
+      if(r.hp) relicLog += " <span class=\"sys\">(不死鸟回了 " + r.hp + " 点)</span>";
+    }
     if(hasRelic("dice") && Math.random() < .10) B.dice = (B.dice || 0) + 1; // 赌骰：答对 10% 叠一层
     if(B.wager && hasRelic("allin") && Math.random() < .10){                // 孤注
-      P.hp = Math.min(s.maxHp, P.hp + Math.max(1, Math.round(s.maxHp * 0.2)));
+      healUp(Math.max(1, Math.round(s.maxHp * 0.2)), s);
     }
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
     /* 凝盾：每答对 AEGIS_EVERY 题攒 AEGIS_GAIN 点护盾，攒到 AEGIS_MAX 封顶 */
@@ -1548,7 +1562,7 @@ function answer(btn, ok){
     if(P.chew && hasRelic("chew")){
       P.chew = false;
       const back = Math.max(1, Math.ceil(s.maxHp * 0.08));
-      P.hp = Math.min(s.maxHp, P.hp + back);
+      healUp(back, s);
       relicLog += " <span class=\"sys\">(反刍回了 " + back + " 点生命)</span>";
     }
     if(B.rescue){                                     // 补救成功：刚才欠的那一下一笔勾销
@@ -1558,7 +1572,7 @@ function answer(btn, ok){
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
     if(B.q.haunted && hauntGone){
       const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * 0.15)) : 2;
-      P.hp = Math.min(s.maxHp, P.hp + back);
+      healUp(back, s);
       note += " <span style=\"color:var(--venom)\">心魔散了，回 " + back + " 点生命。</span>";
     }
   } else {
@@ -1574,6 +1588,10 @@ function answer(btn, ok){
     else P.combo = 0;
     B.dice = 0;                       // 赌骰层数清零
     if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
+    if(hasRelic("build")){                  // 筑盾：错了也不白错
+      P.shield = (P.shield || 0) + BUILD_SHIELD;
+      relicLog += " <span class=\"sys\">(筑盾 · 护盾 " + P.shield + ")</span>";
+    }
     const wasHaunted = B.q.haunted;
     addHaunt(word.en);                      // 答错就缠上来
 
@@ -1587,7 +1605,10 @@ function answer(btn, ok){
       // 受伤也全是加减：怪物伤害 − 护甲，再加上冒险失手/心魔的惩罚
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
       if(B.wager) dmg += 2;                   // 冒险失手
-      if(wasHaunted) dmg += 1;                // 心魔又答错
+      /* 偏移：心魔词答错时减半，**那额外的 1 点也免掉**（所以先不加） */
+      const swerve = wasHaunted && hasRelic("swerve");
+      if(wasHaunted && !swerve) dmg += 1;      // 心魔又答错
+      if(swerve) dmg = Math.max(1, Math.ceil(dmg / 2));
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
         dmg = 0;
@@ -1610,7 +1631,7 @@ function answer(btn, ok){
       /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。
          复读者欠下的那一下存的是**已经减过的**伤害，所以补救失败结清时不用再算一遍。*/
       if(dmg > 0){
-        const mit = mitigate(dmg, s);
+        const mit = mitigate(dmg, s, {wrong:true});   // 告诉减伤链这是「答错」挨的（粗布只认这个）
         dmg = mit.dmg;
         if(mit.dodged){
           head = "<span class=\"big no\">错身 —— 没碰到你</span>";
@@ -1664,6 +1685,25 @@ function answer(btn, ok){
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
   else $("btnNextQ").hidden = false;
 }
+/* ---- 回血的唯一入口 ----
+   ⚠️ **所有回血都要从这儿过**（跟挨打那边的 takeHit() 是一对）：
+   「泉涌」要把**溢出上限的那部分**按 SPILL_RATE（2 点血 → 1 点盾）转成护盾，
+   散在各处直接写 `P.hp = Math.min(maxHp, ...)` 的话它就收不到那笔溢出。
+   force = true 时不看有没有泉涌也转（「水」自己那条词条）。
+   返回 {hp, sh}：真回了多少血、转了多少盾，调用方拿去写日志。*/
+function healUp(n, s0, force){
+  if(!(n > 0)) return {hp:0, sh:0};
+  const s = s0 || stats();
+  const room = Math.max(0, s.maxHp - P.hp);
+  const up = Math.min(room, n), spill = n - up;
+  if(up > 0) P.hp += up;
+  let sh = 0;
+  if(spill > 0 && (force || hasRelic("well"))){
+    sh = Math.floor(spill / SPILL_RATE);
+    if(sh > 0) P.shield = (P.shield || 0) + sh;
+  }
+  return {hp:up, sh:sh};
+}
 /* ---- 挨打这一侧的减伤链（2026-09 的防御线）----
    顺序写死在这儿：软甲 −10% → 屏息每层前 HOLD_FREE 次减半 → 钝痛把单次封在上限 10% →
    错身 25% 完全躲开。返回 {dmg, dodged, why}，why 是接在受伤那句话后面的说明。
@@ -1671,17 +1711,27 @@ function answer(btn, ok){
    不然会白白吃掉屏息的次数、白掷一次错身。
    ⚠️ 这条线里**没有固定减伤**：第 1 层的怪只打 1~2 点，「每次少挨 3 点」就是开局无敌，
    到后期又等于没有 —— 跟 content.js 里「不给后面的章加护甲」是同一个数学。 */
-function mitigate(dmg, s0){
+function mitigate(dmg, s0, opt){
   const s = s0 || stats();
   let out = dmg, why = "";
+  const wrong = !!(opt && opt.wrong);        // 这一下是不是「答错」挨的（超时不算）
   /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
   let cut = 0;
   if(hasRelic("soft")) cut += 10;                                         // 软甲
   if(hasRelic("hide")) cut += 5;                                          // 皮甲
+  if(hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);  // 老茧：每深一层 +1%
+  if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
   /* ⚠️ 这一步**向下取整**（玩家占便宜）：向上取整的话 5% 在小数字上等于没有 ——
      早期怪只打 5~6 点，ceil(6×0.95)=6，皮甲就成了一件骗人的遗物。最低仍然掉 1 点（下面兜）。*/
   if(cut) out = Math.floor(out * (1 - cut / 100));
+  /* 粗布排在屏息前面：它是**每场一次**（一层十来只怪，给得多），
+     先花它才不会白白吃掉屏息那两次「每层」的额度。⚠️ 只认答错，超时不触发。*/
+  if(wrong && hasRelic("burlap") && B && !B.burlapUsed){
+    B.burlapUsed = true;
+    out = Math.max(1, Math.ceil(out / 2));
+    why += " <span class=\"sys\">(粗布挡掉一半)</span>";
+  }
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
     out = Math.max(1, Math.ceil(out / 2));
@@ -1707,7 +1757,11 @@ function takeHit(dmg, m, haunted){
     P.shield -= ate;
     left -= ate;
   }
-  if(left > 0) P.hp -= left;
+  if(left > 0){
+    P.hp -= left;
+    // 反震：**真的掉了血**才攒（护盾全吃掉的那种不算）
+    if(hasRelic("recoil")) P.recoil = Math.min(RECOIL_MAX, (P.recoil || 0) + 1);
+  }
   floatNum("me", "-" + dmg, "ouch");
   return m.name + " 咬中你，" +
     (ate ? ("护盾吃掉 <b>" + ate + "</b> 点" + (left ? "，你失去 <b>" + left + "</b> 点生命" : "，血一点没掉") + "")
@@ -1792,9 +1846,9 @@ function closeBattleWin(){
   let heal = CHAPTER.killHeal;
   if(hasRelic("reap")) heal += 5;
   if(hasRelic("salve")) heal += 2;                                        // 药膏
-  const before = P.hp;
-  P.hp = Math.min(s0.maxHp, P.hp + heal);
-  const gained = P.hp - before;
+  if(hasRelic("breath")) heal += Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT));  // 喘息：每场一次
+  const got = healUp(heal, s0);
+  const gained = got.hp;
   say(m.name + " 化成了灰。<span class=\"sys\">(+" + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
       "，+" + g + " 金" +
       (gained > 0 ? "，回复 " + gained + " 生命" : "") + ")</span>", "good");
@@ -1806,9 +1860,9 @@ function closeBattleWin(){
     say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
     if(hasRelic("finale")){                       // 收尾：清完一层回 20% 上限
       const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
-      const was = P.hp;
-      P.hp = Math.min(stats().maxHp, P.hp + back);
-      if(P.hp > was) say("这一层干净了 —— 收尾替你补了 <b>" + (P.hp - was) + "</b> 点生命。", "good");
+      const r = healUp(back);
+      if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
+        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
     }
   }
   fov();
@@ -1857,7 +1911,7 @@ function gainXp(n){
     if(hasRelic("brand")) P.bonusAtk = (P.bonusAtk || 0) + 1;                 // 烙印
     if(hasRelic("engrave")){ P.bonusHp = (P.bonusHp || 0) + 3; P.hp += 3; }   // 铭心
     const s = stats();
-    P.hp = Math.min(s.maxHp, P.hp + CHAPTER.levelHeal);
+    healUp(CHAPTER.levelHeal, s);
     say("<b>等级提升！</b>你现在是 " + P.lvl + " 级 —— 攻击 " + s.atk + "，生命上限 " + s.maxHp + "。", "good");
   }
   return n;
@@ -1872,16 +1926,36 @@ function altarCost(){ return hasRelic("spare") ? 1 : ALTAR_COST; }
 /* ---- 泉水：踩上去先问一句，不喝就留在原地，回头还能来 ----
    用户 2026-09 从「回满血」改成**回复最大生命的 CHAPTER.springPct**（向上取整、最少 1 点）。*/
 function springHeal(s){ return Math.max(1, Math.ceil((s || stats()).maxHp * CHAPTER.springPct)); }
+/* 「水」：一进这一层就把地上的泉全喝了，**溢出的按 SPILL_RATE 换护盾**
+   （不管有没有「泉涌」—— 这是它自己那条词条，所以 healUp 传 force）。
+   ⚠️ 必须在 genFloor() 之后调，那时候泉才摆上去。 */
+function drinkAll(){
+  const springs = G.things.filter(function(th){ return th.kind === "feat"; });
+  if(!springs.length) return;
+  const s = stats();
+  let hp = 0, sh = 0;
+  springs.forEach(function(th){
+    const r = healUp(springHeal(s), s, true);
+    hp += r.hp; sh += r.sh;
+    removeThing(th);
+  });
+  say("你把这一层的泉水全喝了 —— 回复 <b>" + hp + "</b> 点生命" +
+      (sh ? "，溢出的化成 <b>" + sh + "</b> 点护盾" : "") + "。", "good");
+}
 function openSpring(th){
   G.paused = true;
   pendingRoom = th;
-  const s = stats(), room = s.maxHp - P.hp, heal = Math.min(room, springHeal(s));
+  const s = stats(), room = s.maxHp - P.hp, full = springHeal(s);
+  const heal = Math.min(room, full);
+  /* 「泉涌」把喝不下的那部分变成护盾 —— 所以满血时它也值得喝，按钮不能再禁掉 */
+  const spill = hasRelic("well") ? Math.floor(Math.max(0, full - room) / SPILL_RATE) : 0;
   $("springLedger").innerHTML =
-    li("你现在", P.hp + " / " + s.maxHp) +
-    li("喝下去", room > 0 ? ("回复 " + heal + " 点（上限的 " + Math.round(CHAPTER.springPct * 100) + "%）") : "你已经是满的了");
-  $("btnSpringDrink").disabled = room <= 0;
-  $("btnSpringDrink").textContent = room > 0 ? "掬一捧喝下" : "喝不下了";
-  $("springNote").textContent = room > 0
+    li("你现在", P.hp + " / " + s.maxHp + ((P.shield || 0) ? "　盾 " + P.shield : "")) +
+    li("喝下去", (heal > 0 ? "回复 " + heal + " 点（上限的 " + Math.round(CHAPTER.springPct * 100) + "%）" : "你已经是满的了") +
+                (spill > 0 ? "，溢出的化成 " + spill + " 点护盾" : ""));
+  $("btnSpringDrink").disabled = room <= 0 && spill <= 0;
+  $("btnSpringDrink").textContent = (room > 0 || spill > 0) ? "掬一捧喝下" : "喝不下了";
+  $("springNote").textContent = (room > 0 || spill > 0)
     ? "这口泉只够喝一次 —— 喝完它就干了。不想现在喝，它会留在原地等你。"
     : "满血的时候喝它是浪费。留着，等真需要的时候回来。";
   hideAll();
@@ -1893,10 +1967,11 @@ function resolveSpring(drink){
   $("veilSpring").hidden = true;
   G.paused = false;
   if(drink && th){
-    const s = stats(), got = Math.min(s.maxHp - P.hp, springHeal(s));
-    P.hp = Math.min(s.maxHp, P.hp + got);
-    floatNum("me", "+" + got, "heal");
-    say("你掬起一捧泉水 —— 回复了 <b>" + got + "</b> 点生命（" + P.hp + " / " + s.maxHp + "）。", "good");
+    const s = stats(), r = healUp(springHeal(s), s);       // 泉涌：喝不下的那部分变护盾
+    const got = r.hp;
+    if(got) floatNum("me", "+" + got, "heal");
+    say("你掬起一捧泉水 —— 回复了 <b>" + got + "</b> 点生命（" + P.hp + " / " + s.maxHp + "）" +
+        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
     removeThing(th);
   } else {
     say("泉水留在原地，还冒着气泡。", "sys");
@@ -2870,6 +2945,7 @@ function resumeRun(s){
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
   if(typeof P.shield !== "number") P.shield = 0; // 护盾（第四批），老档没有
   if(typeof P.aegisN !== "number") P.aegisN = 0;
+  if(typeof P.recoil !== "number") P.recoil = 0;  // 反震攒了几层
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   G = { floor: s.floor, paused:false, over:false,
