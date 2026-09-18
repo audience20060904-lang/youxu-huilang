@@ -67,7 +67,7 @@ function newRun(){
         // 2026-09 第二批遗物用的四个累加字段（都跟着 P 进续玩档，老档一律 || 0 兜底）
         spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
         // 护盾（第四批）：先扣盾再扣血。shield 是当前盾，aegisN 是凝盾数到第几题了
-        shield:0, aegisN:0, recoil:0,
+        shield:0, aegisN:0, recoil:0, revived:false,
         // 练习模式：进洞之前在洞窟弹层里勾的，整趟有效（stats() 里读）
         practice: !!practiceOn,
         // 这一趟按层记的答题数，结算时并进 MET.accF
@@ -115,9 +115,13 @@ function stats(){
   /* 成长线：拿到「烙印」「铭心」之后每升一级攒下来的，记在 P 上（gainXp 里加） */
   if(P.bonusAtk) s.atk += P.bonusAtk;                        // 烙印：每级 +1 攻击
   if(P.bonusHp)  s.maxHp += P.bonusHp;                       // 铭心：每级 +3 上限
+  // 铁躯：最大生命 ×1.8 —— 放在所有加血遗物之后、献身之前（两件一起就是 ×0.9）
+  if(hasRelic("titan")) s.maxHp = Math.max(1, Math.round(s.maxHp * TITAN_MULT));
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 3;   // 背水
+  // 重装：护甲 ×3（平减的护甲在深层等于没有，乘一下才跟得上。练习模式那 +50 不在里面）
+  if(hasRelic("heavy")) s.def *= HEAVY_MULT;
   /* 「铁壁」只认**装备和等级来的**护甲，所以在练习模式那 +50 之前先记一笔。
      ⚠️ 不这么分开的话，练习模式 +50 护甲 = 铁壁 +150% 伤害，
      「纯背词的简单模式」反而成了全游戏输出最高的玩法。*/
@@ -1168,10 +1172,8 @@ function timeUp(){
     takeHit(mit.dmg, m, false);
     say("时间到，" + m.name + " 咬了你 <b>" + mit.dmg + "</b> 点。题还在，接着答。", "hurt");
   }
-  if(P.hp <= 0 && hasRelic("undying") && !P.undying){
-    P.undying = true; P.hp = 1;
-    say("薪火在胸口炸开 —— 你以 1 点生命站住了。", "crit");
-  }
+  const saved0 = deathSave();
+  if(saved0) say(saved0, "crit");
   renderBattleBars();
   renderHud();
   if(P.hp <= 0){ B.locked = true; setTimeout(function(){ finishBattle(false); }, 480); return; }
@@ -1664,6 +1666,8 @@ function answer(btn, ok){
     }
     if(recoil){ P.recoil = 0; relicLog += " <span class=\"sys\">(反震 +" + recoil + "% 打了出去)</span>"; }
     if(hasRelic("drain")) healUp(2, s);                                     // 吞噬
+    // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
+    if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
     /* 不死鸟：血掉到 PHOENIX_AT 以下之后，每答对回一大口。
        ⚠️ 判断放在饮血/吞噬**之后** —— 那两件先垫一口，还在线下才轮到它 */
     if(hasRelic("phoenix") && P.hp <= s.maxHp * PHOENIX_AT){
@@ -1748,6 +1752,13 @@ function answer(btn, ok){
       const swerve = wasHaunted && hasRelic("swerve");
       if(wasHaunted && !swerve) dmg += 1;      // 心魔又答错
       if(swerve) dmg = Math.max(1, Math.ceil(dmg / 2));
+      /* 心镜：心魔词答错完全不掉血 —— 让玩家敢反复啃难词。
+         跟断链一样排在最前面，不消耗默诵/回声/屏息那几次「每层」的额度。*/
+      if(dmg > 0 && wasHaunted && hasRelic("psyche")){
+        dmg = 0;
+        head = "<span class=\"big no\">心镜 —— 它打不疼你</span>";
+        note = "心魔的那一下落在镜子上。";
+      }
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
         dmg = 0;
@@ -1797,7 +1808,8 @@ function answer(btn, ok){
         floatNum("foe", "-2", "dmg");
       }
     }
-    if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; note += " 薪火在胸口炸开 —— 你以 1 点生命站住了。"; }
+    const saved = deathSave();
+    if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
   }
   LEX[word.en] = rec;          // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
@@ -1823,6 +1835,24 @@ function answer(btn, ok){
   if(B.rescueTimer) return;                 // 补救倒计时开着：只留「补救」这一个按钮
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
   else $("btnNextQ").hidden = false;
+}
+/* ---- 倒下那一刻的保险，**两道都在这儿** ----
+   不灭薪火：每层一次，把血钉在 1 点；回魂：整趟一次，回到 REVIVE_PCT 的上限。
+   ⚠️ **所有「打完发现血 ≤ 0」的地方都必须调这一个函数**（答错 / 超时 / 补救失败结清）——
+   以前这三处各写了一遍薪火的判断，加第二道保险时很容易漏掉一处。
+   返回要显示的那句话；没救下来就是空字符串。*/
+function deathSave(){
+  if(P.hp > 0) return "";
+  if(hasRelic("undying") && !P.undying){
+    P.undying = true; P.hp = 1;
+    return "薪火在胸口炸开 —— 你以 1 点生命站住了。";
+  }
+  if(hasRelic("revive") && !P.revived){
+    P.revived = true;
+    P.hp = Math.max(1, Math.ceil(stats().maxHp * REVIVE_PCT));
+    return "回魂 —— 你数到第二次心跳，又站了起来（" + P.hp + " 点生命）。";
+  }
+  return "";
 }
 /* ---- 回血的唯一入口 ----
    ⚠️ **所有回血都要从这儿过**（跟挨打那边的 takeHit() 是一对）：
@@ -1861,9 +1891,17 @@ function mitigate(dmg, s0, opt){
   if(hasRelic("hide")) cut += 5;                                          // 皮甲
   if(hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);  // 老茧：每深一层 +1%
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
+  if(hasRelic("still")) cut += STILL_CUT;                                 // 不动：一件顶三四件
+  if(hasRelic("deep") && G.floor >= DEEP_FROM) cut += DEEP_CUT;           // 深潜：30 层之后
+  // 镇压：只挡 Boss 那一口（Boss 层的容错只有 3 下出头，全游戏最容易死的地方）
+  if(hasRelic("quell") && B && B.mob && B.mob.boss) cut += QUELL_CUT;
   /* ⚠️ 这一步**向下取整**（玩家占便宜）：向上取整的话 5% 在小数字上等于没有 ——
      早期怪只打 5~6 点，ceil(6×0.95)=6，皮甲就成了一件骗人的遗物。最低仍然掉 1 点（下面兜）。*/
-  if(cut) out = Math.floor(out * (1 - cut / 100));
+  /* 减伤总和封顶（`MIT_CUT_MAX`）—— 不封的话堆七八件就是「每次只掉 1 点」，那是练习模式不是构筑。
+     ⚠️ 先乘后除，**别写成 `out * (1 - cut/100)`** —— 那样 55% 会算成
+     `1 - 0.55 = 0.44999999999999996`，floor 之后白多掉 1 点（实测 100 点打成 44 而不是 45）。*/
+  if(cut > MIT_CUT_MAX) cut = MIT_CUT_MAX;
+  if(cut) out = Math.floor(out * (100 - cut) / 100);
   /* 粗布排在屏息前面：它是**每场一次**（一层十来只怪，给得多），
      先花它才不会白白吃掉屏息那两次「每层」的额度。⚠️ 只认答错，超时不触发。*/
   if(wrong && hasRelic("burlap") && B && !B.burlapUsed){
@@ -1876,9 +1914,16 @@ function mitigate(dmg, s0, opt){
     out = Math.max(1, Math.ceil(out / 2));
     why += " <span class=\"sys\">(屏息卸掉一半，这一层还剩 " + (HOLD_FREE - G.holdUsed) + " 次)</span>";
   }
-  if(hasRelic("blunt")){                                                  // 钝痛：单次封顶
-    const cap = Math.max(1, Math.ceil(s.maxHp * 0.1));
-    if(out > cap){ out = cap; why += " <span class=\"sys\">(钝痛把这一下压到 " + cap + " 点)</span>"; }
+  /* 钝痛 10% / 石胎 5%：两件都是「单次封顶」，一起带就按**低的那个**算，不叠乘 */
+  let capPct = 0;
+  if(hasRelic("blunt")) capPct = 0.1;
+  if(hasRelic("womb")) capPct = capPct ? Math.min(capPct, WOMB_PCT) : WOMB_PCT;
+  if(capPct){
+    const cap = Math.max(1, Math.ceil(s.maxHp * capPct));
+    if(out > cap){
+      out = cap;
+      why += " <span class=\"sys\">(" + (capPct === WOMB_PCT ? "石胎" : "钝痛") + "把这一下压到 " + cap + " 点)</span>";
+    }
   }
   out = Math.max(1, out);
   if(hasRelic("slip") && Math.random() < 0.25) return {dmg:0, dodged:true, why:""};   // 错身
@@ -1941,7 +1986,8 @@ function closeRescue(expired){
     const line = takeHit(owe.dmg, m, owe.haunted);
     $("verdict").insertAdjacentHTML("beforeend", "<span class=\"mean\">没有补救 —— " + line + "</span>");
     say("没有补救，掉了 " + owe.dmg + " 点生命。", "hurt");
-    if(P.hp <= 0 && hasRelic("undying") && !P.undying){ P.undying = true; P.hp = 1; say("薪火在胸口炸开 —— 你以 1 点生命站住了。", "crit"); }
+    const saved2 = deathSave();
+    if(saved2) say(saved2, "crit");
     renderBattleBars();
     renderHud();
     if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
@@ -1987,6 +2033,7 @@ function closeBattleWin(){
   // 药膏（用户 2026-09 提到稀有）：75% 概率回 4 点，不是每次都给
   if(hasRelic("salve") && Math.random() < SALVE_RATE) heal += SALVE_HEAL;
   if(hasRelic("breath")) heal += Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT));  // 喘息：每打倒一只
+  if(hasRelic("mend")) heal += Math.max(1, Math.ceil(s0.maxHp * MEND_PCT));      // 归血：收割的百分比版
   const got = healUp(heal, s0);                                           // 泉涌要收溢出，所以走 healUp
   const gained = got.hp;
   say(m.name + " 化成了灰。<span class=\"sys\">(+" + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
@@ -3119,6 +3166,7 @@ function resumeRun(s){
   if(typeof P.shield !== "number") P.shield = 0; // 护盾（第四批），老档没有
   if(typeof P.aegisN !== "number") P.aegisN = 0;
   if(typeof P.recoil !== "number") P.recoil = 0;  // 反震攒了几层
+  if(typeof P.revived !== "boolean") P.revived = false;   // 回魂用掉没有（整趟一次）
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
