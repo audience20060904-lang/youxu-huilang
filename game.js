@@ -682,6 +682,9 @@ function renderSheets(s){
   keys.forEach(function(k){ studied += (LEX[k].seen || 0); });
   $("vocab").innerHTML = st("已掌握", mastered) + st("已遇见", keys.length) +
                          st("总数", WORDS.length) + st("累计学词", studied + " 次");
+  /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
+  const inRun = (SCENE === "run" && G && !G.over);
+  $("panelRun").hidden = !inRun;
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
   $("runStats").innerHTML = st("答对", P.right) + st("答错", P.wrong) +
     st("正确率", acc) + st("击杀", P.kills) +
@@ -919,11 +922,35 @@ function askStair(){
   $("veilStair").hidden = false;
   $("btnStairGo").focus();
 }
+/* 「再待一会儿」之后自己从阶梯上退开一格（用户 2026-09）——
+   站在阶梯上再走一步就又弹一次窗，很烦。**先往下退，下面是墙就往上**，
+   上下都不行才左右兜一下；四个方向都走不了（阶梯在死胡同尽头）就留在原地。
+   ⚠️ 只落到**空地板**上：有怪会开打、有泉/坛/箱/商会弹窗 —— 刚说了「再待一会儿」，
+   不该顺手把人推进另一个弹层里。金币也跳过，省得白捡一笔说不清。*/
+function stepOffStair(){
+  const dirs = [[0,1], [0,-1], [-1,0], [1,0]];   // 下 → 上 → 左 → 右
+  for(let i=0;i<dirs.length;i++){
+    const nx = P.x + dirs[i][0], ny = P.y + dirs[i][1];
+    if(nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+    if(!G.map[ny][nx]) continue;                 // 墙
+    if(mobAt(nx, ny)) continue;
+    if(thingAt(nx, ny)) continue;
+    P.x = nx; P.y = ny;
+    fov();
+    return true;
+  }
+  return false;
+}
 function closeStair(go){
   $("veilStair").hidden = true;
   G.paused = false;
   if(go){ nextFloor(); return; }
-  say("你在阶梯口停住了。想走的时候，再点一下脚下那格。", "sys");
+  /* 退开一格之后要是自动寻路还开着，它下一拍又会把人领回阶梯上、再弹一次窗。
+     玩家刚说了「再待一会儿」，这儿顺手关掉它。*/
+  autoOff();
+  const moved = stepOffStair();
+  say(moved ? "你从阶梯上退开一步。想走的时候，再点一下那个 ▼。"
+            : "你在阶梯口停住了。想走的时候，再点一下脚下那格。", "sys");
   lockInput(200);
   render();
 }
@@ -2826,7 +2853,7 @@ let SCENE = "town";
 function showScene(){
   const inRun = SCENE === "run";
   /* hudRow / barsRow 现在住在 stageBox 里面（.mapui 浮层），跟着 stage 一起显隐，不用单独管 */
-  ["stageBox","mapTools","log"].forEach(function(id){ $(id).hidden = !inRun; });
+  ["stageBox","log"].forEach(function(id){ $(id).hidden = !inRun; });
   $("townPanel").hidden = inRun;
   /* 探索时顶栏整块收起 —— 章节名挪进了地图浮层的「层」那一格，省下的高度全给地图 */
   $("topBar").hidden = inRun;
@@ -2878,6 +2905,19 @@ function renderPractice(){
     b.firstChild.textContent = practiceOn ? "练习模式 · 开" : "练习模式 · 关";
   }
 }
+/* 这一章的词见过多少（用户 2026-09 要在洞窟的卡片上显示）——
+   分母是这一档难度的全部词（BYLV[难度]），分子是**熟练度表 LEX 里已经有记录**的那些，
+   也就是这个存档真的遇到过的。返回 0~100 的整数。
+   ⚠️ 老存档里可能留着已经删掉的词（比如整类删掉的虚词），所以要过一遍 WMAP。*/
+function chapterSeenPct(chId){
+  const ch = chapterById(chId);
+  if(!ch) return 0;
+  const pool = BYLV[ch.wordLv] || [];
+  if(!pool.length) return 0;
+  let seen = 0;
+  pool.forEach(function(w){ if(LEX[w.en] && WMAP[w.en]) seen++; });
+  return Math.round(seen / pool.length * 100);
+}
 function openCave(){
   renderPractice();
   const box = $("routeList");
@@ -2888,7 +2928,12 @@ function openCave(){
     d.className = "route" + (r.open ? "" : " off");
     d.disabled = !r.open;
     d.dataset.id = r.id;
-    d.innerHTML = "<span class=\"rt\">" + r.tag + "</span>" +
+    /* 卡片背后铺一条淡蓝：宽度就是这一章遇见过的词的比例，右上角再写一遍百分数。
+       .rfill 是第一个子元素、压在文字底下（z-index 在 style.css 里）。*/
+    const pct = chapterSeenPct(r.ch || 1);
+    d.innerHTML = "<span class=\"rfill\" style=\"width:" + pct + "%\"></span>" +
+      "<span class=\"rpct\">遇见 " + pct + "%</span>" +
+      "<span class=\"rt\">" + r.tag + "</span>" +
       "<span class=\"rn\">" + r.name + "</span>" +
       "<span class=\"rd\">" + r.desc + "</span>" +
       (r.open ? "<span class=\"rgo\">进入 ▸</span>" : "<span class=\"rgo\">还没挖通</span>");
@@ -3601,11 +3646,15 @@ $("btnWager").addEventListener("click", function(){
   setWagerLabel();
 });
 /* ---- 锁定冒险：每题自动押上，省得一题点一次 ---- */
+/* 取景框右下角那个开关（用户 2026-09 从地图下面那一行挪上来的，样式跟「寻路」同一套）。
+   ⚠️ 按钮上只写「锁定冒险」四个字，开关状态靠 .on 的亮起来表示 ——
+   跟「寻路」一个规矩，别把「· 开 / · 关」写回去，那块地方放不下。*/
 function renderLock(){
   const b = $("btnLockWager");
   if(!b) return;
   b.classList.toggle("on", !!OPT.lock);
-  b.textContent = OPT.lock ? "锁定冒险 · 开（每题双倍）" : "锁定冒险 · 关";
+  b.setAttribute("aria-pressed", OPT.lock ? "true" : "false");
+  b.title = OPT.lock ? "锁定冒险 · 开：每题自动押上" : "锁定冒险 · 关";
 }
 $("btnLockWager").addEventListener("click", function(){
   OPT.lock = !OPT.lock;

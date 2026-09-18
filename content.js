@@ -227,19 +227,22 @@ var BLIND_STEP = 4;
 /* ===== 洞窟里的路线 =====
    主城的洞窟列出这些入口。以后加分路（按词类、按难度）就往这里加，
    game.js 不用动 —— enterRoute() 认的就是这些字段。
-   open:false 的会灰着显示，点不动。 */
+   open:false 的会灰着显示，点不动。
+   ⚠️ **desc 到「50 层」为止**（用户 2026-09 要求把后面那半句删掉）——
+   宝石倍率、章末 Boss 是谁，都不在这张卡上写。
+   卡片上的熟练度（遇见过这一章多少词）是 game.js 的 openCave() 现算的，不写在这儿。 */
 var ROUTES = [
   {id:"stone", ch:1, name:"石廊", tag:"第一章 · A1",
-   desc:"A1 入门词 · 50 层 · 尽头有石廊守卫",
+   desc:"A1 入门词 · 50 层",
    open:true},
   {id:"rust", ch:2, name:"锈庭", tag:"第二章 · A2",
-   desc:"A2 进阶词 · 50 层 · 怪更硬，宝石 ×1.25",
+   desc:"A2 进阶词 · 50 层",
    open:true},
   {id:"ember", ch:3, name:"烬渊", tag:"第三章 · B1",
-   desc:"B1 中阶词 · 50 层 · 尽头有烬渊祭司，宝石 ×1.5",
+   desc:"B1 中阶词 · 50 层",
    open:true},
   {id:"core", ch:4, name:"墟心", tag:"第四章 · B2",
-   desc:"B2 高阶词 · 50 层 · 最深的一章，宝石 ×1.75",
+   desc:"B2 高阶词 · 50 层",
    open:true}
 ];
 

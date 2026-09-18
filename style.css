@@ -268,25 +268,30 @@ body{
    .mapui 是 pointer-events:none，这两个按钮是它的兄弟节点，照样能点。
    尺寸比原来大了一倍（用户 2026-09）—— 寻路是常按的，太小按不准。 */
 .mapacts{position:absolute;left:4px;bottom:4px;z-index:3;display:flex;gap:6px}
-.giveup{padding:6px 14px;border:1px solid var(--edge);border-radius:3px;
+/* 右下角那一组（现在只有「锁定冒险」）。用户 2026-09 把它从地图下面那一行挪上来的 */
+.mapacts.right{left:auto;right:4px}
+/* ⚠️ nowrap + flex:none：这三个按钮的容器是绝对定位的，宽度会被压到可用空间以内 ——
+   不钉住的话「放弃」会被挤成上下两行的「放/弃」（以前就是这样，跟右下角的「锁定冒险」放一起才看出来）。*/
+.giveup{flex:none;white-space:nowrap;
+  padding:6px 14px;border:1px solid var(--edge);border-radius:3px;
   background:rgba(246,241,229,.82);color:var(--faint);cursor:pointer;
   font-family:var(--mono);font-size:16px;letter-spacing:.1em;line-height:1}
-.giveup:hover{color:var(--blood);border-color:var(--blood)}
+@media (hover:hover){.giveup:hover{color:var(--blood);border-color:var(--blood)}}
 .giveup.armed{color:var(--blood);border-color:var(--blood);background:rgba(246,241,229,.96);font-weight:600}
 /* 寻路不是危险操作，hover 用火把色，别跟「放弃」的血色混 */
-.giveup.find:hover{color:var(--torch);border-color:var(--torch)}
+@media (hover:hover){.giveup.find:hover{color:var(--torch);border-color:var(--torch)}}
 /* 寻路是**开关**：开着的时候亮起来，一眼能看出它还在跑 */
 .giveup.find.on{color:var(--torch);border-color:var(--torch);
   background:rgba(246,241,229,.96);font-weight:600}
+/* 「锁定冒险」也是开关，同一套长相，只是亮起来用金币色跟寻路区分开。
+   四个字比「放弃」「寻路」宽，所以字号收一号、内边距收窄一点。 */
+.giveup.lock{font-size:14px;padding:6px 10px}
+@media (hover:hover){.giveup.lock:hover{color:var(--coin);border-color:var(--coin)}}
+.giveup.lock.on{color:var(--torch-deep);border-color:var(--coin);
+  background:rgba(246,241,229,.96);font-weight:600}
 
-/* ===== 地图下面那一行文字按钮 ===== */
-.maptools{display:flex;justify-content:center;gap:14px;flex:0 0 auto}
-.maptools[hidden]{display:none !important}
-.mapbtn{background:none;border:0;padding:2px 4px;cursor:pointer;
-  font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;
-  color:var(--faint);border-bottom:1px dashed var(--edge)}
-.mapbtn:hover{color:var(--torch)}
-.mapbtn.on{color:var(--torch-deep);border-bottom-color:var(--torch-deep);font-weight:600}
+/* 地图下面那一行文字按钮（.maptools / .mapbtn）已经整块删了（用户 2026-09）——
+   「锁定冒险」搬去了取景框右下角，空出来的纵向空间归日志栏。 */
 
 .log{flex:1;min-height:62px;border:1px solid var(--edge);background:var(--stone);border-radius:2px;padding:9px 11px;
   overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px}
@@ -549,12 +554,15 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .cx.lost .cn{color:var(--faint)}
 .cx .cd{font-size:12px;color:var(--dim);line-height:1.45}
 .cx .stars{color:var(--torch);letter-spacing:.08em}
-/* 图鉴的搜索框（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找 */
-.find{width:100%;box-sizing:border-box;margin:2px 0 0;padding:7px 10px;
+/* 图鉴的搜索框（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找。
+   ⚠️ 这个类**以前叫 `.find`，跟取景框里的寻路按钮 `.giveup.find` 撞了**
+   （而且定义在后面，`width:100%` 被套到了按钮身上，把「放弃」挤成上下两行）——
+   跟当年 `.opt` 撞设置页复选框、`.cx` 撞连击条是同一个坑。**别改回 `.find`。** */
+.findbox{width:100%;box-sizing:border-box;margin:2px 0 0;padding:7px 10px;
   border:1px solid var(--edge);border-radius:2px;background:#FFFDF7;color:var(--bone);
   font-family:var(--body);font-size:13px;-webkit-appearance:none;appearance:none}
-.find:focus{outline:none;border-color:var(--torch-deep)}
-.find::placeholder{color:var(--faint)}
+.findbox:focus{outline:none;border-color:var(--torch-deep)}
+.findbox::placeholder{color:var(--faint)}
 .tally{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--dim)}
 .tally b{color:var(--torch);font-weight:600}
 
@@ -687,9 +695,22 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 
 /* ===== 洞窟的路线卡 ===== */
 .routes{display:flex;flex-direction:column;gap:8px}
-.route{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;
+.route{position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;
   border:1px solid var(--edge);background:var(--stone-2);border-radius:3px;
-  padding:11px 12px;cursor:pointer;font-family:var(--body);color:var(--bone)}
+  padding:11px 64px 11px 12px;cursor:pointer;font-family:var(--body);color:var(--bone)}
+/* 卡片背后那条淡蓝 = 这一章的词遇见过多少（宽度就是百分比，openCave 里现算）。
+   ⚠️ 它是**背景**，所以下面每一段文字都要 position:relative 顶到它上面去；
+   ⚠️ 颜色要够淡 —— 铺到 100% 也得看得清卡片上的字。*/
+.route .rfill{position:absolute;left:0;top:0;bottom:0;width:0;
+  background:rgba(38,111,123,.16);border-right:1px solid rgba(38,111,123,.28);
+  pointer-events:none}
+.route .rt,.route .rn,.route .rd,.route .rgo{position:relative}
+/* 右上角的百分数。卡片右边留了 64px 的 padding 给它，别跟章名挤在一起 */
+.route .rpct{position:absolute;right:10px;top:9px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--frost);
+  font-variant-numeric:tabular-nums}
+.route.off .rpct{color:var(--faint)}
 .route:hover{border-color:var(--torch-deep);background:#FDF6E7}
 .route .rt{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint)}
 .route .rn{font-family:var(--disp);font-size:17px;font-weight:600;letter-spacing:.04em}
