@@ -133,11 +133,10 @@
           <button class="giveup" id="btnAbandon" type="button">放弃</button>
           <button class="giveup find" id="btnPathfind" type="button" aria-pressed="false">寻路</button>
         </div>
-      </div>
-
-      <!-- 地图下面的一行文字按钮 -->
-      <div class="maptools" id="mapTools" hidden>
-        <button class="mapbtn" id="btnLockWager" type="button">锁定冒险 · 关</button>
+        <!-- 右下角：锁定冒险。跟「寻路」同一种按钮、同一种开关状态（用户 2026-09 从地图下面那一行挪上来的） -->
+        <div class="mapacts right">
+          <button class="giveup lock" id="btnLockWager" type="button" aria-pressed="false">锁定冒险</button>
+        </div>
       </div>
 
       <div class="log" id="log"></div>
@@ -149,12 +148,13 @@
         <div class="phead">属性 Attributes</div>
         <div class="stats" id="stats"></div>
       </div>
-      <div class="panel">
+      <!-- 没进冒险时整块藏起来（用户 2026-09）——「本局」在镇上没有意义 -->
+      <div class="panel" id="panelRun" hidden>
         <div class="phead">本局战绩</div>
         <div class="stats" id="runStats"></div>
       </div>
       <div class="panel">
-        <div class="phead">本章词汇</div>
+        <div class="phead">词汇记录</div>
         <div class="stats" id="vocab"></div>
         <button class="btn" id="btnCodex" type="button">查看图鉴 · 跨局记录</button>
       </div>
@@ -255,6 +255,9 @@
     <div class="eyebrow">洞窟 · 选一条路</div>
     <h2>下去哪里？</h2>
     <div class="routes" id="routeList"></div>
+    <!-- 练习模式：进洞之前勾，整趟有效（用户 2026-09） -->
+    <button class="practice" id="btnPractice" type="button" aria-pressed="false">练习模式 · 关
+      <em>开着：护甲 +50（每下只掉 1 血），但攻击减半</em></button>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnCloseCave" type="button">回镇上</button></div>
   </div>
 </div>
@@ -421,6 +424,8 @@
   <div class="sheet">
     <div class="eyebrow" id="endEyebrow">本次探索结束</div>
     <h2 id="endTitle">你倒在了石廊里</h2>
+    <!-- 本局正确率 vs 这一层历史上的平均正确率（用户 2026-09 要的那个强调） -->
+    <div id="endAcc"></div>
     <div class="ledger" id="endStats"></div>
     <div class="eyebrow">这一趟遇到的词</div>
     <div class="codex" id="endWords"></div>
@@ -461,7 +466,7 @@
     </div>
     <h2 id="codexTitle">词库</h2>
     <div class="tally" id="codexTally"></div>
-    <input class="find" id="codexFind" type="search" autocomplete="off"
+    <input class="findbox" id="codexFind" type="search" autocomplete="off"
            placeholder="搜索：英文 / 中文 / 遗物名">
     <div class="codex" id="codexList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseCodex" type="button">关闭</button></div>
