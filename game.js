@@ -5,6 +5,12 @@
 "use strict";
 
 const W = CHAPTER.W, H = CHAPTER.H, FLOORS = CHAPTER.floors;
+/* **这一章一共几层** —— 第五章「无尽」是 Infinity（`endless:true`，见 content.js 的 CHAPTERS）。
+   ⚠️ 别再直接读 FLOORS：它是「普通章的 50 层」，无尽章读它会在第 50 层莫名其妙地通关。
+   Infinity 进 Math.min 就是「不封顶」，`G.floor > floorMax()` / `=== floorMax()` 永远不成立，
+   所以下面那些「最后一层」「章末 Boss」「通关」的分支在无尽章里自动全部走不到。 */
+function floorMax(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : FLOORS; }
+function isEndless(){ return !!(CH && CH.endless); }
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 
 /* 所有落盘都过这一道。util 的 save 写不进去会返回 false（无痕模式、本地存储被禁、配额满），
@@ -143,8 +149,8 @@ function nextFloor(){
   /* 盲斗：每下一层楼梯**直接往下 BLIND_STEP 层**（用户 2026-09）。
      ⚠️ 撞到章末那一层就停在那儿 —— 不能让人跳过章末 Boss 直接通关。*/
   const from = G.floor;
-  const jump = (P && P.relics && from > 0 && from < FLOORS && hasRelic("blind")) ? BLIND_STEP : 1;
-  G.floor = jump > 1 ? Math.min(from + jump, FLOORS) : from + 1;
+  const jump = (P && P.relics && from > 0 && from < floorMax() && hasRelic("blind")) ? BLIND_STEP : 1;
+  G.floor = jump > 1 ? Math.min(from + jump, floorMax()) : from + 1;
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
@@ -168,14 +174,14 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
-  if(G.floor > FLOORS){ chapterClear(); return; }
+  if(G.floor > floorMax()){ chapterClear(); return; }   // 无尽章永远走不到这儿
   genFloor();
   if(hasRelic("water")) drinkAll();     // 「水」：泉是 genFloor 摆的，所以只能放在它后面
   fov();
   buildGrid();
   render();
   lockInput(320);
-  const last = G.floor === FLOORS;
+  const last = G.floor === floorMax();
   const bossRoom = isBossFloor(G.floor);
   if(G.floor > from + 1) say("盲斗把楼梯烧穿了 —— 你一口气落到了第 " + G.floor + " 层。", "crit");
   say("—— " + CH.name + " 第 " + G.floor + " 层" + (bossRoom ? " · BOSS" : "") + " ——", "crit");
@@ -228,7 +234,8 @@ function genBossRoom(){
   P.x = x0 + 1; P.y = my;
   const bx = x0 + (w >> 1), by = my;
   G.stair = {x:bx, y:by};          // 清空前只是个占位，Boss 倒下的地方才是真阶梯
-  const def = (G.floor === FLOORS) ? CH.boss : GATEKEEPER;
+  // 无尽章没有章末 Boss（CH.boss 是 null），每一间 Boss 房里都是跟着层数长的「层间守者」
+  const def = (G.floor === floorMax() && CH.boss) ? CH.boss : GATEKEEPER;
   G.mobs.push(makeBossFoe(def, bx, by));
 }
 function genFloor(){
@@ -401,6 +408,15 @@ function foeBand(floor){
   for(let i=0;i<FOE_BANDS.length;i++) if(floor <= FOE_BANDS[i].to) return FOE_BANDS[i];
   return {hp:1, dmg:1};
 }
+/* 无尽章的**深渊压迫**（用户 2026-09）：第 ENDLESS_FROM 层往下每 ENDLESS_EVERY 层
+   再给怪的**伤害**加一档 ENDLESS_RAMP。别的章恒为 1，等于这一条不存在。
+   ⚠️ **只压伤害，不压血量**（算过才这么定的）：两样都压时第 200 层一只怪要砍 50 刀 ——
+   那不是难，那是熬。只压伤害的话普通怪稳定在 4~5 刀，难的是「错不起」。
+   详细算式和实测表写在 content.js 的 ENDLESS_RAMP 那一段。*/
+function endlessRamp(floor){
+  if(!isEndless() || floor <= ENDLESS_FROM) return 1;
+  return 1 + Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_RAMP;
+}
 /* 一只怪在第 floor 层的数值：基础 + 层数成长 + 章节 foeBonus，**最后**再乘一次分段倍率。
    抽出来是因为 Boss 房要「参照上一层的小怪」现算一遍（refFoe）。 */
 function foeNums(def, floor){
@@ -409,9 +425,11 @@ function foeNums(def, floor){
   const step = def.fixed ? 0 : Math.max(0, floor - 1);
   const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
   const band = def.fixed ? {hp:1, dmg:1} : foeBand(floor);
+  // 无尽章第 50 层往下的深渊压迫（别的章恒为 1）。**只乘在伤害上**，血量不动 —— 见 endlessRamp
+  const deep = def.fixed ? 1 : endlessRamp(floor);
   return {
     hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp)),
-    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg)),
+    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep)),
     armor: def.armor + fb.armor,
     xp: def.xp + Math.floor(step / gw.xpEvery) + fb.xp
   };
@@ -634,7 +652,8 @@ function renderHud(){
   }
   // Boss 房那一层在顶栏写成 `10*`，并且是血色的（用户 2026-09）
   const bossFloor = isBossFloor(G.floor);
-  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + FLOORS;
+  // 无尽章的分母是「∞」（没有最后一层，见 floorMax）
+  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + (isEndless() ? "∞" : FLOORS);
   $("hFloor").classList.toggle("bossfloor", bossFloor);
   $("hLevel").textContent = P.lvl;
   $("hGold").textContent = P.gold;
@@ -918,9 +937,9 @@ function onEnter(){
 function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
   G.paused = true;
-  const last = G.floor === FLOORS;
+  const last = G.floor === floorMax();
   // 盲斗会一口气往下走 BLIND_STEP 层 —— 门上写的层数得跟真正会落到的那一层对上
-  const to = (!last && hasRelic("blind")) ? Math.min(G.floor + BLIND_STEP, FLOORS) : G.floor + 1;
+  const to = (!last && hasRelic("blind")) ? Math.min(G.floor + BLIND_STEP, floorMax()) : G.floor + 1;
   $("stairEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 已清空";
   $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + to + " 层";
   $("stairNote").innerHTML = last
@@ -1035,20 +1054,27 @@ function renderCombo(){
   c.classList.add(cls);
   setTimeout(function(){ c.classList.remove(cls); }, 460);
 }
-/* **一章只出一个难度的词**（第一章 A1、第二章 A2、第三章 B1、第四章 B2）——
+/* **前四章都是一章一个难度**（第一章 A1、第二章 A2、第三章 B1、第四章 B2）——
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
-   难度写在 content.js 的 CHAPTERS[].wordLv 上。*/
-function chapterLv(){ return (CH && CH.wordLv) || 1; }
+   难度写在 content.js 的 CHAPTERS[].wordLv 上。
+   ⚠️ **第五章「无尽」的 wordLv 是数组 [3,4,5]**（用户 2026-09）：B1 / B2 / B2–C1 三档一起出。
+   所以取词这一路全部改成了**按一组难度**算 —— 单个数字会被包成一个一元数组，
+   前四章的行为一个字没变。想读「当前这一章有哪几档词」只能走 chapterLvs()。*/
+function chapterLvs(ch){
+  const v = (ch || CH) && (ch || CH).wordLv;
+  if(Array.isArray(v)) return v.length ? v.slice() : [1];
+  return [v || 1];
+}
 /* 这一章**真的有词**的词性（Boss 弱点只在这里面挑，用户 2026-09 从「按类别」改过来的）。
    每个难度的每个词性都补到了 ≥6（词库文件顶上的规矩），所以正常不会退回全表。*/
 function chapterPos(){
-  const lv = chapterLv(), out = [];
+  const lvs = chapterLvs(), out = [];
   Object.keys(BYPOS).forEach(function(p){
-    if(BYPOS[p].filter(function(w){ return (w.lv || 1) === lv; }).length >= 6) out.push(p);
+    if(BYPOS[p].filter(function(w){ return lvs.indexOf(w.lv || 1) >= 0; }).length >= 6) out.push(p);
   });
   return out.length ? out : Object.keys(BYPOS);
 }
-/* 先按权重抽一个难度（数组里重复几次就是几倍权重），再按这个难度筛词。
+/* 把词池收到**某一个难度**上。干扰项走的是这一条（跟题目那个词同难度，见 nextQuestion）。
    筛得太窄就逐级回退，**永远不返回空数组** —— 出不出题直接关系到能不能打。*/
 function scopeToLevel(pool, want){
   let out = pool.filter(function(w){ return (w.lv || 1) === want; });
@@ -1056,8 +1082,17 @@ function scopeToLevel(pool, want){
   out = ALLW.filter(function(w){ return (w.lv || 1) === want; });
   return out.length >= 6 ? out : pool;
 }
+/* 把词池收到**这一章的那几档难度**上（无尽章是三档，别的章就一档）。*/
+function scopeToLevels(pool, want){
+  const set = {};
+  want.forEach(function(l){ set[l] = true; });
+  let out = pool.filter(function(w){ return set[w.lv || 1]; });
+  if(out.length >= 6) return out;
+  out = ALLW.filter(function(w){ return set[w.lv || 1]; });
+  return out.length >= 6 ? out : pool;
+}
 function scopeByLevel(pool){
-  return scopeToLevel(pool, chapterLv());
+  return scopeToLevels(pool, chapterLvs());
 }
 /* **一趟之内答对过的词不再出第二次**（用户 2026-09）——「除了答错的」：
    答对就记进 `P.used`，答错（或先对后错）就从里面拿掉，于是错过的词照样会再来找你。
@@ -3033,13 +3068,15 @@ function renderPractice(){
   }
 }
 /* 这一章的词见过多少（用户 2026-09 要在洞窟的卡片上显示）——
-   分母是这一档难度的全部词（BYLV[难度]），分子是**熟练度表 LEX 里已经有记录**的那些，
+   分母是这一章那几档难度的全部词（BYLV[难度]，无尽章是 3+4+5 三桶加起来），
+   分子是**熟练度表 LEX 里已经有记录**的那些，
    也就是这个存档真的遇到过的。返回 0~100 的整数。
    ⚠️ 老存档里可能留着已经删掉的词（比如整类删掉的虚词），所以要过一遍 WMAP。*/
 function chapterSeenPct(chId){
   const ch = chapterById(chId);
   if(!ch) return 0;
-  const pool = BYLV[ch.wordLv] || [];
+  let pool = [];
+  chapterLvs(ch).forEach(function(l){ pool = pool.concat(BYLV[l] || []); });
   if(!pool.length) return 0;
   let seen = 0;
   pool.forEach(function(w){ if(LEX[w.en] && WMAP[w.en]) seen++; });
@@ -3140,13 +3177,15 @@ function readRun(){
   // 版本对不上直接丢，不写迁移。章节不再要求等于当前章 —— 存的是哪一章就接着哪一章走
   if(!s || s.v !== RUN_V || !chapterById(s.ch || 1)) return null;
   if(!s.P || !s.map || !s.seen || !s.mobs || !s.stair) return null;
-  if(!s.floor || s.floor < 1 || s.floor > FLOORS) return null;
+  // ⚠️ 这里还没 setChapter，CH 仍是上一趟那一章 —— 上限要按**存档里那一章**算
+  if(!s.floor || s.floor < 1 || s.floor > floorMax(chapterById(s.ch || 1))) return null;
   return s;
 }
 function dropRun(){ try{ localStorage.removeItem(RUN_KEY); }catch(e){} }
 function foeDef(id){
   // 各章的 Boss 和守层者也得能找回来，不然续玩档一读，它们就凭空消失了
-  for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].boss.id === id) return CHAPTERS[i].boss;
+  // ⚠️ 无尽章的 boss 是 null（它没有章末 Boss），别在这儿点空
+  for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].boss && CHAPTERS[i].boss.id === id) return CHAPTERS[i].boss;
   if(id === GATEKEEPER.id) return GATEKEEPER;
   for(let i=0;i<FOES.length;i++) if(FOES[i].id === id) return FOES[i];
   return null;
@@ -3212,7 +3251,7 @@ function chapterClear(){ endRun(true); }
 function runScore(win){
   const total = P.right + P.wrong;
   const acc = total ? Math.round(P.right / total * 100) : 0;
-  const floor = Math.min(G.floor, FLOORS);
+  const floor = Math.min(G.floor, floorMax());   // 无尽章不封顶，走到哪算哪
   /* 到达的层数**不再是一项加分，它是主倍率**（用户 2026-09）：
      宝石 =（下面这几项相加）× 层数倍率 × 这一章的难度系数。两个乘区，没有第三个。*/
   const rows = [
@@ -3250,7 +3289,7 @@ function endRun(win, gaveUp){
   G.over = true;
   const M = meta();
   M.runs++;
-  if(G.floor > M.best) M.best = Math.min(G.floor, FLOORS);
+  if(G.floor > M.best) M.best = Math.min(G.floor, floorMax());
   if(win) M.clears++; else if(!gaveUp) M.deaths = (M.deaths || 0) + 1;
   // 遗物和金币都留在洞里 —— 带回镇上的是结算换来的**宝石**
   const sc = runScore(win);
@@ -3259,7 +3298,7 @@ function endRun(win, gaveUp){
   foldAcc();
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
-  $("endTitle").textContent = win ? (CH.boss.name + "倒下了")
+  $("endTitle").textContent = win ? ((CH.boss ? CH.boss.name : "这一章") + "倒下了")
                                   : gaveUp ? ("你从第 " + G.floor + " 层退了出来")
                                            : ("你倒在第 " + G.floor + " 层");
   $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关")
