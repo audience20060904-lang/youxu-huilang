@@ -1,0 +1,26 @@
+================================================
+ 固定地址要先装一次 Tailscale，装完以后就再也不用管了。
+
+ 第一次设置，大约五分钟：
+
+  1. 打开 https://tailscale.com/download/windows 下载安装
+     用 Google / GitHub / Microsoft 账号登录就行
+     —— 不要手机号，不要实名，不花钱
+
+  2. 打开 https://login.tailscale.com/admin/dns
+     确认 MagicDNS 是开着的，然后点 Enable HTTPS
+
+  3. 回来双击 start-coop-fixed.bat
+     第一次打开 Funnel 时，窗口里可能会打出一个链接，
+     点开它、在网页上点同意 —— 那是给这台电脑开放公网入口的许可
+
+  4. 再双击一次 start-coop-fixed.bat，窗口里就会框出你的固定地址
+
+ 队友什么都不用装，直接打开你发的那个地址就行。
+
+ 如果窗口里写着 unknown flag --bg：
+   Tailscale 版本太旧，去官网下最新版覆盖安装一次
+
+ 想关掉对外开放：
+   "C:\Program Files\Tailscale\tailscale.exe" funnel off
+================================================
