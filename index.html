@@ -395,7 +395,11 @@
     <h2>他没抬头，只把布摊开</h2>
     <p class="note">「洞里的钱，洞里花。带出去的，我也收不着。」<span id="shopGold"></span></p>
     <div class="shop" id="shopList"></div>
-    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnShopLeave" type="button">走了</button></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnShopReroll" type="button" hidden>刷新 · 换一批货</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnShopLeave" type="button">走了</button>
+    </div>
   </div>
 </div>
 
@@ -498,7 +502,7 @@
         <li><b>冒险</b>：答题前可以点「冒险 · 我确定」—— <b>答对伤害翻倍、连击记 2 点，答错受伤也翻倍</b>。真背熟了就冒。
           地图下面的<b>「锁定冒险」</b>打开后，<b>每题自动冒险</b>，不用一题点一次（拼写题除外）。</li>
         <li><b>弱点</b>：每只怪都怕一类词（战斗界面有标）。用那一类的词打中，<b>伤害 +2</b>。Boss 的弱点每次都不一样。</li>
-        <li><b>遗物</b>：<b>每清完一层三选一</b>，共 72 件分五个品质，<b>最多带 15 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质 + 500 金</b>合成一件更高的 —— 合成出来的<b>在两件里自己挑</b>。
+        <li><b>遗物</b>：<b>每清完一层五选一</b>，共 152 件分五个品质，<b>最多带 15 件</b>（满了要换）。遗物页里可以<b>分解</b>换金币，或拿 <b>3 件同品质 + 500 金</b>合成一件更高的 —— 合成出来的<b>在三件里自己挑</b>。
           它们分成几条成套的路线 —— 比如「盲斗 + 刻字 + 默诵」把你变成拼写专家，
           「铁胆 + 孤注 + 赌骰」让你每题都敲下去。只在这一趟里管用。</li>
         <li><b>变强的唯一途径</b>：<b>遗物</b>。没有装备、没有背包，不用管属性搭配 ——伤害就是一条加法，<b>只有暴击会翻倍</b>。</li>
@@ -506,7 +510,7 @@
         <li><b>路上的东西</b>：<span style="color:var(--r3)">坛</span> <b>第 10 层之后</b>才有，献 5 点血换一件遗物 ——
           它有两成概率是<b>熔炉</b>：献祭身上的一件遗物，三分之一升一档、三分之一同档换一件、三分之一降一档；
           <span style="color:var(--torch)">箱</span> 拼对一个词才能开，<b>拼错就永久锁死</b>；
-          <span style="color:var(--frost)">商</span> 用洞里的金币买东西。
+          <span style="color:var(--frost)">商</span> 用洞里的金币买东西，货架不满意可以<b>刷新一次</b>。
           <b>自动寻路会绕开它们</b>，想用就直接点它。</li>
         <li><b>存档</b>：<b>打开网页自动读档</b>，不会问你。存档点只有三个 —— <b>进入关卡、下一层、回到主城</b>。
           所以一层打到一半关掉页面，下次是<b>从这一层的入口重来</b>：这一层里砍的怪、捡的金币、拿的遗物都不算数。</li>

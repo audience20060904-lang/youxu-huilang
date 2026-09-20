@@ -444,7 +444,11 @@
     <h2>他没抬头，只把布摊开</h2>
     <p class="note">「洞里的钱，洞里花。带出去的，我也收不着。」<span id="shopGold"></span></p>
     <div class="shop" id="shopList"></div>
-    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnShopLeave" type="button">走了</button></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnShopReroll" type="button" hidden>刷新 · 换一批货</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnShopLeave" type="button">走了</button>
+    </div>
   </div>
 </div>
 
@@ -532,7 +536,7 @@
         <li><b>探索</b>：怪物待在原地不动。每层清完怪，下行阶梯才会出现。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。答对砍它一刀，答错挨它一口。</li>
         <li><b>词汇</b>：一章只出一个难度的词，章与章之间不重复。</li>
-        <li><b>遗物</b>：每清完一层三选一，只在这一趟里管用。</li>
+        <li><b>遗物</b>：每清完一层五选一，只在这一趟里管用。</li>
         <li><b>存档</b>：跟单人版共用同一套 localStorage —— 词汇熟练度、遗物图鉴、宝石都是这台设备自己的。</li>
       </ul>
     </div>
