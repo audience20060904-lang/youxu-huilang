@@ -1,25 +1,24 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-echo ===== 幽墟回廊 · 联机服务器 =====
+echo ===== Youxu Huilang :: LAN Co-op Server =====
 echo.
+if exist "coop-msg-lan.txt" type "coop-msg-lan.txt"
+echo.
+
 if exist ".git" (
-  echo 正在拉取最新代码…
+  echo [1/2] Updating code from GitHub...
   git pull
-  if errorlevel 1 (
-    echo.
-    echo 拉取失败 —— 可能没装 Git，或者这会儿没联网。将直接用本地现有代码启动。
-  )
+  if errorlevel 1 echo       Update failed. Using the local copy.
 ) else (
-  echo 这个文件夹不是用 git clone 建的，没法自动拉取最新代码。
-  echo 想要以后能自动更新，请改用 git clone 重新拉一份仓库
-  echo （具体步骤看 联机方案.md 或者问 Claude）。
+  echo [1/2] This folder is not a git clone - cannot auto-update.
+  echo       Re-clone with git if you want automatic updates.
 )
 echo.
-echo 正在启动服务器…
-echo （这个黑窗口不能关，关了服务器就没了；想停止按 Ctrl+C）
+
+echo [2/2] Starting server. Press Ctrl+C to stop.
 echo.
 node server.js
 echo.
-echo 服务器已停止。
+echo Server stopped.
 pause

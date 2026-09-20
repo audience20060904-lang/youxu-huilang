@@ -1,0 +1,15 @@
+================================================
+ 没找到隧道工具，所以只开了游戏服务器。
+ 同一个 WiFi 下照样能玩（用 start-coop.bat 更合适）。
+
+ 想跨网络玩，装一次 cloudflared —— 不用注册、不用实名：
+
+   1. 已经帮你打开了下载页
+      https://github.com/cloudflare/cloudflared/releases/latest
+   2. 下载 cloudflared-windows-amd64.exe
+   3. 改名成 cloudflared.exe
+   4. 丢进这个游戏文件夹（跟 server.js 放一起）
+   5. 再双击一次 start-coop-online.bat
+
+ 也可以用命令装：winget install --id Cloudflare.cloudflared
+================================================
