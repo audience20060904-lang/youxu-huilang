@@ -741,6 +741,9 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 /* ===== 弱点 / 心魔 / 冒险 ===== */
 .foe-weak{font-size:11.5px;color:var(--dim);margin-top:1px}
 .foe-weak b{color:var(--venom)}
+/* 联机第二期：怪有两条独立血条，这行显示队友那条剩多少（index.html 没有 #foeMateBar，纯联机专属）*/
+.foe-mate{font-size:11.5px;color:var(--dim);margin-top:1px}
+.foe-mate b{color:var(--hero)}
 .haunt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--blood);
   background:#F7E3DE;border:1px solid #E2BEB6;border-radius:2px;
   padding:2px 7px;align-self:center;margin-bottom:2px}

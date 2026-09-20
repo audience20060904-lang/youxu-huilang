@@ -93,6 +93,8 @@ function newRun(){
         shield:0, aegisN:0, recoil:0, revived:false,
         // 练习模式：进洞之前在洞窟弹层里勾的，整趟有效（stats() 里读）
         practice: !!practiceOn,
+        // 联机第二期：倒地（血掉光不出局，队友清完层原地复活），见 联机方案.md
+        down:false,
         // 这一趟按层记的答题数，结算时并进 MET.accF
         accF:{} };
   G = { floor:0, paused:false, over:false };
@@ -199,6 +201,7 @@ function nextFloor(){
   // （包括最后的 commit —— 这儿 G.map 还是上一层的，先不存档，免得存进去一份错配的层）。
   if(COOP && !coopIsHost()){ coopPendingFloor = true; say("等待房主生成这一层的地图…", "sys"); return; }
   genFloor();
+  coopPrepMobs();     // 联机第二期：给每只怪挂上 cid + 两条血条的字段（单人版里是空函数）
   if(COOP) coopBroadcastWorld();
   if(hasRelic("water")) drinkAll();     // 「水」：泉是 genFloor 摆的，所以只能放在它后面
   fov();
@@ -247,7 +250,7 @@ function applyCoopWorld(msg){
           right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
           relics:[], haunt:[], hauntAt:{}, undying:false,
           spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
-          shield:0, aegisN:0, recoil:0, revived:false,
+          shield:0, aegisN:0, recoil:0, revived:false, down:false,
           practice: !!practiceOn, accF:{} };
     G = { floor:0, paused:false, over:false };
     comboShown = null; resetHpFx(); autoOff();
@@ -270,6 +273,7 @@ function applyCoopWorld(msg){
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:false});
   });
+  coopPrepMobs();     // 联机第二期：非房主这边也要给每只怪挂上 cid + 两条血条的字段
   P.x = pack.px; P.y = pack.py;
   coopPendingFloor = false;
   if(hasRelic("water")) drinkAll();
@@ -780,7 +784,8 @@ function renderMate(){
   if(!COOP || !coopMateInfo){ row.hidden = true; return; }
   row.hidden = false;
   $("mateName").textContent = coopMateInfo.name || "队友";
-  $("mateHp").textContent = (coopMateInfo.hp != null) ? (coopMateInfo.hp + "/" + coopMateInfo.maxHp) : "—";
+  $("mateHp").textContent = coopMateInfo.down ? "倒地"
+    : (coopMateInfo.hp != null) ? (coopMateInfo.hp + "/" + coopMateInfo.maxHp) : "—";
   $("mateCombo").textContent = "×" + (coopMateInfo.combo || 0);
   $("mateRelics").textContent = coopMateInfo.relics || 0;
 }
@@ -792,6 +797,7 @@ function coopSendMe(){
   NET.send({t:"me", name: coopMyName || "队友", hp: Math.max(0, P.hp), maxHp: s.maxHp,
             combo: P.combo || 0, relics: (P.relics || []).length,
             busy: !!G.paused, clear: G.mobs ? G.mobs.length === 0 : true,
+            down: !!P.down,
             x: P.x, y: P.y});
 }
 /* 联机：踩到泉/坛/箱/商时通知队友一声（纯通知，不改队友自己的世界 —— 消耗是各自独立的，
@@ -1029,6 +1035,8 @@ function autoToggle(){
 }
 function stepWalk(){
   walkTimer = null;
+  // 联机第二期：倒地的人原地不动（怪也不再打他）——路已经广播给队友了，这边只是不亲自走
+  if(COOP && P && P.down){ cancelWalk(); return; }
   if(!walkPath || !walkPath.length || G.paused || G.over){ cancelWalk(); render(); return; }
   const n = walkPath.shift();
   const m = mobAt(n.x, n.y);
@@ -1046,6 +1054,7 @@ function stepWalk(){
 }
 function tryMove(dx, dy, rep){
   if(G.paused || G.over) return;
+  if(COOP && P && P.down) return;    // 倒地的人不能自己动，等队友清完层原地复活
   if(!gate(!!rep)) return;
   autoOff();        // 手动走一步 = 关掉自动寻路，手动操作永远优先
   cancelWalk();
@@ -1169,6 +1178,15 @@ function renderBattleBars(){
   const m = B.mob, s = stats();
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
+  /* 联机第二期：怪有两条独立满血，这条是队友那边剩多少（纯显示，权威值来自服务器的 hp 广播）。
+     index.html 没有 #foeMateBar，$() 拿到 null 就跳过 —— 单人版一步都跑不到这儿。*/
+  const mateBar = $("foeMateBar");
+  if(mateBar){
+    if(COOP && m.hpMate != null){
+      mateBar.hidden = false;
+      $("foeMateTxt").textContent = Math.max(0, m.hpMate) + " / " + m.max;
+    } else mateBar.hidden = true;
+  }
   paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp, $("bHpShield"));
   renderCombo();
 }
@@ -1674,7 +1692,9 @@ function floatNum(where, txt, cls){
   setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 900);
 }
 function answer(btn, ok){
-  if(B.locked) return;
+  /* 联机第二期：怪死是服务器广播确认的共识事件（见 coopHandleDead），
+     窗口可能在这一题答完之前就已经被队友那条广播关掉了 —— B 这时候是 null。 */
+  if(!B || B.locked) return;
   B.locked = true;
   clearQTimer();                 // 答了就把读条收掉，别让它在判定画面上继续走
   $("btnWager").disabled = true;
@@ -1834,11 +1854,11 @@ function answer(btn, ok){
     const armor = noArmor ? 0 : m.armor;
     const dmg = Math.max(1, raw - armor);
     if(crit && hasRelic("vamp")) healUp(4, s);                              // 饮血
-    m.hp -= dmg + extra;
+    coopDealDamage(m, dmg + extra);
     /* 盲斗：答对**一击必杀**（用户 2026-09）。代价是所有题都变成拼写题 ——
        它现在是「拼得出就砍得死」的速通件，不再走伤害那条线。*/
     if(hasRelic("blind") && m.hp > 0){
-      m.hp = 0;
+      coopDealDamage(m, m.hp);
       relicLog += " <span class=\"sys\">(盲斗 · 一击必杀)</span>";
     }
     /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
@@ -1846,7 +1866,7 @@ function answer(btn, ok){
     let hall = 0;
     if(hasRelic("hall") && Math.random() < 0.5){
       hall = dmg;
-      m.hp -= hall;
+      coopDealDamage(m, hall);
       setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
       relicLog += " <span class=\"sys\">(回响之厅又补了 " + hall + " 点)</span>";
     }
@@ -1989,7 +2009,7 @@ function answer(btn, ok){
         note = "这一下没让你掉血。";
       }
       if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
-        m.hp -= 2;
+        coopDealDamage(m, 2);
         note += " 赤鳞反弹了 <b>2</b> 点。";
         floatNum("foe", "-2", "dmg");
       }
@@ -2016,7 +2036,20 @@ function answer(btn, ok){
   $("btnFlee").hidden = true;
 
   // 最后一击：多留一会儿，让人看清这一题的词和释义 —— 之后直接关窗，没有中间画面了
-  if(m.hp <= 0){ setTimeout(function(){ finishBattle(true); }, 760); return; }
+  if(m.hp <= 0){
+    if(COOP && coopTrySwitchTarget(m)){
+      // 我这条空了、队友那条还有血 —— 转去帮砍，不结束战斗，往下走正常的答题流程
+    } else if(COOP){
+      /* 两条血条这边看着都空了：怪死是共识事件，等服务器广播的 dead 才真的收（联机方案.md 第 3/6 节）。
+         B.locked 已经是 true 了（函数最上面挡的），这里只是把「下一题」按钮也收起来，别让人干等着点它。*/
+      $("btnNextQ").hidden = true;
+      say(m.name + "晃了一下，血条空了 —— 等确认最后一下。", "sys");
+      return;
+    } else {
+      setTimeout(function(){ finishBattle(true); }, 760);
+      return;
+    }
+  }
   if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
   if(B.rescueTimer) return;                 // 补救倒计时开着：只留「补救」这一个按钮
   if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
@@ -2188,6 +2221,8 @@ function finishBattle(win){
   if(!win){
     B = null;
     $("veilBattle").hidden = true;
+    /* 联机第二期：血掉光不出局，是「倒地」——两人同时倒下才算这趟结束（联机方案.md）。 */
+    if(COOP){ coopGoDown(); return; }
     gameOver();
     return;
   }
@@ -3423,6 +3458,7 @@ function resumeRun(s){
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
   if(!P.accF) P.accF = {};                                   // 老档没有按层的答题记录
+  if(typeof P.down !== "boolean") P.down = false;             // 老档没有「倒地」（联机第二期）
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -4236,10 +4272,134 @@ $("btnResumeHere").addEventListener("click", function(){
    等两人都点了（服务器的 go{what:"move",on:true}）才真正开始算路。 */
 function coopToggleMove(){
   if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+  if(P.down) return;      // 倒地的人按不动这个按钮，寻路的意愿已经替他摆好了（见 coopGoDown）
   coopMoveWant = !coopMoveWant;
   const b = $("btnPathfind");
   if(b) b.classList.toggle("armed", coopMoveWant);
   NET.send({t:"ready", what:"move", on: coopMoveWant});
+}
+
+/* ================= 联机（第二期）：双血条战斗 =================
+   跟第一期的移动/世界同步是同一套开关隔离：全走 if(COOP) 分支，单人版一行不变。
+   详细设计（三方分工、m.hp 的语义、竞态怎么处理）见 联机方案.md 第 3/4/6/8 节，
+   这里只放实现。⚠️ 这些函数被 answer()/finishBattle()/nextFloor() 等顶层函数调用，
+   所以必须写在顶层（block 里的 function 声明是块作用域的，见文件前面那条踩过的坑）。
+
+   怪的两条血条不是 m.hpA/m.hpB 各处替换 —— 那样要把全文件读写 m.hp 的地方都改一遍。
+   正确做法（联机方案.md 第 3 节）：m.hp 永远是「我现在正在砍的那条」，
+   m.curSide 记着这条对应服务器上的 a 还是 b，m.hpMate 是**另一条**的缓存值（纯显示，
+   权威值来自服务器的 hp 广播）。我自己这条空了、队友那条还有血，就把 m.hp 换成 m.hpMate、
+   m.curSide 翻过去——这就是「转去帮队友砍」，answer() 里那一大段伤害计算一个字不用改。 */
+
+/* 房主生成 / 非房主铺场之后都要跑一遍：给这一层每只怪挂上 cid（跟当前数组下标无关，
+   死一只之后 splice 会让下标错位，所以身份必须是一个跟着怪走的固定号）和两条血条的初始值。
+   单人版里 COOP 恒为 false，直接返回，一步都不多做。 */
+function coopPrepMobs(){
+  if(!COOP || !G || !G.mobs) return;
+  const mySide = coopIsHost() ? "a" : "b";
+  G.mobs.forEach(function(m, i){
+    m.cid = i;
+    m.mySide = mySide;
+    m.curSide = mySide;
+    m.hpMate = m.max;
+  });
+}
+/* 按 cid（不是数组下标！）找回这只怪 —— dmg/hp/dead 消息里带的都是 cid。 */
+function mobByCid(cid){
+  if(!G || !G.mobs) return null;
+  for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].cid === cid) return G.mobs[i];
+  return null;
+}
+/* 联机里，怪掉的血要上报服务器定序（两人可能同时把同一条血条砍成负数，见联机方案.md 第 3 节
+   那条竞态）。m.hp 本身的语义不变——这个函数只是把 answer() 里原来的 `m.hp -= n` 包一层，
+   单人版（COOP 恒为 false）行为跟原来一模一样。 */
+function coopDealDamage(m, n){
+  if(!(n > 0)) return;
+  m.hp -= n;
+  if(COOP && window.NET && m.cid != null){
+    NET.send({t:"dmg", mob:m.cid, side:m.curSide || m.mySide, n:n});
+  }
+}
+/* 我这条血条空了：队友那条还有血就转过去帮砍（强的人能带弱的人）。
+   两条都空了返回 false —— 调用方（answer() 的判怪死那一处）改成「等服务器的 dead 广播」，
+   不在本地直接判定，避免两人同时砍死同一只怪时各自都以为是自己补的最后一刀。 */
+function coopTrySwitchTarget(m){
+  if(!((m.hpMate || 0) > 0)) return false;
+  m.hp = m.hpMate;
+  m.hpMate = 0;
+  m.curSide = m.curSide === "a" ? "b" : "a";
+  say("你把" + m.name + "这边砍空了 —— 转去帮队友砍剩下那条。", "crit");
+  renderBattleBars();
+  return true;
+}
+/* 服务器广播「这只怪两条血条都空了」。三种情况：
+   ① 我正在打它（B.mob 就是它）—— 等一小会儿让人看清最后一题，再走跟单人版一样的 finishBattle(true)；
+   ② 我压根没在打它（还没走到 / 队友一个人带走了）—— 直接从地图上摘掉，不结算经验金币；
+   ③ 摘完之后这一层空了 —— 补上阶梯（跟 closeBattleWin() 里那段是同一件事，
+      这里单独写一遍是因为①会自己走 closeBattleWin，②不会）。 */
+function coopHandleDead(cid){
+  const m = mobByCid(cid);
+  if(!m) return;
+  if(B && B.mob === m){
+    clearQTimer();                                    // 别让读条在这个空当里咬一口
+    if(B.rescueTimer){ clearInterval(B.rescueTimer); B.rescueTimer = null; }
+    setTimeout(function(){ if(B && B.mob === m) finishBattle(true); }, 300);
+    return;
+  }
+  const i = G.mobs.indexOf(m);
+  if(i >= 0) G.mobs.splice(i, 1);
+  if(G.mobs.length === 0){
+    G.stair = {x:m.x, y:m.y};
+    G.seen[m.y][m.x] = true;
+    say("这一层清空了 —— 阶梯 ▼ 出现了。", "crit");
+    if(hasRelic("finale")){    // 收尾：清完一层回 20% 上限——清场是共识事件，没亲手补最后一刀也该有
+      const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
+      const r = healUp(back);
+      if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
+        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
+    }
+  }
+  fov();
+  render();
+  renderHud();
+  coopCheckRevive();
+}
+/* 血掉光不出局，是「倒地」：停止答题，怪也不再打他，队友清完层原地复活（1 点血）。
+   ⚠️ 寻路的算路/广播是房主单方面做的（跟着房主自己的坐标算），房主倒下之后再算就是错的路 ——
+   所以房主倒下要连寻路一起停住，队友只能手动点地图清完剩下的怪（手动移动不看房主状态，不受影响）。
+   队友倒下就不用管这些：房主继续正常算路，队友这边只是不亲自挪（stepWalk 里挡住了）。 */
+function coopGoDown(){
+  P.down = true;
+  P.hp = 0;
+  cancelWalk();
+  G.paused = false;
+  autoOff();
+  if(coopIsHost()){
+    if(window.NET) NET.send({t:"ready", what:"move", on:false});
+    say("你倒下了 —— 你是房主，寻路先停住，队友得手动清完剩下的怪，你才会原地复活。", "hurt");
+  } else {
+    // 倒地的人不阻塞移动：替自己把「寻路」那份 ready 摆成「已同意」，房主一个人点寻路也能继续走
+    if(window.NET) NET.send({t:"ready", what:"move", on:true});
+    say("你倒下了 —— 撑着等队友把这一层清完，你会原地站起来。", "hurt");
+  }
+  renderHud();
+  render();
+  coopSendMe();
+  coopCheckBothDown();
+}
+/* 队友把这一层清完（G.mobs 空了）：倒地的人原地复活，回 1 点生命。 */
+function coopCheckRevive(){
+  if(!COOP || !P || !P.down || !G || G.mobs.length !== 0) return;
+  P.down = false;
+  P.hp = 1;
+  say("队友把这一层清干净了 —— 你摇晃着站了起来（1 点生命）。", "good");
+  renderHud();
+  render();
+  coopSendMe();
+}
+/* 两人同时倒下才算这趟结束（联机方案.md）——各自走各自的 gameOver()/endRun()，各算各的宝石。 */
+function coopCheckBothDown(){
+  if(COOP && P && P.down && coopMateInfo && coopMateInfo.down && G && !G.over) gameOver();
 }
 /* 下楼前的双确认：点「下去」先只是举手，等两人都举手了服务器才发 go{what:"floor"}，
    到那时候才真的调 closeStair(true) 进下一层。 */
@@ -4360,12 +4520,25 @@ if(COOP){
   NET.on("path", function(msg){
     if(coopIsHost()) return;
     if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+    if(P.down) return;      // 倒地的人不跟着走，原地等复活（联机方案.md 第二期）
     cancelWalk();
     walkPath = (msg.steps || []).slice();
     G.goal = walkPath.length ? walkPath[walkPath.length - 1] : null;
     render();
     coopMateResume();
   });
+  /* 联机第二期：怪的两条血条。hp 是服务器算完之后的权威值（校正本地乐观扣的那一下），
+     dead 是两条都空了的共识确认——真正扣怪的地方是 coopHandleDead()。 */
+  NET.on("hp", function(msg){
+    const m = mobByCid(msg.mob);
+    if(!m) return;
+    const mine = m.curSide === "a" ? msg.a : msg.b;
+    const other = m.curSide === "a" ? msg.b : msg.a;
+    if(typeof mine === "number") m.hp = mine;
+    if(typeof other === "number") m.hpMate = other;
+    if(B && B.mob === m) renderBattleBars();
+  });
+  NET.on("dead", function(msg){ coopHandleDead(msg.mob); });
   NET.on("go", function(msg){
     if(msg.what === "move"){
       const b = $("btnPathfind");
@@ -4386,6 +4559,7 @@ if(COOP){
     }
   });
   NET.on("mate", function(msg){
+    const wasDown = coopMateInfo && coopMateInfo.down;
     coopMateInfo = msg;
     coopMateX = (typeof msg.x === "number") ? msg.x : null;
     coopMateY = (typeof msg.y === "number") ? msg.y : null;
@@ -4394,6 +4568,9 @@ if(COOP){
     // 队友刚从忙碌变空闲，房主没必要等 300ms 的下一轮，立刻重新算一次目标
     if(coopIsHost() && wasBusy && !coopMateBusy && autoOn && !(walkPath && walkPath.length)) autoTick();
     if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
+    if(!wasDown && msg.down) say("队友倒下了 —— 清完这一层他会原地复活。", "hurt");
+    else if(wasDown && !msg.down) say("队友站起来了。", "good");
+    coopCheckBothDown();
   });
   NET.on("used", function(msg){
     if(SCENE === "run") say("队友用了" + (msg.what || "点什么") + "。", "sys");

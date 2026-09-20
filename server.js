@@ -127,7 +127,10 @@ function getRoom(code){
       peers: [null, null],
       world: null, worldFloor: 0,
       ready: {},                 // {move:[bool,bool], floor:[bool,bool], enter:[bool,bool]}
-      route: null, practice: false
+      route: null, practice: false,
+      // 第二期 · 双血条战斗：cid -> {a, b, dead}，每次收到 world 就按那份世界包重建
+      // （world 只有房主发、每层一次，见 联机方案.md 第 3/6 节 —— 这是服务器唯一权威维护的战斗状态）
+      mobs: {}
     };
     rooms.set(code, r);
   }
@@ -177,8 +180,27 @@ function onMessage(conn, msg){
     case "world":
       if(idx !== 0) return;              // 只有房主能发世界包
       room.world = msg.pack; room.worldFloor = msg.floor;
+      // 每层重新铺场：怪的两条血条满血重置（cid 是客户端按这份 pack.mobs 的下标定的，见 game.js coopPrepMobs）
+      room.mobs = {};
+      (msg.pack.mobs || []).forEach(function(m, i){
+        room.mobs[i] = { a: m.max, b: m.max, dead: false };
+      });
       sendTo(room, mateIdx, {t:"world", floor: msg.floor, pack: msg.pack});
       break;
+    case "dmg": {
+      // 两人都能发（自己那条、或者帮队友砍那条）。side 指的是砍的是谁那条血条，不是发消息的人是谁。
+      const rec = room.mobs && room.mobs[msg.mob];
+      if(!rec || rec.dead) return;
+      const side = msg.side === "b" ? "b" : "a";
+      const n = Math.max(0, Math.min(999999, +msg.n || 0));
+      rec[side] = Math.max(0, rec[side] - n);
+      broadcast(room, {t:"hp", mob: msg.mob, a: rec.a, b: rec.b});
+      if(rec.a <= 0 && rec.b <= 0 && !rec.dead){
+        rec.dead = true;
+        broadcast(room, {t:"dead", mob: msg.mob});
+      }
+      break;
+    }
     case "route":
       if(idx !== 0) return;
       room.route = msg.id;
