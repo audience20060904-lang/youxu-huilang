@@ -3788,6 +3788,12 @@ function resumeRun(s){
                  hp:m.hp, max:m.max,
                  dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
   });
+  /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
+     所以读档之后必须照 genFloor() 的规矩补一次，否则 coopDealDamage 的 m.cid 是 undefined、
+     伤害根本不上报，#foeMateBar 也没数据。单人版 COOP 恒为 false，这句走不到。
+     ⚠️ 它按数组下标发 cid —— 两人的续玩档来自同一份广播世界，顺序一致，所以 cid 对得上。
+     重连之后角色可能翻转（房主掉线队友会被扶正），afterJoined 里还会再绑一次 side。*/
+  if(COOP) coopPrepMobs();
   $("log").innerHTML = "";
   hideAll();
   fov(); buildGrid(); render(); renderHud();
@@ -4818,6 +4824,20 @@ if(COOP){
   function afterJoined(){
     coopEverConnected = true;
     $("roomMsg").textContent = "";
+    /* 把房间号写进地址栏（用户 2026-09-20 报「退出之后回不到之前那个存档」）。
+       ⚠️ 这就是那个 bug 的主因：自动重连只认 URL 上的 ?room=，而**房主的地址栏里从来没有它**
+       （队友是点邀请链接进来的，所以队友刷新反而能自己回去）。房主一刷新就变成
+       「读回了自己的续玩档，但没在任何房间里」，看着就像存档丢了。
+       写进 URL 之后，刷新/误关标签页/手机切后台被杀，重新打开都会自动回到同一个房间，
+       服务器那边还缓存着 room.world，会立刻把当前这一层补发过来。*/
+    try{
+      const code = NET.roomCode();
+      if(code) history.replaceState(null, "", location.pathname + "?room=" + encodeURIComponent(code));
+    }catch(e){}
+    /* 重连之后角色可能跟上一次不一样（房主掉线的话队友会被服务器扶正成房主），
+       而「我砍的是哪条血条」是按角色定的 —— 在局内就重绑一次，两边才对得上。
+       不在局内时 coopPrepMobs() 自己会因为没有 G.mobs 直接返回。*/
+    coopPrepMobs();
     renderTeamStatus();
     teamHint();
     coopUpdateWaitUi();
@@ -4827,7 +4847,14 @@ if(COOP){
 
   NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || "连接失败"; });
   NET.on("joined", afterJoined);
-  NET.on("resume", function(){ renderTeamStatus(); teamHint(); coopUpdateWaitUi(); });
+  NET.on("resume", function(){
+    renderTeamStatus(); teamHint(); coopUpdateWaitUi();
+    /* 队友重连回来了：房主把**当前**这一层重新广播一次，让他直接对齐现在的进度，
+       而不是停在自己续玩档里那份「刚踏进这一层」的快照（队友走之后房主可能已经清了半层）。
+       服务器本来就缓存着 room.world 并会补发给新连接，但那份是上一次广播的；
+       这里再发一次才是此刻的真实状态。*/
+    if(coopIsHost() && SCENE === "run" && P && G && !G.over && G.map) coopBroadcastWorld();
+  });
   NET.on("pause", function(){ renderTeamStatus(); teamHint(); coopUpdateWaitUi(); });
   NET.on("_close", function(){ teamHint(); coopUpdateWaitUi(); });
 
@@ -4945,6 +4972,8 @@ if(COOP){
   });
   $("btnTeamLeave").addEventListener("click", function(){
     NET.close();
+    // 主动离开就把地址栏里的 ?room= 摘掉，免得下次打开又自己连回去（跟上面 afterJoined 成对）
+    try{ history.replaceState(null, "", location.pathname); }catch(e){}
     coopEverConnected = false;      // 自己主动离开，不算"断线"，别弹断线遮罩
     $("veilCoopWait").hidden = true;
     coopProposedRoute = null;
