@@ -433,6 +433,12 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .mybar .me{width:clamp(26px,4vh,36px);height:clamp(26px,4vh,36px);flex:none;color:var(--hero)}
 .mybar .me svg{width:100%;height:100%}
 .mybar .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+/* 联机第二期：队友的血条画在自己血条上方，半透明 50%（用户 2026-09 要求，跟真血条区分开）——
+   index.html 没有 #bMateHpBar，$() 拿到 null 会自动跳过，单人版一步都跑不到这儿。
+   ⚠️ 它不走 paintHp()（那个函数会顺手把「自己」的护盾数字画上去，队友那条不该顶着我的盾），
+   走的是专门写的 paintMateHp()，所以没有 .sh 护盾层，也没有掉血/回血的闪光动效。*/
+.hpbar.mate{opacity:.5;height:14px}
+.hpbar.mate .txt{font-size:11px}
 /* 连击条：三段常驻（连了几次 / 现在加百分之几 / 再对几个进下一档）。
    ⚠️ 三段永远都在，只有数字变 —— 答题前后行数一致，战斗窗才不会跳高。
    位置是**怪物血条下面**（用户 2026-09 从战斗窗底下挪上来的），所以它自己是一整行。
@@ -741,9 +747,10 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 /* ===== 弱点 / 心魔 / 冒险 ===== */
 .foe-weak{font-size:11.5px;color:var(--dim);margin-top:1px}
 .foe-weak b{color:var(--venom)}
-/* 联机第二期：怪有两条独立血条，这行显示队友那条剩多少（index.html 没有 #foeMateBar，纯联机专属）*/
-.foe-mate{font-size:11.5px;color:var(--dim);margin-top:1px}
-.foe-mate b{color:var(--hero)}
+/* 联机第二期：怪有两条独立血条，这条画在 .fbar 下面显示队友那条剩多少
+   （index.html 没有 #foeMateBar，纯联机专属）。半透明 50%——用户 2026-09 要求，
+   一眼能看出这不是自己在打的那条，跟真血条区分开。*/
+.fbar.mate{opacity:.5;margin-top:3px}
 .haunt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--blood);
   background:#F7E3DE;border:1px solid #E2BEB6;border-radius:2px;
   padding:2px 7px;align-self:center;margin-bottom:2px}

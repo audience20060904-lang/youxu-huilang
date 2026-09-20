@@ -28,6 +28,18 @@ var coopMyName = "";           // 自己填的名字，广播给队友状态条�
 var coopProposedRoute = null;  // 房主提的那条路线 id（两边都存一份，只是提议，没确认不会真的进）
 var coopEverConnected = false; // 连过一次房间没有 —— 用来区分"从没组过队"和"组过队又断线了"
 function coopIsHost(){ return !COOP || (window.NET && NET.isHost()); }
+/* 移动锁的解除条件（用户 2026-09 改窄了）：**只看怪清没清完，不再管地上金币**——
+   金币两人各自生成/各自捡（见下面 autoPath 那条注释），拿它当解锁条件的话，
+   一个人手快先捡完，另一个人还没捡到就已经解锁了，反而说不清。
+   locked 为真时：手动移动整个禁用、寻路只找怪；变假的那一刻由 coopUnlockMove() 统一收尾。*/
+function coopLocked(){ return COOP && !!G && !!G.mobs && G.mobs.length > 0; }
+var coopLockNoteAt = 0;    // 节流：手动动一下就提示一句「怪没清完」，别一直按着方向键刷屏
+function coopNoteLocked(){
+  const now = Date.now();
+  if(now - coopLockNoteAt < 1500) return;
+  coopLockNoteAt = now;
+  say("这一层的怪还没清完 —— 两人先一起点「寻路」走。", "sys");
+}
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 
 /* 所有落盘都过这一道。util 的 save 写不进去会返回 false（无痕模式、本地存储被禁、配额满），
@@ -841,6 +853,14 @@ function paintHp(bar, fill, txt, hp, max, sh){
     }
   }
 }
+/* 联机第二期：战斗窗里队友那条血条（半透明，纯显示）用这个，**不走 paintHp()**——
+   paintHp() 里的护盾数字读的是全局的 P.shield（我自己的盾），直接拿去画队友那条会把
+   我自己的盾数顶在队友的血量上。这个函数只画血量，没有护盾、没有掉血/回血的闪光动效。*/
+function paintMateHp(fill, txt, hp, max){
+  const v = Math.max(0, hp), m = Math.max(1, max || 1);
+  fill.style.width = (Math.max(0, v / m) * 100) + "%";
+  txt.textContent = v + " / " + max;
+}
 function renderSheets(s){
   $("stats").innerHTML =
     st("攻击", s.atk) + st("护甲", s.def) + st("暴击", s.crit + "%");
@@ -935,8 +955,9 @@ function goTo(tx, ty, blind){
   }
   cancelWalk();
   walkPath = path;
-  // 联机 · 只有房主真的算路，算完把这条路广播给队友，队友照着走同一条路（见 net 的 "path" 处理）
-  if(COOP && coopIsHost() && window.NET) NET.send({t:"path", steps: path.map(function(p){ return {x:p.x, y:p.y}; })});
+  // 联机 · 清怪没完时房主的路要广播给队友、两人走同一条（见 net 的 "path" 处理）；
+  // 怪清完之后每人自己决定去哪找自己的金币，不该再把这条路塞给队友（coopLocked() 已经是 false）
+  if(COOP && coopIsHost() && coopLocked() && window.NET) NET.send({t:"path", steps: path.map(function(p){ return {x:p.x, y:p.y}; })});
   G.goal = {x:tx, y:ty};
   render();
   stepWalk();
@@ -975,7 +996,11 @@ function inRoom(r, t){ return !!r && t.x >= r.x && t.x < r.x + r.w && t.y >= r.y
    两样都没有了才去楼梯；泉/箱/坛/商一概不去，要不要进那些是玩家自己决定的。 */
 function autoPath(){
   if(!P || !G || !G.map || G.paused || G.over || SCENE !== "run") return false;
-  const goals = G.mobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
+  /* 联机 · 怪没清完时寻路只认怪，别被顺路的金币岔开走岔路（联机方案.md：移动锁只锁怪）——
+     金币各自生成各自捡，共享路线要是也去够金币，两人捡到的份数很可能对不上。
+     怪清完（或者压根不是联机）就跟原来一样，怪和金币一起比谁近。*/
+  const goals = coopLocked() ? G.mobs.slice()
+    : G.mobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
   const here = roomOf(P.x, P.y);
   let t = null;
   if(here){
@@ -1005,15 +1030,17 @@ function autoTick(){
   autoTimer = null;
   if(!autoOn) return;
   if(!P || !G || !G.map || G.over || SCENE !== "run"){ autoOff(); return; }
-  // 联机：只有房主跑这条 —— 队友不自己算路，全靠 "path" 消息（见 coopMateResume）
-  if(COOP && !coopIsHost()) return;
-  // 联机：队友还在忙（战斗/弹层）就先别算下一步，免得把他落在原地（联机方案.md 的移动锁）
-  if(COOP && coopMateBusy){ autoWake(300); return; }
+  /* 联机：怪没清完（coopLocked()）才是"共享路线"那一套——只有房主真的算路，
+     队友不自己跑，全靠 "path" 消息（见 coopMateResume）。怪一清完，锁就解了，
+     谁按了寻路就自己算自己的路，两人各按各的节奏，不用再等对方（联机方案.md）。*/
+  if(coopLocked() && !coopIsHost()) return;
+  // 联机 · 还锁着的时候：队友还在忙（战斗/弹层）就先别算下一步，免得把他落在原地
+  if(coopLocked() && coopMateBusy){ autoWake(300); return; }
   if(G.paused){ autoWake(400); return; }                  // 弹层开着，等它关
   if(walkPath && walkPath.length){ autoWake(160); return; }   // 还在走，别插手
   if(!autoPath()){
-    if(COOP){ coopMoveWant = false; if(window.NET) NET.send({t:"ready", what:"move", on:false}); autoOff(); }
-    else autoOff();
+    if(coopLocked() && window.NET){ coopMoveWant = false; NET.send({t:"ready", what:"move", on:false}); }
+    autoOff();
     return;                   // 没地方可去了，自己关掉
   }
   autoWake(200);
@@ -1055,6 +1082,7 @@ function stepWalk(){
 function tryMove(dx, dy, rep){
   if(G.paused || G.over) return;
   if(COOP && P && P.down) return;    // 倒地的人不能自己动，等队友清完层原地复活
+  if(coopLocked()){ coopNoteLocked(); return; }    // 怪没清完，双方都不能自己动（联机方案.md）
   if(!gate(!!rep)) return;
   autoOff();        // 手动走一步 = 关掉自动寻路，手动操作永远优先
   cancelWalk();
@@ -1178,16 +1206,30 @@ function renderBattleBars(){
   const m = B.mob, s = stats();
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
-  /* 联机第二期：怪有两条独立满血，这条是队友那边剩多少（纯显示，权威值来自服务器的 hp 广播）。
-     index.html 没有 #foeMateBar，$() 拿到 null 就跳过 —— 单人版一步都跑不到这儿。*/
+  /* 联机第二期：怪有两条独立满血，这条画在怪血条下面，显示队友那边剩多少（半透明 50%，
+     纯显示，权威值来自服务器的 hp 广播）。index.html 没有 #foeMateBar，$() 拿到 null
+     就跳过 —— 单人版一步都跑不到这儿。*/
   const mateBar = $("foeMateBar");
   if(mateBar){
     if(COOP && m.hpMate != null){
       mateBar.hidden = false;
-      $("foeMateTxt").textContent = Math.max(0, m.hpMate) + " / " + m.max;
+      const mv = Math.max(0, m.hpMate);
+      $("foeMateFill").style.width = (m.max > 0 ? mv / m.max * 100 : 0) + "%";
+      $("foeMateTxt").textContent = "队友 " + mv + " / " + m.max;
     } else mateBar.hidden = true;
   }
   paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp, $("bHpShield"));
+  /* 联机：自己血条上方再画一条队友的（半透明 50%），数据来自队友最后一次上报的
+     心跳（coopMateInfo，跟顶栏那条「队友状态条」#mateRow 是同一份数据，见 NET.on("mate")）。
+     index.html 没有 #bMateHpBar，$() 拿到 null 就跳过。*/
+  const mateHpBar = $("bMateHpBar");
+  if(mateHpBar){
+    if(COOP && coopMateInfo && typeof coopMateInfo.hp === "number"){
+      mateHpBar.hidden = false;
+      paintMateHp($("bMateHpFill"), $("bMateHpTxt"),
+        coopMateInfo.down ? 0 : coopMateInfo.hp, coopMateInfo.maxHp || coopMateInfo.hp || 1);
+    } else mateHpBar.hidden = true;
+  }
   renderCombo();
 }
 /* ---- 连击：每 comboStep 次 +comboPct%，可叠加不封顶（火星把 step 减 1）---- */
@@ -2266,6 +2308,7 @@ function closeBattleWin(){
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
     say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
+    coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     if(hasRelic("finale")){                       // 收尾：清完一层回 20% 上限
       const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
       const r = healUp(back);
@@ -3948,6 +3991,7 @@ document.addEventListener("keydown", function(ev){
 $("map").addEventListener("click", function(ev){
   const c = ev.target.closest(".c");
   if(!c || G.paused || G.over) return;
+  if(coopLocked()){ coopNoteLocked(); return; }   // 怪没清完，双方都不能自己动（联机方案.md）
   const x = +c.dataset.x, y = +c.dataset.y;
   // 站在阶梯上再点一下脚下这格 = 重新问「要不要下去」（上次选了「再待一会儿」的退路）
   autoOff();        // 自己点了地图 = 关掉自动寻路
@@ -4268,15 +4312,33 @@ $("btnResumeHere").addEventListener("click", function(){
    strict mode 下 block 里的 function 声明是块作用域的，写在 if(COOP){...} 里面
    外面（比如 btnPathfind 的 click 监听，定义在文件更前面）就调不到，直接 ReferenceError。
    它们只会被 COOP 分支的代码调用，所以内部不用再判断一次 COOP。 */
-/* 「寻路」在联机里不是立刻开，是先跟服务器说「我想走了」，
-   等两人都点了（服务器的 go{what:"move",on:true}）才真正开始算路。 */
+/* 「寻路」在联机里怪没清完时不是立刻开，是先跟服务器说「我想走了」，
+   等两人都点了（服务器的 go{what:"move",on:true}）才真正开始算路，走的是共享那条路。
+   怪一清完，锁就解了（coopLocked() 变 false）——这时候寻路跟单人版一模一样，
+   点一下就自己走自己的（找自己的金币），不用等队友，也不用走服务器那套握手
+   （用户 2026-09：「打完怪物后解除所有限制，包括玩家 B 不再自动跟随玩家 A」）。*/
 function coopToggleMove(){
   if(!P || !G || !G.map || G.over || SCENE !== "run") return;
   if(P.down) return;      // 倒地的人按不动这个按钮，寻路的意愿已经替他摆好了（见 coopGoDown）
+  if(!coopLocked()){ autoToggle(); return; }
   coopMoveWant = !coopMoveWant;
   const b = $("btnPathfind");
   if(b) b.classList.toggle("armed", coopMoveWant);
   NET.send({t:"ready", what:"move", on: coopMoveWant});
+}
+/* 这一层的怪清完了——移动锁解除，寻路也跟着停一下，交还给玩家自己决定接下来干嘛
+   （各自去找各自的金币，或者手动逛）。⚠️ 不管 autoOn 现在是不是已经是 false 都发一次
+   ready:{move,off}：server.js 里 room.ready.move 是常驻的、不会自动复位，两边只要有一边
+   没真的发过这条 off，下一层"两人都点寻路才走"的判定就会被这一层的残留状态提前凑成
+   go——所以这里幂等地发，两边各自检测到"我的 G.mobs 空了"都会调用一次，才能真的把
+   服务器那边的 [true,true] 清成 [false,false]。 */
+function coopUnlockMove(){
+  if(!COOP) return;
+  coopMoveWant = false;
+  const b = $("btnPathfind");
+  if(b) b.classList.remove("armed");
+  if(window.NET) NET.send({t:"ready", what:"move", on:false});
+  if(autoOn){ autoOff(); cancelWalk(); render(); }
 }
 
 /* ================= 联机（第二期）：双血条战斗 =================
@@ -4352,6 +4414,7 @@ function coopHandleDead(cid){
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
     say("这一层清空了 —— 阶梯 ▼ 出现了。", "crit");
+    coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     if(hasRelic("finale")){    // 收尾：清完一层回 20% 上限——清场是共识事件，没亲手补最后一刀也该有
       const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
       const r = healUp(back);
@@ -4521,6 +4584,7 @@ if(COOP){
     if(coopIsHost()) return;
     if(!P || !G || !G.map || G.over || SCENE !== "run") return;
     if(P.down) return;      // 倒地的人不跟着走，原地等复活（联机方案.md 第二期）
+    if(!coopLocked()) return;   // 已经解锁了，不用再跟着房主的共享路走（防一条晚到的旧消息）
     cancelWalk();
     walkPath = (msg.steps || []).slice();
     G.goal = walkPath.length ? walkPath[walkPath.length - 1] : null;
@@ -4568,6 +4632,7 @@ if(COOP){
     // 队友刚从忙碌变空闲，房主没必要等 300ms 的下一轮，立刻重新算一次目标
     if(coopIsHost() && wasBusy && !coopMateBusy && autoOn && !(walkPath && walkPath.length)) autoTick();
     if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
+    if(B && B.mob) renderBattleBars();   // 战斗窗开着的话，自己血条上方那条队友血条也要跟着刷新
     if(!wasDown && msg.down) say("队友倒下了 —— 清完这一层他会原地复活。", "hurt");
     else if(wasDown && !msg.down) say("队友站起来了。", "good");
     coopCheckBothDown();
