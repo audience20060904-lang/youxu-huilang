@@ -147,7 +147,7 @@ function stats(){
   if(hasRelic("vigor")) s.maxHp += 12;
   if(hasRelic("pad"))   s.maxHp += 10;                       // 棉衬
   if(hasRelic("callus")){ s.def += 1; s.maxHp += 4; }        // 硬茧
-  if(hasRelic("keen"))  s.crit += 15;
+  if(hasRelic("keen"))  s.crit += 10;
   if(hasRelic("edge"))  s.crit += 8;
   if(hasRelic("rustplate")){ s.def += 2; s.crit -= 5; }      // 生锈重甲：带负面权衡的合成燃料
   if(hasRelic("twoply")){ s.def += 1; s.maxHp += 6; }        // 双层甲
@@ -216,6 +216,7 @@ function nextFloor(){
   G.fleeFree = false;      // 「脱壳」每层第一次撤退不掉血
   G.glassCut = 0;          // 「沙漏」这一层被超时削掉了几秒读条
   G.borrowUsed = false;    // 「借甲」每层一次
+  G.braceUsed = false;     // 「缓坠」每层第一次跌破半血才触发（原来是整趟一次，太弱了）
   G.catSeen = {};          // 「面熟」这一层各类别的怪遇到过几只，startBattle() 里累
   G.floorAsked = 0;        // 「破晓甲」这一层已经答过几题（不分对错），answer() 里累
   /* 叠甲：**上一层**干不干净（G.tookDamage 在 takeHit() 里置真）决定这一层还算不算连续 ——
@@ -264,7 +265,11 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
-  if(hasRelic("foresight") && P.gold >= 100) healUp(3);              // 未雨绸缪
+  // 未雨绸缪：原来定额 3 点，深层等于没有，改成跟油灯一样按最大生命的百分比
+  if(hasRelic("foresight") && P.gold >= 100){
+    const fm = stats().maxHp;
+    healUp(Math.max(1, Math.ceil(fm * CHAPTER.foresightPct)));
+  }
   if(G.floor > floorMax()){ chapterClear(); return; }   // 无尽章永远走不到这儿
   // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
   // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
@@ -1935,7 +1940,7 @@ function answer(btn, ok){
     if(hasRelic("quick")) pct += Math.min(20, Math.floor(P.combo / 5) * 2); // 速记：每 5 连击 +2%，上限 20%
     if(isSpell && hasRelic("carve")) pct += 20;                             // 刻字
     if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
-    if(hasRelic("hoard")) pct += Math.min(75, Math.floor((P.gold||0) / 200) * 5);  // 守财：每 200 金 +5%，上限 75%
+    if(hasRelic("hoard")) pct += Math.min(40, Math.floor((P.gold||0) / 200) * 5);  // 守财：每 200 金 +5%，上限 40%（跟同档「散财」看齐，原来 75% 太高、金币又没有上限）
     // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
     if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * 5;      // 空手：每少带一件 +5%
     if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
@@ -2290,10 +2295,10 @@ function mitigate(dmg, s0, opt){
   if(wrong && hasRelic("nemesis") && B && B.mob && B.mob.boss && B.mob.def && P.bossSeen){
     if((P.bossSeen[B.mob.def.id] || 0) >= NEMESIS_AT) cut += NEMESIS_CUT;
   }
-  // 缓坠：第一次跌破半血的那一下——用这一下"挨完之后会不会跌破半血"当判定，只触发一次
-  if(wrong && hasRelic("brace") && !P.braceUsed && P.hp >= s.maxHp / 2 && (P.hp - out) < s.maxHp / 2){
+  // 缓坠：这一层第一次跌破半血的那一下——用这一下"挨完之后会不会跌破半血"当判定，每层限一次
+  if(wrong && hasRelic("brace") && !G.braceUsed && P.hp >= s.maxHp / 2 && (P.hp - out) < s.maxHp / 2){
     cut += BRACE_CUT;
-    P.braceUsed = true;
+    G.braceUsed = true;
   }
   /* 残壁：血下 10% 触发、回到 50% 以上才解除，中间这段窗口一直有效（有滞回，只用一个布尔位）。
      状态每次挨打前都会按当前血量刷新一遍，不用另外找地方挂钩子。*/
