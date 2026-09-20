@@ -728,6 +728,13 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .route.off{cursor:default;opacity:.5}
 .route.off:hover{border-color:var(--edge);background:var(--stone-2)}
 .route.off .rgo{color:var(--faint)}
+/* 联机（第一期）：轮不到这个人点（队友选路线阶段 / 还没组队）时的禁用态，
+   跟 .off 长得一样但语义不同（.off 是"这条路还没挖通"）。
+   .picked 是房主选中、等队友确认的那一条，高亮一圈边框。
+   index.html 单人版永远不会加上这两个类。 */
+.route.coopwait{cursor:default;opacity:.55}
+.route.coopwait:hover{border-color:var(--edge);background:var(--stone-2)}
+.route.picked{border-color:var(--torch);box-shadow:inset 0 0 0 2px var(--torch)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:disabled:hover{border-color:var(--edge)}
 

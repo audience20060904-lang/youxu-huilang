@@ -25,6 +25,8 @@ var coopMateX = null, coopMateY = null;   // 队友最后上报的位置，只�
 var coopStatusTimer = null;               // 定时把自己的 hp/连击/遗物数广播出去（队友状态条）
 var coopMateInfo = null;       // 队友最后一次上报的状态（渲染 #mateRow 用）
 var coopMyName = "";           // 自己填的名字，广播给队友状态条用
+var coopProposedRoute = null;  // 房主提的那条路线 id（两边都存一份，只是提议，没确认不会真的进）
+var coopEverConnected = false; // 连过一次房间没有 —— 用来区分"从没组过队"和"组过队又断线了"
 function coopIsHost(){ return !COOP || (window.NET && NET.isHost()); }
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 
@@ -3255,28 +3257,64 @@ function openCave(){
       (r.open ? "<span class=\"rgo\">进入 ▸</span>" : "<span class=\"rgo\">还没挖通</span>");
     box.appendChild(d);
   });
-  // 联机：选哪条路由房主定，两人到齐才能选；练习模式也是房主统一定（联机方案.md）
+  /* 联机：选哪条路由房主定，队友只能看、点了会走 coopConfirmEnter() 那条路。
+     四档状态：没组队 → 房主没队友 → 房主可以选（或已经选了在等确认）→ 队友等/确认。
+     练习模式也是房主统一定（联机方案.md）。*/
   if(COOP){
-    const host = coopIsHost(), hasMate = window.NET && NET.hasMate();
-    const title = $("caveTitle");
-    if(!host){
-      Array.prototype.forEach.call(box.children, function(d){ d.disabled = true; });
-      if(title) title.textContent = "等待房主选路线…";
+    const host = coopIsHost(), connected = window.NET && NET.isConnected(),
+          hasMate = window.NET && NET.hasMate();
+    const title = $("caveTitle"), note = $("caveConfirmNote"), confirmBtn = $("btnCaveConfirm");
+    const disableAll = function(){ Array.prototype.forEach.call(box.children, function(d){ d.disabled = true; }); };
+    note.hidden = true; confirmBtn.hidden = true;
+    if(!connected){
+      disableAll();
+      if(title) title.textContent = "还没组队";
+      note.hidden = false; note.textContent = "先回镇上点「组队」，创建或加入一个房间。";
     } else if(!hasMate){
-      Array.prototype.forEach.call(box.children, function(d){ d.disabled = true; });
+      disableAll();
       if(title) title.textContent = "等待队友连接…";
-    } else if(title) title.textContent = "下去哪里？";
+    } else if(host){
+      if(title) title.textContent = coopProposedRoute ? "已经选好了" : "下去哪里？";
+      if(coopProposedRoute){
+        Array.prototype.forEach.call(box.children, function(d){
+          d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
+        });
+        note.hidden = false;
+        note.textContent = "等队友确认…（还能重新选，选别的会覆盖掉这次）";
+      }
+    } else {
+      // 队友：路线列表只看不点，靠下面这个按钮确认
+      disableAll();
+      if(coopProposedRoute){
+        Array.prototype.forEach.call(box.children, function(d){
+          d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
+        });
+        if(title) title.textContent = "房主选了这条路";
+        confirmBtn.hidden = false;
+      } else if(title) title.textContent = "等待房主选路线…";
+    }
     const pb = $("btnPractice");
     if(pb) pb.disabled = !host;
   }
   $("veilCave").hidden = false;
 }
+/* 联机：房主点一条路 = 提出来，不会立刻进；队友点「确认，一起下去」才真的一起进。
+   host 重新选一条会覆盖之前那次提议（队友要重新确认）。coopProposedRoute 声明在文件顶部。*/
+function coopProposeRoute(id){
+  const r = ROUTES.filter(function(x){ return x.id === id; })[0];
+  if(!r || !r.open) return;
+  coopProposedRoute = id;
+  NET.send({t:"route", id: id});
+  openCave();
+}
+function coopConfirmEnter(){
+  if(!coopProposedRoute) return;
+  NET.send({t:"enterConfirm", id: coopProposedRoute});
+  enterRoute(coopProposedRoute, true);
+}
 function enterRoute(id, fromNet){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
   if(!r || !r.open) return;
-  // 联机：只有房主真的点了才会广播；队友收到广播（fromNet）才跟着进，别自己抢先点
-  if(COOP && !fromNet && !coopIsHost()) return;
-  if(COOP && !fromNet && window.NET) NET.send({t:"route", id: id});
   setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
   $("veilCave").hidden = true;
   SCENE = "run";
@@ -4067,8 +4105,13 @@ $("btnPractice").addEventListener("click", function(){
 });
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
-  if(b && !b.disabled) enterRoute(b.dataset.id);
+  if(!b || b.disabled) return;
+  if(COOP){ coopProposeRoute(b.dataset.id); return; }
+  enterRoute(b.dataset.id);
 });
+/* #btnCaveConfirm 只有 coop.html 才有 —— index.html 里 $() 会拿到 null，
+   在外面直接 addEventListener 会当场报错，所以这个监听必须守着 COOP 才挂。*/
+if(COOP) $("btnCaveConfirm").addEventListener("click", coopConfirmEnter);
 /* 取景框左下角的「放弃」：两步确认 —— 手滑点掉一趟很伤 */
 let abandonArmed = 0;
 $("btnAbandon").addEventListener("click", function(){
@@ -4215,6 +4258,7 @@ function coopUpdateWaitUi(){
   const w = $("veilCoopWait");
   if(!w) return;
   const connected = NET.isConnected(), mate = NET.hasMate();
+  if(!coopEverConnected){ w.hidden = true; return; }   // 还没组过队，不是"断线"，别弹遮罩
   if(!connected){
     $("coopWaitTitle").textContent = "网络断了…";
     $("coopWaitNote").textContent = "正在自动重连，接上之后从这一层继续走。";
@@ -4229,22 +4273,69 @@ function coopUpdateWaitUi(){
 }
 
 if(COOP){
-  NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || "连接失败"; });
-  NET.on("joined", function(){
+  /* ================= 联机（第一期）：组队面板 =================
+     跟一开始的版本不一样：**不再一进页面就拿一层遮罩挡住整个游戏**（用户 2026-09 要求改成
+     主城里一个板块）。没组队也能逛主城、看图鉴、改设置；只有真要进洞窟才需要先组好队。
+     `coopEverConnected` 用来区分"从没连过"和"连过又断了"——前者不弹断线遮罩（声明在文件顶部）。 */
+  function randRoomCode(){
+    const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";     // 去掉容易看混的 0/O/1/I
+    let s = "";
+    for(let i=0;i<4;i++) s += AB[Math.floor(Math.random() * AB.length)];
+    return s;
+  }
+  function teamHint(){
+    const b = $("teamHint");
+    if(!b) return;
+    if(!NET.isConnected()) b.textContent = "创建或加入一个房间";
+    else b.textContent = "房间 " + NET.roomCode() + " · " + (coopIsHost() ? "房主" : "队友") +
+      (NET.hasMate() ? " · 已连接" : " · 等待对方");
+  }
+  function showTeamPanel(which){
+    ["teamPick", "teamJoinForm", "teamStatus"].forEach(function(id){ $(id).hidden = (id !== which); });
+  }
+  function renderTeamStatus(){
+    if(!NET.isConnected()){ showTeamPanel("teamPick"); return; }
+    showTeamPanel("teamStatus");
+    $("teamLedger").innerHTML =
+      li("房间号", "<b>" + NET.roomCode() + "</b>") +
+      li("你是", NET.isHost() ? "房主" : "队友") +
+      li("队友", NET.hasMate() ? "已连接" : "还没连上 —— 把房间号告诉他");
+    $("teamNote").textContent = NET.isHost()
+      ? "房主负责在洞窟里选路线。"
+      : "进洞窟之后，房主选好路线，你确认一下就一起下去。";
+  }
+  function openTeamPanel(){
     $("roomMsg").textContent = "";
-    $("veilRoom").hidden = true;
+    $("teamTitle").textContent = "两个人，一个房间号";
+    renderTeamStatus();
+    $("veilTeam").hidden = false;
+  }
+  function afterJoined(){
+    coopEverConnected = true;
+    $("roomMsg").textContent = "";
+    renderTeamStatus();
+    teamHint();
     coopUpdateWaitUi();
     coopStartTicker();
-    coopBootAfterJoin();
-    if(SCENE === "town" && !$("veilCave").hidden) openCave();   // 刷新洞窟弹层的按钮状态（谁是房主/队友到没到）
-  });
-  NET.on("resume", coopUpdateWaitUi);
-  NET.on("pause", coopUpdateWaitUi);
-  NET.on("_close", coopUpdateWaitUi);
+    if(SCENE === "town" && !$("veilCave").hidden) openCave();   // 刷新洞窟弹层（谁是房主/队友到没到）
+  }
 
+  NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || "连接失败"; });
+  NET.on("joined", afterJoined);
+  NET.on("resume", function(){ renderTeamStatus(); teamHint(); coopUpdateWaitUi(); });
+  NET.on("pause", function(){ renderTeamStatus(); teamHint(); coopUpdateWaitUi(); });
+  NET.on("_close", function(){ teamHint(); coopUpdateWaitUi(); });
+
+  /* 房主提的路线，两边都存一份：房主自己选中的那条，队友收到的房主选的那条。
+     只是"提议"，不会自动进 —— 真正进要么是房主收到 enterConfirm，要么是队友自己点确认。*/
   NET.on("route", function(msg){
     if(coopIsHost()) return;                 // 自己发的不用处理（服务器也不会回给发送者自己）
-    if(SCENE === "town") enterRoute(msg.id, true);
+    coopProposedRoute = msg.id;
+    if(SCENE === "town" && !$("veilCave").hidden) openCave();
+  });
+  NET.on("enterConfirm", function(msg){
+    if(!coopIsHost()) return;
+    if(SCENE === "town") enterRoute(msg.id || coopProposedRoute, true);
   });
   NET.on("practice", function(msg){
     if(coopIsHost()) return;
@@ -4294,35 +4385,43 @@ if(COOP){
     if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
   });
 
-  /* ---- 进页面先连房间 ---- */
-  $("btnRoomJoin").addEventListener("click", function(){
+  /* ---- 主城「组队」板块 ---- */
+  $("btnTeam").addEventListener("click", openTeamPanel);
+  $("btnTeamClose").addEventListener("click", function(){ $("veilTeam").hidden = true; });
+  $("btnTeamCreate").addEventListener("click", function(){
+    const code = randRoomCode();
+    coopMyName = "旅人";
+    $("roomMsg").textContent = "房间号 " + code + " —— 正在连接…";
+    NET.connect(code, coopMyName);
+  });
+  $("btnTeamJoin").addEventListener("click", function(){ showTeamPanel("teamJoinForm"); });
+  $("btnTeamBack").addEventListener("click", function(){ showTeamPanel("teamPick"); });
+  $("btnTeamJoinGo").addEventListener("click", function(){
     const code = $("roomCode").value.trim();
     if(!code){ $("roomMsg").textContent = "先填个房间号。"; return; }
     coopMyName = $("roomName").value.trim() || "旅人";
     $("roomMsg").textContent = "连接中…";
     NET.connect(code, coopMyName);
   });
-
-  var coopBooted = false;
-  function coopBootAfterJoin(){
-    if(coopBooted) return;      // 正常的开局流程只跑一次；断线重连不重来一遍（会把当前这趟弄丢）
-    coopBooted = true;
-    renderLock();
-    const s = readRun();
-    if(s){ SCENE = "run"; showScene(); resumeRun(s); }
-    else goTown();
-    refreshSaveState();
-  }
-} else {
-  /* ================= 启动（单人版，原样不动）=================
-     打开就自动接着上次存下的那一层 —— 不问、不弹窗。
-     不想接着走的话，取景框左下角有「放弃」（两步确认，点完直接结算）。 */
-  renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
-  (function boot(){
-    const s = readRun();
-    if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
-    goTown();
-  })();
-  refreshSaveState();
+  $("btnTeamLeave").addEventListener("click", function(){
+    NET.close();
+    coopEverConnected = false;      // 自己主动离开，不算"断线"，别弹断线遮罩
+    $("veilCoopWait").hidden = true;
+    coopProposedRoute = null;
+    showTeamPanel("teamPick");
+    teamHint();
+    if(SCENE === "town" && !$("veilCave").hidden) openCave();
+  });
 }
+
+/* ================= 启动 =================
+   打开就自动接着上次存下的那一层 —— 不问、不弹窗（单人版、联机版都一样，
+   联机版没组队也能先逛主城）。不想接着走的话，取景框左下角有「放弃」。 */
+renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
+(function boot(){
+  const s = readRun();
+  if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
+  goTown();
+})();
+refreshSaveState();
 })();

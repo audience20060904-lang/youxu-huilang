@@ -189,6 +189,10 @@ function onMessage(conn, msg){
       room.practice = !!msg.on;
       sendTo(room, mateIdx, {t:"practice", on: room.practice});
       break;
+    case "enterConfirm":
+      if(idx !== 1) return;              // 只有队友能发这条（房主自己选路线不用确认自己）
+      sendTo(room, mateIdx, {t:"enterConfirm", id: msg.id});
+      break;
     case "ready": {
       const what = msg.what;
       if(!what) return;

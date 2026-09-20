@@ -84,6 +84,10 @@
           <button class="place" id="btnCave" type="button">
             <i>洞</i><span class="pn">洞窟<em id="caveHint">选一条路，下去</em></span><span class="go">▸</span>
           </button>
+          <!-- 联机独有：组队面板，创建/加入房间。index.html 单人版没有这一块 -->
+          <button class="place" id="btnTeam" type="button">
+            <i>队</i><span class="pn">组队<em id="teamHint">创建或加入一个房间</em></span><span class="go">▸</span>
+          </button>
           <button class="place" id="btnTownCodex" type="button">
             <i>鉴</i><span class="pn">图鉴<em>你认过的词、拿过的遗物</em></span><span class="go">▸</span>
           </button>
@@ -236,17 +240,43 @@
   </nav>
 </div>
 
-<!-- 联机独有：进页面先连房间，这层盖在最上面，连上了才能看见下面的游戏 -->
-<div class="veil" id="veilRoom">
+<!-- 联机独有：组队面板。点主城「组队」那个板块才会打开，不再挡住整个页面 ——
+     没组队之前照样能逛主城、看图鉴、改设置，只有进洞窟需要先组好队。 -->
+<div class="veil" id="veilTeam" hidden>
   <div class="sheet">
-    <div class="eyebrow">幽墟回廊 · 联机</div>
-    <h2>两个人，一个房间号</h2>
-    <p class="note">在电脑上跑 <code>node server.js</code>，手机和电脑连<b>同一个 WiFi</b>，
-      两边都打开这个页面，输入<b>一样的房间号</b>就连上了。先连上的是房主，由房主选路线。</p>
-    <div class="rowb"><input class="code" id="roomCode" placeholder="房间号，比如 abcd" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
-    <div class="rowb"><input class="code" id="roomName" placeholder="你的名字（可不填）" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
-    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnRoomJoin" type="button">连接</button></div>
+    <div class="eyebrow">幽墟回廊 · 组队</div>
+    <h2 id="teamTitle">两个人，一个房间号</h2>
+
+    <!-- 三选一态：还没连接时显示「创建/加入」两个入口 -->
+    <div id="teamPick">
+      <p class="note">在电脑上跑 <code>node server.js</code>，两台设备连<b>同一个 WiFi</b>。
+        一个人「创建房间」拿到一个房间号，告诉另一个人，另一个人「加入房间」输入这个号就连上了。</p>
+      <div class="rowb">
+        <button class="btn primary" id="btnTeamCreate" type="button">创建房间</button>
+        <button class="btn" id="btnTeamJoin" type="button">加入房间</button>
+      </div>
+    </div>
+
+    <!-- 加入态：填房间号 -->
+    <div id="teamJoinForm" hidden>
+      <div class="rowb"><input class="code" id="roomCode" placeholder="房间号，比如 ABCD" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
+      <div class="rowb"><input class="code" id="roomName" placeholder="你的名字（可不填）" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
+      <div class="rowb">
+        <button class="btn ghost" id="btnTeamBack" type="button">返回</button>
+        <span class="sp"></span>
+        <button class="btn primary" id="btnTeamJoinGo" type="button">加入</button>
+      </div>
+    </div>
+
+    <!-- 已连接态：显示房间号/角色/队友状态 -->
+    <div id="teamStatus" hidden>
+      <div class="ledger" id="teamLedger"></div>
+      <p class="note" id="teamNote"></p>
+      <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnTeamLeave" type="button">离开房间</button></div>
+    </div>
+
     <p class="note" id="roomMsg"></p>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnTeamClose" type="button">关闭</button></div>
   </div>
 </div>
 
@@ -266,7 +296,13 @@
     <div class="routes" id="routeList"></div>
     <button class="practice" id="btnPractice" type="button" aria-pressed="false">练习模式 · 关
       <em>开着：护甲 +50（每下只掉 1 血），但攻击减半</em></button>
-    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnCloseCave" type="button">回镇上</button></div>
+    <!-- 联机独有：房主选完路线，队友要点这个才会一起下去 -->
+    <p class="note" id="caveConfirmNote" hidden></p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnCloseCave" type="button">回镇上</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnCaveConfirm" type="button" hidden>确认，一起下去</button>
+    </div>
   </div>
 </div>
 
