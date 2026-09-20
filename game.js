@@ -1969,8 +1969,10 @@ function answer(btn, ok){
     if(B.wager && hasRelic("gambler")) flat += 2;                           // 赌徒：冒对了再 +2 点伤
     let surge = false;
     if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
-    // 镜盾：每 MIRROR_PER 点护盾 +1 点伤（③层：吃暴击、被护甲减，不被百分比放大）
-    if(hasRelic("mirror")) flat += Math.floor((P.shield || 0) / MIRROR_PER);
+    /* 镜盾：每 MIRROR_PER 点护盾 +1 点伤（③层：吃暴击、被护甲减，不被百分比放大）。
+       ⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
+       凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
+    if(hasRelic("mirror")) flat += Math.min(MIRROR_MAX, Math.floor((P.shield || 0) / MIRROR_PER));
 
     // 第四层 · 额外伤害（无视护甲、不吃暴击，单独一笔）
     let extra = 0;
