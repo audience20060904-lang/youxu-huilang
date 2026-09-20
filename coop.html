@@ -1,0 +1,506 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>幽墟回廊 · 联机</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<!-- 报错横幅：跟单人版一模一样，出问题直接显示在页面顶部 -->
+<div class="errbar" id="errbar" hidden>
+  <span class="msg" id="errmsg"></span>
+  <button type="button" id="errcopy">复制</button>
+  <button type="button" id="errhide">×</button>
+</div>
+<script>
+(function(){
+  var seen = [];
+  function show(text){
+    if(seen.indexOf(text) >= 0) return;
+    seen.push(text);
+    var bar = document.getElementById("errbar"), msg = document.getElementById("errmsg");
+    if(!bar || !msg) return;
+    msg.textContent = seen.join("\n");
+    bar.hidden = false;
+  }
+  window.showErr = show;
+  window.addEventListener("error", function(e){
+    if(e.target && e.target.tagName && /SCRIPT|LINK/.test(e.target.tagName)){
+      show("文件加载失败：" + (e.target.src || e.target.href || "?"));
+      return;
+    }
+    show((e.message || "错误") + "  @ " + String(e.filename || "").split("/").pop() + ":" + e.lineno);
+  }, true);
+  window.addEventListener("unhandledrejection", function(e){
+    show("未捕获的 Promise：" + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function(t){
+    document.addEventListener(t, function(e){ e.preventDefault(); }, {passive:false});
+  });
+  var lastTap = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function(e){
+    var t = e.changedTouches && e.changedTouches[0];
+    var now = Date.now(), x = t ? t.clientX : 0, y = t ? t.clientY : 0;
+    var near = Math.abs(x - lastX) < 30 && Math.abs(y - lastY) < 30;
+    var live = e.target && e.target.closest && e.target.closest("button,input,textarea,label,select,a,.c");
+    if(now - lastTap <= 300 && near && !live && e.cancelable) e.preventDefault();
+    lastTap = now; lastX = x; lastY = y;
+  }, {passive:false});
+  document.addEventListener("dblclick", function(e){ e.preventDefault(); }, {passive:false});
+
+  document.addEventListener("click", function(ev){
+    if(ev.target.id === "errhide"){ document.getElementById("errbar").hidden = true; }
+    if(ev.target.id === "errcopy"){
+      var t = document.getElementById("errmsg").textContent;
+      try{ navigator.clipboard.writeText(t); ev.target.textContent = "已复制"; }
+      catch(err){ ev.target.textContent = "复制失败"; }
+    }
+  });
+})();
+</script>
+
+<div class="app">
+  <header class="top" id="topBar">
+    <div class="title"><h1>幽墟回廊</h1><span class="ch" id="chapterTag">第一章 · 石廊　A1</span></div>
+  </header>
+
+  <div class="views">
+
+    <section class="view on" id="viewAdv">
+      <div class="town" id="townPanel" hidden>
+        <div class="townhead">
+          <div class="eyebrow">主城 · 灰岩镇 · 联机</div>
+          <h2 id="townTitle">你站在镇口</h2>
+          <p class="fallline" id="townFlavor">石廊的风从洞口吹上来，带着铁锈味。</p>
+        </div>
+        <div class="bank">
+          <div class="bcell"><span class="k">宝石</span><span class="v gold" id="tGold">0</span></div>
+          <div class="bcell"><span class="k">最深</span><span class="v" id="tBest">—</span></div>
+          <div class="bcell"><span class="k">通关</span><span class="v" id="tClears">0</span></div>
+          <div class="bcell"><span class="k">倒下</span><span class="v" id="tDeaths">0</span></div>
+        </div>
+        <div class="places">
+          <button class="place" id="btnCave" type="button">
+            <i>洞</i><span class="pn">洞窟<em id="caveHint">选一条路，下去</em></span><span class="go">▸</span>
+          </button>
+          <button class="place" id="btnTownCodex" type="button">
+            <i>鉴</i><span class="pn">图鉴<em>你认过的词、拿过的遗物</em></span><span class="go">▸</span>
+          </button>
+          <div class="place off">
+            <i>祝</i><span class="pn">祝福<em>用宝石换永久的好处 —— 还没开门</em></span>
+          </div>
+        </div>
+        <p class="note">进洞后拿到的<b>遗物</b>和<b>金币</b>只在那一趟里算数。出来时按这一趟的表现<b>结算成宝石</b>带回镇上。</p>
+      </div>
+
+      <div class="stage" id="stageBox">
+        <div class="map" id="map"></div>
+        <div class="mapui" id="mapUi">
+          <div class="hudline" id="hudRow">
+            <span class="hi"><i id="hChap">石廊</i><b id="hFloor">1/50</b></span>
+            <span class="hi"><i>等级</i><b id="hLevel">1</b></span>
+            <span class="hi gold"><i>金</i><b id="hGold">0</b></span>
+            <span class="hi left"><i>敌</i><b id="hLeft">3</b></span>
+          </div>
+          <div class="bars" id="barsRow">
+            <div class="hpbar" id="hpBar">
+              <div class="fill" id="hpFill"></div>
+              <div class="sh" id="hpShield"></div>
+              <div class="txt" id="hpTxt">20 / 20</div>
+            </div>
+            <div class="xpbar"><div class="fill" id="xpFill"></div></div>
+          </div>
+          <!-- 联机独有：队友状态条（血/连击/遗物数），index.html 里没有这一块 -->
+          <div class="hudline mateline" id="mateRow" hidden>
+            <span class="hi"><i>队友</i><b id="mateName">—</b></span>
+            <span class="hi"><i>血</i><b id="mateHp">—</b></span>
+            <span class="hi"><i>连击</i><b id="mateCombo">×0</b></span>
+            <span class="hi"><i>遗物</i><b id="mateRelics">0</b></span>
+          </div>
+        </div>
+        <div class="mapacts">
+          <button class="giveup" id="btnAbandon" type="button">放弃</button>
+          <button class="giveup find" id="btnPathfind" type="button" aria-pressed="false">寻路</button>
+        </div>
+        <div class="mapacts right">
+          <button class="giveup lock" id="btnLockWager" type="button" aria-pressed="false">锁定冒险</button>
+        </div>
+      </div>
+
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="view" id="viewInfo">
+      <div class="panel">
+        <div class="phead">属性 Attributes</div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="panel" id="panelRun" hidden>
+        <div class="phead">本局战绩</div>
+        <div class="stats" id="runStats"></div>
+      </div>
+      <div class="panel">
+        <div class="phead">词汇记录</div>
+        <div class="stats" id="vocab"></div>
+        <button class="btn" id="btnCodex" type="button">查看图鉴 · 跨局记录</button>
+      </div>
+    </section>
+
+    <section class="view" id="viewRelic">
+      <div class="panel grow">
+        <div class="phead"><span id="relicHead">遗物 0</span></div>
+        <div class="relics own" id="relicOwned"></div>
+      </div>
+      <div class="panel fusebar">
+        <div class="phead" id="fuseHead">合成 · 3 件同品质 + 300 金 → 1 件更高</div>
+        <div class="rowb">
+          <button class="btn" id="btnFusePick" type="button">选择</button>
+          <button class="btn primary" id="btnFuseGo" type="button" disabled>合成</button>
+        </div>
+        <p class="note" id="fuseState">点「选择」，然后在上面挑 3 件同品质的。</p>
+      </div>
+    </section>
+
+    <section class="view" id="viewSet">
+      <div class="panel">
+        <div class="phead">设置 Settings</div>
+        <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>答完自动朗读</b><i>每题答完念一遍这个词；也能自己点题面右上角的 🔊</i></span></label>
+        <label class="setopt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
+      </div>
+      <div class="panel">
+        <div class="phead">联机</div>
+        <div class="ledger" id="coopInfo"></div>
+        <p class="note" id="coopState">—</p>
+      </div>
+      <div class="panel">
+        <div class="phead">存档 Save</div>
+        <div class="ledger" id="saveInfo"></div>
+        <p class="note" id="saveState">打开网页自动读档；存档只在进入关卡、下一层、回到主城时写。</p>
+        <div class="rowb">
+          <button class="btn primary" id="btnResumeHere" type="button" hidden>继续上次探索</button>
+        </div>
+      </div>
+      <div class="panel" id="panelSaveFile" hidden>
+        <div class="phead">本地存档文件</div>
+        <p class="note">把这台设备上的<b>全部存档</b>存成一个文件，放在你自己手里 ——
+          词汇熟练度、遗物图鉴、探索记录、镇上宝石，连没走完的那一趟都在里面。
+          换设备、换浏览器、清过缓存，选回这个文件就能接着玩。</p>
+        <div class="rowb">
+          <button class="btn" id="btnSaveFile" type="button">下载存档文件</button>
+          <button class="btn" id="btnPickFile" type="button">读取存档文件…</button>
+        </div>
+        <input type="file" id="fileIn" accept=".json,.txt,application/json" hidden>
+        <div class="drop" id="dropZone">把存档文件拖到这里也行</div>
+        <div class="filecard" id="fileCard" hidden>
+          <div class="eyebrow" id="fileName">存档文件</div>
+          <div class="ledger" id="fileInfo"></div>
+          <div class="rowb">
+            <button class="btn primary" id="btnMergeFile" type="button">合并导入</button>
+            <button class="btn danger" id="btnOverwriteFile" type="button">整档覆盖</button>
+            <span class="sp"></span>
+            <button class="btn ghost" id="btnCancelFile" type="button">取消</button>
+          </div>
+          <p class="note"><b>合并导入</b>两边取更好的那份，不会弄丢这台设备上的进度；
+            <b>整档覆盖</b>把这台设备上的存档整个换成文件里的，无法撤销。</p>
+        </div>
+        <p class="note" id="fileMsg"></p>
+      </div>
+      <div class="panel" id="panelCode" hidden>
+        <div class="phead">跨设备 · 导出码</div>
+        <p class="note">不方便传文件时用这个：把<b>词汇熟练度、遗物图鉴、探索记录</b>压成一段码，
+          粘到另一台设备导入。本局进度不在里面 —— 要连探索一起带走请用上面的存档文件。</p>
+        <textarea class="code" id="codeOut" readonly rows="3" placeholder="点下面的按钮生成"></textarea>
+        <div class="rowb">
+          <button class="btn" id="btnGenCode" type="button">生成导出码</button>
+          <button class="btn" id="btnCopyCode" type="button">复制</button>
+        </div>
+        <textarea class="code" id="codeIn" rows="3" placeholder="把另一台设备的码粘在这里"></textarea>
+        <button class="btn" id="btnImport" type="button">导入</button>
+        <p class="note" id="codeMsg"></p>
+        <p class="note">导入是<b>取两边更好的那份</b>合并，不会覆盖掉你在这台设备上的进度。</p>
+      </div>
+      <div class="panel">
+        <div class="phead">别的</div>
+        <button class="btn" id="btnHelp" type="button">玩法说明</button>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="tabbar">
+    <button class="nav on" data-view="viewAdv" type="button"><i>⌖</i><span>冒险</span></button>
+    <button class="nav" data-view="viewInfo" type="button"><i>◈</i><span>信息</span></button>
+    <button class="nav" data-view="viewRelic" type="button"><i>✦</i><span>遗物</span><em class="dot" id="bagDot" hidden></em></button>
+    <button class="nav" data-view="viewSet" type="button"><i>⚙</i><span>设置</span></button>
+  </nav>
+</div>
+
+<!-- 联机独有：进页面先连房间，这层盖在最上面，连上了才能看见下面的游戏 -->
+<div class="veil" id="veilRoom">
+  <div class="sheet">
+    <div class="eyebrow">幽墟回廊 · 联机</div>
+    <h2>两个人，一个房间号</h2>
+    <p class="note">在电脑上跑 <code>node server.js</code>，手机和电脑连<b>同一个 WiFi</b>，
+      两边都打开这个页面，输入<b>一样的房间号</b>就连上了。先连上的是房主，由房主选路线。</p>
+    <div class="rowb"><input class="code" id="roomCode" placeholder="房间号，比如 abcd" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
+    <div class="rowb"><input class="code" id="roomName" placeholder="你的名字（可不填）" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnRoomJoin" type="button">连接</button></div>
+    <p class="note" id="roomMsg"></p>
+  </div>
+</div>
+
+<!-- 联机独有：断线/等待队友的遮罩 -->
+<div class="veil" id="veilCoopWait" hidden>
+  <div class="sheet">
+    <div class="eyebrow">联机</div>
+    <h2 id="coopWaitTitle">等待队友…</h2>
+    <p class="note" id="coopWaitNote">网络断了会自动重连，接上之后继续走。</p>
+  </div>
+</div>
+
+<div class="veil" id="veilCave" hidden>
+  <div class="sheet">
+    <div class="eyebrow">洞窟 · 选一条路</div>
+    <h2 id="caveTitle">下去哪里？</h2>
+    <div class="routes" id="routeList"></div>
+    <button class="practice" id="btnPractice" type="button" aria-pressed="false">练习模式 · 关
+      <em>开着：护甲 +50（每下只掉 1 血），但攻击减半</em></button>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnCloseCave" type="button">回镇上</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilBattle" hidden>
+  <div class="sheet battle">
+    <div class="foe">
+      <div class="portrait" id="foeArt"></div>
+      <div class="foe-info">
+        <div class="foe-tag" id="foeTag">遭遇</div>
+        <div class="foe-name" id="foeName">灰鼠</div>
+        <div class="foe-weak" id="foeWeak" hidden></div>
+        <div class="fbar"><div class="fill" id="foeFill"></div><div class="txt" id="foeTxt"></div></div>
+      </div>
+    </div>
+
+    <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
+
+    <div class="qcard" id="qcard">
+      <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
+      <div class="qlabel" id="qLabel">这个词是什么意思？</div>
+      <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
+      <div class="qword" id="qWord">cat</div>
+      <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>
+    </div>
+
+    <div class="wagerrow" id="wagerRow">
+      <button class="wager" id="btnWager" type="button">冒险 · 我确定
+        <em>对了伤害翻倍，错了受伤翻倍</em></button>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="spellbar" id="spellBar" hidden>
+      <button class="spkline" id="btnSpellSpeak" type="button" aria-label="播放读音">🔊</button>
+      <div class="spellrow" id="spellRow"></div>
+    </div>
+    <div class="letters" id="letters" hidden></div>
+
+    <div class="verdict" id="verdict"></div>
+
+    <div class="mybar">
+      <div class="me" id="meArt"></div>
+      <div class="col">
+        <div class="hpbar" id="bHpBar"><div class="fill" id="bHpFill"></div><div class="sh" id="bHpShield"></div><div class="txt" id="bHpTxt"></div></div>
+      </div>
+    </div>
+
+    <div class="rowb">
+      <button class="btn ghost" id="btnFlee" type="button">撤退 · 掉一半血</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnRescue" type="button" hidden>补救 · 5s</button>
+      <button class="btn primary" id="btnNextQ" type="button" hidden>继续</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilSpring" hidden>
+  <div class="sheet">
+    <div class="eyebrow">石缝里的泉</div>
+    <h2>一小汪水，还冒着气泡</h2>
+    <div class="ledger" id="springLedger"></div>
+    <p class="note" id="springNote">这口泉只够喝一次 —— 喝完它就干了。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnSpringSkip" type="button">先留着</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnSpringDrink" type="button">掬一捧喝下</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilStair" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="stairEyebrow">石廊 第 1 层 · 已清空</div>
+    <h2 id="stairTitle">阶梯通向第 2 层</h2>
+    <p class="note" id="stairNote">下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnStairStay" type="button">再待一会儿</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnStairGo" type="button">下去 ▼</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilAltar" hidden>
+  <div class="sheet">
+    <div class="eyebrow">血祭坛</div>
+    <h2>石台上有一道浅槽</h2>
+    <p class="fallline">槽里积着暗色的东西，还没干透。</p>
+    <div class="ledger" id="altarCost"></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnAltarSkip" type="button">走开</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnAltarPay" type="button">割一刀</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilForge" hidden>
+  <div class="sheet">
+    <div class="eyebrow">石台 · 炉膛还热着</div>
+    <h2>把一件遗物扔进去？</h2>
+    <p class="note">三分之一<b>升一档</b>，三分之一<b>换一件同档的</b>，三分之一<b>降一档</b>。扔进去就收不回来了。</p>
+    <div class="relics" id="forgeList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnForgeSkip" type="button">什么也不扔</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilChest" hidden>
+  <div class="sheet">
+    <div class="eyebrow">上锁的木箱</div>
+    <h2 id="chestTitle">锁上刻着一个词</h2>
+    <p class="note">把它<b>拼对</b>，箱子就开。拼错，锁会彻底咬死 —— 只有一次机会。</p>
+    <div class="qcard">
+      <div class="qlabel" id="chestHint">这个词是什么意思？</div>
+      <div class="qword" id="chestClue">cat</div>
+    </div>
+    <div class="spellrow" id="chestRow"></div>
+    <div class="letters" id="chestLetters"></div>
+    <div class="verdict" id="chestVerdict"></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnChestLeave" type="button">先不开，走了</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnChestDone" type="button" hidden>继续</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilShop" hidden>
+  <div class="sheet">
+    <div class="eyebrow">游商</div>
+    <h2>他没抬头，只把布摊开</h2>
+    <p class="note">「洞里的钱，洞里花。带出去的，我也收不着。」<span id="shopGold"></span></p>
+    <div class="shop" id="shopList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnShopLeave" type="button">走了</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilSwap" hidden>
+  <div class="sheet">
+    <div class="eyebrow">带不下了</div>
+    <h2 id="swapTitle">换掉哪一件？</h2>
+    <div class="relic hot" id="swapNew"></div>
+    <p class="note">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
+    <div class="relics" id="swapList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilRelic" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="relicEyebrow">这一层清干净了</div>
+    <h2 id="relicTitle">石廊给了你一样东西</h2>
+    <p class="note">遗物只在这一趟里管用。选一个。</p>
+    <div class="relics" id="relicList"></div>
+    <button class="btn ghost" id="btnRelicRedraw" type="button" hidden>重掷 · 换一批</button>
+  </div>
+</div>
+
+<div class="veil" id="veilEnd" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="endEyebrow">本次探索结束</div>
+    <h2 id="endTitle">你倒在了石廊里</h2>
+    <div id="endAcc"></div>
+    <div class="ledger" id="endStats"></div>
+    <div class="eyebrow">这一趟遇到的词</div>
+    <div class="codex" id="endWords"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnAgain" type="button">再来一次</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilFuse" hidden>
+  <div class="sheet">
+    <div class="eyebrow">合成</div>
+    <h2 id="fuseTitle">3 件同品质 → 1 件更高</h2>
+    <div class="ledger" id="fuseLedger"></div>
+    <p class="note">换到哪一件是随机的，砸下去就收不回来了。</p>
+    <div class="rowb">
+      <button class="btn ghost" id="btnFuseNo" type="button">再想想</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnFuseYes" type="button">合成</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilFuseGot" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="fuseGotEyebrow">合成</div>
+    <h2 id="fuseGotTitle">两件，挑一件</h2>
+    <div class="relics" id="fuseGotList"></div>
+  </div>
+</div>
+
+<div class="veil" id="veilCodex" hidden>
+  <div class="sheet">
+    <div class="eyebrow">图鉴 · 跨局永久记录</div>
+    <div class="tabs">
+      <button class="tab on" data-tab="word" type="button">词库</button>
+      <button class="tab" data-tab="leg" type="button">遗物</button>
+    </div>
+    <h2 id="codexTitle">词库</h2>
+    <div class="tally" id="codexTally"></div>
+    <input class="findbox" id="codexFind" type="search" autocomplete="off"
+           placeholder="搜索：英文 / 中文 / 遗物名">
+    <div class="codex" id="codexList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseCodex" type="button">关闭</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilHelp" hidden>
+  <div class="sheet">
+    <div class="eyebrow">幽墟回廊 · 玩法</div>
+    <h2>词就是你的剑</h2>
+    <div class="rules">
+      <ul>
+        <li><b>联机</b>：这是<b>局域网双人合作</b>版。两人看到的地图和怪一样，由<b>房主</b>决定选哪条路。
+          清怪捡金阶段要<b>两人都点寻路</b>才会一起走；下楼前<b>两人都要点「下去」</b>才会真的下去。
+          其它规则和单人版一样。</li>
+        <li><b>走路</b>：<b>点地图上任何走过的地面，角色会自己找路过去</b>。点怪物就走过去开战，点 <span style="color:var(--venom)">▼</span> 就走去下楼。</li>
+        <li><b>探索</b>：怪物待在原地不动。每层清完怪，下行阶梯才会出现。</li>
+        <li><b>战斗</b>：走到怪物身上就进入战斗。答对砍它一刀，答错挨它一口。</li>
+        <li><b>词汇</b>：一章只出一个难度的词，章与章之间不重复。</li>
+        <li><b>遗物</b>：每清完一层三选一，只在这一趟里管用。</li>
+        <li><b>存档</b>：跟单人版共用同一套 localStorage —— 词汇熟练度、遗物图鉴、宝石都是这台设备自己的。</li>
+      </ul>
+    </div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseHelp" type="button">关闭</button></div>
+  </div>
+</div>
+
+<!-- 加载顺序不能乱：util 提供全局函数，data 依赖 util，net 提供联机通道，game 依赖全部。
+     window.__COOP 必须在 game.js 之前设好。 -->
+<script src="util.js"></script>
+<script src="words-a1.js"></script>
+<script src="content.js"></script>
+<script src="art.js"></script>
+<script src="net.js"></script>
+<script>window.__COOP = true;</script>
+<script src="game.js"></script>
+</body></html>

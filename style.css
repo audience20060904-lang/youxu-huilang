@@ -202,6 +202,9 @@ body{
 .mapui .hpbar{height:15px;background:rgba(231,224,207,.88)}
 .mapui .hpbar .txt{font-size:11px}
 .mapui .xpbar{height:6px}
+/* 联机（第一期）：队友状态条，跟主状态行同一套样式，稍微淡一号区分开。
+   index.html 里没有 #mateRow 这个元素，这条规则在单人版里没有目标，等于不存在。 */
+.mapui .hudline.mateline{opacity:.82}
 .c{display:grid;place-items:center;font-family:var(--mono);line-height:1;user-select:none;
    width:var(--cell);height:var(--cell);font-size:calc(var(--cell) * .68);font-weight:600;
    position:relative;transition:background .12s ease;background:var(--unseen)}
@@ -211,6 +214,12 @@ body{
   border-radius:50%;opacity:.9;animation:ping 1.1s ease-out infinite}
 @keyframes ping{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.15);opacity:.25}}
 @media (prefers-reduced-motion:reduce){.c.goal::after{animation:none}}
+
+/* 联机（第一期）：队友棋子。纯视觉叠在队友最后上报的格子里，偏右下、缩小一号、半透明 ——
+   不占格子、不进寻路，见 game.js 的 render()。index.html 单人版永远不会画出这个类。 */
+.matepawn{position:absolute;right:2%;bottom:2%;width:60%;height:60%;
+  pointer-events:none;opacity:.7;filter:saturate(.65)}
+.matepawn svg{width:100%;height:100%;display:block}
 
 /* 地格底色：先定底 */
 .c.dark{background:var(--unseen);color:transparent}

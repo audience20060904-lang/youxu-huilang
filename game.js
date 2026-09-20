@@ -11,6 +11,21 @@ const W = CHAPTER.W, H = CHAPTER.H, FLOORS = CHAPTER.floors;
    所以下面那些「最后一层」「章末 Boss」「通关」的分支在无尽章里自动全部走不到。 */
 function floorMax(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : FLOORS; }
 function isEndless(){ return !!(CH && CH.endless); }
+
+/* ================= 联机（第一期 · 骨架）=================
+   COOP 只在 coop.html 里为真（它在 game.js 之前设了 window.__COOP）。
+   index.html 一个字没变，COOP 在那边恒为 false —— 所有下面带 if(COOP) 的分支单人版都走不到。
+   详细设计和踩过的坑见仓库根目录的 联机方案.md，改联机相关的东西记得回去同步那份文档。*/
+const COOP = !!window.__COOP;
+var coopMoveWant = false;      // 本地「已经点了寻路」的意愿，真正开始走要等服务器的 go
+var coopMateBusy = false;      // 队友是不是在忙（战斗/弹层）—— 房主等它变 false 才敢算下一步
+var coopPendingFloor = false;  // 非房主：正等着房主广播这一层的世界包
+var coopMateTimer = null;      // 非房主：断点续走的小轮询（等 G.paused 解开再继续 walkPath）
+var coopMateX = null, coopMateY = null;   // 队友最后上报的位置，只给渲染队友棋子用
+var coopStatusTimer = null;               // 定时把自己的 hp/连击/遗物数广播出去（队友状态条）
+var coopMateInfo = null;       // 队友最后一次上报的状态（渲染 #mateRow 用）
+var coopMyName = "";           // 自己填的名字，广播给队友状态条用
+function coopIsHost(){ return !COOP || (window.NET && NET.isHost()); }
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 
 /* 所有落盘都过这一道。util 的 save 写不进去会返回 false（无痕模式、本地存储被禁、配额满），
@@ -149,7 +164,9 @@ function nextFloor(){
   /* 盲斗：每下一层楼梯**直接往下 BLIND_STEP 层**（用户 2026-09）。
      ⚠️ 撞到章末那一层就停在那儿 —— 不能让人跳过章末 Boss 直接通关。*/
   const from = G.floor;
-  const jump = (P && P.relics && from > 0 && from < floorMax() && hasRelic("blind")) ? BLIND_STEP : 1;
+  // 盲斗联机里不跳层（联机方案.md 拍板过）：跳层会把整层的怪和金币一起跳过，
+  // 在共享世界里没法公平地分给两个人；一击必杀本身已经够强，跳层单独关掉就行。
+  const jump = (P && P.relics && from > 0 && from < floorMax() && hasRelic("blind") && !COOP) ? BLIND_STEP : 1;
   G.floor = jump > 1 ? Math.min(from + jump, floorMax()) : from + 1;
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
@@ -175,7 +192,12 @@ function nextFloor(){
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
   if(G.floor > floorMax()){ chapterClear(); return; }   // 无尽章永远走不到这儿
+  // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
+  // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
+  // （包括最后的 commit —— 这儿 G.map 还是上一层的，先不存档，免得存进去一份错配的层）。
+  if(COOP && !coopIsHost()){ coopPendingFloor = true; say("等待房主生成这一层的地图…", "sys"); return; }
   genFloor();
+  if(COOP) coopBroadcastWorld();
   if(hasRelic("water")) drinkAll();     // 「水」：泉是 genFloor 摆的，所以只能放在它后面
   fov();
   buildGrid();
@@ -189,6 +211,77 @@ function nextFloor(){
      : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
      : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom) ? "hurt" : "sys");
   commit(true);          // 存档点之二：下一层
+}
+/* ===== 联机 · 世界包（第一期）=====
+   房主 genFloor() 跑完之后，把这一层「布局共享」的那部分（地图/怪的初始状态/物件/楼梯/出生点）
+   打包广播；非房主收到后原样铺场。**不带 P**（各自的角色状态是自己的），
+   也不带 seen（地牢一直全亮，applyCoopWorld 里现叫一次 fov() 就够）。
+   格式跟 writeRun() 的打包方式是同一路子（packRow 就是那边定义的）。*/
+function packWorld(){
+  return {
+    ch: CH.id,
+    map: G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
+    stair: G.stair, rooms: G.rooms || null,
+    px: P.x, py: P.y,
+    mobs: G.mobs.map(function(m){
+      return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0};
+    }),
+    things: G.things
+  };
+}
+function coopBroadcastWorld(){
+  if(!COOP || !window.NET) return;
+  NET.send({t:"world", floor: G.floor, pack: packWorld()});
+}
+/* 非房主收到世界包：照着铺场，剩下的（fov/建格子/渲染/日志/存档）
+   跟 nextFloor() 原来那条尾巴一样，只是不用再跑一遍 genFloor()。*/
+function applyCoopWorld(msg){
+  const pack = msg.pack;
+  if(!pack) return;
+  if(!P || !G || G.over || SCENE !== "run"){
+    // 队友重连 / 刚打开页面就赶上房主正在进行的一趟：这里现建一份新的 P/G（照抄 newRun() 那一份）
+    setChapter(pack.ch);
+    P = { x:0, y:0, lvl:1, xp:0, hp:CHAPTER.playerBase.hp, gold:0, kills:0,
+          right:0, wrong:0, seenWords:[], used:{}, combo:0, maxCombo:0,
+          relics:[], haunt:[], hauntAt:{}, undying:false,
+          spent:0, bonusAtk:0, bonusHp:0, chew:false, charge:0,
+          shield:0, aegisN:0, recoil:0, revived:false,
+          practice: !!practiceOn, accF:{} };
+    G = { floor:0, paused:false, over:false };
+    comboShown = null; resetHpFx(); autoOff();
+    SCENE = "run"; showScene();
+    $("log").innerHTML = "";
+    hideAll();
+    say("石门在身后合上。走廊里只有火把的回声。", "sys");
+  }
+  setChapter(pack.ch);
+  G.floor = msg.floor;
+  G.map = pack.map.split("|").map(function(row){ return row.split("").map(function(c){ return c === "1" ? 1 : 0; }); });
+  G.seen = []; G.vis = [];
+  for(let y=0;y<H;y++){ G.seen.push(new Array(W).fill(false)); G.vis.push(new Array(W).fill(false)); }
+  G.stair = pack.stair; G.rooms = pack.rooms || null; G.things = pack.things || []; G.mobs = [];
+  (pack.mobs || []).forEach(function(m){
+    const def = foeDef(m.d);
+    if(!def) return;
+    const boss = !!def.boss;
+    G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
+                 cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
+                 hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:false});
+  });
+  P.x = pack.px; P.y = pack.py;
+  coopPendingFloor = false;
+  if(hasRelic("water")) drinkAll();
+  fov();
+  buildGrid();
+  render();
+  lockInput(320);
+  const last = G.floor === floorMax();
+  const bossRoom = isBossFloor(G.floor);
+  say("—— " + CH.name + " 第 " + G.floor + " 层" + (bossRoom ? " · BOSS" : "") + " ——", "crit");
+  say(last ? "空气冷得发硬。这一层尽头有东西在等。"
+     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
+     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom) ? "hurt" : "sys");
+  commit(true);
 }
 /* ===== 房间图 =====
    地图切成 SLOT_C × SLOT_R 个槽位，每个槽位 SLOT_W × SLOT_H 格（4×4 个 8×6 的槽，加一圈边墙 = 33×25）。
@@ -640,6 +733,17 @@ function render(){
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
   }
+  // 联机：队友棋子（逻辑不占格子，纯视觉叠一层在队友最后上报的位置上，见 coopMateX/Y）
+  if(COOP && coopMateX != null && coopMateY != null &&
+     coopMateX >= 0 && coopMateY >= 0 && coopMateX < W && coopMateY < H){
+    const mc = cells[coopMateY * W + coopMateX];
+    if(mc){
+      const mark = document.createElement("div");
+      mark.className = "matepawn";
+      mark.innerHTML = HERO;
+      mc.appendChild(mark);
+    }
+  }
   camera();
   renderHud();
 }
@@ -665,6 +769,32 @@ function renderHud(){
   $("xpFill").style.width = Math.min(100, P.xp / need * 100) + "%";
 
   renderSheets(s);
+}
+/* 联机：队友状态条（血/连击/遗物数），数据来自 coopMateInfo（NET.on("mate",...) 里更新的）。
+   index.html 里没有 #mateRow，$() 拿到 null 就直接跳过 —— 单人版调不到这个函数。*/
+function renderMate(){
+  const row = $("mateRow");
+  if(!row) return;
+  if(!COOP || !coopMateInfo){ row.hidden = true; return; }
+  row.hidden = false;
+  $("mateName").textContent = coopMateInfo.name || "队友";
+  $("mateHp").textContent = (coopMateInfo.hp != null) ? (coopMateInfo.hp + "/" + coopMateInfo.maxHp) : "—";
+  $("mateCombo").textContent = "×" + (coopMateInfo.combo || 0);
+  $("mateRelics").textContent = coopMateInfo.relics || 0;
+}
+/* 联机：定时把自己的状态广播出去，给队友状态条 + 房主的「队友忙不忙」判断用。
+   500ms 一次，够用，也不至于把连接刷满。*/
+function coopSendMe(){
+  if(!COOP || !window.NET || SCENE !== "run" || !P || !G) return;
+  const s = stats();
+  NET.send({t:"me", name: coopMyName || "队友", hp: Math.max(0, P.hp), maxHp: s.maxHp,
+            combo: P.combo || 0, relics: (P.relics || []).length,
+            busy: !!G.paused, clear: G.mobs ? G.mobs.length === 0 : true,
+            x: P.x, y: P.y});
+}
+function coopStartTicker(){
+  if(coopStatusTimer) return;
+  coopStatusTimer = setInterval(coopSendMe, 500);
 }
 function st(k,v){ return "<span class=\"s\">" + k + "<b>" + v + "</b></span>"; }
 /* 血条：低于 35% 变深红，低于 15% 再加搏动。地牢和战斗界面共用一套 */
@@ -719,6 +849,7 @@ function renderSheets(s){
     st("正确率", acc) + st("击杀", P.kills) +
     st("等级", "Lv." + P.lvl) + st("经验", P.xp + " / " + xpNeed(P.lvl));
   renderRelics();
+  renderMate();
 }
 
 /* ================= 移动与寻路 ================= */
@@ -790,6 +921,8 @@ function goTo(tx, ty, blind){
   }
   cancelWalk();
   walkPath = path;
+  // 联机 · 只有房主真的算路，算完把这条路广播给队友，队友照着走同一条路（见 net 的 "path" 处理）
+  if(COOP && coopIsHost() && window.NET) NET.send({t:"path", steps: path.map(function(p){ return {x:p.x, y:p.y}; })});
   G.goal = {x:tx, y:ty};
   render();
   stepWalk();
@@ -858,9 +991,17 @@ function autoTick(){
   autoTimer = null;
   if(!autoOn) return;
   if(!P || !G || !G.map || G.over || SCENE !== "run"){ autoOff(); return; }
+  // 联机：只有房主跑这条 —— 队友不自己算路，全靠 "path" 消息（见 coopMateResume）
+  if(COOP && !coopIsHost()) return;
+  // 联机：队友还在忙（战斗/弹层）就先别算下一步，免得把他落在原地（联机方案.md 的移动锁）
+  if(COOP && coopMateBusy){ autoWake(300); return; }
   if(G.paused){ autoWake(400); return; }                  // 弹层开着，等它关
   if(walkPath && walkPath.length){ autoWake(160); return; }   // 还在走，别插手
-  if(!autoPath()){ autoOff(); return; }                   // 没地方可去了，自己关掉
+  if(!autoPath()){
+    if(COOP){ coopMoveWant = false; if(window.NET) NET.send({t:"ready", what:"move", on:false}); autoOff(); }
+    else autoOff();
+    return;                   // 没地方可去了，自己关掉
+  }
   autoWake(200);
 }
 function autoOff(){
@@ -949,6 +1090,8 @@ function askStair(){
       "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
   hideAll();
   $("veilStair").hidden = false;
+  $("btnStairGo").disabled = false;
+  $("btnStairGo").textContent = "下去 ▼";
   $("btnStairGo").focus();
 }
 /* 「再待一会儿」之后自己从阶梯上退开一格（用户 2026-09）——
@@ -999,7 +1142,7 @@ function startBattle(m){
   $("foeName").textContent = m.name;
   $("foeTag").textContent = m.boss ? "章节首领 · 全部词类" : ("遭遇 · " + CAT_CN[m.cat] + "类词");
   showWeak(m);
-  $("btnFlee").hidden = false;
+  $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("veilBattle").hidden = false;
   say("你撞上了 " + m.name + "。", "hurt");
   if(P.combo > 0) say("上一场的连击 <b>×" + P.combo + "</b> 还留着 —— 别断。", "crit");
@@ -1242,7 +1385,7 @@ function nextQuestion(){
   $("btnNextQ").hidden = true;
   $("btnNextQ").textContent = "继续";
   $("btnRescue").hidden = true;
-  $("btnFlee").hidden = false;
+  $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("spellBar").hidden = true;
   $("letters").hidden = true;
   $("opts").hidden = false;
@@ -2098,6 +2241,7 @@ function closeBattleWin(){
    最低留 1 点 —— 撤退不会把人撤死，但撤完基本只能去找泉水。
    怪身上掉的血照旧留着，回头还能接着打。*/
 function flee(){
+  if(COOP) return;    // 联机里禁用撤退（联机方案.md）：碰上了就必须打完，按钮在 startBattle() 里就藏掉了
   if(!B || B.locked) return;
   autoOff();          // 主动撤退就是「我不想打这只」，别让自动寻路扭头又走回去
   clearQTimer();
@@ -2744,7 +2888,11 @@ function rc(r){ return "<span style=\"color:var(--q" + (r.r || 0) + ")\">" + r.n
 /* 还没拿过的遗物；全拿全了就返回空数组 */
 function relicPool(){
   const own = (P && P.relics) || [];
-  return RELICS.filter(function(r){ return own.indexOf(r.id) < 0; });
+  return RELICS.filter(function(r){
+    if(own.indexOf(r.id) >= 0) return false;
+    if(COOP && r.id === "shed") return false;    // 联机里禁用撤退，脱壳是纯废牌，别让它掉出来
+    return true;
+  });
 }
 /* 直接给一件（祭坛/宝箱/游商走这里），没得给就折成金币 */
 function grantRelic(r, how){
@@ -2826,7 +2974,11 @@ function noteRelicFound(r, how){
 
 function offerRelics(){
   const owned = P.relics || [];
-  const pool = RELICS.filter(function(r){ return owned.indexOf(r.id) < 0; });
+  const pool = RELICS.filter(function(r){
+    if(owned.indexOf(r.id) >= 0) return false;
+    if(COOP && r.id === "shed") return false;    // 联机里禁用撤退，脱壳是纯废牌
+    return true;
+  });
   if(!pool.length){ G.relicDone = true; return false; }
   // 每一件都按层数权重单抽，互不重复
   const picks = [];
@@ -3103,11 +3255,28 @@ function openCave(){
       (r.open ? "<span class=\"rgo\">进入 ▸</span>" : "<span class=\"rgo\">还没挖通</span>");
     box.appendChild(d);
   });
+  // 联机：选哪条路由房主定，两人到齐才能选；练习模式也是房主统一定（联机方案.md）
+  if(COOP){
+    const host = coopIsHost(), hasMate = window.NET && NET.hasMate();
+    const title = $("caveTitle");
+    if(!host){
+      Array.prototype.forEach.call(box.children, function(d){ d.disabled = true; });
+      if(title) title.textContent = "等待房主选路线…";
+    } else if(!hasMate){
+      Array.prototype.forEach.call(box.children, function(d){ d.disabled = true; });
+      if(title) title.textContent = "等待队友连接…";
+    } else if(title) title.textContent = "下去哪里？";
+    const pb = $("btnPractice");
+    if(pb) pb.disabled = !host;
+  }
   $("veilCave").hidden = false;
 }
-function enterRoute(id){
+function enterRoute(id, fromNet){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
   if(!r || !r.open) return;
+  // 联机：只有房主真的点了才会广播；队友收到广播（fromNet）才跟着进，别自己抢先点
+  if(COOP && !fromNet && !coopIsHost()) return;
+  if(COOP && !fromNet && window.NET) NET.send({t:"route", id: id});
   setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
   $("veilCave").hidden = true;
   SCENE = "run";
@@ -3781,8 +3950,14 @@ function refreshSaveState(){
 /* ---- 下楼确认 ---- */
 $("btnSpringDrink").addEventListener("click", function(){ resolveSpring(true); });
 $("btnSpringSkip").addEventListener("click", function(){ resolveSpring(false); });
-$("btnStairGo").addEventListener("click", function(){ closeStair(true); });
-$("btnStairStay").addEventListener("click", function(){ closeStair(false); });
+$("btnStairGo").addEventListener("click", function(){
+  if(COOP){ coopConfirmStair(); return; }
+  closeStair(true);
+});
+$("btnStairStay").addEventListener("click", function(){
+  if(COOP && window.NET) NET.send({t:"ready", what:"floor", on:false});
+  closeStair(false);
+});
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
 $("btnAltarSkip").addEventListener("click", function(){ resolveAltar(false); });
 /* 熔炉：点身上的一件遗物就是把它扔进去 */
@@ -3885,8 +4060,10 @@ $("btnCave").addEventListener("click", openCave);
 $("btnCloseCave").addEventListener("click", function(){ $("veilCave").hidden = true; });
 $("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
 $("btnPractice").addEventListener("click", function(){
+  if(COOP && !coopIsHost()) return;     // 练习模式由房主统一定
   practiceOn = !practiceOn;
   renderPractice();
+  if(COOP && window.NET) NET.send({t:"practice", on: practiceOn});
 });
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
@@ -3914,7 +4091,10 @@ $("btnAbandon").addEventListener("click", function(){
 /* 取景框左下角的「寻路」：开关式。开着就一路走 —— 怪 → 金币 → 楼梯。
    ⚠️ **不过 `gate()`** —— 战斗刚结束那 260ms 的输入锁会把「停下」这一下吃掉，
    而玩家按停就是想马上停。连点两下 = 关了又开，无害。*/
-$("btnPathfind").addEventListener("click", autoToggle);
+$("btnPathfind").addEventListener("click", function(){
+  if(COOP){ coopToggleMove(); return; }
+  autoToggle();
+});
 
 /* ---- 导出码 ---- */
 $("btnGenCode").addEventListener("click", function(){
@@ -3996,14 +4176,153 @@ $("btnResumeHere").addEventListener("click", function(){
    setInterval(saveRun, 15000)。现在存档点只有三个（进入关卡 / 下一层 / 回到主城），
    全删了 —— 别再加回来。 */
 
-/* ================= 启动 =================
-   打开就自动接着上次存下的那一层 —— 不问、不弹窗。
-   不想接着走的话，取景框左下角有「放弃」（两步确认，点完直接结算）。 */
-renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
-(function boot(){
-  const s = readRun();
-  if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
-  goTown();
-})();
-refreshSaveState();
+/* ================= 联机（第一期）：房间加入 + 消息分发 =================
+   全部包在 if(COOP) 里 —— coop.html 才有 #veilRoom / #veilCoopWait / #mateRow 这几个元素，
+   index.html 里 $() 找不到它们会是 null，所以这一段代码在单人版里一步都跑不到（COOP 恒为 false）。 */
+/* ⚠️ 这几个函数必须写在 if(COOP) 外面（顶层）——
+   strict mode 下 block 里的 function 声明是块作用域的，写在 if(COOP){...} 里面
+   外面（比如 btnPathfind 的 click 监听，定义在文件更前面）就调不到，直接 ReferenceError。
+   它们只会被 COOP 分支的代码调用，所以内部不用再判断一次 COOP。 */
+/* 「寻路」在联机里不是立刻开，是先跟服务器说「我想走了」，
+   等两人都点了（服务器的 go{what:"move",on:true}）才真正开始算路。 */
+function coopToggleMove(){
+  if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+  coopMoveWant = !coopMoveWant;
+  const b = $("btnPathfind");
+  if(b) b.classList.toggle("armed", coopMoveWant);
+  NET.send({t:"ready", what:"move", on: coopMoveWant});
+}
+/* 下楼前的双确认：点「下去」先只是举手，等两人都举手了服务器才发 go{what:"floor"}，
+   到那时候才真的调 closeStair(true) 进下一层。 */
+function coopConfirmStair(){
+  NET.send({t:"ready", what:"floor", on:true});
+  const b = $("btnStairGo");
+  if(b){ b.disabled = true; b.textContent = "等待队友确认…"; }
+}
+/* 非房主：收到 path 消息时可能正在打自己的那一场战斗（G.paused），
+   stepWalk() 这时候什么都不会做。这个小轮询专门等 G.paused 解开再接着走那条路，
+   不用去改战斗/弹层每一处「关闭」的地方挂钩子。 */
+function coopMateResume(){
+  if(coopMateTimer) return;
+  coopMateTimer = setTimeout(function(){
+    coopMateTimer = null;
+    if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+    if(G.paused){ coopMateResume(); return; }
+    if(walkPath && walkPath.length && !walkTimer) stepWalk();
+  }, 200);
+}
+function coopUpdateWaitUi(){
+  const w = $("veilCoopWait");
+  if(!w) return;
+  const connected = NET.isConnected(), mate = NET.hasMate();
+  if(!connected){
+    $("coopWaitTitle").textContent = "网络断了…";
+    $("coopWaitNote").textContent = "正在自动重连，接上之后从这一层继续走。";
+    w.hidden = false;
+  } else if(!mate && SCENE === "run"){
+    $("coopWaitTitle").textContent = "等待队友…";
+    $("coopWaitNote").textContent = "队友掉线了，等他重新连上再继续。";
+    w.hidden = false;
+  } else {
+    w.hidden = true;
+  }
+}
+
+if(COOP){
+  NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || "连接失败"; });
+  NET.on("joined", function(){
+    $("roomMsg").textContent = "";
+    $("veilRoom").hidden = true;
+    coopUpdateWaitUi();
+    coopStartTicker();
+    coopBootAfterJoin();
+    if(SCENE === "town" && !$("veilCave").hidden) openCave();   // 刷新洞窟弹层的按钮状态（谁是房主/队友到没到）
+  });
+  NET.on("resume", coopUpdateWaitUi);
+  NET.on("pause", coopUpdateWaitUi);
+  NET.on("_close", coopUpdateWaitUi);
+
+  NET.on("route", function(msg){
+    if(coopIsHost()) return;                 // 自己发的不用处理（服务器也不会回给发送者自己）
+    if(SCENE === "town") enterRoute(msg.id, true);
+  });
+  NET.on("practice", function(msg){
+    if(coopIsHost()) return;
+    practiceOn = !!msg.on;
+    renderPractice();
+  });
+  NET.on("world", function(msg){
+    if(coopIsHost()) return;
+    applyCoopWorld(msg);
+  });
+  NET.on("path", function(msg){
+    if(coopIsHost()) return;
+    if(!P || !G || !G.map || G.over || SCENE !== "run") return;
+    cancelWalk();
+    walkPath = (msg.steps || []).slice();
+    G.goal = walkPath.length ? walkPath[walkPath.length - 1] : null;
+    render();
+    coopMateResume();
+  });
+  NET.on("go", function(msg){
+    if(msg.what === "move"){
+      const b = $("btnPathfind");
+      if(msg.on){
+        autoOn = true;
+        if(b){ b.classList.add("on"); b.classList.remove("armed"); b.setAttribute("aria-pressed", "true"); }
+        if(coopIsHost()) autoTick();
+        else say("寻路已同步 —— 两人一起走。", "sys");
+      } else {
+        coopMoveWant = false;
+        autoOff();
+        cancelWalk();
+        if(b) b.classList.remove("armed");
+        render();
+      }
+    } else if(msg.what === "floor"){
+      if(msg.on && !$("veilStair").hidden) closeStair(true);
+    }
+  });
+  NET.on("mate", function(msg){
+    coopMateInfo = msg;
+    coopMateX = (typeof msg.x === "number") ? msg.x : null;
+    coopMateY = (typeof msg.y === "number") ? msg.y : null;
+    const wasBusy = coopMateBusy;
+    coopMateBusy = !!msg.busy;
+    // 队友刚从忙碌变空闲，房主没必要等 300ms 的下一轮，立刻重新算一次目标
+    if(coopIsHost() && wasBusy && !coopMateBusy && autoOn && !(walkPath && walkPath.length)) autoTick();
+    if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
+  });
+
+  /* ---- 进页面先连房间 ---- */
+  $("btnRoomJoin").addEventListener("click", function(){
+    const code = $("roomCode").value.trim();
+    if(!code){ $("roomMsg").textContent = "先填个房间号。"; return; }
+    coopMyName = $("roomName").value.trim() || "旅人";
+    $("roomMsg").textContent = "连接中…";
+    NET.connect(code, coopMyName);
+  });
+
+  var coopBooted = false;
+  function coopBootAfterJoin(){
+    if(coopBooted) return;      // 正常的开局流程只跑一次；断线重连不重来一遍（会把当前这趟弄丢）
+    coopBooted = true;
+    renderLock();
+    const s = readRun();
+    if(s){ SCENE = "run"; showScene(); resumeRun(s); }
+    else goTown();
+    refreshSaveState();
+  }
+} else {
+  /* ================= 启动（单人版，原样不动）=================
+     打开就自动接着上次存下的那一层 —— 不问、不弹窗。
+     不想接着走的话，取景框左下角有「放弃」（两步确认，点完直接结算）。 */
+  renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
+  (function boot(){
+    const s = readRun();
+    if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
+    goTown();
+  })();
+  refreshSaveState();
+}
 })();

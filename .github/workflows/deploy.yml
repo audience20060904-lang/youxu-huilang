@@ -33,7 +33,7 @@ jobs:
       - name: Collect site files
         run: |
           mkdir -p _site
-          cp index.html style.css *.js .nojekyll _site/
+          cp index.html coop.html style.css *.js .nojekyll _site/
           # 绑了自定义域名之后仓库根会多一个 CNAME 文件，必须一起发上去，
           # 否则每次部署都会把 Settings -> Pages 里的自定义域名冲掉。没有就跳过。
           if [ -f CNAME ]; then cp CNAME _site/; fi
