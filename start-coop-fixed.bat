@@ -11,7 +11,7 @@ if exist ".git" (
   if errorlevel 1 echo       Update failed. Using the local copy.
 ) else (
   echo [1/4] This folder is not a git clone - cannot auto-update.
-  echo       Using the local copy. See coop-msg-install.txt.
+  echo       Using the local copy - it may be out of date.
 )
 echo.
 
