@@ -169,11 +169,13 @@ function stats(){
   if(hasRelic("dawn") && G && (G.floorAsked || 0) < DAWN_ASKED) s.def += DAWN_ARMOR;
   // 叠甲：连续两层都没掉过血（P.noHitStreak 在 nextFloor() 里按上一层的 G.tookDamage 累），护甲 ×2
   if(hasRelic("stack") && (P.noHitStreak || 0) >= 2) s.def *= 2;
-  /* 蚀甲：每次挨打（takeHit()）本场护甲 −1，每答对一题（answer() 的 ok 分支）+1，
-     B.corrodeLoss 记的是"现在被磨掉了几点"，最低卡在 0（不会把护甲磨成负数）。
+  /* 蚀甲：每次挨打（takeHit()）护甲 −1，每答对一题（answer() 的 ok 分支）+1，
+     G.corrodeLoss 记的是"现在被磨掉了几点"，最低卡在 0（不会把护甲磨成负数）。
+     ⚠️ 2026-09 用户把它从「本场」改成**每层**——所以挂在 G 上、`nextFloor()` 里清零，
+     一场打完不再自动复原（续玩档存的是刚进这一层的样子，天然是 0）。
      ⚠️ 放在 defGear 快照**之前**——护甲被磨掉的时候，铁壁靠护甲换的伤害也该跟着掉，
      不然"甲都快被磨没了"却还在吃满额的铁壁伤害，逻辑对不上。*/
-  if(hasRelic("corrode") && B) s.def = Math.max(0, s.def - (B.corrodeLoss || 0));
+  if(hasRelic("corrode") && G) s.def = Math.max(0, s.def - (G.corrodeLoss || 0));
   /* 「铁壁」只认**装备和等级来的**护甲，所以在练习模式那 +50 之前先记一笔。
      ⚠️ 不这么分开的话，练习模式 +50 护甲 = 铁壁 +150% 伤害，
      「纯背词的简单模式」反而成了全游戏输出最高的玩法。*/
@@ -211,7 +213,8 @@ function nextFloor(){
   G.echoUsed = false;      // 「回声」每层一次
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
   G.holdUsed = 0;          // 「屏息」每层 HOLD_FREE 次
-  G.rerollUsed = 0;        // 「重掷」每层几次，看 rerollBudget()（老档存的 true/false 也能比，JS 会自动转 1/0）
+  G.rerollUsed = 0;        // 遗物候选重掷，每层几次看 rerollBudget()（老档存的 true/false 也能比，JS 会自动转 1/0）
+  G.corrodeLoss = 0;       // 「蚀甲」磨掉了几点护甲，每层重置
   G.openUsed = false;      // 「开场」每层一次
   G.fleeFree = false;      // 「脱壳」每层第一次撤退不掉血
   G.glassCut = 0;          // 「沙漏」这一层被超时削掉了几秒读条
@@ -239,7 +242,8 @@ function nextFloor(){
   }
   G.floorWrong = 0;
   /* 稳步：**上一层**完全没碰互动房间（G.usedRoom 在 onEnter() 里置真）就攒一层连续计数，
-     攒够 PACE_STREAK 层就在这一层开局回血，然后从头再攒。*/
+     攒够 PACE_STREAK 层就在这一层开局回血，然后从头再攒。
+     ⚠️ 2026-09 用户把 PACE_STREAK 改成 1 —— 上一层没用过泉/坛/箱/商，这一层开局就回。*/
   if(hasRelic("pace") && from > 0){
     if(!G.usedRoom) P.roomFreeStreak = (P.roomFreeStreak || 0) + 1;
     else P.roomFreeStreak = 0;
@@ -247,7 +251,7 @@ function nextFloor(){
       P.roomFreeStreak = 0;
       const back = Math.max(1, Math.ceil(stats().maxHp * PACE_PCT));
       healUp(back);
-      say("稳步 —— 连着 " + PACE_STREAK + " 层没沾任何互动房间，回了 <b>" + back + "</b> 点生命。", "good");
+      say("稳步 —— 上一层没沾泉／坛／箱／商，回了 <b>" + back + "</b> 点生命。", "good");
     }
   }
   G.usedRoom = false;
@@ -1246,7 +1250,7 @@ function startBattle(m){
   B = {mob:m, q:null, locked:false, asked:0,
        wager:false, repeatUsed:false, retry:null, optCount:4, dice:0,
        pend:null, rescue:false, rescueTimer:null,
-       wrongTimes:0, corrodeLoss:0, shatterUsed:false, shatterFree:false};
+       wrongTimes:0, shatterUsed:false, shatterFree:false};
   /* 面熟：这一层同一类别的怪，每次真的撞上（不是路过）就记一次，nextFloor() 里清零。
      老对手：这一趟同名 Boss/层间守者第几次遇到，P 上跟着续玩档，不清零（整趟累计）。*/
   if(m.cat){
@@ -1461,12 +1465,10 @@ function startQTimer(){
   const t = $("qTimer"), fill = $("qTimerFill");
   if(!t || !fill) return;
   let secs = qSeconds();
-  // 定心：整趟只加这一次，触发就在这道题的读条上直接加秒，不改 qSeconds() 本身（沙漏还要读它）
-  if(hasRelic("steady") && !P.steadyUsed && P && P.hp <= stats().maxHp * 0.25){
-    secs += STEADY_BONUS;
-    P.steadyUsed = true;
-    say("定心 —— 这道题多给你 " + STEADY_BONUS + " 秒。", "sys");
-  }
+  /* 定心：血低于 25% 时**每道题**都多给几秒（2026-09 用户把「整趟一次」的限制去掉、品质降到稀有）。
+     直接加在这道题的读条上，不改 qSeconds() 本身（沙漏还要读它）。
+     ⚠️ 不写日志 —— 低血时每题都触发，写一行就把战斗日志刷满了，读条变长本身看得见。*/
+  if(hasRelic("steady") && P && P.hp <= stats().maxHp * 0.25) secs += STEADY_BONUS;
   const total = Math.max(1, secs) * 1000, t0 = Date.now();
   t.hidden = false;
   t.classList.remove("hot");
@@ -1878,7 +1880,7 @@ function answer(btn, ok){
 
   const wasStrong = (rec.str || 0) >= 3;          // 学者：看的是答题前的熟练度
   // Boss 的弱点是词性，普通怪的弱点是类别（makeFoe 里的 weakPos 标着是哪一种）
-  // 通感：每一题都算打中弱点（弱点的点伤、猎手、破绽、追猎全都跟着生效）
+  // 通感：每一题都算打中弱点（弱点的 +2 点伤、破绽、追猎全都跟着生效）
   const hitWeak = hasRelic("synes") || (!!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak));
   const isSpell = B.q.type === "spell";
   let head, note = "";
@@ -1895,7 +1897,7 @@ function answer(btn, ok){
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
     // 蚀甲：答对一题护甲 +1（本场内，最低 0、封顶原值，见 stats()）
-    if(hasRelic("corrode")) B.corrodeLoss = Math.max(0, (B.corrodeLoss || 0) - 1);
+    if(hasRelic("corrode")) G.corrodeLoss = Math.max(0, (G.corrodeLoss || 0) - 1);
     /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
     P.combo += B.wager ? 2 : 1;
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
@@ -1963,7 +1965,7 @@ function answer(btn, ok){
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
-    if(hitWeak) flat += hasRelic("hunter") ? 3 : 2;                         // 弱点 +2，猎手再 +1
+    if(hitWeak) flat += 2;                                                  // 打中弱点：③点伤 +2
     if(B.wager && hasRelic("gambler")) flat += 2;                           // 赌徒：冒对了再 +2 点伤
     let surge = false;
     if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
@@ -2346,12 +2348,12 @@ function mitigate(dmg, s0, opt){
       why += " <span class=\"sys\">(" + (capPct === WOMB_PCT ? "石胎" : "钝痛") + "把这一下压到 " + cap + " 点)</span>";
     }
   }
-  // 尚存：整趟一次，单次伤害超过生命上限 ENDURE_PCT 才触发，放在所有其它减伤算完之后判——
-  // 这样它只会在"你没有更好的防御把这一下压下去"时才真的用掉，不浪费这个唯一的名额。
-  if(hasRelic("endure") && !P.endureUsed && out > s.maxHp * ENDURE_PCT){
+  /* 尚存：单次伤害超过生命上限 ENDURE_PCT 就砍半，放在所有其它减伤算完之后判 ——
+     算到最后才比，是为了拿"你真正要挨的那个数"去对门槛。
+     ⚠️ 2026-09 用户把「整趟一次」的限制去掉了，现在每一记重击都吃得到。*/
+  if(hasRelic("endure") && out > s.maxHp * ENDURE_PCT){
     out = Math.ceil(out / 2);
-    P.endureUsed = true;
-    why += " <span class=\"sys\">(尚存把这记重击砍掉一半，整趟只有这一次)</span>";
+    why += " <span class=\"sys\">(尚存把这记重击砍掉一半)</span>";
   }
   out = Math.max(1, out);
   if(hasRelic("slip") && Math.random() < 0.25) return {dmg:0, dodged:true, why:""};   // 错身
@@ -2377,7 +2379,7 @@ function takeHit(dmg, m, haunted){
     if(hasRelic("recoil")) P.recoil = Math.min(RECOIL_MAX, (P.recoil || 0) + 1);
   }
   // 蚀甲：每次挨打（不管盾扛没扛住）本场护甲 −1，最低钉在 0——上限在 stats() 里按当时护甲夹
-  if(hasRelic("corrode")) B.corrodeLoss = (B.corrodeLoss || 0) + 1;
+  if(hasRelic("corrode")) G.corrodeLoss = (G.corrodeLoss || 0) + 1;
   // 护盾从"有"变成"没有"的那一下（真的被打穿，不是本来就没盾）：借甲 / 破盾余威 / 久经 都挂在这个事件上
   const brokeNow = hadShield && (P.shield || 0) <= 0;
   if(brokeNow){
@@ -3308,10 +3310,10 @@ function noteRelicFound(r, how){
   if(first) say("—— 初次发现：" + r.n + " ——", "crit");
 }
 
-/* 这一层能重掷几次：拿到「重掷」是 1 次；「集齐」在身上凑齐普通/稀有/史诗三个品质时再给 1 次，
-   两个条件都满足就是 2 次。G.rerollUsed 记的是"已经用掉几次"（数字，不是布尔）。 */
+/* 这一层能重掷几次：现在只有「集齐」给 —— 身上凑齐普通/稀有/史诗三个品质就是 1 次。
+   （遗物「重掷」2026-09 已按用户要求删掉。）G.rerollUsed 记的是"已经用掉几次"（数字，不是布尔）。 */
 function rerollBudget(){
-  let n = hasRelic("redraw") ? 1 : 0;
+  let n = 0;
   if(hasRelic("fullset")){
     const q = {};
     (P.relics || []).forEach(function(id){ const r = relicById(id); if(r) q[r.r || 0] = true; });
@@ -3352,7 +3354,7 @@ function offerRelics(){
       "<span class=\"rl\">" + r.lore + "</span>";
     box.appendChild(d);
   });
-  /* 「重掷」/「集齐」：换一批五选一，次数看 rerollBudget()（G.rerollUsed 在 nextFloor 里清零） */
+  /* 「集齐」：换一批五选一，次数看 rerollBudget()（G.rerollUsed 在 nextFloor 里清零） */
   const rb = $("btnRelicRedraw");
   if(rb) rb.hidden = !(rerollBudget() > (G.rerollUsed || 0));
   hideAll();
@@ -4433,7 +4435,7 @@ $("relicList").addEventListener("click", function(ev){
   const b = ev.target.closest(".relic");
   if(b && b.dataset.id) takeRelic(b.dataset.id);
 });
-/* 「重掷」/「集齐」：窗不关，就地换一批（次数看 rerollBudget()） */
+/* 「集齐」：窗不关，就地换一批（次数看 rerollBudget()） */
 $("btnRelicRedraw").addEventListener("click", function(){
   if(!G || (G.rerollUsed || 0) >= rerollBudget()) return;
   G.rerollUsed = (G.rerollUsed || 0) + 1;
