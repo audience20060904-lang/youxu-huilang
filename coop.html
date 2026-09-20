@@ -259,7 +259,7 @@
 
     <!-- 加入态：填房间号 -->
     <div id="teamJoinForm" hidden>
-      <div class="rowb"><input class="code" id="roomCode" placeholder="房间号，比如 ABCD" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
+      <div class="rowb"><input class="code" id="roomCode" placeholder="房间号，比如 1234" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
       <div class="rowb"><input class="code" id="roomName" placeholder="你的名字（可不填）" style="flex:1;min-height:auto;padding:10px" autocomplete="off"></div>
       <div class="rowb">
         <button class="btn ghost" id="btnTeamBack" type="button">返回</button>
@@ -272,7 +272,15 @@
     <div id="teamStatus" hidden>
       <div class="ledger" id="teamLedger"></div>
       <p class="note" id="teamNote"></p>
-      <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnTeamLeave" type="button">离开房间</button></div>
+      <!-- 邀请链接：队友直接打开这个链接就自动加入，不用手输房间号。
+           只读输入框是为了在剪贴板 API 不可用时（局域网 http:// 不是安全上下文，
+           navigator.clipboard 在有的浏览器里直接不存在）还能手动选中复制。 -->
+      <div class="rowb"><input class="code" id="teamLinkText" readonly style="flex:1;min-height:auto;padding:10px;font-size:12px" onclick="this.select()"></div>
+      <div class="rowb">
+        <button class="btn" id="btnTeamCopyLink" type="button">复制邀请链接</button>
+        <span class="sp"></span>
+        <button class="btn ghost" id="btnTeamLeave" type="button">离开房间</button>
+      </div>
     </div>
 
     <p class="note" id="roomMsg"></p>

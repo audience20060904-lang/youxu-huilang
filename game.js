@@ -794,6 +794,12 @@ function coopSendMe(){
             busy: !!G.paused, clear: G.mobs ? G.mobs.length === 0 : true,
             x: P.x, y: P.y});
 }
+/* 联机：踩到泉/坛/箱/商时通知队友一声（纯通知，不改队友自己的世界 —— 消耗是各自独立的，
+   见联机方案.md「布局共享，消耗独立」）。日志显示在 NET.on("used", ...) 里。*/
+function coopNoteUsed(what){
+  if(!COOP || !window.NET) return;
+  NET.send({t:"used", what: what, x: P.x, y: P.y});
+}
 function coopStartTicker(){
   if(coopStatusTimer) return;
   coopStatusTimer = setInterval(coopSendMe, 500);
@@ -1064,10 +1070,10 @@ function onEnter(){
       say("你拾起 <b>" + amt + "</b> 金币。", "sys");
       G.things.splice(G.things.indexOf(th),1);
       fxGold(P.x, P.y);                     // 碎屑飞向顶上的「金」
-    } else if(th.kind === "feat"){ openSpring(th); return; }
-    else if(th.kind === "altar"){ openAltar(th); return; }
-    else if(th.kind === "chest"){ openChest(th); return; }
-    else if(th.kind === "shop"){ openShop(th); return; }
+    } else if(th.kind === "feat"){ coopNoteUsed("泉"); openSpring(th); return; }
+    else if(th.kind === "altar"){ coopNoteUsed("坛"); openAltar(th); return; }
+    else if(th.kind === "chest"){ coopNoteUsed("箱"); openChest(th); return; }
+    else if(th.kind === "shop"){ coopNoteUsed("商"); openShop(th); return; }
   }
   // 清空之后阶梯才存在，踩上去才问。清空前那一格看着就是普通地面，别弹莫名其妙的提示。
   if(G.mobs.length === 0 && P.x === G.stair.x && P.y === G.stair.y){
@@ -4277,11 +4283,10 @@ if(COOP){
      跟一开始的版本不一样：**不再一进页面就拿一层遮罩挡住整个游戏**（用户 2026-09 要求改成
      主城里一个板块）。没组队也能逛主城、看图鉴、改设置；只有真要进洞窟才需要先组好队。
      `coopEverConnected` 用来区分"从没连过"和"连过又断了"——前者不弹断线遮罩（声明在文件顶部）。 */
+  /* 房间号只用数字（用户 2026-09 要求）——4 位，手机上不用切字母键盘，报数字给队友也方便念。
+     纯数字只有 10000 种组合，但这就是个临时接头暗号，用完就忘，撞号概率practically 可以不管。*/
   function randRoomCode(){
-    const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";     // 去掉容易看混的 0/O/1/I
-    let s = "";
-    for(let i=0;i<4;i++) s += AB[Math.floor(Math.random() * AB.length)];
-    return s;
+    return String(Math.floor(1000 + Math.random() * 9000));   // 1000~9999，不带前导 0
   }
   function teamHint(){
     const b = $("teamHint");
@@ -4293,6 +4298,11 @@ if(COOP){
   function showTeamPanel(which){
     ["teamPick", "teamJoinForm", "teamStatus"].forEach(function(id){ $(id).hidden = (id !== which); });
   }
+  /* 邀请链接：队友直接打开就自动加入这个房间，不用再手输房间号。
+     ?room=1234 —— 页面一加载就会检查这个参数，见文件末尾的 autoJoinFromUrl()。*/
+  function coopInviteLink(){
+    return location.origin + location.pathname + "?room=" + NET.roomCode();
+  }
   function renderTeamStatus(){
     if(!NET.isConnected()){ showTeamPanel("teamPick"); return; }
     showTeamPanel("teamStatus");
@@ -4303,6 +4313,7 @@ if(COOP){
     $("teamNote").textContent = NET.isHost()
       ? "房主负责在洞窟里选路线。"
       : "进洞窟之后，房主选好路线，你确认一下就一起下去。";
+    $("teamLinkText").value = coopInviteLink();
   }
   function openTeamPanel(){
     $("roomMsg").textContent = "";
@@ -4384,6 +4395,9 @@ if(COOP){
     if(coopIsHost() && wasBusy && !coopMateBusy && autoOn && !(walkPath && walkPath.length)) autoTick();
     if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
   });
+  NET.on("used", function(msg){
+    if(SCENE === "run") say("队友用了" + (msg.what || "点什么") + "。", "sys");
+  });
 
   /* ---- 主城「组队」板块 ---- */
   $("btnTeam").addEventListener("click", openTeamPanel);
@@ -4403,6 +4417,19 @@ if(COOP){
     $("roomMsg").textContent = "连接中…";
     NET.connect(code, coopMyName);
   });
+  $("btnTeamCopyLink").addEventListener("click", function(){
+    const t = $("teamLinkText"), b = this;
+    t.select();
+    try{
+      navigator.clipboard.writeText(t.value);
+      b.textContent = "已复制";
+    }catch(e){
+      // 局域网 http:// 不是"安全上下文"，有的浏览器压根没有 navigator.clipboard ——
+      // 已经帮你选中了，手动复制（跟设置页「复制导出码」那个按钮一个套路）
+      b.textContent = "已选中，手动复制";
+    }
+    setTimeout(function(){ b.textContent = "复制邀请链接"; }, 1600);
+  });
   $("btnTeamLeave").addEventListener("click", function(){
     NET.close();
     coopEverConnected = false;      // 自己主动离开，不算"断线"，别弹断线遮罩
@@ -4412,6 +4439,20 @@ if(COOP){
     teamHint();
     if(SCENE === "town" && !$("veilCave").hidden) openCave();
   });
+
+  /* ---- 邀请链接自动加入 ----
+     打开 coop.html?room=1234 直接就去连那个房间，不用再点"加入房间"、手输房间号。
+     链接是 renderTeamStatus() 里 coopInviteLink() 生成的，队友直接打开就行。 */
+  (function autoJoinFromUrl(){
+    let code = "";
+    try{ code = new URLSearchParams(location.search).get("room") || ""; }catch(e){}
+    code = code.trim();
+    if(!code) return;
+    coopMyName = "旅人";
+    openTeamPanel();
+    $("roomMsg").textContent = "邀请链接 —— 正在加入房间 " + code + "…";
+    NET.connect(code, coopMyName);
+  })();
 }
 
 /* ================= 启动 =================
