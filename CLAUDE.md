@@ -755,6 +755,14 @@
   `start "Youxu Server" cmd /k chcp 65001 ^>nul ^&^& node server.js`（`^` 是批处理转义，别删）。
   ⚠️ 别用 `cmd /k "chcp 65001 >nul && node server.js"` 这种带引号的写法 —— 串里有 `>` `&` 这类特殊字符时
   cmd **不会**脱掉外层引号，整串会被当成一个文件名去找。
+- **两个 `.bat` 必须是 CRLF，LF-only 会让 `call :label` / `goto :label` 整个失效**
+  （2026-09-20 踩了一次）：症状是 `The system cannot find the batch label specified - findexe`，
+  然后脚本带着空变量往下跑，表现成「No tunnel tool found」这种**看着像别的 bug 的假象**。
+  ⚠️ **踩坑的根因是改文件的方式**：用 Python `open(p, encoding=...)` 读（universal newlines 会把
+  `\r\n` 吃成 `\n`）再用 `newline=""` 写回去，**会静默地把 CRLF 变成 LF**。
+  改这两个 bat **只能用二进制方式收尾**：
+  `d = open(p,"rb").read().replace(b"\r\n",b"\n").replace(b"\n",b"\r\n"); open(p,"wb").write(d)`，
+  改完**必须验一遍** `tr -cd '\r' < x.bat | wc -c` 跟 `wc -l` 相等。
 
 ## 遗物系统（2026-09 大改）
 
