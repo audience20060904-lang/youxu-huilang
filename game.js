@@ -1432,6 +1432,11 @@ function renderBattleBars(){
   renderCombo();
 }
 /* ---- 连击：每 comboStep 次 +comboPct%，可叠加不封顶（火星把 step 减 1）---- */
+/* 断链的门槛和代价（2026-09-21 用户改）：**都是「当前层数」** ——
+   连击 ≥ 这个数才挡得下一次答错，挡完连击就减掉这么多。
+   ⚠️ 原来的固定门槛 `UNCHAIN_AT`/`UNCHAIN_CUT`(各 10) 已经删了，别找。
+   ⚠️ 主城里没有 G，兜一个 1（那时候也用不到）。*/
+function unchainAt(){ return Math.max(1, (G && G.floor) || 1); }
 function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? SPARK_STEP : 0)); }
 /* 现在这一串连击给多少百分比。**它进 answer() 的 pct 桶，不是独立乘区。** */
 function comboPct(combo){
@@ -2270,15 +2275,16 @@ function answer(btn, ok){
     P.wrongSeen[word.en] = true;
     /* 铁胆：冒险失手不断连击；长链：答错只减半；
        **拼写题拼错也只减半**（用户 2026-09：拼写比选择难，错一次不该把长链清零）*/
-    /* 断链：连击攒够 UNCHAIN_AT 就能拿它挡一下 —— 完全免伤，连击只减 UNCHAIN_CUT。
+    /* 断链：连击攒够 `unchainAt()`（= **当前层数**）就能拿它挡一下 —— 完全免伤，
+       连击减掉同样多（不清零）。越深越难触发、触发一次也越贵，是用户 2026-09-21 定的形状。
        惯性：连击 ≥20 时不清零、直接砍到 20，比长链的"减半"更保底，排在长链前面。
        归位：连击真的要清零那一刻，如果原本 ≥30 就按七折返还一半，只在"真清零"这条分支里算。
        ⚠️ **必须在下面动 P.combo 之前判**，不然连击已经清零/减半了，条件就永远不成立。*/
-    const unchain = hasRelic("unchain") && P.combo >= UNCHAIN_AT;
+    const unchain = hasRelic("unchain") && P.combo >= unchainAt();
     const inertia = hasRelic("inertia") && P.combo >= INERTIA_AT;
     const beforeCombo = P.combo;
     if(B.wager && hasRelic("nerve")){ /* 连击保住 */ }
-    else if(unchain) P.combo = Math.max(0, P.combo - UNCHAIN_CUT);
+    else if(unchain) P.combo = Math.max(0, P.combo - unchainAt());   // 代价也是「当前层数」
     else if(inertia) P.combo = INERTIA_AT;
     else if(isSpell || hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
     else {
@@ -2312,7 +2318,7 @@ function answer(btn, ok){
       if(dmg > 0 && unchain){
         dmg = 0;
         head = "<span class=\"big no\">断链 —— 链子替你挨了</span>";
-        note = "连击 −" + UNCHAIN_CUT + "，血一点没掉。";
+        note = "连击 −" + unchainAt() + "，血一点没掉。";
       }
       // 默诵：拼写题答错不掉血，但**每层只有 RECITE_FREE 次**（老续玩档没这个字段，所以 || 0）
       if(dmg > 0 && isSpell && hasRelic("recite") && (G.reciteFree || 0) < RECITE_FREE){
