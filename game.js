@@ -140,18 +140,18 @@ function stats(){
   // 普通品质：纯数值，全部在这儿结清
   if(hasRelic("whet"))  s.atk += 3;
   if(hasRelic("grind")){ s.atk += 5; s.maxHp -= 5; }          // 砺石：带负面权衡的合成燃料
-  if(hasRelic("nick")){ s.atk += 1; s.crit += 5; }
+  if(hasRelic("nick")){ s.atk += 1; s.crit += 4; }
   if(hasRelic("iron"))  s.def += 1;
   if(hasRelic("plate")) s.def += 2;
-  if(hasRelic("gird")){ s.def += 1; s.maxHp += 2; }
+  if(hasRelic("gird")){ s.def += 1; s.maxHp -= 2; }
   if(hasRelic("heart")) s.maxHp += 6;
   if(hasRelic("ward"))  s.maxHp += 7;
-  if(hasRelic("vigor")){ s.maxHp += 15; s.atk -= 4; }         // 血囊：同上
+  if(hasRelic("vigor")){ s.maxHp += 17; s.atk -= 4; }         // 血囊：同上
   if(hasRelic("pad"))   s.maxHp += 8;                        // 棉衬
   if(hasRelic("keen"))  s.crit += 5;
   /* 薄刃 2026-09-21 从「暴击率 +8%」改成「暴击伤害 +50%」——
      暴击率那一档普通品质已经有锐眼和刻痕了，这一件挪去填暴击伤害。加成在 answer() 的 critMult。*/
-  if(hasRelic("rustplate")){ s.def += 2; s.crit -= 5; }      // 生锈重甲：带负面权衡的合成燃料
+  if(hasRelic("rustplate")){ s.def += 2; s.crit -= 6; }      // 生锈重甲：带负面权衡的合成燃料
   if(hasRelic("twoply")) s.def += TWOPLY_ARMOR;              // 双层甲
   /* 2026-09-21：这三件原来「独立价值恒为 0」（自己不产护甲/护盾，全靠别的件喂），
      这一批各补了一个自带底数。⚠️ 底数要放在重装/硬茧的乘法**之前**。*/
@@ -1502,7 +1502,6 @@ function startQTimer(){
      直接加在这道题的读条上，不改 qSeconds() 本身（沙漏还要读它）。
      ⚠️ 不写日志 —— 低血时每题都触发，写一行就把战斗日志刷满了，读条变长本身看得见。*/
   if(hasRelic("steady") && P && P.hp <= stats().maxHp * 0.25) secs += STEADY_BONUS;
-  if(hasRelic("glass")) secs += GLASS_BONUS;   // 沙漏：读条本身多给几秒（2026-09-21 加）
   const total = Math.max(1, secs) * 1000, t0 = Date.now();
   t.hidden = false;
   t.classList.remove("hot");
@@ -2308,12 +2307,12 @@ function mitigate(dmg, s0, opt){
   let cut = 0;
   /* 粗布 2026-09-21 从「每场一次减半」改成「**每层**一次 −BURLAP_CUT%」，并挪进 cut 桶 ——
      一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
-     一件**普通**品质比传奇「不动」(−35%) 还强，是全表最大的一处定价事故。*/
+     一件**普通**品质比传奇「不动」还强，是全表最大的一处定价事故。*/
   if(wrong && hasRelic("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += BURLAP_CUT; }
-  if(hasRelic("soft")) cut += 10;                                         // 软甲
+  if(hasRelic("soft")) cut += 7;                                         // 软甲
   if(hasRelic("shed")) cut += SHED_CUT;                                   // 脱壳：全程减伤（撤退免伤在 flee()）
   if(wrong && hasRelic("chain")) cut += CHAIN_CUT;                        // 长链：答错时的减伤
-  if(hasRelic("hide")) cut += 5;                                          // 皮甲
+  if(hasRelic("hide")) cut += 3;                                          // 皮甲
   if(hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);  // 老茧：每深一层 +1%
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
   if(hasRelic("still")) cut += STILL_CUT;                                 // 不动：一件顶三四件
