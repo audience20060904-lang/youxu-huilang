@@ -637,11 +637,14 @@ function foeNums(def, floor){
   const band = def.fixed ? {hp:1, dmg:1} : foeBand(floor);
   // 无尽章第 50 层往下的深渊压迫（别的章恒为 1）。**只乘在伤害上**，血量不动 —— 见 endlessRamp
   const deep = def.fixed ? 1 : endlessRamp(floor);
+  /* 怪物全局倍率（content.js 的 FOE_MULT，用户 2026-09-21）——**所有怪都吃，章末 Boss 也吃**。
+     放在最后一步乘，取整、最低 1，跟 FOE_BANDS / endlessRamp 一个待遇。
+     armor / xp 那两档默认是 1（为什么见 content.js 那段注释）。*/
   return {
-    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp)),
-    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep)),
-    armor: def.armor + fb.armor,
-    xp: def.xp + Math.floor(step / gw.xpEvery) + fb.xp
+    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp * FOE_MULT.hp)),
+    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep * FOE_MULT.dmg)),
+    armor: Math.round((def.armor + fb.armor) * FOE_MULT.armor),
+    xp: Math.round((def.xp + Math.floor(step / gw.xpEvery) + fb.xp) * FOE_MULT.xp)
   };
 }
 /* 第 floor 层「一只普通小怪」的平均数值 —— Boss 房就是照着上一层的这个数放大的 */
