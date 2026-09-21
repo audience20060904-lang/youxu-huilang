@@ -138,24 +138,30 @@ function stats(){
   const s = {atk: pb.atk + (P.lvl-1) * pl.atk, def:0, crit:pb.crit,
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
   // 普通品质：纯数值，全部在这儿结清
-  if(hasRelic("whet"))  s.atk += 1;
-  if(hasRelic("grind")) s.atk += 2;
+  if(hasRelic("whet"))  s.atk += 3;
+  if(hasRelic("grind")){ s.atk += 5; s.maxHp -= 5; }          // 砺石：带负面权衡的合成燃料
   if(hasRelic("nick")){ s.atk += 1; s.crit += 5; }
   if(hasRelic("iron"))  s.def += 1;
   if(hasRelic("plate")) s.def += 2;
-  if(hasRelic("gird")){ s.def += 1; s.maxHp += 4; }
+  if(hasRelic("gird")){ s.def += 1; s.maxHp += 2; }
   if(hasRelic("heart")) s.maxHp += 6;
-  if(hasRelic("ward"))  s.maxHp += 8;
-  if(hasRelic("vigor")) s.maxHp += 12;
-  if(hasRelic("pad"))   s.maxHp += 10;                       // 棉衬
-  if(hasRelic("keen"))  s.crit += 10;
-  if(hasRelic("edge"))  s.crit += 8;
+  if(hasRelic("ward"))  s.maxHp += 7;
+  if(hasRelic("vigor")){ s.maxHp += 15; s.atk -= 4; }         // 血囊：同上
+  if(hasRelic("pad"))   s.maxHp += 8;                        // 棉衬
+  if(hasRelic("keen"))  s.crit += 5;
+  /* 薄刃 2026-09-21 从「暴击率 +8%」改成「暴击伤害 +50%」——
+     暴击率那一档普通品质已经有锐眼和刻痕了，这一件挪去填暴击伤害。加成在 answer() 的 critMult。*/
   if(hasRelic("rustplate")){ s.def += 2; s.crit -= 5; }      // 生锈重甲：带负面权衡的合成燃料
-  if(hasRelic("twoply")) s.def += TWOPLY_ARMOR;              // 双层甲：护甲 +6
+  if(hasRelic("twoply")) s.def += TWOPLY_ARMOR;              // 双层甲
+  /* 2026-09-21：这三件原来「独立价值恒为 0」（自己不产护甲/护盾，全靠别的件喂），
+     这一批各补了一个自带底数。⚠️ 底数要放在重装/硬茧的乘法**之前**。*/
+  if(hasRelic("bastion")) s.def += BASTION_ARMOR;            // 铁壁：自带底数
+  if(hasRelic("stack"))   s.def += STACK_ARMOR;              // 叠甲：自带底数
+  if(hasRelic("rampart")) s.def += RAMPART_ARMOR;            // 残壁：自带底数
   /* 轻装上阵：**每空一个遗物格** +3 护甲（用户 2026-09 改的，原来是「全程没换过」）。
      跟「空手」一样按 RELIC_MAX 算，不跟「行囊」和深层多出来的格子走 ——
      不然带上行囊就白得 9 点护甲，两件叠成滚雪球。*/
-  if(hasRelic("spry")) s.def += Math.max(0, RELIC_MAX - P.relics.length) * SPRY_ARMOR;
+  if(hasRelic("spry")) s.def += Math.min(SPRY_MAX, Math.max(0, RELIC_MAX - P.relics.length) * SPRY_ARMOR);
   /* 久经：护盾这一趟每被打穿 VETERAN_AT 次 +VETERAN_ARMOR 护甲，本局累计封在 VETERAN_MAX。
      ⚠️ 现算（不写回 P 上）—— 卖掉/换掉这件，加的护甲立刻跟着没。*/
   if(hasRelic("veteran")){
@@ -164,31 +170,37 @@ function stats(){
   /* 成长线：烙印/铭心按**当前等级现算**（用户 2026-09）——
      ⚠️ 以前是升一级就把加成攒进 P.bonusAtk / P.bonusHp，卖掉遗物那笔加成还赖着不走，
      成了全游戏唯一的永久面板加成。现在拆掉就立刻失效，跟别的遗物一个规矩。*/
-  if(hasRelic("brand"))   s.atk   += P.lvl * 1;              // 烙印：每一级 +1 攻击
-  if(hasRelic("engrave")) s.maxHp += P.lvl * 3;              // 铭心：每一级 +3 上限
+  /* 烙印/铭心 2026-09-21 加了封顶：原来跟等级线性长、没有上限，
+     基准层（56 级）就是「攻击 +56 / 生命上限 +168」，把面板整个翻一倍，无尽章还会继续长。*/
+  if(hasRelic("brand"))   s.atk   += Math.min(BRAND_MAX, P.lvl);          // 烙印
+  if(hasRelic("engrave")) s.maxHp += Math.min(ENGRAVE_MAX, P.lvl * 3);    // 铭心
   // 铁躯：最大生命 ×1.8 —— 放在所有加血遗物之后、献身之前（两件一起就是 ×0.9）
   if(hasRelic("titan")) s.maxHp = Math.max(1, Math.round(s.maxHp * TITAN_MULT));
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
-  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += 3;   // 背水
+  if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
   // 重装：护甲 ×3（平减的护甲在深层等于没有，乘一下才跟得上。练习模式那 +50 不在里面）
-  if(hasRelic("heavy")) s.def *= HEAVY_MULT;
+  if(hasRelic("heavy")) s.def = (s.def + HEAVY_ARMOR) * HEAVY_MULT;   // 重装：自带底数 + 乘法
   // 硬茧：护甲 +20%（乘法档，跟重装/叠甲排在一起；取整放到最后由 defGear 那一步兜）
-  if(hasRelic("callus")) s.def = Math.round(s.def * CALLUS_MULT);
+  if(hasRelic("callus")) s.def = Math.round((s.def + CALLUS_ARMOR) * CALLUS_MULT);  // 硬茧：同上
   // 破晓甲：这一层前 DAWN_ASKED 题（G.floorAsked 在 answer() 里累，nextFloor() 里清零）额外给护甲
   if(hasRelic("dawn") && G && (G.floorAsked || 0) < DAWN_ASKED) s.def += DAWN_ARMOR;
   // 叠甲：连续两层都没掉过血（P.noHitStreak 在 nextFloor() 里按上一层的 G.tookDamage 累），护甲 ×2
-  if(hasRelic("stack") && (P.noHitStreak || 0) >= 2) s.def *= 2;
+  if(hasRelic("stack") && (P.noHitStreak || 0) >= 2) s.def *= 2;   // 叠甲的乘法（底数在上面）
   /* 蚀甲：每次挨打（takeHit()）护甲 −1，每答对一题（answer() 的 ok 分支）+1，
-     G.corrodeLoss 记的是"现在被磨掉了几点"，最低卡在 0（不会把护甲磨成负数）。
+     G.corrodeArmor 记的是"现在攒了几点额外护甲"（2026-09-21 修：原来记的是"被磨掉几点"、
+     封在 0，所以「每答对 +1」永远只能还回原值，这件史诗从头到尾只有负面）。
      ⚠️ 2026-09 用户把它从「本场」改成**每层**——所以挂在 G 上、`nextFloor()` 里清零，
      一场打完不再自动复原（续玩档存的是刚进这一层的样子，天然是 0）。
      ⚠️ 放在 defGear 快照**之前**——护甲被磨掉的时候，铁壁靠护甲换的伤害也该跟着掉，
      不然"甲都快被磨没了"却还在吃满额的铁壁伤害，逻辑对不上。*/
-  if(hasRelic("corrode") && G) s.def = Math.max(0, s.def - (G.corrodeLoss || 0));
+  if(hasRelic("corrode") && G) s.def += (G.corrodeArmor || 0);
   /* 「铁壁」只认**装备和等级来的**护甲，所以在练习模式那 +50 之前先记一笔。
      ⚠️ 不这么分开的话，练习模式 +50 护甲 = 铁壁 +150% 伤害，
      「纯背词的简单模式」反而成了全游戏输出最高的玩法。*/
+  /* 砺石（生命 −5）和血囊（攻击 −4）可能在 1 级把面板压穿，这里兜一下底。*/
+  s.atk = Math.max(1, s.atk);
+  s.maxHp = Math.max(1, s.maxHp);
   s.defGear = s.def;
   /* 练习模式（用户 2026-09）：选关卡时勾的，跟着 P 进续玩档。
      固定 +50 护甲（挨打那条链最低仍掉 1 点）、攻击减半 —— 拿来纯背词用。
@@ -219,13 +231,16 @@ function nextFloor(){
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
   G.holdUsed = 0;          // 「屏息」每层 HOLD_FREE 次
   G.rerollUsed = 0;        // 遗物候选重掷，每层几次看 rerollBudget()（老档存的 true/false 也能比，JS 会自动转 1/0）
-  G.corrodeLoss = 0;       // 「蚀甲」磨掉了几点护甲，每层重置
+  G.corrodeArmor = 0;      // 「蚀甲」现在攒的是**加**出来的护甲（2026-09-21 修：原来只扣不加），每层重置
   G.openUsed = false;      // 「开场」每层一次
   G.fleeFree = false;      // 「脱壳」每层第一次撤退不掉血
   G.glassCut = 0;          // 「沙漏」这一层被超时削掉了几秒读条
   G.dice = 0;              // 「赌骰」攒了几层暴击率，每层清零（答错也清，见 answer()）
   G.borrowUsed = false;    // 「借甲」每层一次
   G.braceUsed = false;     // 「缓坠」每层第一次跌破半血才触发（原来是整趟一次，太弱了）
+  G.burlapUsed = false;    // 「粗布」每层第一次答错（2026-09-21 从「每场一次」改的）
+  G.warmthUsed = false;    // 「余温」每层第一次跌破半血触发一次（2026-09-21 加的自带触发源）
+  G.openLeft = OPENING_N;  // 「开场」每层前几次答对吃加成（2026-09-21 从「第一次」改成「前 3 次」）
   G.catSeen = {};          // 「面熟」这一层各类别的怪遇到过几只，startBattle() 里累
   G.floorAsked = 0;        // 「破晓甲」这一层已经答过几题（不分对错），answer() 里累
   /* 叠甲：**上一层**干不干净（G.tookDamage 在 takeHit() 里置真）决定这一层还算不算连续 ——
@@ -275,6 +290,16 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
+  /* 2026-09-21：这五件原来「独立价值恒为 0」——它们要么按护甲算（自己不产护甲），
+     要么等着「护盾被打穿」（自己不产护盾），单带时永远触发不了。这一批各补了一条
+     **每进一层自带的护盾**当种子。⚠️ 别把种子删掉，删了它们就又回到白板。*/
+  if(hasRelic("mirror"))  P.shield = (P.shield || 0) + MIRROR_SHIELD;   // 镜盾
+  if(hasRelic("cherish")) P.shield = (P.shield || 0) + CHERISH_SHIELD;  // 惜盾
+  if(hasRelic("shatter")) P.shield = (P.shield || 0) + SHATTER_SHIELD;  // 破盾余威
+  if(hasRelic("borrow"))  P.shield = (P.shield || 0) + BORROW_SHIELD;   // 借甲
+  if(hasRelic("veteran")) P.shield = (P.shield || 0) + VETERAN_SHIELD;  // 久经
+  /* 泉涌：自带一笔每层回血当「溢出的来源」——它原来只吃别的件漏出来的溢出，单带几乎没用。*/
+  if(hasRelic("well")) healUp(Math.max(1, Math.ceil(stats().maxHp * WELL_HEAL_PCT)));
   /* 未雨绸缪（用户 2026-09 提到史诗）：进层时**身上每 foresightPer 金币**回 1% 最大生命，
      不封顶 —— 存着不花的人走得越远回得越多。*/
   if(hasRelic("foresight")){
@@ -1318,7 +1343,7 @@ function renderBattleBars(){
   renderCombo();
 }
 /* ---- 连击：每 comboStep 次 +comboPct%，可叠加不封顶（火星把 step 减 1）---- */
-function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? 1 : 0)); }
+function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? SPARK_STEP : 0)); }
 /* 现在这一串连击给多少百分比。**它进 answer() 的 pct 桶，不是独立乘区。** */
 function comboPct(combo){
   const c = combo == null ? ((P && P.combo) || 0) : combo;
@@ -1443,6 +1468,8 @@ function spellBonusPct(){
   let p = 0;
   if(hasRelic("carve")) p += SPELL_RELIC_RATE * 100;      // 刻字 +15
   if(hasRelic("recite")) p += RECITE_SPELL_RATE * 100;    // 默诵 +30
+  if(hasRelic("caution")) p += CAUTION_SPELL_RATE * 100;  // 慎笔 +5（2026-09-21 加：拼写题只占 5%，
+                                                          //   光靠「拼写答错减伤」这条永远吃不满一件稀有）
   return Math.round(p);
 }
 /* ---- 答题读条（用户 2026-09）----
@@ -1472,6 +1499,7 @@ function startQTimer(){
      直接加在这道题的读条上，不改 qSeconds() 本身（沙漏还要读它）。
      ⚠️ 不写日志 —— 低血时每题都触发，写一行就把战斗日志刷满了，读条变长本身看得见。*/
   if(hasRelic("steady") && P && P.hp <= stats().maxHp * 0.25) secs += STEADY_BONUS;
+  if(hasRelic("glass")) secs += GLASS_BONUS;   // 沙漏：读条本身多给几秒（2026-09-21 加）
   const total = Math.max(1, secs) * 1000, t0 = Date.now();
   t.hidden = false;
   t.classList.remove("hot");
@@ -1893,22 +1921,30 @@ function answer(btn, ok){
   }
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
-    // 蚀甲：答对一题护甲 +1（本场内，最低 0、封顶原值，见 stats()）
-    if(hasRelic("corrode")) G.corrodeLoss = Math.max(0, (G.corrodeLoss || 0) - 1);
+    /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
+       原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
+       永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
+    if(hasRelic("corrode")) G.corrodeArmor = Math.min(CORRODE_MAX, (G.corrodeArmor || 0) + 1);
     /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
     P.combo += B.wager ? 2 : 1;
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
     if(isSpell){ P.combo += SPELL_COMBO * (hasRelic("boom") ? 2 : 1); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
-    if(hitWeak && hasRelic("chase")) P.combo += 2;          // 追猎：打中弱点多攒两下
+    if(hitWeak && hasRelic("chase")){                       // 追猎：打中弱点多攒两下 + 回血
+      P.combo += 2;
+      const ch = healUp(Math.max(1, Math.ceil(stats().maxHp * CHASE_HEAL)));
+      if(ch.hp) relicLog += " <span class=\"sys\">(追猎 · 回 " + ch.hp + " 点)</span>";
+    }
     /* 续弦：5% 把连击接回这一趟最长的那一串。**必须在下面更新 maxCombo 之前判**，
        不然 P.combo 刚好就是 maxCombo，接回来等于没接。*/
-    if(hasRelic("restring") && P.combo < (P.maxCombo || 0) && Math.random() < 0.05){
-      P.combo = P.maxCombo;
-      relicLog += " <span class=\"sys\">(续弦 · 连击接回 ×" + P.combo + ")</span>";
+    if(hasRelic("restring") && Math.random() < RESTRING_RATE){
+      if(P.combo < (P.maxCombo || 0)) P.combo = P.maxCombo;
+      const rs = healUp(RESTRING_HEAL);
+      relicLog += " <span class=\"sys\">(续弦 · 连击 ×" + P.combo +
+        (rs.hp ? "，回 " + rs.hp + " 点" : "") + ")</span>";
     }
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
-    if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(2, s);   // 计数器
+    if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(COUNTER_HEAL, s);   // 计数器
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤 + 额外伤害）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
        ⚠️ **额外伤害现在进这条式子**（用户 2026-09 改的公式）——
@@ -1936,16 +1972,22 @@ function answer(btn, ok){
     // 连击也在这一桶里：每 comboStep 次 +comboPct%，不封顶（火星让 step 少 1）
     const cbo = comboPct();
     let pct = cbo;
-    if(hasRelic("quick")) pct += Math.min(20, Math.floor(P.combo / 5) * 2); // 速记：每 5 连击 +2%，上限 20%
-    if(isSpell && hasRelic("carve")) pct += 20;                             // 刻字
-    if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += 33;                 // 残焰
-    if(hasRelic("hoard")) pct += Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT;  // 守财：每 150 金 +2%，不封顶
+    if(hasRelic("quick")) pct += Math.min(QUICK_MAX, Math.floor(P.combo / 5) * QUICK_PER); // 速记
+    if(isSpell && hasRelic("carve")) pct += CARVE_PCT;                      // 刻字：拼对的那一刀
+    if(isSpell && hasRelic("boom"))  pct += BOOM_PCT;                       // 破音：同上（连击翻倍在上面）
+    if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += EMBER_PCT;          // 残焰
+    if(hasRelic("hoard")) pct += Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT;  // 守财：不封顶
+    if(hasRelic("nerve") && B.wager) pct += NERVE_PCT;                      // 铁胆：冒险答对的加码
+    if(hitWeak && hasRelic("scent")) pct += SCENT_PCT;                      // 嗅迹
+    if(hitWeak && hasRelic("synes")) pct += SYNES_PCT;                      // 通感
+    if(hasRelic("flaw"))  pct += FLAW_PCT;                                  // 破绽（无视护甲在下面）
+    if(hasRelic("inertia") && P.combo >= INERTIA_AT) pct += INERTIA_PCT;    // 惯性
     // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
-    if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * 5;      // 空手：每少带一件 +5%
+    if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * EMPTY_PCT;  // 空手
     if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
-    if(hasRelic("offer")) pct += 60;                                        // 献身（生命减半在 stats() 里）
-    if(hasRelic("slay") && m.boss) pct += 25;                               // 弑主：Boss 和守层者
-    if(hasRelic("delve")) pct += Math.min(40, G.floor * 0.5);               // 踏层：每下一层 +0.5%
+    if(hasRelic("offer")) pct += OFFER_PCT;                                 // 献身（生命减半在 stats() 里）
+    if(hasRelic("slay")){ pct += SLAY_ALL; if(m.boss) pct += SLAY_PCT; }    // 弑主：对谁都加，对 Boss 再加
+    if(hasRelic("delve")) pct += Math.min(DELVE_MAX, G.floor * 0.5);        // 踏层：每下一层 +0.5%
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
     // 铁壁：每 1 点护甲 +3%。用 defGear —— 练习模式那 +50 不算数（见 stats()）
     if(hasRelic("bastion")) pct += (s.defGear || 0) * BASTION_PER;
@@ -1957,15 +1999,17 @@ function answer(btn, ok){
        按钮上写的就是「对了伤害翻倍」，所以它是②层的 +100%，不是原来那个 +3 点伤。
        ⚠️ 摊进百分比桶，别给它开第三个乘区。*/
     if(B.wager) pct += 100;
-    if(hasRelic("opening") && !G.openUsed){ pct += 100; G.openUsed = true; }   // 开场：每层第一次答对
-    if(hasRelic("greet") && !B.greetUsed){ pct += 50; B.greetUsed = true; }    // 见面礼：每场第一次答对
+    /* 开场 2026-09-21 从「每层第一次」改成「每层前 OPENING_N 次」——
+       「每层一次」摊到一层 35 刀上只剩 +2.9%，撑不起一件稀有（见面礼「每场一次」是它的 11.5 倍）。*/
+    if(hasRelic("opening") && (G.openLeft || 0) > 0){ pct += OPENING_PCT; G.openLeft--; }
+    if(hasRelic("greet") && !B.greetUsed){ pct += GREET_PCT; B.greetUsed = true; }  // 见面礼：每场第一次
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
     if(hitWeak) flat += 2;                                                  // 打中弱点：③点伤 +2
-    if(B.wager && hasRelic("gambler")) flat += 2;                           // 赌徒：冒对了再 +2 点伤
+    if(B.wager && hasRelic("gambler")) flat += GAMBLER_FLAT;                // 赌徒：冒对了再加一笔点伤
     let surge = false;
-    if(hasRelic("surge") && Math.random() < .25){ flat += 4; surge = true; } // 潮汐
+    if(hasRelic("surge") && Math.random() < .25){ flat += SURGE_FLAT; surge = true; } // 潮汐
     /* 镜盾：每 MIRROR_PER 点护盾 +1 点伤（③层：吃暴击、被护甲减，不被百分比放大）。
        ⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
        凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
@@ -1980,10 +2024,13 @@ function answer(btn, ok){
 
     // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
     let critRate = s.crit, critMult = 2;
-    if(hasRelic("maul")) critMult += 0.4;                                   // 重锤：暴击伤害 ×2 → ×2.4
-    if(hasRelic("tempo") && P.combo >= 10) critRate += 15;                  // 节拍
+    if(hasRelic("maul")){ critMult += MAUL_MULT; critRate += MAUL_CRIT; }   // 重锤：暴击率 + 暴击伤害
+    if(hasRelic("edge")) critMult += EDGE_MULT;                             // 薄刃：暴击伤害 ×2 → ×2.5
+    if(hasRelic("crush")) critMult += CRUSH_MULT;                           // 碎颅：暴击伤害（无视护甲在下面）
+    if(hasRelic("tempo") && P.combo >= TEMPO_AT) critRate += TEMPO_CRIT;    // 节拍
     if(hasRelic("dice")) critRate += (G.dice || 0) * DICE_CRIT;             // 赌骰：本层内叠加
-    if(hasRelic("charge")) critRate += (P.charge || 0) * 8;                 // 蓄势：攒了几刀没暴就加几个 8%
+    if(hasRelic("spark")) critRate += SPARK_CRIT;                           // 火星：档位变密 + 暴击率
+    if(hasRelic("charge")) critRate += (P.charge || 0) * CHARGE_CRIT;       // 蓄势：攒了几刀没暴就叠几档
     if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * 0.1; critRate = 100; }
     // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
     const forceCrit = hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0;
@@ -1994,10 +2041,12 @@ function answer(btn, ok){
     let raw = Math.round((base + extra) * (1 + pct / 100)) + flat;
     if(crit) raw = Math.round(raw * critMult);                              // 乘区二
     // 破绽：打中弱点时无视护甲；碎颅：暴击时无视护甲
-    const noArmor = (hitWeak && hasRelic("flaw")) || (crit && hasRelic("crush"));
+    /* 破绽 2026-09-21 从「打中弱点时」改成无条件 —— 弱点命中率只有 7%，
+       而怪物护甲平均 0.8 点，两个小数字乘在一起等于这件传奇什么都没做。*/
+    const noArmor = hasRelic("flaw") || (crit && hasRelic("crush"));
     const armor = noArmor ? 0 : m.armor;
     const dmg = Math.max(1, raw - armor);
-    if(crit && hasRelic("vamp")) healUp(4, s);                              // 饮血
+    if(crit && hasRelic("vamp")) healUp(VAMP_HEAL, s);                      // 饮血
     // 记仇看的是"连续挨你打了几刀"——每一次真的落下的攻击都算一刀，跟这次是不是暴击/额外伤害无关
     if(hasRelic("grudge")) m.hitsLanded = (m.hitsLanded || 0) + 1;
     coopDealDamage(m, dmg);
@@ -2011,7 +2060,7 @@ function answer(btn, ok){
       relicLog += " <span class=\"sys\">(回响之厅又补了 " + hall + " 点)</span>";
     }
     if(recoil){ P.recoil = 0; relicLog += " <span class=\"sys\">(反震 +" + recoil + "% 打了出去)</span>"; }
-    if(hasRelic("drain")) healUp(2, s);                                     // 吞噬
+    if(hasRelic("drain") && Math.random() < DRAIN_RATE) healUp(DRAIN_HEAL, s);  // 吞噬
     // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
     if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
     /* 不死鸟：血掉到 PHOENIX_AT 以下之后，每答对回一大口。
@@ -2022,7 +2071,7 @@ function answer(btn, ok){
     }
     if(hasRelic("dice") && Math.random() < DICE_RATE) G.dice = (G.dice || 0) + 1;  // 赌骰：答对 50% 叠一层（本层内）
     if(B.wager && hasRelic("allin") && Math.random() < .10){                // 孤注
-      healUp(Math.max(1, Math.round(s.maxHp * 0.2)), s);
+      healUp(Math.max(1, Math.round(s.maxHp * ALLIN_PCT)), s);
     }
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
     /* 凝盾：每答对 AEGIS_EVERY 题攒 AEGIS_GAIN 点护盾，攒到 AEGIS_MAX 封顶 */
@@ -2049,13 +2098,13 @@ function answer(btn, ok){
     /* 反刍：上一题答错了，这一题答对就回一口血 */
     if(P.chew && hasRelic("chew")){
       P.chew = false;
-      const back = Math.max(1, Math.ceil(s.maxHp * 0.08));
+      const back = Math.max(1, Math.ceil(s.maxHp * CHEW_PCT));
       healUp(back, s);
       relicLog += " <span class=\"sys\">(反刍回了 " + back + " 点生命)</span>";
     }
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
     if(B.q.haunted && hauntGone){
-      const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * 0.15)) : 2;
+      const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * BIND_HEAL)) : 2;
       healUp(back, s);
       note += " <span style=\"color:var(--venom)\">心魔散了，回 " + back + " 点生命。</span>";
     }
@@ -2063,7 +2112,12 @@ function answer(btn, ok){
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
     G.floorWrong = (G.floorWrong || 0) + 1;    // 循迹：这一层打错了几题，nextFloor() 里跟上一层比
     B.wrongTimes = (B.wrongTimes || 0) + 1;    // 后劲：这一场第几次答错，mitigate() 里读
-    const repeatWord = rec.wrong >= 2;         // 二见：这个词已经连续第二次（及以上）答错了
+    /* 二见 2026-09-21 从「连续第二次」改成「**本局**第二次」——
+       连续两次错同一个词太罕见（中间答对一次就重新数），一件史诗基本吃不到。
+       P.wrongSeen 记这一趟错过哪些词，跟着 P 进续玩档（读处 || {}）。*/
+    if(!P.wrongSeen) P.wrongSeen = {};
+    const repeatWord = !!P.wrongSeen[word.en];
+    P.wrongSeen[word.en] = true;
     /* 铁胆：冒险失手不断连击；长链：答错只减半；
        **拼写题拼错也只减半**（用户 2026-09：拼写比选择难，错一次不该把长链清零）*/
     /* 断链：连击攒够 UNCHAIN_AT 就能拿它挡一下 —— 完全免伤，连击只减 UNCHAIN_CUT。
@@ -2071,17 +2125,19 @@ function answer(btn, ok){
        归位：连击真的要清零那一刻，如果原本 ≥30 就按七折返还一半，只在"真清零"这条分支里算。
        ⚠️ **必须在下面动 P.combo 之前判**，不然连击已经清零/减半了，条件就永远不成立。*/
     const unchain = hasRelic("unchain") && P.combo >= UNCHAIN_AT;
-    const inertia = hasRelic("inertia") && P.combo >= 20;
+    const inertia = hasRelic("inertia") && P.combo >= INERTIA_AT;
     const beforeCombo = P.combo;
     if(B.wager && hasRelic("nerve")){ /* 连击保住 */ }
     else if(unchain) P.combo = Math.max(0, P.combo - UNCHAIN_CUT);
-    else if(inertia) P.combo = 20;
+    else if(inertia) P.combo = INERTIA_AT;
     else if(isSpell || hasRelic("chain")) P.combo = Math.floor(P.combo / 2);
     else {
       P.combo = 0;
-      if(hasRelic("rebound") && beforeCombo >= 30){
-        P.combo = Math.round(beforeCombo * 0.5 * 0.7);
-        relicLog += " <span class=\"sys\">(归位 · 连击缓冲回 ×" + P.combo + ")</span>";
+      if(hasRelic("rebound") && beforeCombo >= REBOUND_AT){
+        P.combo = Math.round(beforeCombo * REBOUND_KEEP);
+        const rb = healUp(Math.max(1, Math.ceil(stats().maxHp * REBOUND_HEAL)));
+        relicLog += " <span class=\"sys\">(归位 · 连击缓冲回 ×" + P.combo +
+          (rb.hp ? "，回 " + rb.hp + " 点" : "") + ")</span>";
       }
     }
     G.dice = 0;                       // 赌骰：答错把这一层攒的暴击率清零
@@ -2099,13 +2155,8 @@ function answer(btn, ok){
       // 冒险失手 —— 按钮写的是「错了受伤翻倍」；托底把这个倍率从 ×2 降到 ×1.5
       if(B.wager) dmg = Math.round(dmg * (hasRelic("cushion") ? CUSHION_MULT : 2));
       if(wasHaunted) dmg += 1;                 // 心魔又答错
-      /* 心镜：心魔词答错完全不掉血 —— 让玩家敢反复啃难词。
-         跟断链一样排在最前面，不消耗默诵/回声/屏息那几次「每层」的额度。*/
-      if(dmg > 0 && wasHaunted && hasRelic("psyche")){
-        dmg = 0;
-        head = "<span class=\"big no\">心镜 —— 它打不疼你</span>";
-        note = "心魔的那一下落在镜子上。";
-      }
+      /* 心镜 2026-09-21 从「完全免伤」改成减伤 —— 加成挪进了 mitigate() 的 cut 桶
+         （靠 opt.haunted 传进去），所以它现在跟别的百分比减伤一起相加、一起吃 MIT_CUT_MAX。*/
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
         dmg = 0;
@@ -2119,15 +2170,23 @@ function answer(btn, ok){
         head = "<span class=\"big no\">默诵替你挡下了</span>";
         note = "这一层的免伤还剩 " + (RECITE_FREE - G.reciteFree) + " 次。";
       }
-      if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血
+      /* 慎笔 2026-09-21：从「拼写答错 −15%」改成「拼写答错不掉血」+ 拼写出现率 +5% ——
+         拼写题只占 5% 的题，−15% 摊下来只有 0.4 价值，是全表最低的一件。*/
+      if(dmg > 0 && isSpell && hasRelic("caution")){
+        dmg = 0;
+        head = "<span class=\"big no\">慎笔 —— 笔尖悬住了</span>";
+        note = "拼错了，但这一下没落到身上。";
+      }
+      if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血 + 回一口
         G.echoUsed = true;
         dmg = 0;
+        const eh = healUp(Math.max(1, Math.ceil(stats().maxHp * ECHO_HEAL)));
         head = "<span class=\"big no\">回声替你挡下了</span>";
-        note = "这一层的第一次失手，不掉血。";
+        note = "这一层的第一次失手，不掉血" + (eh.hp ? "，还回了 " + eh.hp + " 点" : "") + "。";
       }
       /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。*/
       if(dmg > 0){
-        const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord});   // 二见：同词连续第二次答错
+        const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted});
         dmg = mit.dmg;
         if(mit.dodged){
           head = "<span class=\"big no\">错身 —— 没碰到你</span>";
@@ -2142,9 +2201,9 @@ function answer(btn, ok){
         note = "这一下没让你掉血。";
       }
       if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
-        coopDealDamage(m, 2);
-        note += " 赤鳞反弹了 <b>2</b> 点。";
-        floatNum("foe", "-2", "dmg");
+        coopDealDamage(m, THORNS_EXTRA);
+        note += " 赤鳞反弹了 <b>" + THORNS_EXTRA + "</b> 点。";
+        floatNum("foe", "-" + THORNS_EXTRA, "dmg");
       }
     }
     const saved = deathSave();
@@ -2195,14 +2254,19 @@ function answer(btn, ok){
 function deathSave(){
   if(P.hp > 0) return "";
   if(hasRelic("undying") && !P.undying){
-    P.undying = true; P.hp = 1;
+    P.undying = true;
+    /* 2026-09-21：原来是把血钉在 1 点 —— 钉在 1 点等于下一下还是死，
+       一件神圣只值「多挨一下」。现在直接回 UNDYING_HEAL 的上限。*/
+    P.hp = Math.max(1, Math.ceil(stats().maxHp * UNDYING_HEAL));
     if(hasRelic("warmth")) P.warmthLeft = WARMTH_HITS;   // 余温：薪火之后接下来几次答错单独再减半
-    return "薪火在胸口炸开 —— 你以 1 点生命站住了。";
+    return "薪火在胸口炸开 —— 你带着 " + P.hp + " 点生命站住了。";
   }
-  if(hasRelic("revive") && !P.revived){
-    P.revived = true;
+  // 回魂：本局 REVIVE_N 次（P.revived 从布尔改成计数，老续玩档存的 true/false 会被 JS 当 1/0 比）
+  if(hasRelic("revive") && (P.revived || 0) < REVIVE_N){
+    P.revived = (P.revived || 0) + 1;
     P.hp = Math.max(1, Math.ceil(stats().maxHp * REVIVE_PCT));
-    return "回魂 —— 你数到第二次心跳，又站了起来（" + P.hp + " 点生命）。";
+    return "回魂 —— 你数到第二次心跳，又站了起来（" + P.hp + " 点生命，本局还剩 " +
+           (REVIVE_N - P.revived) + " 次）。";
   }
   return "";
 }
@@ -2239,22 +2303,31 @@ function mitigate(dmg, s0, opt){
   /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
   let cut = 0;
+  /* 粗布 2026-09-21 从「每场一次减半」改成「**每层**一次 −BURLAP_CUT%」，并挪进 cut 桶 ——
+     一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
+     一件**普通**品质比传奇「不动」(−35%) 还强，是全表最大的一处定价事故。*/
+  if(wrong && hasRelic("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += BURLAP_CUT; }
   if(hasRelic("soft")) cut += 10;                                         // 软甲
+  if(hasRelic("shed")) cut += SHED_CUT;                                   // 脱壳：全程减伤（撤退免伤在 flee()）
+  if(wrong && hasRelic("chain")) cut += CHAIN_CUT;                        // 长链：答错时的减伤
   if(hasRelic("hide")) cut += 5;                                          // 皮甲
   if(hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);  // 老茧：每深一层 +1%
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
   if(hasRelic("still")) cut += STILL_CUT;                                 // 不动：一件顶三四件
   if(hasRelic("deep") && G.floor >= DEEP_FROM) cut += DEEP_CUT;           // 深潜：30 层之后
   // 镇压：只挡 Boss 那一口（Boss 层的容错只有 3 下出头，全游戏最容易死的地方）
-  if(hasRelic("quell") && B && B.mob && B.mob.boss) cut += QUELL_CUT;
+  if(hasRelic("quell")){ cut += QUELL_ALL; if(B && B.mob && B.mob.boss) cut += QUELL_CUT; }  // 镇压
   /* 稳答／慎笔：按题型分——mitigate() 只有两个调用点（timeUp() 不传 wrong，answer() 的答错分支传
      {wrong:true}），所以这里的 wrong 已经排除了超时；题型看 B.q.type（此时题目还没被清掉）。*/
   if(wrong && hasRelic("calm") && B && B.q && B.q.type !== "spell") cut += CALM_CUT;
-  if(wrong && hasRelic("caution") && B && B.q && B.q.type === "spell") cut += CAUTION_CUT;
+  // 心镜 2026-09-21 从「完全免伤」改成减伤（原来一层能免掉 2.4 次挨打，稀有档超标三倍）
+  if(wrong && hasRelic("psyche") && opt && opt.haunted) cut += PSYCHE_CUT;
   // 缓冲：!wrong 就是超时那条路（唯二两个调用点之一），跟沙漏是两条路——沙漏会在 timeUp() 里提前返回
   if(!wrong && hasRelic("buffer")) cut += BUFFER_CUT;
   // 后劲：B.wrongTimes 在 answer() 的答错分支里、调 mitigate() 之前就先 +1 了，这里读到的已经是"这一下是第几次"
-  if(wrong && hasRelic("grit") && B && (B.wrongTimes || 0) >= 2) cut += Math.min(GRIT_MAX, (B.wrongTimes - 1) * GRIT_STEP);
+  /* 后劲 2026-09-21 从「同一场」改成「同一层」、并且**第 1 次答错就起算** ——
+     一场平均只答错 0.52 次，原来那条「同场第二次起」一层只发生 1.3 次。*/
+  if(wrong && hasRelic("grit")) cut += Math.min(GRIT_MAX, (G.floorWrong || 0) * GRIT_STEP);
   // 记仇：连续挨你打到第 GRUDGE_AT 刀起——m.hitsLanded 在 answer() 答对分支里累加，只属于这一只怪
   if(wrong && hasRelic("grudge") && B && B.mob && (B.mob.hitsLanded || 0) >= GRUDGE_AT) cut += GRUDGE_CUT;
   // 面熟：这一层同类别的怪见过几只——G.catSeen 在 startBattle() 里累，nextFloor() 清零
@@ -2266,8 +2339,12 @@ function mitigate(dmg, s0, opt){
   if(wrong && hasRelic("twice") && opt && opt.repeatWord) cut += TWICE_CUT;
   /* 老对手：本局**每遇到过一次**同名 Boss/层间守者就再减 NEMESIS_CUT%（用户 2026-09 改成叠加）。
      P.bossSeen 在 startBattle() 里累（这一次也已经记进去了，所以第一次遇到就是 1 档），整趟不清零。*/
-  if(wrong && hasRelic("nemesis") && B && B.mob && B.mob.boss && B.mob.def && P.bossSeen){
-    cut += (P.bossSeen[B.mob.def.id] || 0) * NEMESIS_CUT;
+  /* 老对手 2026-09-21 改成**对所有敌人**生效：原来只减那一只 Boss 的伤害，
+     而 Boss 只占全部挨打量的 6%，一件传奇摊下来只值 0.5。*/
+  if(wrong && hasRelic("nemesis") && P.bossSeen){
+    let met = 0;
+    for(const k in P.bossSeen) met += P.bossSeen[k] || 0;   // 本局一共撞见过几次 Boss（不分是哪一只）
+    cut += Math.min(NEMESIS_MAX, met * NEMESIS_CUT);
   }
   // 缓坠：这一层第一次跌破半血的那一下——用这一下"挨完之后会不会跌破半血"当判定，每层限一次
   if(wrong && hasRelic("brace") && !G.braceUsed && P.hp >= s.maxHp / 2 && (P.hp - out) < s.maxHp / 2){
@@ -2290,13 +2367,6 @@ function mitigate(dmg, s0, opt){
      `1 - 0.55 = 0.44999999999999996`，floor 之后白多掉 1 点（实测 100 点打成 44 而不是 45）。*/
   if(cut > MIT_CUT_MAX) cut = MIT_CUT_MAX;
   if(cut) out = Math.floor(out * (100 - cut) / 100);
-  /* 粗布排在屏息前面：它是**每场一次**（一层十来只怪，给得多），
-     先花它才不会白白吃掉屏息那两次「每层」的额度。⚠️ 只认答错，超时不触发。*/
-  if(wrong && hasRelic("burlap") && B && !B.burlapUsed){
-    B.burlapUsed = true;
-    out = Math.max(1, Math.ceil(out / 2));
-    why += " <span class=\"sys\">(粗布挡掉一半)</span>";
-  }
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
     out = Math.max(1, Math.ceil(out / 2));
@@ -2304,6 +2374,12 @@ function mitigate(dmg, s0, opt){
   }
   /* 余温：不灭薪火触发之后才有 P.warmthLeft（在 deathSave() 里发），接下来这几次答错单独再减半，
      不占粗布/屏息的名额——放在它们后面，是"薪火给的额外缓冲"，不是替代它们。*/
+  /* 余温 2026-09-21 补了自带触发源：每层第一次跌破半血也发一轮 ——
+     原来只认「不灭薪火」，而薪火是一件掉不出来的神圣，单带余温永远触发不了。*/
+  if(hasRelic("warmth") && !G.warmthUsed && P.hp <= s.maxHp / 2){
+    G.warmthUsed = true;
+    P.warmthLeft = Math.max(P.warmthLeft || 0, WARMTH_HITS);
+  }
   if(wrong && hasRelic("warmth") && (P.warmthLeft || 0) > 0){
     P.warmthLeft--;
     out = Math.max(1, Math.ceil(out / 2));
@@ -2311,7 +2387,7 @@ function mitigate(dmg, s0, opt){
   }
   /* 钝痛 10% / 石胎 5%：两件都是「单次封顶」，一起带就按**低的那个**算，不叠乘 */
   let capPct = 0;
-  if(hasRelic("blunt")) capPct = 0.1;
+  if(hasRelic("blunt")) capPct = BLUNT_PCT;
   if(hasRelic("womb")) capPct = capPct ? Math.min(capPct, WOMB_PCT) : WOMB_PCT;
   if(capPct){
     const cap = Math.max(1, Math.ceil(s.maxHp * capPct));
@@ -2324,11 +2400,11 @@ function mitigate(dmg, s0, opt){
      算到最后才比，是为了拿"你真正要挨的那个数"去对门槛。
      ⚠️ 2026-09 用户把「整趟一次」的限制去掉了，现在每一记重击都吃得到。*/
   if(hasRelic("endure") && out > s.maxHp * ENDURE_PCT){
-    out = Math.ceil(out / 2);
-    why += " <span class=\"sys\">(尚存把这记重击砍掉一半)</span>";
+    out = Math.max(1, Math.floor(out * (100 - ENDURE_CUT) / 100));
+    why += " <span class=\"sys\">(尚存削掉了这记重击的 " + ENDURE_CUT + "%)</span>";
   }
   out = Math.max(1, out);
-  if(hasRelic("slip") && Math.random() < 0.25) return {dmg:0, dodged:true, why:""};   // 错身
+  if(hasRelic("slip") && Math.random() < SLIP_RATE) return {dmg:0, dodged:true, why:""};   // 错身
   return {dmg:out, dodged:false, why:why};
 }
 /* ---- 挨一下：先扣护盾、剩下的才扣血，跳数字，返回写进 verdict 的那句话 ----
@@ -2350,15 +2426,16 @@ function takeHit(dmg, m, haunted){
     // 反震：**真的掉了血**才攒（护盾全吃掉的那种不算）
     if(hasRelic("recoil")) P.recoil = Math.min(RECOIL_MAX, (P.recoil || 0) + 1);
   }
-  // 蚀甲：每次挨打（不管盾扛没扛住）本场护甲 −1，最低钉在 0——上限在 stats() 里按当时护甲夹
-  if(hasRelic("corrode")) G.corrodeLoss = (G.corrodeLoss || 0) + 1;
+  // 蚀甲：每次挨打（不管盾扛没扛住）把攒下的额外护甲扣掉 CORRODE_LOSS 点，最低 0
+  if(hasRelic("corrode")) G.corrodeArmor = Math.max(0, (G.corrodeArmor || 0) - CORRODE_LOSS);
   // 护盾从"有"变成"没有"的那一下（真的被打穿，不是本来就没盾）：借甲 / 破盾余威 / 久经 都挂在这个事件上
   const brokeNow = hadShield && (P.shield || 0) <= 0;
   if(brokeNow){
     P.shieldBrokenCount = (P.shieldBrokenCount || 0) + 1;    // 久经：累计次数，stats() 里按门槛判
     if(hasRelic("borrow") && !G.borrowUsed){                 // 借甲：每层一次，白送一批新盾
       G.borrowUsed = true;
-      const gain = Math.max(0, Math.round((stats().defGear || 0) * BORROW_MULT));
+      // 2026-09-21：加了 BORROW_SHIELD 保底 —— 裸装护甲是 0，原来这一笔恒为 0
+      const gain = Math.max(BORROW_SHIELD, Math.round((stats().defGear || 0) * BORROW_MULT));
       if(gain > 0){ P.shield = gain; say("借甲趁护盾破的那一下，立刻又撑起 <b>" + gain + "</b> 点。", "good"); }
     }
     if(hasRelic("shatter") && B && !B.shatterUsed){          // 破盾余威：这场一次，免下一下答错伤害
@@ -2408,7 +2485,7 @@ function closeBattleWin(){
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
-  if(hasRelic("reap")) heal += 5;
+  if(hasRelic("reap")) heal += REAP_HEAL;
   // 药膏（用户 2026-09 提到稀有）：75% 概率回 4 点，不是每次都给
   if(hasRelic("salve") && Math.random() < SALVE_RATE) heal += SALVE_HEAL;
   if(hasRelic("breath")) heal += Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT));  // 喘息：每打倒一只
@@ -2425,8 +2502,8 @@ function closeBattleWin(){
     G.seen[m.y][m.x] = true;
     say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
-    if(hasRelic("finale")){                       // 收尾：清完一层回 20% 上限
-      const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
+    if(hasRelic("finale")){                       // 收尾：清完一层回 FINALE_PCT 的上限
+      const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
       if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
         (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
@@ -2472,7 +2549,7 @@ function flee(){
 }
 /* 返回**实际到手**的经验（求知加成之后），调用方拿它去写日志 */
 function gainXp(n){
-  if(hasRelic("study")) n = Math.round(n * 1.2);        // 求知 +20%
+  if(hasRelic("study")) n = Math.round(n * STUDY_MULT);  // 求知
   P.xp += n;
   while(P.xp >= xpNeed(P.lvl)){
     P.xp -= xpNeed(P.lvl);
@@ -2480,7 +2557,7 @@ function gainXp(n){
     /* 烙印/铭心按当前等级在 stats() 里现算，这儿不再攒 P.bonusAtk / P.bonusHp
        （那是永久面板加成，卖掉遗物也不还 —— 2026-09 已经改掉）。
        铭心涨的是上限，按老规矩当前血也跟着补上。*/
-    if(hasRelic("engrave")) P.hp += 3;
+    if(hasRelic("engrave") && P.lvl * 3 <= ENGRAVE_MAX) P.hp += 3;   // 封顶之后不再补（见 stats()）
     const s = stats();
     healUp(CHAPTER.levelHeal, s);
     fxLevelUp();
@@ -3893,7 +3970,9 @@ function resumeRun(s){
   if(typeof P.shield !== "number") P.shield = 0; // 护盾（第四批），老档没有
   if(typeof P.aegisN !== "number") P.aegisN = 0;
   if(typeof P.recoil !== "number") P.recoil = 0;  // 反震攒了几层
-  if(typeof P.revived !== "boolean") P.revived = false;   // 回魂用掉没有（整趟一次）
+  // 回魂 2026-09-21 从「整趟一次」改成「本局 REVIVE_N 次」，字段从布尔变成计数
+  if(typeof P.revived !== "number") P.revived = P.revived ? 1 : 0;
+  if(!P.wrongSeen) P.wrongSeen = {};                         // 二见：这一趟错过哪些词
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
@@ -3905,6 +3984,13 @@ function resumeRun(s){
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
         vis: [], things: s.things || [], stair: s.stair, rooms: s.rooms || null, mobs: [] };
+  /* 续玩档存的是「刚踏进这一层」的样子，所以这几个每层字段直接按新一层初始化。
+     ⚠️ 开场那个 openLeft 是计数不是布尔，不补的话读档后这一层就白少三刀。*/
+  G.openLeft = OPENING_N;
+  G.corrodeArmor = 0;
+  G.warmthUsed = false;
+  G.floorWrong = 0;
+  G.burlapUsed = false;
   // 游商货架上可能还摆着已经删掉的遗物（老档），先清一遍
   G.things.forEach(function(th){
     if(th && th.stock) th.stock = th.stock.filter(function(row){ return row.relic && relicById(row.relic.id); });
@@ -4846,8 +4932,8 @@ function coopHandleDead(cid){
     G.seen[m.y][m.x] = true;
     say("这一层清空了 —— 阶梯 ▼ 出现了。", "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
-    if(hasRelic("finale")){    // 收尾：清完一层回 20% 上限——清场是共识事件，没亲手补最后一刀也该有
-      const back = Math.max(1, Math.ceil(stats().maxHp * 0.2));
+    if(hasRelic("finale")){    // 收尾：清完一层回 FINALE_PCT 的上限——清场是共识事件，没亲手补最后一刀也该有
+      const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
       if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
         (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
