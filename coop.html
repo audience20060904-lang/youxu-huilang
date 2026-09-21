@@ -95,7 +95,6 @@
             <i>祝</i><span class="pn">祝福<em id="blessSub">用宝石换永久的好处</em></span><span class="go">▸</span>
           </button>
         </div>
-        <p class="note">进洞后拿到的<b>遗物</b>和<b>金币</b>只在那一趟里算数。出来时按这一趟的表现<b>结算成宝石</b>带回镇上。</p>
       </div>
 
       <div class="stage" id="stageBox">
@@ -210,19 +209,18 @@
         </div>
         <p class="note" id="fileMsg"></p>
       </div>
-      <div class="panel" id="panelCode" hidden>
-        <div class="phead">跨设备 · 导出码</div>
-        <p class="note">不方便传文件时用这个：把<b>词汇熟练度、遗物图鉴、探索记录</b>压成一段码，
-          粘到另一台设备导入。本局进度不在里面 —— 要连探索一起带走请用上面的存档文件。</p>
-        <textarea class="code" id="codeOut" readonly rows="3" placeholder="点下面的按钮生成"></textarea>
+      <!-- 云存档：只有两个按钮。剪贴板被浏览器挡住时才露出 #codeBox 那个退路 -->
+      <div class="panel" id="panelCode">
+        <div class="phead">云存档 · 换设备</div>
+        <p class="note">一段<b>存档码</b>装下<b>词汇熟练度、遗物图鉴、探索记录、宝石和祝福</b>。
+          旧设备上点「复制」，新设备上点「粘贴」就过去了。导入是<b>取两边更好的那份</b>合并，不会抹掉这台设备上的进度；
+          <b>没走完的那一趟不在码里</b>。</p>
         <div class="rowb">
-          <button class="btn" id="btnGenCode" type="button">生成导出码</button>
-          <button class="btn" id="btnCopyCode" type="button">复制</button>
+          <button class="btn primary" id="btnCopySave" type="button">复制存档码</button>
+          <button class="btn" id="btnPasteSave" type="button">粘贴存档码</button>
         </div>
-        <textarea class="code" id="codeIn" rows="3" placeholder="把另一台设备的码粘在这里"></textarea>
-        <button class="btn" id="btnImport" type="button">导入</button>
         <p class="note" id="codeMsg"></p>
-        <p class="note">导入是<b>取两边更好的那份</b>合并，不会覆盖掉你在这台设备上的进度。</p>
+        <textarea class="code" id="codeBox" rows="3" hidden></textarea>
       </div>
       <div class="panel">
         <div class="phead">别的</div>
@@ -517,7 +515,7 @@
 <div class="veil" id="veilBlessPick" hidden>
   <div class="sheet">
     <div class="eyebrow" id="blessPickEyebrow">偏爱 · 普通</div>
-    <h2 id="blessPickTitle">想多见到哪一件？</h2>
+    <h2 id="blessPickTitle">什么是你的最爱</h2>
     <input class="findbox" id="blessFind" type="search" autocomplete="off"
            placeholder="搜索：名字 / 效果 / 铭文">
     <div class="relics" id="blessPickList"></div>

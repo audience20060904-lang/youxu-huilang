@@ -3455,13 +3455,14 @@ function renderFuse(){
   if(fuseOn){
     note.innerHTML = fuseSel.length
       ? ("已挑 <b>" + fuseSel.length + " / " + fuseN() + "</b> 件" + RAR_CN[fuseRar()] +
-         "，合成后在两件<b>" + RAR_CN[fuseRar() + 1] + "</b>里挑一件，另付 <b>" + fuseCost() + "</b> 金。")
+         "，合成后在 " + FUSE_PICK + " 件<b>" + RAR_CN[fuseRar() + 1] + "</b>里挑一件，另付 <b>" + fuseCost() + "</b> 金。")
       : "在上面点 <b>" + fuseN() + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
   } else {
     note.innerHTML = ready >= 0
       ? ("点「选择」，挑 " + fuseN() + " 件同品质的砸成一件更高的（另付 <b>" + fuseCost() + "</b> 金）。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
-      : "同一个品质攒够 " + fuseN() + " 件，再加 <b>" + fuseCost() + "</b> 金才能合成。";
+      : "";                 // 材料还不够时这一行整条不写（用户 2026-09-21：标题上已经写着配方了）
   }
+  note.hidden = !note.innerHTML;   // 空着就连位置都别占
 }
 
 /* ================= 心魔 =================
@@ -3641,7 +3642,7 @@ function renderBless(){
     const h = document.createElement("div");
     h.className = "eyebrow bhead";
     h.textContent = kind === "fav"
-      ? ("偏爱 · 同品质里出现概率 " + (BLESS_FAV_X * 100) + "%，本局拿到一次就歇")
+      ? ("偏爱 · 同品质里出现概率 " + (BLESS_FAV_X * 100) + "%，拿到一次失效")
       : "封印 · 本局永不出现";
     box.appendChild(h);
     for(let rar = 0; rar < 5; rar++){
@@ -3671,7 +3672,7 @@ function renderBless(){
 function openBlessPick(kind, rar){
   blessPickSlot = {kind:kind, rar:rar};
   $("blessPickEyebrow").textContent = BLESS_CN[kind] + " · " + RAR_CN[rar];
-  $("blessPickTitle").textContent = kind === "fav" ? "想多见到哪一件？" : "不想再见到哪一件？";
+  $("blessPickTitle").textContent = kind === "fav" ? "什么是你的最爱" : "不想再见到哪一件？";
   const f = $("blessFind");
   if(f) f.value = "";
   renderBlessPick();
@@ -4227,10 +4228,29 @@ function anyVeil(){
   return null;
 }
 
-/* ================= 跨设备导出码 =================
-   只带永久数据：词汇熟练度 / 图鉴 / 探索记录。本局进度不在里面。
-   导入是**合并取优**，不是覆盖 —— 免得从旧设备导一次就把新进度抹了。 */
-var CODE_TAG = "YX1.";
+/* ================= 云存档 · 存档码 =================
+   界面上只有两个按钮：**复制存档码** / **粘贴存档码**。没有服务器 ——
+   这个站是纯静态的，所以「云」就是那段码本身：数据全装在码里，谁拿着码谁就拿着存档。
+
+   码里**只有永久数据**：词汇熟练度 / 遗物图鉴 / 探索记录 / 宝石 + 祝福。
+   **局内数据（没走完的那一趟）一个字节都不进去** —— 它是「换设备」用的，不是「续上这一层」用的。
+   导入是**合并取优**，不是覆盖 —— 免得从旧设备导一次就把新进度抹了。
+
+   ⚠️ 为什么要自己写一套二进制编码：老的 YX1 是 `JSON → base64`，一份认识两千个词的存档
+   能压出**四万多个字符**，根本没法粘。现在按下面这套位流走，同一份档**两三千字符**：
+     · 熟练度不按「英文单词」存，按**词库下标**存 —— 省掉每个词的英文和 JSON 的引号逗号；
+     · 每个词只占 **7 bit**（熟练度 3 + 错过没 1 + 见过几次 3，见得多的再逃逸一个变长整数）；
+     · 「哪些词有记录」这张稀疏表**两种写法各算一遍取短的**（位图 / 间隔表），开头 1 bit 记用了哪种。
+   ⚠️ 按下标存的代价：**词库的顺序一变，老码就对不上**。所以码里带了
+   `nWords + 词库前 nWords 个英文的 16 位校验`：**往词库末尾追加词不影响老码**（前缀没动），
+   但中间插词/删词/重排会被当场查出来 —— 那时只跳过熟练度这一块，图鉴/记录/宝石照样导进去，
+   并在提示里说清楚。遗物图鉴同理（`nRelics` + 前缀校验）。
+   ⚠️ **加词只往 WORDS 末尾追加**，别往中间插 —— 插了所有老存档码就都废了。 */
+var CODE_TAG = "YX1.";          // 老码（JSON + base64），只读不再生成
+var CODE2_TAG = "YX2";          // 新码（紧凑位流），没有点号，整串都是 base64url
+var CODE2_V = 2;
+
+/* ---- base64（老码用的：UTF-8 字符串 <-> base64） ---- */
 function b64enc(str){
   const b = new TextEncoder().encode(str);
   let bin = "";
@@ -4242,27 +4262,287 @@ function b64dec(s){
   for(let i=0;i<bin.length;i++) b[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(b);
 }
-function makeCode(){
-  return CODE_TAG + b64enc(JSON.stringify({
-    lex: LEX, codex: CODEX, meta: meta()
-  }));
+/* ---- base64url（新码用的：裸字节 <-> 无填充的 base64url） ---- */
+function bytesToB64u(arr){
+  let bin = "";
+  for(let i=0;i<arr.length;i++) bin += String.fromCharCode(arr[i] & 255);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+function b64uToBytes(s){
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  while(s.length % 4) s += "=";
+  const bin = atob(s), out = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/* ---- 位流 ---- 低位在前。vint = 每次 7 位数据 + 1 位「还有下一段」 */
+function BitW(){ this.bytes = []; this.cur = 0; this.n = 0; }
+BitW.prototype.bits = function(v, k){
+  for(let i=0;i<k;i++){
+    if(v & (1 << i)) this.cur |= (1 << this.n);
+    if(++this.n === 8){ this.bytes.push(this.cur); this.cur = 0; this.n = 0; }
+  }
+};
+BitW.prototype.vint = function(v){
+  v = Math.max(0, Math.round(v || 0));
+  for(;;){
+    const chunk = v % 128;
+    v = Math.floor(v / 128);
+    this.bits(chunk, 7);
+    this.bits(v > 0 ? 1 : 0, 1);
+    if(!v) return;
+  }
+};
+BitW.prototype.finish = function(){
+  if(this.n) this.bytes.push(this.cur);
+  return this.bytes;
+};
+function BitR(bytes){ this.bytes = bytes; this.i = 0; }
+BitR.prototype.bits = function(k){
+  let v = 0;
+  for(let j=0;j<k;j++){
+    const byteAt = this.i >> 3;
+    if(byteAt >= this.bytes.length) throw new Error("码短了");
+    if(this.bytes[byteAt] & (1 << (this.i & 7))) v |= (1 << j);
+    this.i++;
+  }
+  return v;
+};
+BitR.prototype.vint = function(){
+  let v = 0, scale = 1;
+  for(;;){
+    const chunk = this.bits(7), more = this.bits(1);
+    v += chunk * scale;
+    if(!more) return v;
+    scale *= 128;
+  }
+};
+/* 一个 vint 占几 bit —— 选位图还是间隔表时要先算一遍长度 */
+function vintBits(v){
+  let n = 8;
+  v = Math.max(0, Math.round(v || 0));
+  while(v > 127){ v = Math.floor(v / 128); n += 8; }
+  return n;
+}
+
+/* ---- 稀疏下标表：位图 / 间隔表两种写法取短的 ---- */
+function putSet(w, n, idx){
+  w.vint(idx.length);
+  if(!idx.length) return;
+  let gapBits = 0, prev = -1;
+  for(let k=0;k<idx.length;k++){ gapBits += vintBits(idx[k] - prev - 1); prev = idx[k]; }
+  if(n <= gapBits){                       // 位图更短（词学得多的时候）
+    w.bits(0, 1);
+    let at = 0;
+    for(let i=0;i<n;i++){
+      const on = (at < idx.length && idx[at] === i);
+      w.bits(on ? 1 : 0, 1);
+      if(on) at++;
+    }
+  } else {                                // 间隔表更短（学得少、散着的时候）
+    w.bits(1, 1);
+    prev = -1;
+    for(let k=0;k<idx.length;k++){ w.vint(idx[k] - prev - 1); prev = idx[k]; }
+  }
+}
+function getSet(r, n){
+  const count = r.vint(), out = [];
+  if(!count) return out;
+  if(count > n) throw new Error("码里的条数比词库还多");
+  if(r.bits(1) === 0){
+    // ⚠️ n 个 bit 要**全部读完**，不能凑够 count 就提前收手 —— 位流会当场错位
+    for(let i=0;i<n;i++) if(r.bits(1)) out.push(i);
+  } else {
+    let prev = -1;
+    for(let k=0;k<count;k++){ prev += r.vint() + 1; out.push(prev); }
+  }
+  if(out.length !== count) throw new Error("码里的条数对不上");
+  if(out.length && out[out.length-1] >= n) throw new Error("码里的下标超出范围");
+  return out;
+}
+
+/* ---- 16 位校验：既给「词库有没有变过」用，也给「码有没有被截断」用 ---- */
+function hash16(list){
+  let h = 0x1234;
+  for(let i=0;i<list.length;i++){
+    const s = String(list[i]);
+    for(let j=0;j<s.length;j++) h = ((h * 31 + s.charCodeAt(j)) & 0xFFFF);
+    h = ((h * 31 + 1) & 0xFFFF);
+  }
+  return h;
+}
+function wordsHash(n){
+  const a = [];
+  for(let i=0;i<n;i++) a.push(WORDS[i][0]);
+  return hash16(a);
+}
+function relicsHash(n){
+  const a = [];
+  for(let i=0;i<n;i++) a.push(RELICS[i].id);
+  return hash16(a);
+}
+function sumHash(bytes){
+  let h = 0x9E37;
+  for(let i=0;i<bytes.length;i++) h = ((h * 31 + bytes[i]) & 0xFFFF);
+  return h;
+}
+
+/* ---- 生成 ---- */
+function makeCode(){
+  const w = new BitW();
+  w.bits(CODE2_V, 8);
+
+  /* 熟练度：按词库下标存。present 里只放真的有记录的词 */
+  const nW = WORDS.length;
+  w.vint(nW);
+  w.vint(wordsHash(nW));
+  const idx = [], rows = [];
+  for(let i=0;i<nW;i++){
+    const rec = LEX[WORDS[i][0]];
+    if(!rec) continue;
+    idx.push(i);
+    rows.push(rec);
+  }
+  putSet(w, nW, idx);
+  for(let k=0;k<rows.length;k++){
+    const rec = rows[k];
+    w.bits(Math.max(0, Math.min(5, rec.str || 0)), 3);   // 熟练度 0~5
+    w.bits((rec.wrong || 0) > 0 ? 1 : 0, 1);             // 上次答错没（wrong 只当布尔用）
+    const seen = Math.max(0, Math.round(rec.seen || 0));
+    w.bits(seen >= 7 ? 7 : seen, 3);                     // 见过几次，7 = 逃逸
+    if(seen >= 7) w.vint(seen - 7);
+  }
+
+  /* 遗物图鉴：同一套写法，按 RELICS 下标 */
+  const nR = RELICS.length;
+  w.vint(nR);
+  w.vint(relicsHash(nR));
+  const ri = [], rr = [];
+  for(let i=0;i<nR;i++){
+    const c = CODEX[RELICS[i].id];
+    if(!c) continue;
+    ri.push(i);
+    rr.push(c);
+  }
+  putSet(w, nR, ri);
+  for(let k=0;k<rr.length;k++){ w.vint(rr[k].depth || 0); w.vint(rr[k].times || 0); }
+
+  /* 探索记录 */
+  const M = meta();
+  w.vint(M.best || 0); w.vint(M.runs || 0); w.vint(M.clears || 0); w.vint(M.deaths || 0);
+  const fks = Object.keys(M.accF || {}).filter(function(k){
+    const a = M.accF[k];
+    return a && ((a.r || 0) || (a.w || 0));
+  });
+  w.vint(fks.length);
+  fks.forEach(function(k){
+    w.vint(parseInt(k, 10) || 0);
+    w.vint(M.accF[k].r || 0);
+    w.vint(M.accF[k].w || 0);
+  });
+
+  /* 宝石 + 祝福（10 个槽位：开没开 1 bit，开了的再存钉着哪一件的下标+1，0 = 空着） */
+  w.vint(TOWN.gem || 0);
+  const B = fixBless(TOWN.bless);
+  ["fav", "ban"].forEach(function(kind){
+    for(let r=0;r<5;r++) w.bits(B.open[kind][r] ? 1 : 0, 1);
+  });
+  ["fav", "ban"].forEach(function(kind){
+    for(let r=0;r<5;r++){
+      if(!B.open[kind][r]) continue;
+      const id = B.pick[kind][r] || "";
+      let at = -1;
+      for(let i=0;i<nR;i++) if(RELICS[i].id === id){ at = i; break; }
+      w.vint(at + 1);
+    }
+  });
+
+  const bytes = w.finish();
+  const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
+  bytes.push(ck & 255, (ck >> 8) & 255);
+  return CODE2_TAG + bytesToB64u(bytes);
+}
+
+/* ---- 读回来 ---- 返回 mergeData 吃的那个 {lex, codex, meta, town}，外加 note（要跟玩家说的话） */
+function parseCode2(txt){
+  const bytes = b64uToBytes(txt.slice(CODE2_TAG.length));
+  if(bytes.length < 4) throw new Error("码太短了");
+  const body = Array.prototype.slice.call(bytes, 0, bytes.length - 2);
+  const want = bytes[bytes.length-2] | (bytes[bytes.length-1] << 8);
+  if(sumHash(body) !== want) throw new Error("校验对不上 —— 复制的时候少了一截或者多带了字符");
+  const r = new BitR(body);
+  if(r.bits(8) !== CODE2_V) throw new Error("这串码是别的版本生成的");
+  const out = {lex:{}, codex:{}, meta:{accF:{}}, town:{}}, notes = [];
+
+  /* 熟练度 */
+  const nW = r.vint(), wh = r.vint();
+  const wordsOk = (nW <= WORDS.length && wordsHash(nW) === wh);
+  const idx = getSet(r, nW);
+  for(let k=0;k<idx.length;k++){
+    const str = r.bits(3), wrong = r.bits(1);
+    let seen = r.bits(3);
+    if(seen === 7) seen = 7 + r.vint();
+    if(wordsOk) out.lex[WORDS[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
+  }
+  if(!wordsOk) notes.push("词库变过了，这串码里的熟练度跳过了");
+
+  /* 遗物图鉴 */
+  const nR = r.vint(), rh = r.vint();
+  const relicsOk = (nR <= RELICS.length && relicsHash(nR) === rh);
+  const ri = getSet(r, nR);
+  for(let k=0;k<ri.length;k++){
+    const depth = r.vint(), times = r.vint();
+    if(relicsOk) out.codex[RELICS[ri[k]].id] = {depth:depth, times:times};
+  }
+  if(!relicsOk) notes.push("遗物表变过了，图鉴跳过了");
+
+  /* 探索记录 */
+  out.meta.best = r.vint(); out.meta.runs = r.vint();
+  out.meta.clears = r.vint(); out.meta.deaths = r.vint();
+  const nA = r.vint();
+  for(let k=0;k<nA;k++){
+    const f = r.vint(), rr = r.vint(), ww = r.vint();
+    out.meta.accF[String(f)] = {r:rr, w:ww};
+  }
+
+  /* 宝石 + 祝福 */
+  out.town.gem = r.vint();
+  const bl = blankBless(), order = [];
+  ["fav", "ban"].forEach(function(kind){
+    for(let i=0;i<5;i++){ bl.open[kind][i] = r.bits(1); if(bl.open[kind][i]) order.push([kind, i]); }
+  });
+  order.forEach(function(slot){
+    const at = r.vint() - 1;
+    if(relicsOk && at >= 0 && at < nR) bl.pick[slot[0]][slot[1]] = RELICS[at].id;
+  });
+  out.town.bless = bl;
+  out.note = notes.join("；");
+  return out;
+}
+/* 三种都认：新码 YX2、老码 YX1、以及直接粘进来的存档文件 JSON */
 function applyCode(txt){
   txt = (txt || "").trim();
-  if(!txt) return "先把码粘进来。";
+  if(!txt) return "剪贴板里没有存档码。";
   let o;
-  if(txt.charAt(0) === "{"){                       // 存档文件的内容被直接粘进来了，也认
+  if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
     catch(e){ return "这段文本读不出来 —— 像是存档文件但缺了一截。"; }
+  } else if(txt.replace(/\s+/g, "").indexOf(CODE2_TAG) === 0){
+    try{ o = parseCode2(txt.replace(/\s+/g, "")); }
+    catch(e){ return "这串码读不出来：" + e.message + "。"; }
+  } else if(txt.replace(/\s+/g, "").indexOf(CODE_TAG) === 0){
+    try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
+    catch(e){ return "这串老码读不出来，多半是复制时漏了一截。"; }
   } else {
-    txt = txt.replace(/\s+/g, "");                 // 粘贴常带换行，先洗掉
-    if(txt.indexOf(CODE_TAG) !== 0) return "这串码不对 —— 应该以 " + CODE_TAG + " 开头。";
-    try{ o = JSON.parse(b64dec(txt.slice(CODE_TAG.length))); }
-    catch(e){ return "这串码读不出来，多半是复制时漏了一截。"; }
+    return "这不像存档码 —— 它应该以 " + CODE2_TAG + " 开头。";
   }
-  if(!o || typeof o !== "object" || !o.lex) return "这串码里没有词汇数据。";
-  const r = mergeData(o);
-  return "导入成功：更新了 " + r.words + " 个词，补上 " + r.legs + " 件传说。";
+  if(!o || typeof o !== "object" || !o.lex) return "这串码里没有存档数据。";
+  const note = o.note;
+  const res = mergeData(o);
+  return "导入成功：更新了 " + res.words + " 个词，补上 " + res.legs + " 件遗物"
+       + (res.gold ? ("，宝石 +" + res.gold + " 颗") : "") + "。"
+       + (note ? ("（" + note + "）") : "");
 }
 /* 合并取优 —— 导出码和本地存档文件共用这一套。
    吃 {lex, codex, meta, town, run}，缺哪块跳过哪块，任何一块都不会让这台设备倒退。 */
@@ -4392,8 +4672,8 @@ function downloadSave(){
     setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 8000);
     return "已导出 " + name + "（约 " + Math.max(1, Math.round(txt.length/1024)) + " KB）—— 去浏览器的下载列表里找它。";
   }catch(e){
-    $("codeOut").value = txt;      // 下载被挡了就退回文本框，至少能手动复制走
-    return "这个浏览器挡了下载。存档已经放进下面「导出码」的框里，手动复制走一样能用。";
+    codeBoxShow(txt, true);        // 下载被挡了就退回下面那个框，至少能手动复制走
+    return "这个浏览器挡了下载。存档已经放进下面「云存档」那个框里，手动复制走一样能用。";
   }
 }
 /* 认三种东西：本游戏的存档文件、存成文本的导出码、以及裸 JSON（有 lex 就行） */
@@ -4745,28 +5025,77 @@ $("btnPathfind").addEventListener("click", function(){
   autoToggle();
 });
 
-/* ---- 导出码 ---- */
-$("btnGenCode").addEventListener("click", function(){
-  $("codeOut").value = makeCode();
-  $("codeMsg").textContent = "生成好了 —— 复制它，到另一台设备粘进下面那个框。";
-});
-$("btnCopyCode").addEventListener("click", function(){
-  const t = $("codeOut");
-  if(!t.value){ $("codeMsg").textContent = "先点「生成导出码」。"; return; }
-  t.select();
-  const b = this;
-  try{
-    navigator.clipboard.writeText(t.value);
+/* ---- 云存档：两个按钮 ----
+   「复制」= 现生成一段码直接塞进剪贴板；「粘贴」= 从剪贴板读回来导入。
+   ⚠️ 剪贴板不是每个浏览器都给网页用（Firefox 不给读、http 页面两样都不给），
+   所以两条路都有同一个退路：露出 #codeBox 那个框，让玩家自己复制/粘贴。
+   平时它是 hidden 的 —— 界面上就只有那两个按钮。*/
+function codeMsg(t){ $("codeMsg").textContent = t || ""; }
+function codeBoxShow(v, ro){
+  const box = $("codeBox");
+  box.hidden = false;
+  box.readOnly = !!ro;
+  box.value = v || "";
+  box.focus();
+  if(ro) box.select();
+  return box;
+}
+function codeBoxHide(){ const box = $("codeBox"); box.value = ""; box.hidden = true; }
+$("btnCopySave").addEventListener("click", function(){
+  let code;
+  try{ code = makeCode(); }
+  catch(e){ codeMsg("生成存档码时出错了：" + (e && e.message ? e.message : e)); return; }
+  const b = this, ok = function(){
+    codeBoxHide();
     b.textContent = "已复制";
-  }catch(e){
-    b.textContent = "请手动复制";     // 沙箱里剪贴板可能被挡，已经帮你选中了
-  }
-  setTimeout(function(){ b.textContent = "复制"; }, 1600);
+    setTimeout(function(){ b.textContent = "复制存档码"; }, 1600);
+    codeMsg("存档码（" + code.length + " 个字符）已经在剪贴板里 —— 到另一台设备上点「粘贴存档码」。");
+  };
+  const manual = function(){
+    codeBoxShow(code, true);
+    codeMsg("这个浏览器不让网页写剪贴板 —— 码已经放在下面的框里并选中了，自己复制走。");
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(ok, manual);
+      return;
+    }
+  }catch(e){}
+  // 老路：先把码放进框里选中，再试一次 execCommand
+  const box = codeBoxShow(code, true);
+  let done = false;
+  try{ done = document.execCommand("copy"); }catch(e){}
+  if(done) ok(); else manual();
 });
-$("btnImport").addEventListener("click", function(){
-  const msg = applyCode($("codeIn").value);
-  $("codeMsg").textContent = msg;
-  if(msg.indexOf("成功") >= 0) $("codeIn").value = "";
+$("btnPasteSave").addEventListener("click", function(){
+  const box = $("codeBox");
+  // 退路那个框里已经有东西了：这一下就是「导入它」
+  if(!box.hidden && !box.readOnly && box.value.trim()){
+    const msg = applyCode(box.value);
+    codeMsg(msg);
+    if(msg.indexOf("成功") >= 0) codeBoxHide();
+    return;
+  }
+  const manual = function(why){
+    codeBoxShow("", false);
+    codeMsg(why || "这个浏览器不让网页读剪贴板 —— 把存档码粘到下面的框里，再点一次「粘贴存档码」。");
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(t){
+        // 读到了但是空的：这不是浏览器的锅，别报错怪它
+        if(!String(t || "").trim()){
+          manual("剪贴板里是空的 —— 先在旧设备上点「复制存档码」。要手输也行：粘到下面的框里再点一次。");
+          return;
+        }
+        const msg = applyCode(t);
+        codeMsg(msg);
+        if(msg.indexOf("成功") >= 0) codeBoxHide();
+      }, function(){ manual(); });      // 拒绝理由是个 Error，别把它当提示文案用
+      return;
+    }
+  }catch(e){}
+  manual();
 });
 
 /* ---- 本地存档文件 ---- */
