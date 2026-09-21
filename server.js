@@ -182,7 +182,9 @@ function getRoom(code){
       peers: [null, null],
       world: null, worldFloor: 0,
       ready: {},                 // {move:[bool,bool], floor:[bool,bool], enter:[bool,bool]}
-      route: null, practice: false,
+      // route 是房主提的那条路线，diff 是他挑的难度等级（用户 2026-09-21）——
+      // 两个一起存、一起转发，断线重连时也一起补发，不然队友那边会退回默认的 A 级
+      route: null, diff: null, practice: false,
       // 第二期 · 双血条战斗：cid -> {a, b, dead}，每次收到 world 就按那份世界包重建
       // （world 只有房主发、每层一次，见 联机方案.md 第 3/6 节 —— 这是服务器唯一权威维护的战斗状态）
       mobs: {}
@@ -218,7 +220,7 @@ function doJoin(conn, msg){
     sendTo(room, mateIdx, {t:"resume"});
     // 断线重连：把已知的世界/路线/练习模式状态立刻补发给新连接，别让他从零开始等
     if(room.world) sendText(conn.socket, JSON.stringify({t:"world", floor: room.worldFloor, pack: room.world}));
-    if(room.route) sendText(conn.socket, JSON.stringify({t:"route", id: room.route}));
+    if(room.route) sendText(conn.socket, JSON.stringify({t:"route", id: room.route, diff: room.diff}));
     if(room.practice) sendText(conn.socket, JSON.stringify({t:"practice", on: room.practice}));
   }
 }
@@ -259,7 +261,10 @@ function onMessage(conn, msg){
     case "route":
       if(idx !== 0) return;
       room.route = msg.id;
-      sendTo(room, mateIdx, {t:"route", id: msg.id});
+      // ⚠️ 转发是**重新拼一个对象**，不是把原消息原样转出去 ——
+      // 所以路线消息上新加的字段（这里的 diff）必须在这儿也带一份，漏了队友就收不到
+      room.diff = typeof msg.diff === "string" ? msg.diff.slice(0, 4) : null;
+      sendTo(room, mateIdx, {t:"route", id: msg.id, diff: room.diff});
       break;
     case "practice":
       if(idx !== 0) return;

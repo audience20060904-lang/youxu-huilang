@@ -105,6 +105,8 @@ function newRun(){
         shield:0, aegisN:0, recoil:0, revived:false,
         // 练习模式：进洞之前在洞窟弹层里勾的，整趟有效（stats() 里读）
         practice: !!practiceOn,
+        // 难度等级：选完路线弹窗里定的，整趟有效（同样只在 stats() 里读）
+        diff: diffId(),
         // 联机第二期：倒地（血掉光不出局，队友清完层原地复活），见 联机方案.md
         down:false,
         // 这一趟按层记的答题数，结算时并进 MET.accF
@@ -122,6 +124,10 @@ function newRun(){
   say("石门在身后合上。走廊里只有火把的回声。", "sys");
   say("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。", "sys");
   if(P.practice) say("<b>练习模式</b>：护甲 +50，攻击减半。", "sys");
+  if(P.diff !== DIFF_DEFAULT){
+    const dd = diffById(P.diff);
+    if(dd) say("<b>" + dd.name + "</b>：" + dd.desc + "。", "sys");
+  }
   nextFloor();
 }
 /* 升一级要多少经验。「速成」在这儿减 20% —— HUD 的经验条和 gainXp 都走它，一处改两处生效。*/
@@ -239,13 +245,16 @@ function stats(){
   if(hasRelic("armblade")){
     s.crit += Math.min(ABLADE_MAX, Math.floor((s.defGear || 0) / ABLADE_PER) * ABLADE_STEP);
   }
-  /* 练习模式（用户 2026-09）：选关卡时勾的，跟着 P 进续玩档。
-     固定 +50 护甲（挨打那条链最低仍掉 1 点）、攻击减半 —— 拿来纯背词用。
-     ⚠️ 放在最后：所有遗物和等级都算完了再压这一刀。*/
-  if(P.practice){
-    s.def += CHAPTER.practiceDef;
-    s.atk = Math.max(1, Math.round(s.atk * CHAPTER.practiceAtkMult));
-  }
+  /* 练习模式（用户 2026-09）+ 难度等级（用户 2026-09-21）：两样都是进洞之前定的，
+     跟着 P 进续玩档。练习是 +50 护甲（挨打那条链最低仍掉 1 点）、攻击减半；
+     难度只动攻击（A ×1 / B ×1.25 / C ×1.5 / D ×2）。
+     ⚠️ 放在最后：所有遗物和等级都算完了再压这一刀。
+     ⚠️ **两个倍率先乘起来、只取整一次** —— 分两步各 round 的话
+     D 级（×2）+ 练习（×0.5）会因为中间那次取整漂掉一两点，而用户要的是
+     「练习 + D 级正好抵消，等于白拿 50 护甲」，必须严格等于原攻击。*/
+  const dmul = diffMult(P.diff) * (P.practice ? CHAPTER.practiceAtkMult : 1);
+  if(P.practice) s.def += CHAPTER.practiceDef;
+  if(dmul !== 1) s.atk = Math.max(1, Math.round(s.atk * dmul));
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
 }
@@ -438,7 +447,7 @@ function applyCoopWorld(msg){
           relics:[], haunt:[], hauntAt:{}, undying:false,
           spent:0, chew:false, charge:0,
           shield:0, aegisN:0, recoil:0, revived:false, down:false,
-          practice: !!practiceOn, accF:{} };
+          practice: !!practiceOn, diff: diffId(), accF:{} };
     G = { floor:0, paused:false, over:false };
     comboShown = null; resetHpFx(); autoOff();
     SCENE = "run"; showScene();
@@ -3955,6 +3964,81 @@ function goTown(){
   refreshSaveState();
   showView("viewAdv");
 }
+/* ================= 难度等级（用户 2026-09-21）=================
+   **A 级 = 这个游戏本来的数值**，B/C/D 只放宽玩家攻击（+25% / +50% / +100%）。
+   跟练习模式一样是**纯局前选项**：不进 OPT、不落盘，进洞那一下写进 P.diff，
+   跟着续玩档走，数值在 stats() 最后一步结算。
+   ⚠️ 两者**可以同时开**，攻击那两个倍率相乘只取整一次 ——
+   所以 D 级 + 练习正好 ×1，等于白拿那 50 点护甲（用户定的）。
+   流程：洞窟里点一条路 → 这个弹层选难度 → 才真的进（联机由房主选，见 coopProposeRoute）。*/
+let diffOn = DIFF_DEFAULT;
+let pendingRoute = null;         // 选难度的时候，等在门口的那条路线 id
+function diffById(id){
+  for(let i=0;i<DIFFS.length;i++) if(DIFFS[i].id === id) return DIFFS[i];
+  return null;
+}
+/* 当前选的那一档 —— 存档/网络里传的都是它，认不出来就退回 A 级 */
+function diffId(){ return diffById(diffOn) ? diffOn : DIFF_DEFAULT; }
+/* 攻击倍率的唯一口径（stats() 和界面上的预览都走它），认不出来的一律当 A 级 */
+function diffMult(id){
+  const d = diffById(id);
+  return d ? d.atkMult : 1;
+}
+/* 一行短说明：难度 + 练习模式合起来实际是多少攻击。
+   ⚠️ 别在这儿写第二屏说明（CLAUDE.md「别堆提示文字」），一行就够。*/
+function diffLine(id){
+  const d = diffById(id);
+  if(!d) return "";
+  if(!practiceOn) return d.desc + (d.note ? " · " + d.note : "");
+  // 练习模式开着：那两个倍率是乘起来的，直接把**实际**攻击倍率写出来，省得玩家自己算
+  const mul = Math.round(d.atkMult * CHAPTER.practiceAtkMult * 100) / 100;
+  return d.desc + " · 练习后实际 ×" + mul;
+}
+/* 选完路线弹出来的那个窗。联机里只有房主进得来（队友的路线卡片本来就点不动）。*/
+function askDiff(routeId){
+  const r = ROUTES.filter(function(x){ return x.id === routeId; })[0];
+  if(!r || !r.open) return;
+  pendingRoute = routeId;
+  const sub = $("diffSub");
+  if(sub) sub.textContent = r.name + " · " + r.tag;
+  renderDiffList();
+  $("veilDiff").hidden = false;
+}
+function closeDiff(){
+  pendingRoute = null;
+  $("veilDiff").hidden = true;
+}
+function renderDiffList(){
+  const box = $("diffList");
+  if(!box) return;
+  box.innerHTML = "";
+  DIFFS.forEach(function(d){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "route diff" + (d.id === diffOn ? " picked" : "");
+    b.dataset.id = d.id;
+    b.innerHTML = "<span class=\"rt\">" + d.tag + "</span>" +
+      "<span class=\"rn\">" + d.name + "</span>" +
+      "<span class=\"rd\">" + diffLine(d.id) + "</span>" +
+      "<span class=\"rgo\">" + (COOP ? "选这档 ▸" : "进入 ▸") + "</span>";
+    box.appendChild(b);
+  });
+}
+/* 选定一档：单人直接进洞；联机是房主在提议，要等队友确认。*/
+function takeDiff(id){
+  if(!diffById(id) || !pendingRoute) return;
+  /* 联机：难度归房主。窗开着的这会儿队友要是断了，就别再往外提议了 —— 直接退回洞窟，
+     那边会重新画成「等待队友连接…」。*/
+  if(COOP && !(coopIsHost() && window.NET && NET.isConnected() && NET.hasMate())){
+    closeDiff(); openCave(); return;
+  }
+  diffOn = id;
+  const route = pendingRoute;
+  closeDiff();
+  if(COOP){ coopProposeRoute(route); return; }
+  enterRoute(route);
+}
+
 /* 练习模式的开关：**纯局前选项**，不进设置存档 ——
    勾了之后 newRun() 把它写进 P.practice，那一趟才算数（数值在 stats() 里）。*/
 let practiceOn = false;
@@ -3966,6 +4050,10 @@ function renderPractice(){
   if(b.firstChild && b.firstChild.nodeType === 3){
     b.firstChild.textContent = practiceOn ? "练习模式 · 开" : "练习模式 · 关";
   }
+  /* 难度卡上那行字要写「练习后实际 ×几」，所以练习模式一变、开着的难度窗也得跟着重画
+     （联机里房主的练习开关是从网络上来的，可能正好赶上难度窗开着）。*/
+  const dv = $("veilDiff");
+  if(dv && !dv.hidden) renderDiffList();
 }
 /* 这一章的词见过多少（用户 2026-09 要在洞窟的卡片上显示）——
    分母是这一章那几档难度的全部词（BYLV[难度]，无尽章是 3+4+5 三桶加起来），
@@ -4026,7 +4114,8 @@ function openCave(){
           d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
         });
         note.hidden = false;
-        note.textContent = "等队友确认…（还能重新选，选别的会覆盖掉这次）";
+        note.textContent = "难度 " + (diffById(diffId()) || {}).name +
+          " · 等队友确认…（还能重新选，选别的会覆盖掉这次）";
       }
     } else {
       // 队友：路线列表只看不点，靠下面这个按钮确认
@@ -4036,6 +4125,9 @@ function openCave(){
           d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
         });
         if(title) title.textContent = "房主选了这条路";
+        // 难度也是房主定的，队友只能看 —— 写在确认钮上面那行字里
+        note.hidden = false;
+        note.textContent = "难度 " + (diffById(diffId()) || {}).name + " · " + diffLine(diffId());
         confirmBtn.hidden = false;
       } else if(title) title.textContent = "等待房主选路线…";
     }
@@ -4050,7 +4142,8 @@ function coopProposeRoute(id){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
   if(!r || !r.open) return;
   coopProposedRoute = id;
-  NET.send({t:"route", id: id});
+  // 难度也是房主定的（用户 2026-09-21），跟路线一起提出去，队友照着显示
+  NET.send({t:"route", id: id, diff: diffId()});
   openCave();
 }
 function coopConfirmEnter(){
@@ -4062,6 +4155,8 @@ function enterRoute(id, fromNet){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
   if(!r || !r.open) return;
   setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
+  pendingRoute = null;
+  $("veilDiff").hidden = true;
   $("veilCave").hidden = true;
   SCENE = "run";
   showScene();
@@ -4164,6 +4259,7 @@ function resumeRun(s){
   if(typeof P.maxCombo !== "number") P.maxCombo = P.combo;   // 老档没有最大连击
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
+  if(!diffById(P.diff)) P.diff = DIFF_DEFAULT;               // 老档没有难度等级 —— 一律按 A 级算
   if(!P.accF) P.accF = {};                                   // 老档没有按层的答题记录
   if(!P.blessGot) P.blessGot = [];                           // 老档没有祝福·偏爱的本局记录
   if(typeof P.down !== "boolean") P.down = false;             // 老档没有「倒地」（联机第二期）
@@ -4309,6 +4405,10 @@ function endRun(win, gaveUp){
     li("<b>获得宝石</b>", "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
     li("宝石合计", TOWN.gem) +
     (P.practice ? li("练习模式", "护甲 +50 · 攻击 −50%") : "") +
+    /* ⚠️ 这一行写「难度等级」不写「难度」—— 上面那行「难度 · 第N章」已经占了「难度」两个字
+       （那是宝石的章节倍率），两行都叫难度会以为是同一件事。*/
+    (P.diff !== DIFF_DEFAULT && diffById(P.diff)
+       ? li("难度等级 · " + diffById(P.diff).name, diffById(P.diff).desc) : "") +
     li("丢在洞里", (P.relics.length || 0) + " 件遗物 · " + P.gold + " 金币") +
     li("这趟遇到的词", P.seenWords.length + " 个") +
     li("累计掌握", Object.keys(LEX).filter(function(k){ return (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
@@ -5156,7 +5256,7 @@ $("btnRelicRedraw").addEventListener("click", function(){
 
 /* ---- 主城 与 洞窟 ---- */
 $("btnCave").addEventListener("click", openCave);
-$("btnCloseCave").addEventListener("click", function(){ $("veilCave").hidden = true; });
+$("btnCloseCave").addEventListener("click", function(){ closeDiff(); $("veilCave").hidden = true; });
 $("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
 
 /* ---- 祝福 ---- */
@@ -5187,12 +5287,19 @@ $("btnPractice").addEventListener("click", function(){
   renderPractice();
   if(COOP && window.NET) NET.send({t:"practice", on: practiceOn});
 });
+/* 点一条路不再直接进洞 —— 先弹难度窗（用户 2026-09-21）。
+   联机里队友的卡片是 disabled 的，所以这条只有房主走得到。*/
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(!b || b.disabled) return;
-  if(COOP){ coopProposeRoute(b.dataset.id); return; }
-  enterRoute(b.dataset.id);
+  askDiff(b.dataset.id);
 });
+$("diffList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".route");
+  if(!b) return;
+  takeDiff(b.dataset.id);
+});
+$("btnCloseDiff").addEventListener("click", closeDiff);
 /* #btnCaveConfirm 只有 coop.html 才有 —— index.html 里 $() 会拿到 null，
    在外面直接 addEventListener 会当场报错，所以这个监听必须守着 COOP 才挂。*/
 if(COOP) $("btnCaveConfirm").addEventListener("click", coopConfirmEnter);
@@ -5637,6 +5744,7 @@ if(COOP){
   NET.on("route", function(msg){
     if(coopIsHost()) return;                 // 自己发的不用处理（服务器也不会回给发送者自己）
     coopProposedRoute = msg.id;
+    if(diffById(msg.diff)) diffOn = msg.diff;     // 难度由房主定，队友照单收下
     if(SCENE === "town" && !$("veilCave").hidden) openCave();
   });
   NET.on("enterConfirm", function(msg){
