@@ -34,7 +34,35 @@ const MIME = {
   ".md": "text/plain; charset=utf-8"
 };
 
-/* ================= 静态文件 ================= */
+/* ================= 静态文件 =================
+   ⚠️ **必须带缓存头**（2026-09-21 修，用户报「新版本无法正确同步至联机端」）：
+   原来这里一个缓存头都不发 —— 没有 Cache-Control、没有 ETag、没有 Last-Modified。
+   HTTP 规范允许浏览器对这种响应自己拍脑袋定一个新鲜期（启发式缓存），
+   手机浏览器尤其激进，于是 `git pull` 拉到了新代码、服务器读的也是新文件，
+   **手机上加载的还是缓存里那份旧的 game.js / content.js**。
+   单人版没这个毛病是因为 GitHub Pages 自己会发 ETag。
+   现在两条一起上：
+     · `.html` 发 **no-store**：入口永不缓存，刷新一定拿到最新的那份
+     · 其余静态文件发 **no-cache + ETag**（mtime-size）：每次都回源验证，
+       没变回 304 省流量，变了立刻拿新的
+     · HTML 里本地的 `<script src>` / `<link href>` 自动加上 `?v=<文件的 mtime>` ——
+       代码一改 URL 就变，浏览器**必定**重新拉，连「修复之前存下的那份旧缓存」也绕不过去
+   ⚠️ 别为了省事把这一段删回 `readFile` 那三行，这就是联机端不更新的根因。*/
+function etagOf(st){
+  return '"' + st.mtimeMs.toString(36) + "-" + st.size.toString(36) + '"';
+}
+/* 给 HTML 里本地的 js/css 加版本串。只动**相对路径**的 src/href
+   （带协议或 // 开头的外链一律不碰），版本号取那个文件自己的 mtime。*/
+function stampHtml(html){
+  return html.replace(/(<(?:script|link)\b[^>]*?\b(?:src|href)=")([^"?:]+\.(?:js|css))(")/gi,
+    function(all, head, url, tail){
+      if(url.charAt(0) === "/" || url.indexOf("//") === 0) return all;
+      try{
+        const st = fs.statSync(path.join(ROOT, url));
+        return head + url + "?v=" + Math.floor(st.mtimeMs).toString(36) + tail;
+      }catch(e){ return all; }
+    });
+}
 function serveStatic(req, res){
   let p = decodeURIComponent((req.url || "/").split("?")[0]);
   if(p === "/") p = "/coop.html";
@@ -42,11 +70,38 @@ function serveStatic(req, res){
   p = path.normalize(p).replace(/^([.]{2}[\/\\])+/, "");
   const file = path.join(ROOT, p);
   if(!file.startsWith(ROOT)){ res.writeHead(403); res.end("forbidden"); return; }
-  fs.readFile(file, function(err, data){
-    if(err){ res.writeHead(404, {"Content-Type": "text/plain; charset=utf-8"}); res.end("404 没有这个文件：" + p); return; }
+  fs.stat(file, function(err, st){
+    if(err || !st.isFile()){
+      res.writeHead(404, {"Content-Type": "text/plain; charset=utf-8"});
+      res.end("404 没有这个文件：" + p);
+      return;
+    }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {"Content-Type": MIME[ext] || "application/octet-stream"});
-    res.end(data);
+    const isHtml = ext === ".html";
+    const tag = etagOf(st);
+    // 没变就回 304（HTML 不走这条：它是 no-store，每次都重新发）
+    if(!isHtml && req.headers["if-none-match"] === tag){
+      res.writeHead(304, {"ETag": tag, "Cache-Control": "no-cache"});
+      res.end();
+      return;
+    }
+    fs.readFile(file, function(err2, data){
+      if(err2){
+        res.writeHead(404, {"Content-Type": "text/plain; charset=utf-8"});
+        res.end("404 没有这个文件：" + p);
+        return;
+      }
+      const head = {"Content-Type": MIME[ext] || "application/octet-stream"};
+      if(isHtml){
+        head["Cache-Control"] = "no-store, must-revalidate";
+        data = Buffer.from(stampHtml(data.toString("utf8")), "utf8");
+      }else{
+        head["Cache-Control"] = "no-cache";
+        head["ETag"] = tag;
+      }
+      res.writeHead(200, head);
+      res.end(data);
+    });
   });
 }
 

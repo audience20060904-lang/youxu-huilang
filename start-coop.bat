@@ -9,13 +9,15 @@ echo.
 if exist ".git" (
   echo [1/2] Updating code from GitHub...
   git pull
-  if errorlevel 1 echo       Update failed. Using the local copy.
+  if errorlevel 1 echo       *** UPDATE FAILED - the server will run the OLD code. Run: git status
 ) else (
   echo [1/2] This folder is not a git clone - cannot auto-update.
   echo       Re-clone with git if you want automatic updates.
 )
 echo.
 
+if exist ".git" git --no-pager log -1 --date=short "--format=Now running: %%h  %%cd"
+echo.
 echo [2/2] Starting server. Press Ctrl+C to stop.
 echo.
 node server.js
