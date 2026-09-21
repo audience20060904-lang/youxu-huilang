@@ -63,8 +63,8 @@
 | `遗物数据表.md` | **不上线**，只给用户改：全部遗物的品质/文案/实际数值 + 全局数值（公式、掉率、分解价）。用户改这份，Claude 照着改 `content.js` / `game.js`。改了遗物数值就**同步更新它** |
 | `联机方案.md` | **不上线**，**局域网双人联机的唯一交接文档**：当前进度、已定死的玩法规则、架构与踩过的坑。要做联机、或者用户提到联机，**先读它**；动了联机相关的任何东西，**必须回来改它** |
 | `start-coop.bat` | **不上线**（2026-09-20 加，跟 `server.js` 一个待遇），用户在自己电脑上双击用的：先 `git pull` 拉最新代码，再 `node server.js` 启动联机服务器。⚠️ **文件里必须全是 ASCII**，中文提示走 `type coop-msg-lan.txt`（见下面那条坑）。详见 `联机方案.md`「怎么自动更新到用户电脑」 |
-| `start-coop-fixed.bat` | **不上线**（2026-09-20 加）：**跨网络**联机的入口，跟 `start-coop.bat` **并列的两个入口**（同一个 WiFi 用那个，不同网络用这个）。走 **Tailscale Funnel**：`tailscale funnel --bg 8080` 把 8080 挂到一个**永远不变的** `https://<机器名>.<tailnet>.ts.net` 上，**队友什么都不用装**，地址不变所以**联机存档也不会再换**。⚠️ Funnel 在后台跑，**没有隧道窗口**，只有服务器一个窗口。⚠️ 跟 `start-coop.bat` 一样：**CRLF + 全 ASCII**，`echo` 里不许有半角括号。⚠️ **cloudflared 那套（`start-coop-online.bat` + `coop-msg-url.txt` + `coop-msg-install.txt`）2026-09-20 已经整套删掉，别重写，要找去 git 历史里翻**。详见 `联机方案.md`「固定地址路线」 |
-| `coop-msg-lan.txt` / `coop-msg-tailscale.txt` / `coop-msg-fixed.txt` | **不上线**（2026-09-20 加）：两个 bat 用 `type` 打出来的中文说明（局域网怎么玩 / 第一次怎么装 Tailscale / 拿到固定地址之后）。**UTF-8 无 BOM、CRLF**。改提示文字改这里，别往 bat 里写中文 |
+| `start-coop-fixed.bat` | **不上线**（2026-09-20 加）：**跨网络**联机的入口，跟 `start-coop.bat` **并列的两个入口**（同一个 WiFi 用那个，不同网络用这个）。走 **Tailscale Funnel**：`tailscale funnel --bg 8080` 把 8080 挂到一个**永远不变的** `https://<机器名>.<tailnet>.ts.net` 上，**队友什么都不用装**，地址不变所以**联机存档也不会再换**。⚠️ Funnel 在后台跑，**没有隧道窗口**，只有服务器一个窗口。⚠️ **serve 和 funnel 的域名一模一样**，但 serve 只有自己的设备能开 —— 脚本必须查 `funnel status` 里有没有 `Funnel on`，没有就报警，**别把这个检查去掉**（2026-09-21 踩过：地址框出来了，手机打不开）。⚠️ 跟 `start-coop.bat` 一样：**CRLF + 全 ASCII**，`echo` 里不许有半角括号。⚠️ **cloudflared 那套（`start-coop-online.bat` + `coop-msg-url.txt` + `coop-msg-install.txt`）2026-09-20 已经整套删掉，别重写，要找去 git 历史里翻**。详见 `联机方案.md`「固定地址路线」 |
+| `coop-msg-lan.txt` / `coop-msg-tailscale.txt` / `coop-msg-fixed.txt` / `coop-msg-funnel-off.txt` | **不上线**（2026-09-20 加）：两个 bat 用 `type` 打出来的中文说明（局域网怎么玩 / 第一次怎么装 Tailscale / 拿到固定地址之后 / **funnel 没真开时怎么排查**）。**UTF-8 无 BOM、CRLF**。改提示文字改这里，别往 bat 里写中文 |
 
 ## 章节系统（五章，2026-09）
 

@@ -20,6 +20,7 @@ call :findexe tailscale.exe
 if not defined _p goto no_ts
 set "TS=%_p%"
 echo       Found: %TS%
+"%TS%" version
 echo.
 
 echo [3/4] Starting game server...
@@ -37,12 +38,29 @@ set "TSFILE=%TEMP%\youxu_funnel.txt"
 set "TSURL="
 for /f "tokens=1" %%i in ('findstr /b /c:"https://" "%TSFILE%"') do if not defined TSURL set "TSURL=%%i"
 if not defined TSURL goto no_url
+findstr /c:"Funnel on" "%TSFILE%" >nul
+if errorlevel 1 goto not_public
 
 echo   ==========================================================
 echo     %TSURL%/coop.html
 echo   ==========================================================
 echo.
 if exist "coop-msg-fixed.txt" type "coop-msg-fixed.txt"
+goto done
+
+:not_public
+echo   ==========================================================
+echo     %TSURL%/coop.html
+echo   ==========================================================
+echo.
+echo       WARNING - this address is NOT public yet.
+echo       Funnel is off, so only your own devices can open it.
+echo       Raw status below:
+echo.
+type "%TSFILE%"
+echo.
+if exist "coop-msg-funnel-off.txt" type "coop-msg-funnel-off.txt"
+start "" https://login.tailscale.com/admin/dns
 goto done
 
 :no_url
@@ -52,7 +70,7 @@ type "%TSFILE%"
 echo.
 echo       Take the line that starts with https:// and add /coop.html
 echo.
-if exist "coop-msg-fixed.txt" type "coop-msg-fixed.txt"
+if exist "coop-msg-funnel-off.txt" type "coop-msg-funnel-off.txt"
 goto done
 
 :ts_failed

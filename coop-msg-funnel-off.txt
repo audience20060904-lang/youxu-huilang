@@ -1,0 +1,27 @@
+================================================
+ 地址是出来了，但它现在**只有你自己的设备**能打开 ——
+ 手机、队友都会显示「打不开 / 找不到服务器」。
+
+ 原因：Tailscale 有两种模式，域名长得一模一样：
+   serve  = 只给你自己的 Tailscale 设备看
+   funnel = 对整个公网开放   <- 我们要的是这个
+
+ 上面那块 Raw status 里如果写的是 tailnet only 之类，
+ 或者没有 Funnel on 这两个字，就是 funnel 没真开。
+
+ 按顺序检查这两件事：
+
+  1. 打开 https://login.tailscale.com/admin/dns
+     —— 已经帮你开好这个页面了
+     MagicDNS 要是开着的，下面还要点一次 Enable HTTPS
+     这一步没做，funnel 永远起不来
+
+  2. 第一次开 funnel 要在网页上批准一次：
+     回到命令行往上翻，如果有一行
+       https://login.tailscale.com/f/funnel?node=xxxxx
+     点开它，在网页上点同意
+
+  3. 两件都做完，再双击一次 start-coop-fixed.bat
+
+ 还是不行的话，把这个窗口里 [4/4] 往下的全部文字复制给 Claude。
+================================================
