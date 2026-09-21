@@ -821,3 +821,31 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;line-height:1;
   padding:2px 4px;border-radius:7px;background:var(--blood);color:#FFF7EE;
   box-shadow:0 1px 2px rgba(0,0,0,.25)}
+
+/* ===== 祝福（主城的局外养成）=====
+   10 个槽位排成两组，每组 5 行（一个品质一行）。开着的行点进去挑遗物，
+   没开的行是两步确认的「开启」按钮（.armed 是已经点过一下、等第二下的样子）。 */
+.blesslots{display:flex;flex-direction:column;gap:6px;max-height:54vh;overflow-y:auto;padding-right:2px}
+.blesslots .bhead{margin-top:4px}
+.blesslots .bhead:first-child{margin-top:0}
+.bslot{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:1px solid var(--edge);background:var(--stone-2);border-radius:3px;
+  padding:8px 10px;cursor:pointer;font-family:var(--body);color:var(--bone)}
+.bslot:hover:not(:disabled){border-color:var(--torch-deep);background:#FDF6E7}
+.bslot .bq{flex:none;width:30px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  writing-mode:horizontal-tb;text-align:center}
+.bslot .bcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bslot .bn{font-size:14px;font-weight:600}
+.bslot .bcol em{font-style:normal;font-size:11.5px;font-weight:400;color:var(--faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bslot .bgo{flex:none;font-family:var(--mono);font-size:11px;color:var(--torch)}
+.bslot.locked{background:var(--stone-3);color:var(--dim)}
+.bslot.locked .bn{color:var(--faint)}
+.bslot.locked .bgo{color:var(--faint)}
+.bslot.locked:disabled{opacity:.55;cursor:default}
+.bslot.armed{border-color:var(--torch-deep);background:#F6E6C4}
+.bslot.armed .bn,.bslot.armed .bgo{color:var(--torch-deep)}
+.bslot.set{border-left:3px solid var(--torch-deep)}
+/* 挑遗物那一页：一个品质最多四十几张卡，列表自己滚 */
+#blessPickList{max-height:52vh;overflow-y:auto;padding-right:2px}
+.relic.cur{border-color:var(--torch-deep);background:#F6E6C4}

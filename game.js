@@ -108,7 +108,9 @@ function newRun(){
         // 联机第二期：倒地（血掉光不出局，队友清完层原地复活），见 联机方案.md
         down:false,
         // 这一趟按层记的答题数，结算时并进 MET.accF
-        accF:{} };
+        accF:{},
+        // 祝福·偏爱本局已经拿到过哪几件（拿到一次那一件就不再加权）
+        blessGot:[] };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -2650,7 +2652,7 @@ function forgePick(id){
   [want, (old.r || 0), want + 1, want - 1, 0, 1, 2, 3, 4].forEach(function(t){
     if(got || t < 0 || t > 4) return;
     const hit = pool.filter(function(x){ return (x.r || 0) === t; });
-    if(hit.length) got = pick(hit);
+    if(hit.length) got = blessPick(hit);
   });
   clearNewRelic(id);
   if(!got){
@@ -2992,10 +2994,10 @@ function rollRelic(floor){
     for(const r of [want - d, want + d]){
       if(r < 0 || r > 4) continue;
       const hit = pool.filter(function(x){ return (x.r || 0) === r; });
-      if(hit.length) return pick(hit);
+      if(hit.length) return blessPick(hit);      // 祝福·偏爱在同品质里加权，见 blessPick()
     }
   }
-  return pick(pool);
+  return blessPick(pool);
 }
 
 /* ---- 分解：拆掉一件换金币，腾出格子 ---- */
@@ -3101,10 +3103,7 @@ function fuseGo(){
   });
   fuseOn = false; fuseSel = [];
   say("你付了 <b>" + cost + "</b> 金，把 " + fuseN() + " 件" + RAR_CN[rar] + "遗物砸在一起。", "sys");
-  const bag = up.slice(), picks = [];
-  for(let i = 0; i < FUSE_PICK && bag.length; i++){
-    picks.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
-  }
+  const picks = blessPickN(up, FUSE_PICK);    // 祝福·偏爱在候选里加权（神圣那个偏爱槽主要吃这条）
   renderHud();
   if(picks.length <= 1){ fuseTake(picks[0] ? picks[0].id : null); return; }
   openFusePick(picks, rar + 1);
@@ -3162,6 +3161,7 @@ function relicPool(){
   return RELICS.filter(function(r){
     if(own.indexOf(r.id) >= 0) return false;
     if(COOP && r.id === "shed") return false;    // 联机里禁用撤退，脱壳是纯废牌，别让它掉出来
+    if(blessBanned(r.id)) return false;          // 祝福·封印：这一局它根本不出现
     return true;
   });
 }
@@ -3236,6 +3236,7 @@ function doSwap(dropId){
 
 /* 跨局图鉴：记首次在第几层拿到、总共拿过几次 */
 function noteRelicFound(r, how){
+  blessNoteGot(r.id);                // 祝福·偏爱：本局拿到过一次就不再加权
   markNewRelic(r.id);                // 遗物页上挂个「new」，点一下那张卡就没了
   const first = !CODEX[r.id];
   CODEX[r.id] = {depth: first ? G.floor : CODEX[r.id].depth, times: (first ? 0 : CODEX[r.id].times) + 1};
@@ -3255,12 +3256,7 @@ function rerollBudget(){
   return n;
 }
 function offerRelics(){
-  const owned = P.relics || [];
-  const pool = RELICS.filter(function(r){
-    if(owned.indexOf(r.id) >= 0) return false;
-    if(COOP && r.id === "shed") return false;    // 联机里禁用撤退，脱壳是纯废牌
-    return true;
-  });
+  const pool = relicPool();      // ⚠️ 走这一个口，封印/已拥有/联机禁用件都在里面滤掉了
   if(!pool.length){ G.relicDone = true; return false; }
   // 每一件都按层数权重单抽，互不重复（2026-09 从三选一改成五选一，RELIC_OFFER_N）
   const picks = [];
@@ -3435,7 +3431,7 @@ var TOWN_KEY = "youxu.town.v1";
    字段从 gold 改叫 gem，读的时候兜一下老档。宝石以后花在「祝福」上。 */
 var TOWN = (function(){
   const t = load(TOWN_KEY, {gem:0}) || {};
-  return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0)};
+  return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0), bless: fixBless(t.bless)};
 })();
 /* 宝石一变就落盘（用户要求）——**别绕过这个函数直接改 TOWN.gem** */
 function addGems(n){
@@ -3443,6 +3439,206 @@ function addGems(n){
   commitPerm();
   if(SCENE === "town") renderTown();
 }
+/* ================= 祝福（局外养成） =================
+   主城那个原来灰着的「祝福」：用**宝石**开槽位，把某件遗物钉在两种效果之一上。
+   一共 **10 个槽位 = 偏爱 5 + 封印 5**，每一组**每个品质各一个**（普通/稀有/史诗/传奇/神圣），
+   所以一个品质最多同时有「偏爱一件 + 封印一件」。
+
+   - **偏爱**：那件遗物在**同品质的候选里权重 ×BLESS_FAV_X（300%）**，
+     **本局拿到过一次就歇了**（P.blessGot 记着，卖掉也不会再涨回来）。
+     ⚠️ 只改「同品质里抽哪一件」，**不动 rarityWeights 那张掉率表** ——
+     所以神圣那个偏爱槽在掉落里没用（神圣本来就不掉），它吃的是**合成候选和游商**。
+   - **封印**：那件遗物这一局**永远不出现**（relicPool() 里直接滤掉）。
+
+   开一个槽位收 BLESS_SLOT_COST 宝石，开了之后**换遗物不再收钱**，可以在**全部遗物**里自选。
+   数据挂在 TOWN.bless 上，跟着宝石一起走 TOWN_KEY，**没有新开 localStorage 键**
+   （所以 commit/snapshot/overwrite 三处自动带上，只有 mergeData 要单独写一条合并规矩）。*/
+function blankBless(){
+  return {open:{fav:[0,0,0,0,0], ban:[0,0,0,0,0]},
+          pick:{fav:["","","","",""], ban:["","","","",""]}};
+}
+/* 存档里读回来的那份可能是老档/坏档/删过的遗物 —— 一律过这儿正规化：
+   槽位没开的不认它存的遗物，品质对不上的也不认。*/
+function fixBless(b){
+  const out = blankBless();
+  if(!b || typeof b !== "object") return out;
+  ["fav", "ban"].forEach(function(k){
+    for(let r = 0; r < 5; r++){
+      if(b.open && b.open[k] && b.open[k][r]) out.open[k][r] = 1;
+      const id = (b.pick && b.pick[k] && b.pick[k][r]) || "";
+      const R = id ? relicById(id) : null;
+      if(R && (R.r || 0) === r && out.open[k][r]) out.pick[k][r] = id;
+    }
+  });
+  return out;
+}
+function blessOpen(kind, rar){ return !!(TOWN.bless && TOWN.bless.open[kind][rar]); }
+/* 这个槽位钉着哪一件（没开的槽位一律当空） */
+function blessId(kind, rar){ return blessOpen(kind, rar) ? (TOWN.bless.pick[kind][rar] || "") : ""; }
+function blessSlots(){
+  let n = 0;
+  ["fav", "ban"].forEach(function(k){ for(let r = 0; r < 5; r++) if(blessOpen(k, r)) n++; });
+  return n;
+}
+function blessHas(kind, id){
+  if(!id) return false;
+  for(let r = 0; r < 5; r++) if(blessId(kind, r) === id) return true;
+  return false;
+}
+/* 封印：这一局根本不出现 */
+function blessBanned(id){ return blessHas("ban", id); }
+/* 偏爱：还在生效吗 —— 本局已经拿到过一次就歇了（P.blessGot） */
+function blessFavored(id){
+  if(!blessHas("fav", id)) return false;
+  return !(P && P.blessGot && P.blessGot.indexOf(id) >= 0);
+}
+/* 从一串遗物里抽一件，偏爱的那件占 BLESS_FAV_X 份。
+   ⚠️ 所有「随机抽一件遗物」的地方都走它，别再直接 pick()。*/
+function blessPick(list){
+  if(!list || !list.length) return null;
+  const bag = [];
+  list.forEach(function(r){
+    const n = blessFavored(r.id) ? BLESS_FAV_X : 1;
+    for(let i = 0; i < n; i++) bag.push(r);
+  });
+  return pick(bag);
+}
+/* 不重复地抽 n 件（合成的候选用） */
+function blessPickN(list, n){
+  const bag = (list || []).slice(), out = [];
+  while(out.length < n && bag.length){
+    const r = blessPick(bag);
+    if(!r) break;
+    bag.splice(bag.indexOf(r), 1);
+    out.push(r);
+  }
+  return out;
+}
+/* 本局拿到了一件偏爱的 —— 记一笔，这一趟剩下的时间它不再加权（noteRelicFound 里调） */
+function blessNoteGot(id){
+  if(!P || !blessHas("fav", id)) return;
+  if(!P.blessGot) P.blessGot = [];
+  if(P.blessGot.indexOf(id) < 0) P.blessGot.push(id);
+}
+
+/* ---- 买槽位 / 换遗物 ---- */
+function blessBuy(kind, rar){
+  if(blessOpen(kind, rar)) return;
+  if((TOWN.gem || 0) < BLESS_SLOT_COST) return;      // 按钮本来就是禁的，这儿再兜一层
+  TOWN.bless.open[kind][rar] = 1;
+  addGems(-BLESS_SLOT_COST);                          // 它自己 commitPerm()，bless 跟着一起落盘
+  renderBless();
+}
+function blessSet(kind, rar, id){
+  if(!blessOpen(kind, rar)) return;
+  const R = id ? relicById(id) : null;
+  if(id && (!R || (R.r || 0) !== rar)) return;        // 槽位的品质是钉死的
+  /* 同一件不能又偏爱又封印 —— 塞进这一边就把另一边那个槽位空出来。
+     两边的槽位按品质一一对应，所以只可能撞在同一个下标上。*/
+  const other = kind === "fav" ? "ban" : "fav";
+  if(id && TOWN.bless.pick[other][rar] === id) TOWN.bless.pick[other][rar] = "";
+  TOWN.bless.pick[kind][rar] = id || "";
+  commitPerm();
+  renderBless();
+}
+
+/* ---- 界面 ---- */
+var BLESS_CN = {fav:"偏爱", ban:"封印"};
+let blessPickSlot = null;      // 正在挑的那个槽位 {kind, rar}
+let blessArmed = "";           // 开槽位的两步确认（"kind:rar"），跟「放弃」一个套路
+function openBless(){
+  blessArmed = "";
+  hideAll();
+  renderBless();
+  $("veilBless").hidden = false;
+}
+function closeBless(){ $("veilBless").hidden = true; blessArmed = ""; }
+function renderBless(){
+  $("blessGem").textContent = TOWN.gem || 0;
+  $("blessCost").textContent = BLESS_SLOT_COST;      // 价钱只有 content.js 那一处源
+  const box = $("blessList");
+  box.innerHTML = "";
+  ["fav", "ban"].forEach(function(kind){
+    const h = document.createElement("div");
+    h.className = "eyebrow bhead";
+    h.textContent = kind === "fav"
+      ? ("偏爱 · 同品质里出现概率 " + (BLESS_FAV_X * 100) + "%，本局拿到一次就歇")
+      : "封印 · 本局永不出现";
+    box.appendChild(h);
+    for(let rar = 0; rar < 5; rar++){
+      const open = blessOpen(kind, rar), id = blessId(kind, rar), R = id ? relicById(id) : null;
+      const armed = blessArmed === (kind + ":" + rar);
+      const afford = (TOWN.gem || 0) >= BLESS_SLOT_COST;
+      const d = document.createElement("button");
+      d.type = "button";
+      d.className = "bslot" + (open ? "" : " locked") + (R ? " set" : "") + (armed ? " armed" : "");
+      d.dataset.kind = kind; d.dataset.rar = rar;
+      if(!open && !afford && !armed) d.disabled = true;
+      const title = open ? (R ? R.n : "空着") : "未开启";
+      const sub = open ? (R ? R.pw : "点这里挑一件" + RAR_CN[rar] + "遗物")
+                       : (armed ? "再点一次 = 花 " + BLESS_SLOT_COST + " 宝石开它"
+                                : (afford ? BLESS_SLOT_COST + " 宝石开启" : "宝石还差 " + (BLESS_SLOT_COST - (TOWN.gem || 0))));
+      d.innerHTML =
+        "<span class=\"bq q" + rar + "\">" + RAR_CN[rar] + "</span>" +
+        "<span class=\"bcol\"><b class=\"bn" + (R ? " q" + rar : "") + "\">" + title + "</b>" +
+        "<em>" + sub + "</em></span>" +
+        "<span class=\"bgo\">" + (open ? "▸" : (armed ? "确认" : (afford ? "开启" : "锁"))) + "</span>";
+      box.appendChild(d);
+    }
+  });
+}
+/* 挑遗物：只摆这个槽位那一个品质的，全部可选（用户要求「可以自选所有遗物」）。
+   这一局已经钉着的那件标出来，再点一下等于换成别的。*/
+function openBlessPick(kind, rar){
+  blessPickSlot = {kind:kind, rar:rar};
+  $("blessPickEyebrow").textContent = BLESS_CN[kind] + " · " + RAR_CN[rar];
+  $("blessPickTitle").textContent = kind === "fav" ? "想多见到哪一件？" : "不想再见到哪一件？";
+  const f = $("blessFind");
+  if(f) f.value = "";
+  renderBlessPick();
+  $("veilBless").hidden = true;
+  $("veilBlessPick").hidden = false;
+}
+function renderBlessPick(){
+  if(!blessPickSlot) return;
+  const kind = blessPickSlot.kind, rar = blessPickSlot.rar, cur = blessId(kind, rar);
+  // 另一边同品质那个槽位钉着谁 —— 挑到它就等于把那边空出来，先在卡片上说一声
+  const other = blessId(kind === "fav" ? "ban" : "fav", rar);
+  const f = $("blessFind"), q = f ? f.value.trim().toLowerCase() : "";
+  const box = $("blessPickList");
+  box.innerHTML = "";
+  RELICS.filter(function(R){ return (R.r || 0) === rar; })
+    .filter(function(R){ return !q || (R.n + R.pw + R.lore).toLowerCase().indexOf(q) >= 0; })
+    .forEach(function(R){
+      const d = document.createElement("button");
+      d.type = "button";
+      d.className = "relic" + (R.id === cur ? " cur" : "");
+      d.dataset.id = R.id;
+      d.innerHTML = "<span class=\"rt q" + rar + "\">" + RAR_CN[rar] +
+          (R.id === cur ? " · 现在钉着它" : (R.id && R.id === other ? " · 现在" + BLESS_CN[kind === "fav" ? "ban" : "fav"] + "着，选了就换过来" : "")) + "</span>" +
+        "<span class=\"rn q" + rar + "\">" + R.n + "</span>" +
+        "<span class=\"rp\">" + R.pw + "</span>" +
+        "<span class=\"rl\">" + R.lore + "</span>";
+      box.appendChild(d);
+    });
+  if(!box.children.length){
+    box.innerHTML = "<div class=\"relic hot\"><span class=\"rn\">没找到</span></div>";
+  }
+  const c = $("btnBlessClear");
+  if(c) c.hidden = !cur;
+}
+function closeBlessPick(){
+  blessPickSlot = null;
+  $("veilBlessPick").hidden = true;
+  renderBless();
+  $("veilBless").hidden = false;
+}
+function blessTake(id){
+  if(!blessPickSlot) return;
+  blessSet(blessPickSlot.kind, blessPickSlot.rar, id);
+  closeBlessPick();
+}
+
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -3460,6 +3656,11 @@ function showScene(){
 function renderTown(){
   const M = meta();
   $("tGold").textContent = TOWN.gem;
+  // 祝福那一格的小字：开了几个槽位（没开过就写价钱）
+  const bs = $("blessSub");
+  if(bs) bs.textContent = blessSlots()
+    ? ("已开 " + blessSlots() + " / 10 个槽位")
+    : ("用宝石换永久的好处 · " + BLESS_SLOT_COST + " 宝石一个槽位");
   $("tBest").textContent = M.best ? ("第 " + M.best + " 层") : "—";
   $("tClears").textContent = M.clears || 0;
   $("tDeaths").textContent = M.deaths || 0;
@@ -3697,6 +3898,7 @@ function resumeRun(s){
   if(!P.used) P.used = {};                                   // 老档没有「这趟出过的词」
   if(typeof P.practice !== "boolean") P.practice = false;    // 老档没有练习模式
   if(!P.accF) P.accF = {};                                   // 老档没有按层的答题记录
+  if(!P.blessGot) P.blessGot = [];                           // 老档没有祝福·偏爱的本局记录
   if(typeof P.down !== "boolean") P.down = false;             // 老档没有「倒地」（联机第二期）
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
@@ -3927,12 +4129,12 @@ function openCodex(tab){
 }
 function hideAll(){
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -4018,6 +4220,12 @@ function mergeData(o){
   const before = TOWN.gem || 0;
   const inGem = (o.town && (typeof o.town.gem === "number" ? o.town.gem : o.town.gold)) || 0;
   TOWN.gem = Math.max(before, inGem);
+  /* 祝福：**整份取开得多的那一边**，不做并集 —— 跟存款同一个道理，
+     两边各开一半再并起来，等于一次的钱开出两个槽位。 */
+  const inBless = fixBless(o.town && o.town.bless);
+  let inN = 0, myN = blessSlots();
+  ["fav", "ban"].forEach(function(k){ for(let r = 0; r < 5; r++) if(inBless.open[k][r]) inN++; });
+  if(inN > myN) TOWN.bless = inBless;
 
   /* 导入是玩家自己点的，就地写一次盘 —— 它不是游戏里的那三个存档点，而是存档管理本身；
      不马上写的话玩家关掉页面会以为导入没生效。只写永久数据，
@@ -4176,7 +4384,8 @@ document.addEventListener("keydown", function(ev){
       const b = v.querySelector(".btn.primary");
       if(b){ ev.preventDefault(); b.click(); }
     } else if(ev.key === "Escape"){
-      if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse") v.hidden = true;
+      if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
+      else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
     }
     return;
@@ -4383,6 +4592,29 @@ $("btnRelicRedraw").addEventListener("click", function(){
 $("btnCave").addEventListener("click", openCave);
 $("btnCloseCave").addEventListener("click", function(){ $("veilCave").hidden = true; });
 $("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
+
+/* ---- 祝福 ---- */
+$("btnBless").addEventListener("click", openBless);
+$("btnCloseBless").addEventListener("click", closeBless);
+/* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */
+$("blessList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".bslot");
+  if(!b) return;
+  const kind = b.dataset.kind, rar = +b.dataset.rar, key = kind + ":" + rar;
+  if(blessOpen(kind, rar)){ blessArmed = ""; openBlessPick(kind, rar); return; }
+  // 2000 宝石不是小数目，误点一下很亏 —— 跟「放弃」一样两步确认
+  if(blessArmed !== key){ blessArmed = key; renderBless(); return; }
+  blessArmed = "";
+  blessBuy(kind, rar);
+});
+$("blessPickList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".relic");
+  if(!b || !b.dataset.id) return;
+  blessTake(b.dataset.id);
+});
+$("blessFind").addEventListener("input", renderBlessPick);
+$("btnBlessClear").addEventListener("click", function(){ blessTake(""); });
+$("btnBlessBack").addEventListener("click", closeBlessPick);
 $("btnPractice").addEventListener("click", function(){
   if(COOP && !coopIsHost()) return;     // 练习模式由房主统一定
   practiceOn = !practiceOn;

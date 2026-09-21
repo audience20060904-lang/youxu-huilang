@@ -91,9 +91,9 @@
           <button class="place" id="btnTownCodex" type="button">
             <i>鉴</i><span class="pn">图鉴<em>你认过的词、拿过的遗物</em></span><span class="go">▸</span>
           </button>
-          <div class="place off">
-            <i>祝</i><span class="pn">祝福<em>用宝石换永久的好处 —— 还没开门</em></span>
-          </div>
+          <button class="place" id="btnBless" type="button">
+            <i>祝</i><span class="pn">祝福<em id="blessSub">用宝石换永久的好处</em></span><span class="go">▸</span>
+          </button>
         </div>
         <p class="note">进洞后拿到的<b>遗物</b>和<b>金币</b>只在那一趟里算数。出来时按这一趟的表现<b>结算成宝石</b>带回镇上。</p>
       </div>
@@ -500,6 +500,32 @@
     <div class="eyebrow" id="fuseGotEyebrow">合成</div>
     <h2 id="fuseGotTitle">两件，挑一件</h2>
     <div class="relics" id="fuseGotList"></div>
+  </div>
+</div>
+
+<!-- 祝福：局外养成。10 个槽位 = 偏爱 5 + 封印 5，每一组每个品质各一个 -->
+<div class="veil" id="veilBless" hidden>
+  <div class="sheet">
+    <div class="eyebrow">祝福 · 跨局永久</div>
+    <h2>把宝石押在两件事上</h2>
+    <p class="note">宝石 <b id="blessGem">0</b>　一个槽位 <b id="blessCost">2000</b>，开了之后换遗物不再收钱。</p>
+    <div class="blesslots" id="blessList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseBless" type="button">关闭</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilBlessPick" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="blessPickEyebrow">偏爱 · 普通</div>
+    <h2 id="blessPickTitle">想多见到哪一件？</h2>
+    <input class="findbox" id="blessFind" type="search" autocomplete="off"
+           placeholder="搜索：名字 / 效果 / 铭文">
+    <div class="relics" id="blessPickList"></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnBlessClear" type="button" hidden>空出这个槽位</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnBlessBack" type="button">返回</button>
+    </div>
   </div>
 </div>
 
