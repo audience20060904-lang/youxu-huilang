@@ -153,6 +153,27 @@ function stats(){
      暴击率那一档普通品质已经有锐眼和刻痕了，这一件挪去填暴击伤害。加成在 answer() 的 critMult。*/
   if(hasRelic("rustplate")){ s.def += 2; s.crit -= 6; }      // 生锈重甲：带负面权衡的合成燃料
   if(hasRelic("twoply")) s.def += TWOPLY_ARMOR;              // 双层甲
+  /* ===== 第九批「跨流派组合」的底数（2026-09-21）=====
+     每件都自带一个数，另一半挂在别的流派上 —— **底数别删**，删了就又是「独立价值 0」的寄生件。*/
+  if(hasRelic("armpad"))     s.def += ARMPAD_ARMOR;      // 甲垫：护甲→每层护盾（结算在 nextFloor）
+  if(hasRelic("underarmor")) s.def += UNDERARM_ARMOR;    // 甲下：护甲→每层回血（同上）
+  if(hasRelic("armblade"))   s.def += ABLADE_ARMOR;      // 甲刃：护甲→暴击率（在 defGear 之后加）
+  if(hasRelic("ironvow"))    s.def += IRONVOW_ARMOR;     // 铁誓：护甲→伤害%＋减伤
+  if(hasRelic("confluence")) s.def += CONF_ARMOR;        // 万流归宗：三条线各数几档
+  if(hasRelic("chainmail")){                             // 链甲：连击→护甲
+    s.def += CHAINMAIL_ARMOR + Math.min(CHAINMAIL_MAX, Math.floor((P.combo || 0) / CHAINMAIL_AT));
+  }
+  if(hasRelic("paperweight")) s.maxHp += PAPER_HP;       // 镇纸：生命上限→攻击（在下面算完上限再加）
+  if(hasRelic("weight")){                                // 秤砣：金币→暴击率
+    s.crit += WEIGHT_CRIT + Math.min(WEIGHT_MAX, Math.floor((P.gold || 0) / WEIGHT_PER) * WEIGHT_STEP);
+  }
+  if(hasRelic("moltengold")){                            // 熔金：金币→攻击＋暴击
+    const t = Math.min(MOLTEN_TIERS, Math.floor((P.gold || 0) / MOLTEN_PER));
+    s.atk += t * MOLTEN_ATK; s.crit += t * MOLTEN_CRIT;
+  }
+  if(hasRelic("mirroredge")){                            // 镜锋：护盾→暴击率
+    s.crit += Math.min(MEDGE_MAX, Math.floor((P.shield || 0) / MEDGE_PER) * MEDGE_STEP);
+  }
   /* 2026-09-21：这三件原来「独立价值恒为 0」（自己不产护甲/护盾，全靠别的件喂），
      这一批各补了一个自带底数。⚠️ 底数要放在重装/硬茧的乘法**之前**。*/
   if(hasRelic("bastion")) s.def += BASTION_ARMOR;            // 铁壁：自带底数
@@ -179,6 +200,15 @@ function stats(){
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
+  /* 第九批：这四件按**别的资源**换护甲，必须排在生命上限定下来之后、重装/硬茧的乘法之前。
+     ⚠️ 「恒甲」读 cutStatic()，那个函数**不许回头调 stats()**，否则死循环（见它的注释）。*/
+  if(hasRelic("bloodplate")) s.def += Math.min(BPLATE_MAX, Math.floor(s.maxHp / BPLATE_PER));  // 血甲：生命→护甲
+  if(hasRelic("glyph") && G) s.def += (G.glyphArmor || 0);                                     // 咒文：这一层拼对攒的
+  if(hasRelic("twin")) s.def += Math.min(TWIN_MAX, Math.floor((P.shield || 0) / TWIN_PER));    // 双生：护盾→护甲
+  if(hasRelic("shieldking")){                                                                   // 盾王：护盾→护甲（＋伤害%）
+    s.def += Math.min(SKING_TIERS, Math.floor((P.shield || 0) / SKING_PER));
+  }
+  if(hasRelic("evervow")) s.def += Math.min(EVERVOW_MAX, Math.floor(cutStatic() / EVERVOW_PER)); // 恒甲：减伤→护甲
   // 重装：护甲 ×3（平减的护甲在深层等于没有，乘一下才跟得上。练习模式那 +50 不在里面）
   if(hasRelic("heavy")) s.def = (s.def + HEAVY_ARMOR) * HEAVY_MULT;   // 重装：自带底数 + 乘法
   // 硬茧：护甲 +20%（乘法档，跟重装/叠甲排在一起；取整放到最后由 defGear 那一步兜）
@@ -199,9 +229,16 @@ function stats(){
      ⚠️ 不这么分开的话，练习模式 +50 护甲 = 铁壁 +150% 伤害，
      「纯背词的简单模式」反而成了全游戏输出最高的玩法。*/
   /* 砺石（生命 −5）和血囊（攻击 −4）可能在 1 级把面板压穿，这里兜一下底。*/
+  // 镇纸：生命上限→攻击。放在这儿 —— 铁躯/献身/铭心全算完了，按**最终**上限折算
+  if(hasRelic("paperweight")) s.atk += Math.min(PAPER_MAX, Math.floor(s.maxHp / PAPER_PER));
   s.atk = Math.max(1, s.atk);
   s.maxHp = Math.max(1, s.maxHp);
   s.defGear = s.def;
+  /* 甲刃：护甲→暴击率。跟「铁壁」一个道理，读的是 defGear（装备和等级来的护甲）——
+     放在练习模式那 +50 之前，不然「纯背词的简单模式」白得 +18% 暴击。*/
+  if(hasRelic("armblade")){
+    s.crit += Math.min(ABLADE_MAX, Math.floor((s.defGear || 0) / ABLADE_PER) * ABLADE_STEP);
+  }
   /* 练习模式（用户 2026-09）：选关卡时勾的，跟着 P 进续玩档。
      固定 +50 护甲（挨打那条链最低仍掉 1 点）、攻击减半 —— 拿来纯背词用。
      ⚠️ 放在最后：所有遗物和等级都算完了再压这一刀。*/
@@ -218,6 +255,9 @@ function nextFloor(){
   autoOff();       // 下一层要重新手动开寻路（用户 2026-09），别自己接着冲
   const from = G.floor;
   G.floor = from + 1;
+  /* 汗巾／血锤要按「**这一层**回了多少血」给加成 —— 清零放在最前面，
+     这样连油灯那一笔进层回血也算进这一层（G.healed 在 healUp() 里累）。*/
+  G.healed = 0;
   P.undying = false;
   G.relicDone = false;     // 这一层清完再给一次遗物
   if(P.relics){                                    // 进层结算的普通遗物
@@ -243,6 +283,15 @@ function nextFloor(){
   G.openLeft = OPENING_N;  // 「开场」每层前几次答对吃加成（2026-09-21 从「第一次」改成「前 3 次」）
   G.catSeen = {};          // 「面熟」这一层各类别的怪遇到过几只，startBattle() 里累
   G.floorAsked = 0;        // 「破晓甲」这一层已经答过几题（不分对错），answer() 里累
+  /* 第九批「跨流派组合」每层的次数上限和本层攒的东西（2026-09-21）*/
+  G.needleN = 0;           // 粗针：这一层拼对给过几次护盾
+  G.ropeN = 0;             // 旧绳：这一层连击给过几次护盾
+  G.capN = 0;              // 学徒帽：这一层拼对回过几次血
+  G.critShN = 0;           // 暴盾：这一层暴击给过几次护盾
+  G.songN = 0;             // 长歌：这一层触发过几次
+  G.bladeN = 0;            // 拼刃：这一层开过几扇窗
+  G.glyphArmor = 0;        // 咒文：这一层拼对攒的护甲（每层清零）
+  G.lastPct = 0;           // 双面：上一刀打出去多少伤害加成
   /* 叠甲：**上一层**干不干净（G.tookDamage 在 takeHit() 里置真）决定这一层还算不算连续 ——
      必须在重置 G.tookDamage 之前先把上一层的成绩并进 P.noHitStreak。
      ⚠️ 第一层（from === 0）没有"上一层"，跳过，免得凭空记一次干净。*/
@@ -298,6 +347,34 @@ function nextFloor(){
   if(hasRelic("shatter")) P.shield = (P.shield || 0) + SHATTER_SHIELD;  // 破盾余威
   if(hasRelic("borrow"))  P.shield = (P.shield || 0) + BORROW_SHIELD;   // 借甲
   if(hasRelic("veteran")) P.shield = (P.shield || 0) + VETERAN_SHIELD;  // 久经
+  /* ===== 第九批「跨流派组合」的每层种子（2026-09-21）=====
+     ⚠️ **种子别删** —— 这七件的另一半挂在护盾上，没有种子它们在不带护盾流时就是白板
+     （跟附录 B2 那 11 件是同一个坑）。*/
+  if(hasRelic("shedge"))      P.shield = (P.shield || 0) + SHEDGE_SEED;    // 盾锋
+  if(hasRelic("mirroredge"))  P.shield = (P.shield || 0) + MEDGE_SEED;     // 镜锋
+  if(hasRelic("shieldheart")) P.shield = (P.shield || 0) + SHEART_SEED;    // 盾心
+  if(hasRelic("twin"))        P.shield = (P.shield || 0) + TWIN_SEED;      // 双生
+  if(hasRelic("shieldking"))  P.shield = (P.shield || 0) + SKING_SEED;     // 盾王
+  if(hasRelic("evervow"))     P.shield = (P.shield || 0) + EVERVOW_SEED;   // 恒甲
+  if(hasRelic("confluence"))  P.shield = (P.shield || 0) + CONF_SEED;      // 万流归宗
+  // 甲垫：按**护甲**换这一层的护盾（读 defGear，练习模式那 +50 不算数）
+  if(hasRelic("armpad")){
+    const gain = Math.min(ARMPAD_MAX, Math.max(0, stats().defGear || 0) * ARMPAD_PER);
+    if(gain > 0) P.shield = (P.shield || 0) + gain;
+  }
+  /* 进层回血的三件：放在护盾后面 —— 它们回的血会记进 G.healed，
+     「汗巾」「血锤」这一层的加成就是从这几笔起算的。*/
+  if(hasRelic("clasp")){                                                   // 铜扣：金币→回血
+    const pc = Math.min(CLASP_MAX, Math.floor((P.gold || 0) / CLASP_PER) * CLASP_PCT);
+    if(pc > 0) healUp(Math.max(1, Math.ceil(stats().maxHp * pc)));
+  }
+  if(hasRelic("underarmor")){                                              // 甲下：护甲→回血
+    const s9 = stats();
+    const pc = Math.min(UNDERARM_MAX, Math.max(0, s9.defGear || 0) * UNDERARM_PCT);
+    if(pc > 0) healUp(Math.max(1, Math.ceil(s9.maxHp * pc)), s9);
+  }
+  if(hasRelic("towel"))     healUp(Math.max(1, Math.ceil(stats().maxHp * TOWEL_SEED)));   // 汗巾的种子
+  if(hasRelic("bloodmaul")) healUp(Math.max(1, Math.ceil(stats().maxHp * BMAUL_SEED)));   // 血锤的种子
   /* 泉涌：自带一笔每层回血当「溢出的来源」——它原来只吃别的件漏出来的溢出，单带几乎没用。*/
   if(hasRelic("well")) healUp(Math.max(1, Math.ceil(stats().maxHp * WELL_HEAL_PCT)));
   /* 未雨绸缪（用户 2026-09 提到史诗）：进层时**身上每 foresightPer 金币**回 1% 最大生命，
@@ -1995,6 +2072,29 @@ function answer(btn, ok){
     if(hasRelic("bastion")) pct += (s.defGear || 0) * BASTION_PER;
     const recoil = hasRelic("recoil") ? (P.recoil || 0) * RECOIL_PCT : 0;   // 反震：挨几下就攒几层
     pct += recoil;
+    /* ===== 第九批「跨流派组合」落在②层的六件（2026-09-21）=====
+       全部照旧摊进这一个百分比桶，**没有新乘区**。*/
+    if(hasRelic("shedge")){                                                 // 盾锋：护盾→伤害%
+      pct += Math.min(SHEDGE_MAX, Math.floor((P.shield || 0) / SHEDGE_PER) * SHEDGE_PCT);
+    }
+    if(hasRelic("towel")){                                                  // 汗巾：本层回血→伤害%
+      const per = Math.max(1, Math.ceil(s.maxHp * TOWEL_PER / 100));
+      pct += Math.min(TOWEL_MAX, Math.floor((G.healed || 0) / per) * TOWEL_PCT);
+    }
+    if(hasRelic("bile")) pct += Math.min(BILE_MAX, Math.floor(cutStatic() / BILE_PER) * BILE_PCT);  // 苦胆：减伤→伤害%
+    if(hasRelic("shieldking")){                                             // 盾王：护盾→伤害%（护甲在 stats）
+      pct += Math.min(SKING_TIERS, Math.floor((P.shield || 0) / SKING_PER)) * SKING_PCT;
+    }
+    if(hasRelic("ironvow")){                                                // 铁誓：护甲→伤害%（减伤在 mitigate）
+      pct += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_PCT;
+    }
+    if(hasRelic("confluence")) pct += confTiers(s) * CONF_PCT;              // 万流归宗
+    if(hasRelic("janus")){                                                  // 双面：常驻减伤→伤害%
+      pct += JANUS_PCT + Math.min(JANUS_C_TIERS, Math.floor(cutStatic() / JANUS_C_PER)) * JANUS_C_STEP;
+    }
+    /* 拼刃：拼对之后的 SBLADE_Q 题各 +SBLADE_PCT%。窗口记在 P.bladeLeft 上（跟着续玩档），
+       **这里消耗一格**；答错那条分支也会消耗一格（"接下来 5 题"，不分对错）。*/
+    if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0){ pct += SBLADE_PCT; P.bladeLeft--; }
     /* 节奏件：「×2」「×1.5」都摊成②层的百分比 —— 全局仍然只有两个乘区。
        两件同时触发就是 +150%（相加，不是相乘）。*/
     /* 冒险（用户 2026-09 报的 bug：开了跟没开一样）——
@@ -2016,6 +2116,8 @@ function answer(btn, ok){
        ⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
        凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
     if(hasRelic("mirror")) flat += Math.min(MIRROR_MAX, Math.floor((P.shield || 0) / MIRROR_PER));
+    // 血锤：**这一层**回了多少血就换多少点伤（G.healed 在 healUp() 里累，nextFloor() 清零）
+    if(hasRelic("bloodmaul")) flat += Math.min(BMAUL_MAX, Math.floor((G.healed || 0) / BMAUL_PER) * BMAUL_FLAT);
 
     /* 第四层 · 额外伤害：跟基础点伤同一个桶（用户 2026-09 改的公式），
        所以它照样吃下面的百分比和暴击 —— 数字给得比①层大得多，品质也都在传奇以上。*/
@@ -2040,6 +2142,9 @@ function answer(btn, ok){
     // 蓄势：暴了就清零，没暴就再攒一层（跨怪物保留，跟连击一个道理）
     if(hasRelic("charge")) P.charge = crit ? 0 : (P.charge || 0) + 1;
 
+    /* 双面（神圣）要拿「这一刀打出去多少加成」换减伤，记在 G 上，mitigate() 里读。
+       ⚠️ 记的是**算完的 pct**，所以它换来的减伤总是慢一刀 —— 故意的，两边同时现算会绕成死循环。*/
+    if(G) G.lastPct = pct;
     let raw = Math.round((base + extra) * (1 + pct / 100)) + flat;
     if(crit) raw = Math.round(raw * critMult);                              // 乘区二
     // 破绽：打中弱点时无视护甲；碎颅：暴击时无视护甲
@@ -2076,6 +2181,40 @@ function answer(btn, ok){
       healUp(Math.max(1, Math.round(s.maxHp * ALLIN_PCT)), s);
     }
     if(hasRelic("midas") && Math.random() < 0.25) P.gold += 10;             // 点金：固定 10 金
+    /* ===== 第九批「跨流派组合」的答对触发（2026-09-21）=====
+       拼写和连击那两条线带齐之后触发频率会翻十倍，所以**每件都有每层次数上限** ——
+       计数挂在 G 上、nextFloor() 里清零。别把上限删了（算法见 遗物数据表.md 附录 C）。*/
+    if(isSpell){
+      if(hasRelic("needle") && (G.needleN || 0) < NEEDLE_N){               // 粗针：拼写→护盾
+        G.needleN = (G.needleN || 0) + 1;
+        P.shield = (P.shield || 0) + NEEDLE_SHIELD;
+      }
+      if(hasRelic("cap") && (G.capN || 0) < CAP_N){                        // 学徒帽：拼写→回血
+        G.capN = (G.capN || 0) + 1;
+        const ch2 = healUp(Math.max(1, Math.ceil(s.maxHp * CAP_HEAL)), s);
+        if(ch2.hp) relicLog += " <span class=\"sys\">(学徒帽 · 回 " + ch2.hp + " 点)</span>";
+      }
+      if(hasRelic("glyph")) G.glyphArmor = Math.min(GLYPH_MAX, (G.glyphArmor || 0) + GLYPH_ARMOR);  // 咒文：拼写→本层护甲
+      if(hasRelic("spellblade") && (G.bladeN || 0) < SBLADE_N){            // 拼刃：开一扇 5 题的窗口
+        G.bladeN = (G.bladeN || 0) + 1;
+        P.bladeLeft = SBLADE_Q;
+      }
+    }
+    if(hasRelic("oldrope") && P.combo > 0 && P.combo % ROPE_AT === 0 && (G.ropeN || 0) < ROPE_N){   // 旧绳：连击→护盾
+      G.ropeN = (G.ropeN || 0) + 1;
+      P.shield = (P.shield || 0) + ROPE_SHIELD;
+    }
+    if(hasRelic("longsong") && P.combo > 0 && P.combo % SONG_AT === 0 && (G.songN || 0) < SONG_N){  // 长歌：连击→护盾＋回血
+      G.songN = (G.songN || 0) + 1;
+      P.shield = (P.shield || 0) + SONG_SHIELD;
+      const sg = healUp(Math.max(1, Math.ceil(s.maxHp * SONG_HEAL)), s);
+      relicLog += " <span class=\"sys\">(长歌 · 护盾 +" + SONG_SHIELD +
+        (sg.hp ? "，回 " + sg.hp + " 点" : "") + ")</span>";
+    }
+    if(crit && hasRelic("critshield") && (G.critShN || 0) < CRITSH_N){     // 暴盾：暴击→护盾
+      G.critShN = (G.critShN || 0) + 1;
+      P.shield = (P.shield || 0) + CRITSH_SHIELD;
+    }
     /* 凝盾：每答对 AEGIS_EVERY 题攒 AEGIS_GAIN 点护盾，攒到 AEGIS_MAX 封顶 */
     if(hasRelic("aegis")){
       P.aegisN = (P.aegisN || 0) + 1;
@@ -2142,6 +2281,7 @@ function answer(btn, ok){
           (rb.hp ? "，回 " + rb.hp + " 点" : "") + ")</span>";
       }
     }
+    if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0) P.bladeLeft--;   // 拼刃：窗口是「接下来 5 题」，答错也算一题
     G.dice = 0;                       // 赌骰：答错把这一层攒的暴击率清零
     if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
     if(hasRelic("build")){                  // 筑盾：错了也不白错
@@ -2284,6 +2424,8 @@ function healUp(n, s0, force){
   const room = Math.max(0, s.maxHp - P.hp);
   const up = Math.min(room, n), spill = n - up;
   if(up > 0) P.hp += up;
+  // 汗巾／血锤按「这一层回了多少血」给加成 —— 只算真的进了血条的那部分，转成护盾的不算
+  if(up > 0 && G) G.healed = (G.healed || 0) + up;
   let sh = 0;
   if(spill > 0 && (force || hasRelic("well"))){
     sh = Math.floor(spill / SPILL_RATE);
@@ -2298,27 +2440,70 @@ function healUp(n, s0, force){
    不然会白白吃掉屏息的次数、白掷一次错身。
    ⚠️ 这条线里**没有固定减伤**：第 1 层的怪只打 1~2 点，「每次少挨 3 点」就是开局无敌，
    到后期又等于没有 —— 跟 content.js 里「不给后面的章加护甲」是同一个数学。 */
+/* ---- 常驻减伤合计（第九批「跨流派组合」用）----
+   只装**跟这一下无关**的那几项：装备、层数、金币、连击决定，每一下都生效。
+   「苦胆」「恒甲」「双面」读的就是它，mitigate() 也从它起算 —— 全局只有这一个口径，
+   别再在别处抄一份。
+   ⚠️ **不许在这里调 stats()**：stats() 自己要读它（恒甲按常驻减伤给护甲），调回去就是死循环。
+   所以依赖护甲/生命上限的那几项（逆鳞、盾心、铁誓、万流归宗）留在 mitigate() 里单独加。*/
+function cutStatic(){
+  let cut = 0;
+  if(hasRelic("soft")) cut += 7;                                          // 软甲
+  if(hasRelic("shed")) cut += SHED_CUT;                                   // 脱壳
+  if(hasRelic("hide")) cut += 3;                                          // 皮甲
+  if(G && hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);   // 老茧
+  if(hasRelic("still")) cut += STILL_CUT;                                 // 不动
+  if(G && hasRelic("deep") && G.floor >= DEEP_FROM) cut += DEEP_CUT;      // 深潜
+  if(hasRelic("quell")) cut += QUELL_ALL;             // 镇压：对 Boss 多的那一档在 mitigate() 里
+  // 第九批：三件自带底数的减伤 + 两件挂在别的流派上的
+  if(hasRelic("bile")) cut += BILE_CUT;                                   // 苦胆自带
+  if(hasRelic("evervow")) cut += EVERVOW_CUT;                             // 恒甲自带
+  if(hasRelic("janus")) cut += JANUS_CUT;                                 // 双面自带
+  if(hasRelic("goldplate")){                                              // 金甲：金币→减伤
+    cut += GPLATE_CUT + Math.min(GPLATE_MAX, Math.floor((P.gold || 0) / GPLATE_PER) * GPLATE_STEP);
+  }
+  if(hasRelic("linked")){                                                 // 连环：连击→减伤
+    cut += LINKED_CUT + Math.min(LINKED_MAX, Math.floor((P.combo || 0) / LINKED_AT) * LINKED_STEP);
+  }
+  return cut;
+}
+/* 万流归宗（神圣）：护盾／护甲／连击三条线各数几档（各最多 CONF_TIERS 档），
+   档数加起来 —— 打人那边每档 +CONF_PCT% 伤害（answer()），挨打那边每档 −CONF_CUT%（mitigate()）。*/
+function confTiers(s0){
+  if(!hasRelic("confluence")) return 0;
+  const s = s0 || stats();
+  return Math.min(CONF_TIERS, Math.floor((P.shield || 0) / CONF_SH_PER)) +
+         Math.min(CONF_TIERS, Math.floor((s.defGear || 0) / CONF_AR_PER)) +
+         Math.min(CONF_TIERS, Math.floor((P.combo || 0) / CONF_CB_PER));
+}
 function mitigate(dmg, s0, opt){
   const s = s0 || stats();
   let out = dmg, why = "";
   const wrong = !!(opt && opt.wrong);        // 这一下是不是「答错」挨的（超时不算）
   /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
-  let cut = 0;
+  /* 常驻那一档（软甲／皮甲／脱壳／老茧／不动／深潜／镇压的全局档 + 第九批的五件）
+     统一从 cutStatic() 起算 —— 「苦胆」「双面」「恒甲」要读同一个数，口径只能有一个。*/
+  let cut = cutStatic();
   /* 粗布 2026-09-21 从「每场一次减半」改成「**每层**一次 −BURLAP_CUT%」，并挪进 cut 桶 ——
      一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
      一件**普通**品质比传奇「不动」还强，是全表最大的一处定价事故。*/
   if(wrong && hasRelic("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += BURLAP_CUT; }
-  if(hasRelic("soft")) cut += 7;                                         // 软甲
-  if(hasRelic("shed")) cut += SHED_CUT;                                   // 脱壳：全程减伤（撤退免伤在 flee()）
   if(wrong && hasRelic("chain")) cut += CHAIN_CUT;                        // 长链：答错时的减伤
-  if(hasRelic("hide")) cut += 3;                                          // 皮甲
-  if(hasRelic("tough")) cut += Math.min(TOUGH_MAX, G.floor * TOUGH_PER);  // 老茧：每深一层 +1%
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
-  if(hasRelic("still")) cut += STILL_CUT;                                 // 不动：一件顶三四件
-  if(hasRelic("deep") && G.floor >= DEEP_FROM) cut += DEEP_CUT;           // 深潜：30 层之后
-  // 镇压：只挡 Boss 那一口（Boss 层的容错只有 3 下出头，全游戏最容易死的地方）
-  if(hasRelic("quell")){ cut += QUELL_ALL; if(B && B.mob && B.mob.boss) cut += QUELL_CUT; }  // 镇压
+  // 镇压：只挡 Boss 那一口（全局那一档在 cutStatic() 里；Boss 层的容错只有 3 下出头）
+  if(hasRelic("quell") && B && B.mob && B.mob.boss) cut += QUELL_CUT;
+  /* ===== 第九批「跨流派组合」里依赖护甲／护盾的三件（不能进 cutStatic，那儿不许调 stats）===== */
+  if(hasRelic("shieldheart") && (P.shield || 0) >= SHEART_AT) cut += SHEART_CUT;   // 盾心：护盾够厚
+  if(hasRelic("ironvow")){                                                // 铁誓：护甲→减伤
+    cut += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_CUT;
+  }
+  if(hasRelic("confluence")) cut += confTiers(s) * CONF_CUT;              // 万流归宗：三条线的档数
+  /* 双面：拿**上一刀真的打出去的伤害加成**（G.lastPct，answer() 里记）换减伤 ——
+     它自己那一档是「减伤→伤害」，方向相反，所以不会跟 cutStatic() 绕成死循环。*/
+  if(hasRelic("janus") && G){
+    cut += Math.min(JANUS_P_TIERS, Math.floor((G.lastPct || 0) / JANUS_P_PER)) * JANUS_P_STEP;
+  }
   /* 稳答／慎笔：按题型分——mitigate() 只有两个调用点（timeUp() 不传 wrong，answer() 的答错分支传
      {wrong:true}），所以这里的 wrong 已经排除了超时；题型看 B.q.type（此时题目还没被清掉）。*/
   if(wrong && hasRelic("calm") && B && B.q && B.q.type !== "spell") cut += CALM_CUT;
@@ -3994,6 +4179,19 @@ function resumeRun(s){
   G.warmthUsed = false;
   G.floorWrong = 0;
   G.burlapUsed = false;
+  /* 第九批「跨流派组合」的每层计数，同理按新一层初始化。
+     ⚠️ G.healed（本层回了多少血）补成 0 —— 进层那几笔种子回血是**上一次**发的、
+     血量已经存在档里了，这里重发就成了读档回血外挂。代价是读档那一层的
+     「汗巾」「血锤」要重新攒，差一档（+2% 伤害 / +3 点伤），故意选的。*/
+  G.healed = 0;
+  G.needleN = 0;
+  G.ropeN = 0;
+  G.capN = 0;
+  G.critShN = 0;
+  G.songN = 0;
+  G.bladeN = 0;
+  G.glyphArmor = 0;
+  G.lastPct = 0;
   // 游商货架上可能还摆着已经删掉的遗物（老档），先清一遍
   G.things.forEach(function(th){
     if(th && th.stock) th.stock = th.stock.filter(function(row){ return row.relic && relicById(row.relic.id); });
