@@ -150,7 +150,39 @@ var BF_FOES = {
  siege:  {name:"攻城眼",   art:"clock",   col:"#7A5A8A", hp:110,dmg:11, spd:40,  armor:2, xp:26, r:16, kind:"ranged",
           shot:{cd:4.0, keep:320, speed:150, r:13, n:1, spread:0, warn:0.8}},
  gate2:  {name:"深廊守者", art:"gate",    col:"#C2510E", hp:280,dmg:24, spd:70,  armor:5, xp:90, r:22, kind:"melee",
-          elite:true, noKnock:true, scale:1.6}
+          elite:true, noKnock:true, scale:1.6},
+
+ /* ===== 21–29 波（用户 2026-09-22「继续做到 40」）=====
+    主题：**拆营地**。11–19 波逼你决定先打谁，这一段逼你**别守死一个点** ——
+    噬盾者吸干护盾流、相位兽让你的大招打空、母巢不停产崽、穿刺手隔着屏幕点你。 */
+ leech:  {name:"噬盾者",   art:"dread",   col:"#4A6E8A", hp:90, dmg:12, spd:74,  armor:1, xp:28, r:14, kind:"melee",
+          leech:{r:200, pct:0.08}},
+ phaser: {name:"相位兽",   art:"ghost",   col:"#8A5AA8", hp:80, dmg:14, spd:96,  armor:0, xp:30, r:13, kind:"melee",
+          phase:true, wob:18, immune:{every:5, dur:1.4}},
+ hive:   {name:"母巢",     art:"slime",   col:"#5A7A4A", hp:220,dmg:10, spd:26,  armor:3, xp:45, r:21, kind:"melee",
+          hatch:{cd:4, n:2, id:"spawnling", max:10}},
+ spawnling:{name:"巢虫",   art:"rat",     col:"#7A8A5A", hp:16, dmg:7,  spd:120, armor:0, xp:3,  r:8,  kind:"melee",
+          scale:0.7},
+ sniper: {name:"穿刺手",   art:"prism",   col:"#A83F5A", hp:95, dmg:16, spd:52,  armor:1, xp:32, r:13, kind:"ranged",
+          shot:{cd:3.6, keep:400, speed:460, r:8, n:1, spread:0, warn:1.0, lock:true}},
+ gate3:  {name:"烬渊守者", art:"gate",    col:"#6B4A8A", hp:420,dmg:30, spd:72,  armor:6, xp:140,r:24, kind:"melee",
+          elite:true, noKnock:true, scale:1.8},
+
+ /* ===== 31–39 波 =====
+    主题：**破构筑**。碾压者免疫一切控制、不朽者要杀两遍、唤雷者不让你站着、
+    掘垒者拖慢你的塔、蚀空死了还占着地。 */
+ juggernaut:{name:"碾压者",art:"statue",  col:"#6A5A4A", hp:380,dmg:34, spd:46,  armor:8, xp:70, r:24, kind:"melee",
+          noKnock:true, noSlow:true, scale:1.35},
+ revenant:{name:"不朽者", art:"bone",     col:"#8A7A9A", hp:150,dmg:22, spd:86,  armor:3, xp:55, r:15, kind:"melee",
+          revive:{pct:0.5}},
+ stormcaller:{name:"唤雷者",art:"clock",  col:"#3A5A8A", hp:120,dmg:14, spd:46,  armor:2, xp:50, r:15, kind:"ranged",
+          storm:{cd:4.5, keep:340, warn:1.2, r:85, dmg:16}},   /* 实测 24 在第 34 波是一发 95，太狠 */
+ sapper: {name:"掘垒者",   art:"spider",  col:"#7A6A4A", hp:130,dmg:18, spd:92,  armor:2, xp:48, r:13, kind:"melee",
+          sap:{r:200, mult:2}},
+ voidling:{name:"蚀空",    art:"ghost",   col:"#4A3A6A", hp:110,dmg:16, spd:104, armor:0, xp:45, r:13, kind:"melee",
+          phase:true, leave:{r:90, life:3, dmg:9}},           /* 实测 14/4s 在第 38 波站满就是 183，砍到 9/3s */
+ gate4:  {name:"墟心守者", art:"gate",    col:"#4A3A8C", hp:620,dmg:42, spd:74,  armor:8, xp:220,r:26, kind:"melee",
+          elite:true, noKnock:true, noSlow:true, scale:2.0}
 };
 
 /* ===== 每一波（设计文档 4.2）=====
@@ -187,7 +219,50 @@ var BF_WAVES = [
  {pool:{ghost:8, prism:6, statue:8, clock:6, warden2:8, dread:6,
         swarm:10, splitter:10, mender:8, bulwark:10, warder:10, bomber:12, siege:10}, fix:{gate2:2}},
  {pool:{ghost:8, statue:8, warden2:8, dread:6,
-        swarm:10, splitter:12, mender:8, bulwark:12, warder:12, bomber:14, siege:12}, fix:{gate:2, gate2:2}}
+        swarm:10, splitter:12, mender:8, bulwark:12, warder:12, bomber:14, siege:12}, fix:{gate:2, gate2:2}},
+ {pool:{rat:1}},                                                                      /* 20：Boss 波，占位 */
+ /* ---- 21–29 波：拆营地 ---- */
+ {pool:{ghost:6, statue:8, warden2:8, swarm:10, splitter:10, mender:8, bulwark:10, warder:12, bomber:12, siege:10,
+        leech:14}, fix:{gate2:1, gate3:1}},
+ {pool:{ghost:6, statue:8, warden2:8, swarm:10, splitter:10, mender:8, bulwark:10, warder:12, bomber:12, siege:10,
+        leech:12, phaser:14}, fix:{gate2:1, gate3:1}},
+ {pool:{statue:8, warden2:8, swarm:10, splitter:10, mender:8, bulwark:10, warder:12, bomber:12, siege:10,
+        leech:12, phaser:12}, fix:{gate2:1, gate3:1}},
+ {pool:{statue:8, warden2:8, swarm:8, splitter:10, mender:8, bulwark:10, warder:12, bomber:12, siege:10,
+        leech:12, phaser:12, hive:10}, fix:{gate2:1, gate3:1}},
+ {pool:{statue:8, warden2:8, swarm:8, splitter:10, mender:8, bulwark:10, warder:12, bomber:12, siege:10,
+        leech:12, phaser:12, hive:10}, fix:{gate3:2}},
+ {pool:{statue:8, warden2:6, swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12, siege:8,
+        leech:12, phaser:12, hive:10, sniper:12}, fix:{gate3:2}},
+ {pool:{statue:8, warden2:6, swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12, siege:8,
+        leech:12, phaser:12, hive:10, sniper:12}, fix:{gate3:2}},
+ {pool:{statue:6, swarm:8, splitter:8, mender:8, bulwark:12, warder:12, bomber:12, siege:8,
+        leech:12, phaser:14, hive:12, sniper:12}, fix:{gate2:2, gate3:2}},
+ {pool:{statue:6, swarm:8, splitter:8, mender:8, bulwark:12, warder:14, bomber:14, siege:8,
+        leech:14, phaser:14, hive:12, sniper:14}, fix:{gate2:2, gate3:2}},
+ {pool:{rat:1}},                                                                      /* 30：Boss 波，占位 */
+ /* ---- 31–39 波：破构筑 ---- */
+ {pool:{swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12, siege:8,
+        leech:12, phaser:12, hive:10, sniper:12, juggernaut:14}, fix:{gate3:1, gate4:1}},
+ {pool:{swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12, siege:8,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:14}, fix:{gate3:1, gate4:1}},
+ {pool:{swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12, siege:8,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12}, fix:{gate3:1, gate4:1}},
+ {pool:{swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12, stormcaller:12}, fix:{gate3:1, gate4:1}},
+ {pool:{swarm:8, splitter:8, mender:8, bulwark:10, warder:12, bomber:12,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12, stormcaller:12}, fix:{gate4:2}},
+ {pool:{swarm:8, splitter:8, mender:6, bulwark:10, warder:12, bomber:12,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12, stormcaller:12, sapper:12}, fix:{gate4:2}},
+ {pool:{swarm:8, splitter:8, mender:6, bulwark:10, warder:12, bomber:12,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12, stormcaller:12, sapper:12}, fix:{gate4:2}},
+ {pool:{swarm:8, splitter:8, mender:6, bulwark:10, warder:12, bomber:12,
+        leech:10, phaser:12, hive:10, sniper:12, juggernaut:12, revenant:12, stormcaller:12, sapper:12,
+        voidling:14}, fix:{gate4:2}},
+ /* 第 39 波是这张表的最后一行 —— **第 41 波往后一直吃它**，只是按三旋钮继续加压。 */
+ {pool:{swarm:8, splitter:8, mender:6, bulwark:12, warder:14, bomber:14,
+        leech:12, phaser:14, hive:12, sniper:14, juggernaut:14, revenant:14, stormcaller:14, sapper:14,
+        voidling:14}, fix:{gate3:2, gate4:2}}
 ];
 
 /* ===== Boss（设计文档 4.3）=====
@@ -210,14 +285,36 @@ var BF_BOSS = {
           chain: {cd:8.5, warn:0.7, len:420, w:46, dmg:30, slow:{pct:0.5, sec:2.5}},
           call:  {at:[0.70, 0.40], n:6, id:"splitter", ring:170, warn:0.6},
           rage:  {at:0.30, spd:1.25, cd:0.70},
-          adds:  {id:"bomber", n:2, respawn:7}}
+          adds:  {id:"bomber", n:2, respawn:7}},
+ /* ===== 第 30 波 Boss ·「烬渊祭司」（用户 2026-09-22「继续做到 40」）=====
+    立绘 MOB_ART.priest 是现成的（地牢第三章那只）。
+    ⚠️ 技能跟前两只都不重：守卫是扇形、主事是钉子和长鞭，**祭司是「领域」** ——
+       一个甜甜圈（贴脸和跑远都安全，中间那一圈才危险）+ 三片会留在地上的火场。 */
+ priest: {name:"烬渊祭司", art:"priest", col:"#C2510E", hp:6800, dmg:48, spd:64, armor:8,
+          xp:1100, gold:1600, r:34, noKnock:true, boss:true, scale:2.8,
+          ring:  {cd:8.0, warn:1.1, inner:95, outer:250, dmg:52},
+          pyre:  {cd:11.0, warn:0.6, n:3, r:95, life:6.0, dmg:16, spread:200},
+          call:  {at:[0.70, 0.40], n:2, id:"hive", ring:190, warn:0.6},
+          rage:  {at:0.30, spd:1.25, cd:0.70},
+          adds:  {id:"sniper", n:2, respawn:8}},
+ /* ===== 第 40 波 Boss ·「墟心冕者」=====
+    ⚠️ 它是目前的终点，三个技能各逼一种反应：
+       崩心要你**跑很远**、冕刃要你**别站在直线上**、位移让你**甩不掉它**。 */
+ crown:  {name:"墟心冕者", art:"crown", col:"#4A3A8C", hp:13000, dmg:72, spd:68, armor:10,
+          xp:2200, gold:3200, r:36, noKnock:true, boss:true, scale:3.0,
+          nova:  {cd:12.0, warn:2.0, r:380, dmg:95},
+          shards:{cd:6.5, warn:0.6, n:10, speed:220, r:9, dmg:34},
+          warp:  {cd:9.0, warn:0.5, dist:70},
+          call:  {at:[0.75, 0.50, 0.25], n:4, id:"revenant", ring:200, warn:0.6},
+          rage:  {at:0.30, spd:1.22, cd:0.70},
+          adds:  {id:"juggernaut", n:1, respawn:10}}
 };
-/* Boss 出场顺序：第 10 波守卫、第 20 波主事。
-   ⚠️ 第 30 / 40 波预定是「烬渊祭司」priest 和「墟心冕者」crown（立绘都是现成的），还没做 ——
-      在那之前，第 30 波往后继续按**最后一只**加压（见待办）。 */
-var BF_BOSS_ORDER = ["warden", "steward"];
+/* Boss 出场顺序：10 守卫 · 20 主事 · 30 祭司 · 40 冕者。
+   ⚠️ **第 50 波往后继续按冕者加压**（每多一轮 hp/xp/金 ×1.9、伤害 ×1.35）——
+      再往上要新 Boss 的话，`BF_BOSS` 抄一条 + 这张表排个位就行，立绘走 buildArt() 自动生成。 */
+var BF_BOSS_ORDER = ["warden", "steward", "priest", "crown"];
 /* Boss 技能表。加新技能要同时动三处：这张表、bossAim()、bossFire()（外加 draw() 里的预警）。 */
-var BOSS_SKILLS = ["sweep", "quake", "nails", "chain"];
+var BOSS_SKILLS = ["sweep", "quake", "nails", "chain", "ring", "pyre", "nova", "shards", "warp"];
 function bossFor(w){
   var n = Math.floor(w / BF.bossEvery);            // 第 10 波 n=1
   var key = BF_BOSS_ORDER[Math.min(n, BF_BOSS_ORDER.length) - 1];
@@ -452,7 +549,7 @@ function newRun(){
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
   E = {foes:[], shots:[], drops:[], sites:[], pwaves:[], fx:[], boss:null,
-       builds:[], tshots:[]};             // builds 是塔/墙/泉/商，tshots 是塔打出去的弹
+       builds:[], tshots:[], zones:[]};   // builds 是塔/泉/商，tshots 是塔的弹，zones 是地面危险区
   E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0, second:0, aim:0};
   CAM.x = 0; CAM.y = 0;
   P.hp = bstats().maxHp;
@@ -1047,11 +1144,36 @@ function gainXp(n){
 /* ================================================================
    怪：受伤 / 倒下
    ================================================================ */
+/* ================================================================
+   地面危险区（用户 2026-09-22「继续做到 40」）
+   唤雷者的落雷、蚀空的尸块、祭司的火场**共用这一套**，别再各写一份。
+   warn > 0 的那段只画预警不结算；结算之后每 ZONE_TICK 秒咬一口。
+   ⚠️ 它也算「怪打你」，所以必须走 takeHit()，否则护盾会被绕过去。
+   ================================================================ */
+var ZONE_TICK = 0.6;
+function addZone(x, y, r, warn, life, dmg, col){
+  E.zones.push({x:x, y:y, r:r, warn:warn, life:life, dmg:dmg, col:col, cd:0, t:0});
+}
+function updateZones(dt){
+  var me = E.me;
+  for(var i = E.zones.length - 1; i >= 0; i--){
+    var z = E.zones[i];
+    z.t += dt;
+    if(z.warn > 0){ z.warn -= dt; continue; }
+    z.life -= dt; z.cd -= dt;
+    if(z.life <= 0){ E.zones.splice(i, 1); continue; }
+    if(z.cd <= 0 && Math.hypot(me.x - z.x, me.y - z.y) < z.r){
+      z.cd = ZONE_TICK; takeHit(z.dmg, null, {});
+    }
+  }
+}
+
 /* 「拒马」的光环：身边的怪受到的伤害 −N%。
    ⚠️ **所有打怪的路都必须过它**（hurtFoe / splash / aoe / zap / towerHurt / 冲击波），
       漏一条拒马就等于没摆。
    ⚠️ 它**不保护自己** —— 不然它就是块纯肉，玩家少了「先点掉它」这个解法。 */
 function guarded(f, d){
+  if(f.immuneT > 0) return 0;               // 相位兽的无敌窗口：这一下完全不算
   if(!G.guardN) return d;
   for(var i = 0; i < E.foes.length; i++){
     var o = E.foes[i];
@@ -1063,6 +1185,7 @@ function guarded(f, d){
 }
 function hurtFoe(f, d, s, crit){
   d = guarded(f, d);
+  if(d <= 0){ fxText("免疫", "#8A5AA8"); return; }
   f.hp -= d;
   f.flash = 0.12;
   if(!f.noKnock){
@@ -1075,7 +1198,7 @@ function hurtFoe(f, d, s, crit){
 }
 function splash(near, d){
   var f = near && !near.dead ? near : nearestFoe();
-  if(f){ f.hp -= guarded(f, d); if(f.hp <= 0) killFoe(f); }
+  if(f){ f.hp -= guarded(f, d); if(f.hp <= 0) killFoe(f); }   // 0 伤害就是没打动，不用特判
 }
 /* 身边 r 之内有几只（人海、霜环都要用）*/
 function nearFoes(r){
@@ -1096,6 +1219,7 @@ function aoe(x, y, r, dmg, col){
     var f = list[i]; if(f.dead) continue;
     if(Math.hypot(f.x - x, f.y - y) > r + f.r) continue;
     var dg = guarded(f, dmg);
+    if(dg <= 0) continue;
     f.hp -= dg; f.flash = 0.12;
     fxNum(f.x, f.y - f.r - 4, dg, false);
     if(f.hp <= 0) killFoe(f);
@@ -1118,6 +1242,7 @@ function zap(from, dmg, n){
     var t = E.foes[best]; seen[best] = 1;
     fxBolt(cur.x, cur.y, t.x, t.y);
     var dz = guarded(t, dmg);
+    if(dz <= 0){ cur = t; continue; }
     t.hp -= dz; t.flash = 0.12;
     fxNum(t.x, t.y - t.r - 4, dz, false);
     cur = t;
@@ -1133,7 +1258,17 @@ function nearestFoe(){
 }
 function killFoe(f){
   if(f.dead) return;
+  /* 「不朽者」：第一次倒下不算，原地回一半血再站起来。
+     ⚠️ 必须排在 f.dead = true **之前** —— 这是它跟「裂壳虫」的根本区别。 */
+  if(f.def.revive && !f.revived){
+    f.revived = true;
+    f.hp = Math.max(1, Math.round(f.maxHp * f.def.revive.pct));
+    f.flash = 0.2; fxRing(f.x, f.y, f.r + 18, "#8A7A9A");
+    return;
+  }
   f.dead = true;
+  /* 「蚀空」：死了还占着一块地（走 addZone，跟唤雷者和祭司的火场同一套）*/
+  if(f.def.leave) addZone(f.x, f.y, f.def.leave.r, 0, f.def.leave.life, f.leaveDmg, "#4A3A6A");
   var s = bstats(), k = BF.killScale;
   P.kills++; P.killStreak++;
   P.kinds[f.id] = (P.kinds[f.id] || 0) + 1;
@@ -1190,7 +1325,14 @@ function makeFoe(id, w, x, y){
     silCd: d.silence ? d.silence.cd * Math.random() : 0,
     healCd: d.heal ? d.heal.cd * Math.random() : 0,
     fuse: 0,
-    boomDmg: d.boom ? Math.max(1, Math.round(d.boom.dmg * dmgMul(w) * TIER.dmg)) : 0};
+    boomDmg: d.boom ? Math.max(1, Math.round(d.boom.dmg * dmgMul(w) * TIER.dmg)) : 0,
+    /* 21–39 波那一批的状态 */
+    immuneT: 0, immCd: d.immune ? d.immune.every * Math.random() : 0,
+    hatchCd: d.hatch ? d.hatch.cd * Math.random() : 0,
+    stormCd: d.storm ? d.storm.cd * Math.random() : 0,
+    back: false, aimDir: 0,
+    stormDmg: d.storm ? Math.max(1, Math.round(d.storm.dmg * dmgMul(w) * TIER.dmg)) : 0,
+    leaveDmg: d.leave ? Math.max(1, Math.round(d.leave.dmg * dmgMul(w) * TIER.dmg)) : 0};
 }
 function makeBoss(w){
   var d = bossFor(w);
@@ -1268,7 +1410,7 @@ function dropCoinPile(k){
 /* ---- 弹丸 ---- */
 function shoot(f, s){
   var d = f.def.shot, n = d.n, i;
-  var a0 = Math.atan2(E.me.y - f.y, E.me.x - f.x);
+  var a0 = d.lock ? f.aimDir : Math.atan2(E.me.y - f.y, E.me.x - f.x);
   for(i = 0; i < n; i++){
     var off = n > 1 ? (i - (n - 1) / 2) * d.spread * Math.PI / 180 : 0;
     E.shots.push({x:f.x, y:f.y, vx:Math.cos(a0 + off) * d.speed, vy:Math.sin(a0 + off) * d.speed,
@@ -1281,20 +1423,29 @@ function shoot(f, s){
    ================================================================ */
 function updateFoes(dt){
   var me = E.me, i, j, f, o, dx, dy, d, sp;
-  /* guarded() 每次打怪都要调，这里先数一遍拒马，没有就整段跳过（省掉一层 O(怪数) 循环）*/
-  G.guardN = 0;
-  for(i = 0; i < E.foes.length; i++) if(!E.foes[i].dead && E.foes[i].def.guard) G.guardN++;
+  /* guarded() / sapMul() 每帧要调很多次，这里先各数一遍，一个都没有就整段跳过 */
+  G.guardN = 0; G.sapN = 0;
+  for(i = 0; i < E.foes.length; i++){
+    if(E.foes[i].dead) continue;
+    if(E.foes[i].def.guard) G.guardN++;
+    if(E.foes[i].def.sap) G.sapN++;
+  }
+  var st = bstats();                       // 噬盾者要用，一帧只算一次
   for(i = 0; i < E.foes.length; i++){
     f = E.foes[i]; if(f.dead) continue;
     f.t += dt; if(f.flash > 0) f.flash -= dt;
     dx = me.x - f.x; dy = me.y - f.y; d = Math.hypot(dx, dy) || 1;
     sp = f.spd;
-    if(hasSp("sp_frost") && d <= 220) sp *= 0.6;          // 霜环
+    if(hasSp("sp_frost") && d <= 220 && !f.def.noSlow) sp *= 0.6;   // 霜环
     /* ---- 塔带来的三样状态（用户 2026-09-22 的塔防改版）---- */
     if(f.mark > 0) f.mark -= dt;                          // 窥影镜的标记
-    if(f.slowT > 0){ f.slowT -= dt; sp *= (1 - f.slowPct); }   // 冰晶塔的减速弹
-    var aura = towerSlowAt(f.x, f.y);                     // 霜灯 / 荆棘园的减速光环
-    if(aura > 0) sp *= (1 - aura);
+    /* ⚠️ `noSlow` 的怪（碾压者 / 墟心守者）**免疫一切减速** —— 它们是专门来破「控场流」的，
+       霜灯、冰晶塔、荆棘园、霜环对它们一概无效。别在这儿给它们开后门。 */
+    if(!f.def.noSlow){
+      if(f.slowT > 0){ f.slowT -= dt; sp *= (1 - f.slowPct); } // 冰晶塔的减速弹
+      var aura = towerSlowAt(f.x, f.y);                        // 霜灯 / 荆棘园的减速光环
+      if(aura > 0) sp *= (1 - aura);
+    }
     var def = f.def, tx = dx / d, ty = dy / d;
 
     if(f.boss){ updateBoss(f, dt, d, tx, ty); }
@@ -1327,7 +1478,52 @@ function updateFoes(dt){
           f.shotCd -= dt;
           if(d < def.shot.keep * 0.8){ tx = -tx; ty = -ty; }
           else if(d < def.shot.keep * 1.1){ tx = 0; ty = 0; }
-          if(f.shotCd <= 0 && d < def.shot.keep * 1.6) f.castT = def.shot.warn || 0.45;
+          if(f.shotCd <= 0 && d < def.shot.keep * 1.6){
+            f.castT = def.shot.warn || 0.45;
+            /* ⚠️ 「穿刺手」抬手那一下就把方向锁死（shot.lock），地上画的那条瞄准线就是它 ——
+               弹速 460 躲不掉，能躲的是**在抬手的 1 秒里挪开**。别改成开火时再瞄。 */
+            if(def.shot.lock) f.aimDir = Math.atan2(me.y - f.y, me.x - f.x);
+          }
+        }
+      }
+      /* 「相位兽」：每 every 秒无敌 dur 秒 —— 无敌期间身上一圈闪光。
+         它破的是「攒一个大招一次性砸死」的打法，逼你分开出手。 */
+      if(def.immune){
+        if(f.immuneT > 0) f.immuneT -= dt;
+        else { f.immCd -= dt; if(f.immCd <= 0){ f.immCd = def.immune.every; f.immuneT = def.immune.dur; } }
+      }
+      /* 「母巢」：每 cd 秒产 n 只巢虫，**场上同种封在 max 只** —— 不封会指数爆炸。 */
+      if(def.hatch){
+        f.hatchCd -= dt;
+        if(f.hatchCd <= 0){
+          f.hatchCd = def.hatch.cd;
+          var live = 0;
+          for(j = 0; j < E.foes.length; j++)
+            if(!E.foes[j].dead && E.foes[j].id === def.hatch.id) live++;
+          for(j = 0; j < def.hatch.n && live + j < def.hatch.max; j++){
+            var ha = Math.random() * Math.PI * 2;
+            E.foes.push(makeFoe(def.hatch.id, P.wave, f.x + Math.cos(ha) * (f.r + 14),
+                                                      f.y + Math.sin(ha) * (f.r + 14)));
+          }
+          fxRing(f.x, f.y, f.r + 10, f.col);
+        }
+      }
+      /* 「噬盾者」：站在你身边 r 之内就每秒吸走 pct 的最大生命值那么多**护盾**，自己回一半。
+         ⚠️ 它只吃护盾不吃血 —— 这是专门来破「叠盾流」的，别改成扣血（那就跟别的近战没区别了）。 */
+      if(def.leech && P.shield > 0 && d < def.leech.r){
+        var take = Math.min(P.shield, def.leech.pct * st.maxHp * dt);
+        P.shield -= take;
+        f.hp = Math.min(f.maxHp, f.hp + take * 0.5);
+      }
+      /* 「唤雷者」：保持距离，每 cd 秒在你**当下的位置**标一个圈，warn 秒后劈下。
+         走开就躲得掉 —— 它要的是「别站着不动」。 */
+      if(def.storm){
+        if(d < def.storm.keep * 0.8){ tx = -tx; ty = -ty; }
+        else if(d < def.storm.keep * 1.1){ tx = 0; ty = 0; }
+        f.stormCd -= dt;
+        if(f.stormCd <= 0 && d < def.storm.keep * 1.6){
+          f.stormCd = def.storm.cd;
+          addZone(me.x, me.y, def.storm.r, def.storm.warn, 0.25, f.stormDmg, "#3A5A8A");
         }
       }
       /* 「缝合者」：不打人，保持距离，每 cd 秒给身边伤得最重的一只回血。
@@ -1464,6 +1660,15 @@ function bossAim(f, def, k){
       f.nails.push({x: me.x + Math.cos(a) * rr, y: me.y + Math.sin(a) * rr});
     }
   }
+  else if(k === "pyre"){                              // 火场：脚下一片 + 周围两片
+    f.nails = [{x:me.x, y:me.y}];
+    for(i = 1; i < def.pyre.n; i++){
+      var pa = Math.random() * Math.PI * 2, pr = 60 + Math.random() * def.pyre.spread;
+      f.nails.push({x: me.x + Math.cos(pa) * pr, y: me.y + Math.sin(pa) * pr});
+    }
+  }
+  else if(k === "warp"){ f.qx = me.x; f.qy = me.y; }  // 位移：记下你现在站哪儿
+  /* ring / nova / shards 都以自己为心，抬手时不用记任何东西 */
 }
 function bossFire(f, def){
   var me = E.me, i;
@@ -1500,6 +1705,39 @@ function bossFire(f, def){
       me.slowT = def.chain.slow.sec; me.slowPct = def.chain.slow.pct;
     }
     fxArc(f.x, f.y, f.castDir, def.chain.len, 12, "#7A4A2A");
+  } else if(f.cast === "ring"){
+    /* 炎环：一个**甜甜圈** —— 贴着它站、或者跑到 outer 之外都安全，中间那一圈才吃伤害。
+       它是祭司的身份技：逼你要么贴脸要么远遁，不许在「舒适距离」上磨。 */
+    var rd = Math.hypot(me.x - f.x, me.y - f.y);
+    if(rd >= def.ring.inner && rd <= def.ring.outer)
+      takeHit(Math.round(def.ring.dmg * TIER.dmg), f, {boss:true});
+    fxRing(f.x, f.y, def.ring.outer, "#C2510E");
+    fxRing(f.x, f.y, def.ring.inner, "#C2510E");
+  } else if(f.cast === "pyre"){
+    /* 火场：三片留在地上的火，走 addZone（跟唤雷者、蚀空同一套）*/
+    for(i = 0; i < f.nails.length; i++)
+      addZone(f.nails[i].x, f.nails[i].y, def.pyre.r, 0, def.pyre.life,
+              Math.round(def.pyre.dmg * TIER.dmg), "#C2510E");
+    f.nails = null;
+  } else if(f.cast === "nova"){
+    /* 崩心：半径 380 的一整圈，抬手 2 秒 —— 唯一的解法是**往外跑**。 */
+    if(Math.hypot(me.x - f.x, me.y - f.y) < def.nova.r)
+      takeHit(Math.round(def.nova.dmg * TIER.dmg), f, {boss:true});
+    fxRing(f.x, f.y, def.nova.r, "#4A3A8C");
+  } else if(f.cast === "shards"){
+    /* 冕刃：一圈均匀射出去的弹，走 E.shots（跟远程怪同一套弹丸）*/
+    for(i = 0; i < def.shards.n; i++){
+      var sa = i / def.shards.n * Math.PI * 2 + Math.random() * 0.2;
+      E.shots.push({x:f.x, y:f.y, vx:Math.cos(sa) * def.shards.speed, vy:Math.sin(sa) * def.shards.speed,
+                    r:def.shards.r, dmg:Math.round(def.shards.dmg * TIER.dmg), col:f.col, life:4, slow:null});
+    }
+  } else if(f.cast === "warp"){
+    /* 位移：跳到你刚才站的地方旁边 —— 甩不掉它，只能打。 */
+    var wa = Math.random() * Math.PI * 2;
+    fxRing(f.x, f.y, f.r + 14, f.col);
+    f.x = f.qx + Math.cos(wa) * def.warp.dist;
+    f.y = f.qy + Math.sin(wa) * def.warp.dist;
+    fxRing(f.x, f.y, f.r + 14, f.col);
   }
 }
 
@@ -1768,7 +2006,7 @@ function openDeploy(){
   /* ⚠️ **进部署先把场上的弹幕全清掉**（用户 2026-09-22）——
      不清的话「开战」那一下会直接吃一脸停在半空的弹，而且那是上一波留下的，躲都没法躲。
      顺手把远程怪的抬手也打断，免得开战瞬间同时炸开一排。 */
-  E.shots.length = 0; E.tshots.length = 0; E.pwaves.length = 0;
+  E.shots.length = 0; E.tshots.length = 0; E.pwaves.length = 0; E.zones.length = 0;
   for(i = 0; i < E.foes.length; i++){ E.foes[i].castT = 0; E.foes[i].shotCd = Math.max(E.foes[i].shotCd, 0.8); }
   $("deploy").hidden = false;
   renderDeploy();
@@ -1913,10 +2151,23 @@ function refreshTowerStats(){
     }
     t.ef = {
       range: d.range * (1 + rangeUp),
-      cd: Math.max(0.08, d.cd / (1 + aspdUp) * (1 - Math.min(0.6, cdCut))),
+      cd: Math.max(0.08, d.cd / (1 + aspdUp) * (1 - Math.min(0.6, cdCut)) * sapMul(t.x, t.y)),
       dmg: Math.round(towerPower() * (d.dmg || 0) * sd * (1 + dmgUp))
     };
   }
+}
+/* 「掘垒者」活着的时候，身边 r 内的塔攻击间隔 ×mult（取最狠的那一个，不叠乘）。
+   ⚠️ 它跟「缚锁者」是两回事：缚锁是**短暂封停**，掘垒是**一直拖慢到它死**。
+      所以它是个明确的「先点掉」目标 —— 别把两者合并成一个机制。 */
+function sapMul(x, y){
+  if(!G.sapN) return 1;
+  var m = 1;
+  for(var i = 0; i < E.foes.length; i++){
+    var o = E.foes[i];
+    if(o.dead || !o.def.sap) continue;
+    if(Math.hypot(o.x - x, o.y - y) <= o.def.sap.r) m = Math.max(m, o.def.sap.mult);
+  }
+  return m;
 }
 /* 怪身上的减速光环（霜灯 / 荆棘园）：取最强的那一个，不叠加 */
 function towerSlowAt(x, y){
@@ -1948,6 +2199,7 @@ function towerHurt(f, d){
   if(f.dead || d <= 0) return;
   if(f.mark > 0) d = d * (1 + f.markPct / 100);
   d = guarded(f, d);
+  if(d <= 0) return;
   var out = Math.max(1, Math.round(d) - f.armor);
   f.hp -= out; f.flash = 0.12;
   fxNum(f.x, f.y - f.r - 4, out, false);
@@ -2228,9 +2480,43 @@ function draw(){
       ctx2.save(); ctx2.translate(sx(b.x), sy(b.y)); ctx2.rotate(b.castDir);
       ctx2.beginPath(); ctx2.rect(0, -cw2 / 2, cl, cw2);
       ctx2.fill(); ctx2.stroke(); ctx2.restore();
+    } else if(b.cast === "pyre" && b.nails){
+      for(var q2 = 0; q2 < b.nails.length; q2++){
+        ctx2.beginPath(); ctx2.arc(sx(b.nails[q2].x), sy(b.nails[q2].y), b.def.pyre.r, 0, 6.2832);
+        ctx2.fill(); ctx2.stroke();
+      }
+    } else if(b.cast === "ring"){
+      /* 甜甜圈：用 evenodd 把中间那块挖空，一眼看得出「贴脸安全」 */
+      ctx2.beginPath();
+      ctx2.arc(sx(b.x), sy(b.y), b.def.ring.outer, 0, 6.2832);
+      ctx2.arc(sx(b.x), sy(b.y), b.def.ring.inner, 0, 6.2832, true);
+      ctx2.fill("evenodd"); ctx2.stroke();
+    } else if(b.cast === "nova"){
+      ctx2.beginPath(); ctx2.arc(sx(b.x), sy(b.y), b.def.nova.r, 0, 6.2832);
+      ctx2.fill(); ctx2.stroke();
     }
   }
-  /* 建筑（塔 / 城墙 / 泉 / 商）画在怪底下 */
+  /* 地面危险区（唤雷者的落雷 / 蚀空的尸块 / 祭司的火场）—— 画在最底下，贴着地板 */
+  for(i = 0; i < E.zones.length; i++){
+    var z = E.zones[i], zx = sx(z.x), zy = sy(z.y);
+    if(zx < -padX || zx > cw + padX || zy < -padY || zy > ch + padY) continue;
+    ctx2.strokeStyle = z.col; ctx2.fillStyle = z.col;
+    if(z.warn > 0){                       // 预警：虚线 + 一圈往里收的实线
+      ctx2.globalAlpha = 0.16;
+      ctx2.beginPath(); ctx2.arc(zx, zy, z.r, 0, 6.2832); ctx2.fill();
+      ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5; ctx2.setLineDash([7, 7]);
+      ctx2.beginPath(); ctx2.arc(zx, zy, z.r, 0, 6.2832); ctx2.stroke();
+      ctx2.setLineDash([]);
+    } else {                              // 已经落下：实心一圈，快消失时淡掉
+      ctx2.globalAlpha = 0.20 * Math.min(1, z.life);
+      ctx2.beginPath(); ctx2.arc(zx, zy, z.r, 0, 6.2832); ctx2.fill();
+      ctx2.globalAlpha = 0.55 * Math.min(1, z.life); ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(zx, zy, z.r, 0, 6.2832); ctx2.stroke();
+    }
+    ctx2.globalAlpha = 1;
+  }
+
+  /* 建筑（塔 / 泉 / 商）画在怪底下 */
   drawBuilds();
 
   /* 石箱。脚下画一圈淡光圈，远远就能看见 */
@@ -2262,6 +2548,40 @@ function draw(){
       ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5;
       ctx2.beginPath(); ctx2.arc(px, py, f.r + 6 + wt * 26, 0, 6.2832); ctx2.stroke();
       ctx2.globalAlpha = 1;
+    }
+    /* 相位兽的无敌：整只画淡 + 一圈发亮的环，一眼看出「现在打它没用」 */
+    if(f.immuneT > 0){
+      ctx2.strokeStyle = "#8A5AA8"; ctx2.lineWidth = 3; ctx2.globalAlpha = 0.9;
+      ctx2.beginPath(); ctx2.arc(px, py, f.r + 6, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    /* 掘垒者：身上一圈淡光标出它拖慢的塔范围 */
+    if(f.def.sap){
+      ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.20; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(px, py, f.def.sap.r, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    /* 噬盾者：正在吸你的盾时连一条线过去 */
+    if(f.def.leech && P.shield > 0 && Math.hypot(me.x - f.x, me.y - f.y) < f.def.leech.r){
+      ctx2.strokeStyle = "#4A6E8A"; ctx2.globalAlpha = 0.5; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.moveTo(px, py); ctx2.lineTo(sx(me.x), sy(me.y)); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    /* 不朽者复活过一次之后打一个叉，告诉玩家这只不会再站起来 */
+    if(f.revived){
+      ctx2.strokeStyle = "#8A7A9A"; ctx2.lineWidth = 2; ctx2.globalAlpha = 0.85;
+      ctx2.beginPath();
+      ctx2.moveTo(px - 5, py - f.r - 8); ctx2.lineTo(px + 5, py - f.r - 2);
+      ctx2.moveTo(px + 5, py - f.r - 8); ctx2.lineTo(px - 5, py - f.r - 2);
+      ctx2.stroke(); ctx2.globalAlpha = 1;
+    }
+    /* 穿刺手抬手时地上那条瞄准线 —— 弹速 460 躲不掉，能躲的是这 1 秒 */
+    if(f.castT > 0 && f.def.shot && f.def.shot.lock){
+      ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.75; ctx2.lineWidth = 2;
+      ctx2.setLineDash([9, 6]);
+      ctx2.beginPath(); ctx2.moveTo(px, py);
+      ctx2.lineTo(px + Math.cos(f.aimDir) * 900, py + Math.sin(f.aimDir) * 900);
+      ctx2.stroke(); ctx2.setLineDash([]); ctx2.globalAlpha = 1;
     }
     /* 拒马：身上一圈淡光标出它护住的范围 —— 不画的话玩家不知道为什么打不动 */
     if(f.def.guard){
@@ -2729,7 +3049,7 @@ function step(dt){
   /* 二段：补的那一刀 */
   if(me.second > 0){ me.second -= dt; if(me.second <= 0) swing(0.7); }
   spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt); updateSites(dt);
-  updateTowers(dt); updateTShots(dt); updateBuilds(dt);
+  updateTowers(dt); updateTShots(dt); updateBuilds(dt); updateZones(dt);
   updateSpecial(dt, s);
   for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
@@ -2790,6 +3110,7 @@ function updateSpecial(dt, s){
       if(Math.hypot(f.x - w.x, f.y - w.y) > w.r + f.r) continue;
       w.hit[j] = 1;
       var d2 = guarded(f, Math.max(1, Math.round(s.atk * w.mult) - f.armor));
+      if(d2 <= 0) continue;
       f.hp -= d2; f.flash = 0.12;
       fxNum(f.x, f.y - f.r - 4, d2, false);
       if(f.hp <= 0) killFoe(f);
@@ -2817,8 +3138,14 @@ function startBoss(w){
 }
 function onBossDown(b){
   E.boss = null; G.bossDown = true; pendSpecial++;
-  for(var i = 0; i < E.foes.length; i++){ var f = E.foes[i]; if(!f.dead && f !== b) killFoe(f); }
-  E.shots.length = 0;
+  for(var i = 0; i < E.foes.length; i++){
+    var f = E.foes[i]; if(f.dead || f === b) continue;
+    /* ⚠️ 清屏要**强制**清掉：「不朽者」的复活会把 killFoe 挡回去，
+       不置这一下的话冕者（它召的就是不朽者）死了还留一地站着的，经验也不发。 */
+    f.revived = true;
+    killFoe(f);
+  }
+  E.shots.length = 0; E.zones.length = 0;      // 地上的火场 / 尸块跟着一起收
 }
 
 /* ================================================================
