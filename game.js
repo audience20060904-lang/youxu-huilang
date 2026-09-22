@@ -11,6 +11,20 @@ const W = CHAPTER.W, H = CHAPTER.H, FLOORS = CHAPTER.floors;
    所以下面那些「最后一层」「章末 Boss」「通关」的分支在无尽章里自动全部走不到。 */
 function floorMax(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : FLOORS; }
 function isEndless(){ return !!(CH && CH.endless); }
+/* ===== 深渊（用户 2026-09-22）=====
+   **前四章走过第 50 层的章末 Boss 之后，下面还有一层**：第 51 层，里面是血量无限的
+   「无终之影」（数值和形状全在 content.js 的 ABYSS 那一段）。它不会倒下，所以这一层
+   **永远不会清空、不会有阶梯、也没有下一层** —— 这一趟只能以「玩家倒下」收场
+   （或者主动放弃；通关那一笔在踏进深渊的那一下就记下了，见 nextFloor 的 P.cleared）。
+   ⚠️ **无尽章没有深渊**（它本来就没有底）：abyssFloor() 在那一章返回 Infinity，
+   跟 floorMax() 一个路子 —— 进 Math.min 就是不封顶，`=== abyssFloor()` 永远不成立。
+   ⚠️ **章末 Boss 那一层仍然是 floorMax()（50）**，深渊是通关**之后**的加时，不是通关的条件。 */
+function abyssFloor(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : FLOORS + 1; }
+function isAbyssFloor(f, ch){ return f === abyssFloor(ch); }
+function inAbyss(){ return !!(G && isAbyssFloor(G.floor)); }
+/* 无终之影第 n 层的血量和攻击：血量翻倍，攻击跟着血量走（10%，最少 1）——两条线是同一条。 */
+function abyssHp(layer){ return ABYSS_HP0 * Math.pow(ABYSS_X, Math.max(0, layer - 1)); }
+function abyssDmg(layer){ return Math.max(1, Math.round(abyssHp(layer) * ABYSS_DMG_PCT)); }
 
 /* ================= 联机（第一期 · 骨架）=================
    COOP 只在 coop.html 里为真（它在 game.js 之前设了 window.__COOP）。
@@ -112,7 +126,10 @@ function newRun(){
         // 这一趟按层记的答题数，结算时并进 MET.accF
         accF:{},
         // 祝福·偏爱本局已经拿到过哪几件（拿到一次那一件就不再加权）
-        blessGot:[] };
+        blessGot:[],
+        /* 深渊（用户 2026-09-22）：cleared = 走过章末 Boss 那一层了（通关照记），
+           abyss = 在深渊里打穿了无终之影几层（结算按层给宝石）。两个都跟着续玩档。*/
+        cleared:false, abyss:0 };
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -421,7 +438,17 @@ function nextFloor(){
     const tier = Math.floor((P.gold || 0) / CHAPTER.foresightPer);
     if(tier > 0) healUp(Math.max(1, Math.ceil(stats().maxHp * CHAPTER.foresightPct * tier)));
   }
-  if(G.floor > floorMax()){ chapterClear(); return; }   // 无尽章永远走不到这儿
+  /* 走过章末 Boss 那一层 = **这一章通关**（宝石里的「通关」和统计都照记，见 endRun 的 cleared），
+     但这一趟不在这儿结束 —— 下面还有一层深渊，里面是打不完的「无终之影」。
+     ⚠️ 深渊没有下一层（那只东西不会倒下，阶梯也就永远不会出现），所以 chapterClear()
+     这一句现在只是兜底，正常走不到；无尽章更是这两行都走不到。 */
+  if(G.floor > floorMax()){
+    if(!P.cleared){
+      P.cleared = true;
+      say("章末的门在身后合上 —— <b>第" + CH.id + "章通关</b>。这一趟的通关已经记下了。", "crit");
+    }
+    if(!isAbyssFloor(G.floor)){ chapterClear(); return; }
+  }
   // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
   // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
   // （包括最后的 commit —— 这儿 G.map 还是上一层的，先不存档，免得存进去一份错配的层）。
@@ -434,12 +461,7 @@ function nextFloor(){
   buildGrid();
   render();
   lockInput(320);
-  const last = G.floor === floorMax();
-  const bossRoom = isBossFloor(G.floor);
-  say("—— " + CH.name + " 第 " + G.floor + " 层" + (bossRoom ? " · BOSS" : "") + " ——", "crit");
-  say(last ? "空气冷得发硬。这一层尽头有东西在等。"
-     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
-     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom) ? "hurt" : "sys");
+  sayFloorIntro();
   commit(true);          // 存档点之二：下一层
 }
 /* ===== 联机 · 世界包（第一期）=====
@@ -506,12 +528,7 @@ function applyCoopWorld(msg){
   buildGrid();
   render();
   lockInput(320);
-  const last = G.floor === floorMax();
-  const bossRoom = isBossFloor(G.floor);
-  say("—— " + CH.name + " 第 " + G.floor + " 层" + (bossRoom ? " · BOSS" : "") + " ——", "crit");
-  say(last ? "空气冷得发硬。这一层尽头有东西在等。"
-     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
-     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom) ? "hurt" : "sys");
+  sayFloorIntro();
   commit(true);
 }
 /* ===== 房间图 =====
@@ -534,8 +551,21 @@ function slotChain(){
   }
   return [{c:0,r:0},{c:1,r:0}];      // 兜底，正常走不到
 }
-/* 每 BOSS_EVERY 层就是一层 Boss 房（第 10/20/30/40/50 层）。顶栏那层写成 `10*`，血色。 */
-function isBossFloor(f){ return f > 0 && f % BOSS_EVERY === 0; }
+/* 每 BOSS_EVERY 层就是一层 Boss 房（第 10/20/30/40/50 层）。顶栏那层写成 `10*`，血色。
+   **深渊那一层（第 51 层）也算一层 Boss 房**：它同样是「一间屋子 + 一只东西」，
+   所以 genFloor 的分岔、顶栏的血色、「候门」「叩关」那两件按 Boss 层给的遗物全都照走。 */
+function isBossFloor(f){ return f > 0 && (f % BOSS_EVERY === 0 || isAbyssFloor(f)); }
+/* 进一层之后那两行日志（nextFloor 和联机的 applyCoopWorld 共用同一份文案）。*/
+function sayFloorIntro(){
+  const last = G.floor === floorMax();
+  const bossRoom = isBossFloor(G.floor);
+  const abyss = inAbyss();
+  say("—— " + CH.name + " 第 " + G.floor + " 层" + (abyss ? " · 深渊" : bossRoom ? " · BOSS" : "") + " ——", "crit");
+  say(abyss ? "门在身后合上，这一层没有阶梯。<b>无终之影</b>站在屋子中间 —— 它的血没有底，打穿一层还有一层。想把这一趟的宝石带走，撤退之后「放弃」就行。"
+     : last ? "空气冷得发硬。这一层尽头有东西在等。"
+     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
+     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom || abyss) ? "hurt" : "sys");
+}
 /* ===== Boss 房 =====
    下了楼梯只有**一间屋子**，屋里**只有一只 Boss** —— 没有别的怪，也没有金币/泉/箱/坛/商。
    人在屋子一头，Boss 在另一头。阶梯照旧在它倒下的地方裂开（closeBattleWin 那一套不动）。
@@ -558,6 +588,8 @@ function genBossRoom(){
   P.x = x0 + 1; P.y = my;
   const bx = x0 + (w >> 1), by = my;
   G.stair = {x:bx, y:by};          // 清空前只是个占位，Boss 倒下的地方才是真阶梯
+  // 深渊（第 51 层）里是血量无限的「无终之影」，它自己一套数值（makeAbyssFoe，不吃下面那几个倍率）
+  if(isAbyssFloor(G.floor)){ G.mobs.push(makeAbyssFoe(ABYSS, bx, by)); return; }
   // 无尽章没有章末 Boss（CH.boss 是 null），每一间 Boss 房里都是跟着层数长的「层间守者」
   const def = (G.floor === floorMax() && CH.boss) ? CH.boss : GATEKEEPER;
   G.mobs.push(makeBossFoe(def, bx, by));
@@ -801,6 +833,41 @@ function makeBossFoe(def, x, y){
   m.loot = Math.round((ri(2,5) + G.floor) * BOSS_GOLD_X);
   return m;
 }
+/* 深渊那一只：**血量无限**，按「层」算 —— 第 1 层 1 点，每往下一层 ×ABYSS_X，
+   攻击 = 这一层血量的 ABYSS_DMG_PCT。立绘借**这一章章末 Boss 的**（它是那一章的影子），
+   所以这一批一张新图都没加。
+   ⚠️ 它不吃 Boss 房那几个倍率（BOSS_HP_X 之类），也不吃层数成长 —— 血和攻击只看层数。
+   ⚠️ 经验和金币都是 0：它不会倒下，closeBattleWin() 这辈子也走不到。 */
+function makeAbyssFoe(def, x, y){
+  const m = makeFoe(def, x, y);
+  m.art = (CH.boss && CH.boss.art) || def.art;
+  m.layer = 1;
+  m.max = m.hp = abyssHp(1);
+  m.dmg = abyssDmg(1);
+  m.armor = 0; m.xp = 0; m.loot = 0;
+  return m;
+}
+/* 打在无终之影身上的每一刀：**打光当前这一层，剩下的原样穿到下一层**
+   （用户要的「一次打很多层」）。血量是翻倍的，所以再大的一刀也只能穿有限层，这个循环一定会停。
+   ⚠️ 打穿的层数记在 **P.abyss** 上（跟着续玩档），结算时按层给宝石（SCORE.perAbyss）。
+   ⚠️ 血条永远不会归零 —— 所以 answer() 里那条「m.hp <= 0 就结束战斗」的分支在深渊里走不到。*/
+function abyssAbsorb(m, n){
+  let left = n, broke = 0;
+  while(left >= m.hp){
+    left -= m.hp;
+    broke++;
+    m.layer = (m.layer || 1) + 1;
+    m.max = m.hp = abyssHp(m.layer);
+    m.dmg = abyssDmg(m.layer);
+  }
+  m.hp -= left;
+  if(broke){
+    P.abyss = (P.abyss || 0) + broke;
+    say("无终之影碎了 <b>" + broke + "</b> 层（累计 " + P.abyss + " 层）—— 底下那层 <b>" +
+        m.max + "</b> 血，一口 <b>" + m.dmg + "</b> 点。", "crit");
+  }
+  return broke;
+}
 
 /* ================= 日志 ================= */
 function say(t, cls){
@@ -991,8 +1058,8 @@ function renderHud(){
   }
   // Boss 房那一层在顶栏写成 `10*`，并且是血色的（用户 2026-09）
   const bossFloor = isBossFloor(G.floor);
-  // 无尽章的分母是「∞」（没有最后一层，见 floorMax）
-  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + (isEndless() ? "∞" : FLOORS);
+  // 无尽章和深渊的分母都是「∞」：都没有「最后一层」（见 floorMax / abyssFloor）
+  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + ((isEndless() || inAbyss()) ? "∞" : FLOORS);
   $("hFloor").classList.toggle("bossfloor", bossFloor);
   $("hLevel").textContent = P.lvl;
   $("hGold").textContent = P.gold;
@@ -1347,8 +1414,10 @@ function askStair(){
   const to = G.floor + 1;
   $("stairEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 已清空";
   $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + to + " 层";
+  /* 第 50 层这一下现在通向**深渊**（用户 2026-09-22）：下去就算通关（宝石照给），
+     但下面那只东西打不完，只能走到倒下 —— 这句必须写清楚，不然玩家会以为自己亏了一次通关。*/
   $("stairNote").innerHTML = last
-    ? "下面就是这一章的尽头。<b>下去就没有回头路。</b>"
+    ? "下去就算<b>通关</b>，宝石照给。<br>再往下是<b>深渊</b>：里面那只东西血量没有底，打穿一层还有一层，没有阶梯也没有下一层 —— 走到倒下为止。"
     : (isBossFloor(to) ? "下面是一间屋子，里面<b>只有一只 BOSS</b>。" : "") +
       "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
   hideAll();
@@ -1413,7 +1482,8 @@ function startBattle(m){
   $("foeArt").innerHTML = ART[m.art];
   $("meArt").innerHTML = HERO;
   $("foeName").textContent = m.name;
-  $("foeTag").textContent = m.boss ? "章节首领 · 全部词类" : ("遭遇 · " + CAT_CN[m.cat] + "类词");
+  $("foeTag").textContent = (m.def && m.def.abyss) ? "深渊 · 血量无限，打穿一层还有一层"
+                          : m.boss ? "章节首领 · 全部词类" : ("遭遇 · " + CAT_CN[m.cat] + "类词");
   showWeak(m);
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("veilBattle").hidden = false;
@@ -1432,6 +1502,9 @@ function showWeak(m){
 }
 function renderBattleBars(){
   const m = B.mob, s = stats();
+  const abyss = !!(m.def && m.def.abyss);
+  /* 无终之影的血条画的是**当前这一层**（血量无限，画不出总条），第几层写在名字后面。*/
+  if(abyss) $("foeName").textContent = m.name + " · 第 " + (m.layer || 1) + " 层";
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
   /* 联机第二期：怪有两条独立满血，这条画在怪血条下面，显示队友那边剩多少（半透明 50%，
@@ -1439,7 +1512,7 @@ function renderBattleBars(){
      就跳过 —— 单人版一步都跑不到这儿。*/
   const mateBar = $("foeMateBar");
   if(mateBar){
-    if(COOP && m.hpMate != null){
+    if(COOP && m.hpMate != null && !abyss){
       mateBar.hidden = false;
       const mv = Math.max(0, m.hpMate);
       $("foeMateFill").style.width = (m.max > 0 ? mv / m.max * 100 : 0) + "%";
@@ -4398,7 +4471,7 @@ function writeRun(){
       // 怪只存 defId + 当前状态，读档时重新链回 FOES
       mobs: G.mobs.map(function(m){
         return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, s:m.seen};
+                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen};
       }),
       things: G.things
     });
@@ -4410,7 +4483,8 @@ function readRun(){
   if(!s || s.v !== RUN_V || !chapterById(s.ch || 1)) return null;
   if(!s.P || !s.map || !s.seen || !s.mobs || !s.stair) return null;
   // ⚠️ 这里还没 setChapter，CH 仍是上一趟那一章 —— 上限要按**存档里那一章**算
-  if(!s.floor || s.floor < 1 || s.floor > floorMax(chapterById(s.ch || 1))) return null;
+  // 上限是**深渊那一层**（前四章 51，无尽章 Infinity），不是章末 Boss 那一层
+  if(!s.floor || s.floor < 1 || s.floor > abyssFloor(chapterById(s.ch || 1))) return null;
   return s;
 }
 function dropRun(){ try{ localStorage.removeItem(RUN_KEY); }catch(e){} }
@@ -4419,6 +4493,7 @@ function foeDef(id){
   // ⚠️ 无尽章的 boss 是 null（它没有章末 Boss），别在这儿点空
   for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].boss && CHAPTERS[i].boss.id === id) return CHAPTERS[i].boss;
   if(id === GATEKEEPER.id) return GATEKEEPER;
+  if(id === ABYSS.id) return ABYSS;          // 深渊那只（前四章第 51 层）
   for(let i=0;i<FOES.length;i++) if(FOES[i].id === id) return FOES[i];
   return null;
 }
@@ -4447,6 +4522,8 @@ function resumeRun(s){
   if(!P.accF) P.accF = {};                                   // 老档没有按层的答题记录
   if(!P.blessGot) P.blessGot = [];                           // 老档没有祝福·偏爱的本局记录
   if(typeof P.down !== "boolean") P.down = false;             // 老档没有「倒地」（联机第二期）
+  if(typeof P.cleared !== "boolean") P.cleared = false;       // 老档没有「这一趟通关过没」（深渊）
+  if(typeof P.abyss !== "number") P.abyss = 0;                // 老档没有「打穿了几层深渊」
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -4496,7 +4573,7 @@ function resumeRun(s){
     const boss = !!def.boss;
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
-                 hp:m.hp, max:m.max,
+                 hp:m.hp, max:m.max, layer:m.ly || 1,
                  dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
   });
   /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
@@ -4508,7 +4585,7 @@ function resumeRun(s){
   $("log").innerHTML = "";
   hideAll();
   fov(); buildGrid(); render(); renderHud();
-  say("—— " + CH.name + " 第 " + G.floor + " 层 ——", "crit");
+  say("—— " + CH.name + " 第 " + G.floor + " 层" + (inAbyss() ? " · 深渊" : "") + " ——", "crit");
   say("你回到了踏进这一层时的样子 —— 存档存在每层的入口。", "sys");
   lockInput(320);
 }
@@ -4525,7 +4602,8 @@ function chapterClear(){ endRun(true); }
 function runScore(win){
   const total = P.right + P.wrong;
   const acc = total ? Math.round(P.right / total * 100) : 0;
-  const floor = Math.min(G.floor, floorMax());   // 无尽章不封顶，走到哪算哪
+  // 无尽章不封顶、深渊是第 51 层，所以上限取 abyssFloor()，走到哪算哪
+  const floor = Math.min(G.floor, abyssFloor());
   /* 到达的层数**不再是一项加分，它是主倍率**（用户 2026-09）：
      宝石 =（下面这几项相加）× 层数倍率 × 这一章的难度系数。两个乘区，没有第三个。*/
   const rows = [
@@ -4535,6 +4613,8 @@ function runScore(win){
     {k:"没花完的 " + P.gold + " 金币",   v: Math.floor((P.gold || 0) / SCORE.goldDiv)}
   ];
   if(win) rows.push({k:"通关", v: SCORE.clear});
+  // 深渊：打穿无终之影一层给一份（用户 2026-09-22 加的那只，见 content.js 的 ABYSS）
+  if(P.abyss) rows.push({k:"深渊 · 打穿 " + P.abyss + " 层", v: P.abyss * SCORE.perAbyss});
   const sum = rows.reduce(function(a, r){ return a + r.v; }, 0);
   const fmul = Math.max(SCORE.floorMin, floor / SCORE.floorDiv);
   return {rows:rows, sum:sum, acc:acc, floor:floor, fmul:fmul,
@@ -4563,20 +4643,27 @@ function endRun(win, gaveUp){
   G.over = true;
   const M = meta();
   M.runs++;
-  if(G.floor > M.best) M.best = Math.min(G.floor, floorMax());
-  if(win) M.clears++; else if(!gaveUp) M.deaths = (M.deaths || 0) + 1;
+  if(G.floor > M.best) M.best = Math.min(G.floor, abyssFloor());
+  /* 深渊（用户 2026-09-22）是**通关之后的加时**：走过章末 Boss 那一层的时候就记了 P.cleared，
+     所以倒在深渊里照样算这一章通关 —— 统计里记 clears、不记 deaths，宝石里的「通关」也照给。
+     ⚠️ `win` 仍然只表示「走到了这一章的尽头之外」（chapterClear），现在基本只是兜底。*/
+  const cleared = win || !!(P && P.cleared);
+  const abyssEnd = !win && !!(P && P.cleared);
+  if(cleared) M.clears++; else if(!gaveUp) M.deaths = (M.deaths || 0) + 1;
   // 遗物和金币都留在洞里 —— 带回镇上的是结算换来的**宝石**
-  const sc = runScore(win);
+  const sc = runScore(cleared);
   /* 历史平均要**在并进本局之前**算，不然等于跟自己比 */
   const hAcc = histAcc(sc.floor);
   foldAcc();
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
   $("endTitle").textContent = win ? ((CH.boss ? CH.boss.name : "这一章") + "倒下了")
+                                  : abyssEnd ? (gaveUp ? "你从深渊里退了出来" : "无终之影把你压了下去")
                                   : gaveUp ? ("你从第 " + G.floor + " 层退了出来")
                                            : ("你倒在第 " + G.floor + " 层");
-  $("endEyebrow").textContent = win ? ("第" + CH.id + "章 · 通关")
-                                    : gaveUp ? "主动撤离" : "你被抬回了镇上";
+  $("endEyebrow").textContent = cleared
+    ? ("第" + CH.id + "章 · 通关" + (P.abyss ? " · 深渊 " + P.abyss + " 层" : ""))
+    : gaveUp ? "主动撤离" : "你被抬回了镇上";
   /* 强调这一块（用户 2026-09）：本局正确率 vs 这一层历史上的平均正确率。
      高了标绿、低了标红，没有历史记录就写「—」。 */
   const dv = hAcc == null ? null : sc.acc - hAcc;
@@ -4627,7 +4714,7 @@ function endRun(win, gaveUp){
   hideAll();
   $("veilEnd").hidden = false;
   $("btnAgain").focus();
-  if(win) say(CH.boss.name + "碎成了石块。第" + CH.id + "章结束。", "crit");
+  if(win && CH.boss) say(CH.boss.name + "碎成了石块。第" + CH.id + "章结束。", "crit");
 }
 function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
 
@@ -5726,6 +5813,10 @@ function mobByCid(cid){
    单人版（COOP 恒为 false）行为跟原来一模一样。 */
 function coopDealDamage(m, n){
   if(!(n > 0)) return;
+  /* 无终之影：伤害在「层」之间穿过去，血条不会归零（abyssAbsorb）。
+     ⚠️ 联机里**这一刀不上报** —— 服务器那套是按「一条会被打空的血条」写的，
+     报过去它会判这只怪死了、广播 dead 把它从场上抹掉。深渊里两人各打各的层。*/
+  if(m.def && m.def.abyss){ abyssAbsorb(m, n); return; }
   m.hp -= n;
   if(COOP && window.NET && m.cid != null){
     NET.send({t:"dmg", mob:m.cid, side:m.curSide || m.mySide, n:n});
@@ -5971,6 +6062,7 @@ if(COOP){
   NET.on("hp", function(msg){
     const m = mobByCid(msg.mob);
     if(!m) return;
+    if(m.def && m.def.abyss) return;   // 深渊那只的血按层算，服务器不认它（见 coopDealDamage）
     const mine = m.curSide === "a" ? msg.a : msg.b;
     const other = m.curSide === "a" ? msg.b : msg.a;
     if(typeof mine === "number") m.hp = mine;

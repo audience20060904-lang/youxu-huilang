@@ -582,3 +582,7 @@ var MOTE_GEM  = '<svg viewBox="0 0 10 10"><path d="M5 .8 9.2 5 5 9.2.8 5z" fill=
 /* 第二章的 Boss「锈庭主事」共用守卫那张小图（战斗立绘走 def.art，也是 warden）。
    MOB_ART 的键是 def.id，所以这里得单独挂一个别名，不然地图上只会画出「庭」字。 */
 MOB_ART.steward = MOB_ART.warden;
+
+/* 深渊那只「无终之影」（前四章第 51 层，见 content.js 的 ABYSS）的**地图小图**：借冕者那张。
+   战斗立绘不在这儿 —— 它现取当前这一章章末 Boss 的 art（game.js 的 makeAbyssFoe）。 */
+MOB_ART.abyss = MOB_ART.crown;
