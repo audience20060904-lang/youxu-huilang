@@ -57,8 +57,8 @@
     <div class="drow">
       <button class="dbtn" id="btnDShop">商店</button>
       <button class="dbtn" id="btnDLvl">升级</button>
-      <button class="dbtn zm" id="btnZoomOut">−</button>
-      <button class="dbtn zm" id="btnZoomIn">+</button>
+      <!-- ⚠️ 缩放的 ± 按钮 2026-09-22 删了（用户：「不用加减按钮」）——
+           手机两指捏合，桌面滚轮。别加回来。 -->
       <button class="dbtn sell" id="btnDSell" hidden>出售</button>
     </div>
     <div class="dbench" id="dBench"></div>
@@ -85,12 +85,12 @@
   <!-- 塔的商店：部署阶段点「商店」弹出来，刷新和购买都在这儿（用户 2026-09-22）-->
   <div class="veil" id="veilTwShop">
     <div class="box wide col">
-      <h2>塔的商店</h2>
+      <h2>商店</h2>
       <p class="sub" id="twShopSub"></p>
       <div class="scroll"><div id="twShopList"></div></div>
       <div class="rowb pin">
         <button class="btn ghost" id="btnTwRe">刷新</button>
-        <button class="btn" id="btnTwClose">回去摆</button>
+        <button class="btn" id="btnTwClose">返回</button>
       </div>
     </div>
   </div>

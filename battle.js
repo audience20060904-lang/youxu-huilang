@@ -11,8 +11,13 @@ var BF = {
   /* 玩家起手面板 */
   base: {maxHp:100, atk:12, aspd:1.25, range:78, arc:120, spd:155,
          armor:0, crit:10, critMult:2.0, pickup:75, knock:14},
-  perLevel: {maxHp:6, atk:1},
+  /* 每升一级给多少（用户 2026-09-22：**升级获得的数值提升 50%**，6/1 → 9/1.5）。
+     ⚠️ atk 是小数，`bstats()` 末尾统一 round 一次 —— 别在这儿先取整。 */
+  perLevel: {maxHp:9, atk:1.5},
   levelHealPct: 0.08,
+  /* **每升几级才给一次遗物四选一**（用户 2026-09-22 从 1 改成 2）。
+     ⚠️ 升级本身照旧一级一算（面板、onLevelRelics 都按级走），只有「挑遗物」这一下按这个数攒。 */
+  pickEvery: 2,
 
   waveSec: 30,          // 每波多少秒
   bossEvery: 10,        // 每几波一个 Boss
@@ -45,8 +50,10 @@ var BF = {
         玩家在**部署阶段**摆下去的**建筑**，永久存在（见 BF.deploy 和 BF_BUILDS）。
         **别把 spring / shop 加回这张表。** 箱子照旧从击杀里掉。 */
   site: {
-    /* 箱：踩上去直接白给一件，不花钱不弹窗。每 every 波最多掉 max 个。 */
-    chest: {p:0.020, max:3, every:5},
+    /* 箱：踩上去直接白给一件，不花钱不弹窗。每 every 波最多掉 max 个。
+       ⚠️ **p 2026-09-22 减半**（用户：「宝箱出现概率减半」），0.020 → 0.010。
+          每波保底那一个还在（pitySite），所以「一整波一个箱都没有」仍然不会发生。 */
+    chest: {p:0.010, max:3, every:5},
     eliteRate: 0.25,                        // 精英倒下时额外掷一次
     max: 8,                                 // 场上最多几个
     r: 22                                   // 踩上去的判定半径
@@ -118,7 +125,32 @@ var BF_FOES = {
  dread:  {name:"吞惧者",    art:"dread",   col:"#8A4A4A", hp:40, dmg:7,  spd:54,  armor:1, xp:12, r:15, kind:"ranged",
           shot:{cd:3.5, keep:240, speed:165, r:7, n:3, spread:20, warn:0.55}},
  gate:   {name:"层间守者",  art:"gate",    col:"#A93729", hp:150,dmg:16, spd:66,  armor:3, xp:45, r:20, kind:"melee",
-          elite:true, noKnock:true, scale:1.4}
+          elite:true, noKnock:true, scale:1.4},
+
+ /* ===== 11–19 波的新怪（用户 2026-09-22）=====
+    ⚠️ 照旧**一张新图都没画**：全部复用 MOB_ART 里现成的那 11 张，
+       靠**颜色 + 体型 + 行为**区分。加新怪时也照这个来。
+    ⚠️ 这一批的设计口径是「**1–10 波考走位，11–19 波考取舍**」——
+       每一只都逼玩家先决定**先打谁**，而不是无脑贴着怪群转圈：
+       拒马给别人减伤、缝合者给别人回血、缚锁者封你的塔、裂壳虫越打越多。 */
+ swarm:  {name:"蚀影群",   art:"ghost",   col:"#3F5E7E", hp:22, dmg:9,  spd:142, armor:0, xp:7,  r:9,  kind:"melee",
+          phase:true, wob:14, scale:0.72},
+ splitter:{name:"裂壳虫",  art:"slime",   col:"#7A6A3A", hp:70, dmg:11, spd:56,  armor:1, xp:14, r:17, kind:"melee",
+          split:{id:"shard", n:2}},
+ shard:  {name:"碎壳",     art:"slime",   col:"#A2925E", hp:22, dmg:8,  spd:92,  armor:0, xp:4,  r:10, kind:"melee",
+          scale:0.6},
+ mender: {name:"缝合者",   art:"prism",   col:"#3E7A5E", hp:56, dmg:6,  spd:66,  armor:1, xp:18, r:13, kind:"ranged",
+          heal:{cd:2.6, r:210, pct:0.15, keep:300}},
+ bulwark:{name:"拒马",     art:"statue",  col:"#59636F", hp:130,dmg:16, spd:30,  armor:6, xp:24, r:19, kind:"melee",
+          guard:{r:150, cut:0.25}},
+ warder: {name:"缚锁者",   art:"gate",    col:"#6B4A8A", hp:90, dmg:13, spd:58,  armor:2, xp:22, r:14, kind:"melee",
+          silence:{cd:5, r:300, sec:3}},
+ bomber: {name:"爆囊",     art:"dread",   col:"#A8502A", hp:48, dmg:9,  spd:88,  armor:0, xp:16, r:14, kind:"melee",
+          boom:{at:76, warn:1.0, r:100, dmg:28}},
+ siege:  {name:"攻城眼",   art:"clock",   col:"#7A5A8A", hp:110,dmg:11, spd:40,  armor:2, xp:26, r:16, kind:"ranged",
+          shot:{cd:4.0, keep:320, speed:150, r:13, n:1, spread:0, warn:0.8}},
+ gate2:  {name:"深廊守者", art:"gate",    col:"#C2510E", hp:280,dmg:24, spd:70,  armor:5, xp:90, r:22, kind:"melee",
+          elite:true, noKnock:true, scale:1.6}
 };
 
 /* ===== 每一波（设计文档 4.2）=====
@@ -133,12 +165,33 @@ var BF_WAVES = [
  {pool:{rat:22, slime:16, spider:18, bone:18, ghost:14, prism:12}, fix:{gate:1}},
  {pool:{rat:16, slime:14, spider:16, bone:16, ghost:14, prism:14, statue:10}, fix:{gate:1}},
  {pool:{rat:12, slime:12, spider:14, bone:14, ghost:14, prism:14, statue:10, clock:10}, fix:{gate:1}},
- {pool:{rat:10, slime:10, spider:12, bone:12, ghost:14, prism:12, statue:10, clock:10, warden2:10}, fix:{gate:2}}
+ {pool:{rat:10, slime:10, spider:12, bone:12, ghost:14, prism:12, statue:10, clock:10, warden2:10}, fix:{gate:2}},
+ /* ⚠️ **下标 = 波数 − 1**，所以第 10 行（Boss 波）必须占个位 —— 它永远读不到，
+    但少了它第 11 波往后全会错一格。别删。 */
+ {pool:{rat:1}},                                                                      /* 10：Boss 波，占位 */
+ /* ---- 11–19 波（用户 2026-09-22）。每一波只加一种新怪，跟 1–10 波同一个节奏。 ---- */
+ {pool:{rat:8, slime:8, spider:10, bone:12, ghost:12, prism:12, statue:10, clock:10, warden2:10, dread:8,
+        swarm:16}, fix:{gate:2}},
+ {pool:{slime:8, spider:10, bone:10, ghost:12, prism:10, statue:10, clock:10, warden2:10, dread:8,
+        swarm:14, splitter:14}, fix:{gate:2}},
+ {pool:{spider:8, bone:10, ghost:12, prism:10, statue:8, clock:10, warden2:10, dread:8,
+        swarm:12, splitter:12, mender:10}, fix:{gate:2}},
+ {pool:{spider:8, bone:8, ghost:10, prism:10, statue:8, clock:8, warden2:10, dread:8,
+        swarm:12, splitter:12, mender:8, bulwark:10}, fix:{gate:2}},
+ {pool:{bone:8, ghost:10, prism:8, statue:8, clock:8, warden2:10, dread:8,
+        swarm:12, splitter:12, mender:8, bulwark:10, warder:10}, fix:{gate:1, gate2:1}},
+ {pool:{bone:8, ghost:10, prism:8, statue:8, clock:8, warden2:8, dread:8,
+        swarm:10, splitter:10, mender:8, bulwark:10, warder:10, bomber:12}, fix:{gate:1, gate2:1}},
+ {pool:{ghost:8, prism:8, statue:8, clock:8, warden2:8, dread:8,
+        swarm:10, splitter:10, mender:8, bulwark:10, warder:10, bomber:12}, fix:{gate2:2}},
+ {pool:{ghost:8, prism:6, statue:8, clock:6, warden2:8, dread:6,
+        swarm:10, splitter:10, mender:8, bulwark:10, warder:10, bomber:12, siege:10}, fix:{gate2:2}},
+ {pool:{ghost:8, statue:8, warden2:8, dread:6,
+        swarm:10, splitter:12, mender:8, bulwark:12, warder:12, bomber:14, siege:12}, fix:{gate:2, gate2:2}}
 ];
 
 /* ===== Boss（设计文档 4.3）=====
-   数值写死、不吃波次倍率（跟地牢的章末 Boss fixed:true 一个规矩），但吃难度层倍率。
-   第 20/30/40 波预定换成 steward / priest / crown，现在先用同一只按 rep 加压。 */
+   数值写死、不吃波次倍率（跟地牢的章末 Boss fixed:true 一个规矩），但吃难度层倍率。 */
 var BF_BOSS = {
  warden: {name:"石廊守卫", art:"warden", col:"#8A3223", hp:1400, dmg:18, spd:58, armor:4,
           xp:260, gold:400, r:30, noKnock:true, boss:true, scale:2.5,
@@ -146,14 +199,34 @@ var BF_BOSS = {
           quake: {cd:9.0, warn:1.2, r:95,  dmg:34},
           call:  {at:[0.75, 0.50, 0.25], n:8, id:"rat", ring:150, warn:0.6},
           rage:  {at:0.30, spd:1.30, cd:0.70},
-          adds:  {id:"dread", n:2, respawn:8}}
+          adds:  {id:"dread", n:2, respawn:8}},
+ /* ===== 第 20 波 Boss ·「锈庭主事」（用户 2026-09-22）=====
+    立绘复用 MOB_ART.steward（它本来就是守卫那张的别名），换个锈色就认得出来。
+    ⚠️ 技能**故意跟守卫一条都不重**：守卫是「扇形 + 一个圈」，考的是别贴脸；
+       主事是「一片钉子 + 一条长鞭」，考的是**别站在原地、也别站成一条线**。 */
+ steward:{name:"锈庭主事", art:"steward", col:"#7A4A2A", hp:3000, dmg:30, spd:62, armor:6,
+          xp:560, gold:820, r:32, noKnock:true, boss:true, scale:2.6,
+          nails: {cd:7.0, warn:1.1, n:5, r:62, spread:150, dmg:26},
+          chain: {cd:8.5, warn:0.7, len:420, w:46, dmg:30, slow:{pct:0.5, sec:2.5}},
+          call:  {at:[0.70, 0.40], n:6, id:"splitter", ring:170, warn:0.6},
+          rage:  {at:0.30, spd:1.25, cd:0.70},
+          adds:  {id:"bomber", n:2, respawn:7}}
 };
+/* Boss 出场顺序：第 10 波守卫、第 20 波主事。
+   ⚠️ 第 30 / 40 波预定是「烬渊祭司」priest 和「墟心冕者」crown（立绘都是现成的），还没做 ——
+      在那之前，第 30 波往后继续按**最后一只**加压（见待办）。 */
+var BF_BOSS_ORDER = ["warden", "steward"];
+/* Boss 技能表。加新技能要同时动三处：这张表、bossAim()、bossFire()（外加 draw() 里的预警）。 */
+var BOSS_SKILLS = ["sweep", "quake", "nails", "chain"];
 function bossFor(w){
-  var d = {}, k;
-  for(k in BF_BOSS.warden) d[k] = BF_BOSS.warden[k];
-  var rep = Math.floor(w / BF.bossEvery);          // 第 10 波 rep=1
-  if(rep > 1){ var m = 1 + 0.9 * (rep - 1);
-    d.hp = Math.round(d.hp * m); d.dmg = Math.round(d.dmg * (1 + 0.35 * (rep - 1)));
+  var n = Math.floor(w / BF.bossEvery);            // 第 10 波 n=1
+  var key = BF_BOSS_ORDER[Math.min(n, BF_BOSS_ORDER.length) - 1];
+  var src = BF_BOSS[key], d = {}, k;
+  for(k in src) d[k] = src[k];
+  d.key = key;
+  var extra = n - BF_BOSS_ORDER.length;            // 超出这张表的轮次继续加压
+  if(extra > 0){ var m = 1 + 0.9 * extra;
+    d.hp = Math.round(d.hp * m); d.dmg = Math.round(d.dmg * (1 + 0.35 * extra));
     d.xp = Math.round(d.xp * m); d.gold = Math.round(d.gold * m); }
   return d;
 }
@@ -370,6 +443,10 @@ function newRun(){
        bench:[],                          // 备战区，BF.deploy.bench 格（用户说的「九个卡槽」）
        pool:{},                           // 牌库：每种塔还剩几张（云顶那套共享池）
        round:0,                           // 已经进行过几轮部署
+       /* 距离下一次「挑遗物」还差几级（见 BF.pickEvery）。
+          ⚠️ 从 1 起步，所以**第一件遗物在 2 级拿到**，之后 4/6/8…；
+             从 0 起步的话第一件要等到 3 级，开局太空了。 */
+       lvlSince:1,
        power:0};                          // 玩家最近几刀的实际出手伤害 —— 塔的伤害读它
   initPool();
   reindex();
@@ -955,15 +1032,37 @@ function gainXp(n){
     var s2 = bstats();
     P.hp = Math.min(s2.maxHp, P.hp + Math.round(s2.maxHp * BF.levelHealPct));
     for(var i = 0; i < up; i++) onLevelRelics();
-    pendPicks += up;
-    openPick();
+    /* ⚠️ **每 BF.pickEvery 级才给一次四选一**（用户 2026-09-22）——
+       零头攒在 P.lvlSince 上，跨升级继续攒，别改成「偶数级才给」（一次升两级会漏）。 */
+    P.lvlSince += up;
+    var got = Math.floor(P.lvlSince / BF.pickEvery);
+    if(got > 0){
+      P.lvlSince -= got * BF.pickEvery;
+      pendPicks += got;
+      openPick();
+    }
   }
 }
 
 /* ================================================================
    怪：受伤 / 倒下
    ================================================================ */
+/* 「拒马」的光环：身边的怪受到的伤害 −N%。
+   ⚠️ **所有打怪的路都必须过它**（hurtFoe / splash / aoe / zap / towerHurt / 冲击波），
+      漏一条拒马就等于没摆。
+   ⚠️ 它**不保护自己** —— 不然它就是块纯肉，玩家少了「先点掉它」这个解法。 */
+function guarded(f, d){
+  if(!G.guardN) return d;
+  for(var i = 0; i < E.foes.length; i++){
+    var o = E.foes[i];
+    if(o.dead || o === f || !o.def.guard) continue;
+    if(Math.hypot(o.x - f.x, o.y - f.y) <= o.def.guard.r)
+      return Math.max(1, Math.round(d * (1 - o.def.guard.cut)));
+  }
+  return d;
+}
 function hurtFoe(f, d, s, crit){
+  d = guarded(f, d);
   f.hp -= d;
   f.flash = 0.12;
   if(!f.noKnock){
@@ -976,7 +1075,7 @@ function hurtFoe(f, d, s, crit){
 }
 function splash(near, d){
   var f = near && !near.dead ? near : nearestFoe();
-  if(f){ f.hp -= d; if(f.hp <= 0) killFoe(f); }
+  if(f){ f.hp -= guarded(f, d); if(f.hp <= 0) killFoe(f); }
 }
 /* 身边 r 之内有几只（人海、霜环都要用）*/
 function nearFoes(r){
@@ -996,8 +1095,9 @@ function aoe(x, y, r, dmg, col){
   for(var i = 0; i < list.length; i++){
     var f = list[i]; if(f.dead) continue;
     if(Math.hypot(f.x - x, f.y - y) > r + f.r) continue;
-    f.hp -= dmg; f.flash = 0.12;
-    fxNum(f.x, f.y - f.r - 4, dmg, false);
+    var dg = guarded(f, dmg);
+    f.hp -= dg; f.flash = 0.12;
+    fxNum(f.x, f.y - f.r - 4, dg, false);
     if(f.hp <= 0) killFoe(f);
   }
   aoeDepth--;
@@ -1017,8 +1117,9 @@ function zap(from, dmg, n){
     if(best < 0) return;
     var t = E.foes[best]; seen[best] = 1;
     fxBolt(cur.x, cur.y, t.x, t.y);
-    t.hp -= dmg; t.flash = 0.12;
-    fxNum(t.x, t.y - t.r - 4, dmg, false);
+    var dz = guarded(t, dmg);
+    t.hp -= dz; t.flash = 0.12;
+    fxNum(t.x, t.y - t.r - 4, dz, false);
     cur = t;
     if(t.hp <= 0) killFoe(t);
   }
@@ -1050,6 +1151,15 @@ function killFoe(f){
   if(hasSp("sp_rampage")){ P.rageN = Math.min(15, P.rageN + 1); P.rageT = 4; }
   if(hasSp("sp_feast")) healUp(s.maxHp * 0.01);
   if(hasSp("sp_burst")) aoe(f.x, f.y, 80, Math.max(1, Math.round(f.maxHp * 0.6)), "#C2510E");
+  /* 「裂壳虫」倒下时裂成两只小的（小的自己没有 split，所以不会再裂）。
+     ⚠️ 这里往 E.foes 里 push，而 aoe() 是对快照迭代的 —— 新裂出来的不会被同一发范围伤害二次命中。 */
+  if(f.def.split){
+    for(var q = 0; q < f.def.split.n; q++){
+      var qa = q / f.def.split.n * 6.2832 + Math.random();
+      E.foes.push(makeFoe(f.def.split.id, P.wave, f.x + Math.cos(qa) * 20, f.y + Math.sin(qa) * 20));
+    }
+    fxRing(f.x, f.y, 26, f.col);
+  }
   gainXp(f.xp);
   dropGold(f.x, f.y, f.gold);
   fxPop(f.x, f.y, f.col);
@@ -1075,7 +1185,12 @@ function makeFoe(id, w, x, y){
     kx:0, ky:0, t: Math.random() * 10, touch:0, flash:0, haunt:false, dead:false,
     shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0, castT:0,
     dashT:0, dashCd: d.dash ? d.dash.every * Math.random() : 0,
-    blinkCd: d.blink ? d.blink.every * Math.random() : 0, blinkWarn:0};
+    blinkCd: d.blink ? d.blink.every * Math.random() : 0, blinkWarn:0,
+    /* 11–19 波那一批的状态（用户 2026-09-22）*/
+    silCd: d.silence ? d.silence.cd * Math.random() : 0,
+    healCd: d.heal ? d.heal.cd * Math.random() : 0,
+    fuse: 0,
+    boomDmg: d.boom ? Math.max(1, Math.round(d.boom.dmg * dmgMul(w) * TIER.dmg)) : 0};
 }
 function makeBoss(w){
   var d = bossFor(w);
@@ -1085,8 +1200,13 @@ function makeBoss(w){
     dmg: Math.round(d.dmg * TIER.dmg), spd:d.spd, armor:d.armor,
     xp:d.xp, gold:Math.round(d.gold * BF.goldMult), r:d.r, sc:d.scale, elite:true, boss:true, noKnock:true,
     kx:0, ky:0, t:0, touch:0, flash:0, dead:false,
-    sweepCd:d.sweep.cd * 0.6, quakeCd:d.quake.cd * 0.8, cast:null, castT:0,
+    bkey:d.key || "warden", cast:null, castT:0, skCd:{}, nails:null,
     called:0, rage:false};
+  /* 开局各技能的 CD 错开一点，别一进门三个一起抬手 */
+  for(var i = 0; i < BOSS_SKILLS.length; i++){
+    var k = BOSS_SKILLS[i];
+    if(d[k]) f.skCd[k] = d[k].cd * (0.45 + Math.random() * 0.45);
+  }
   return f;
 }
 
@@ -1161,6 +1281,9 @@ function shoot(f, s){
    ================================================================ */
 function updateFoes(dt){
   var me = E.me, i, j, f, o, dx, dy, d, sp;
+  /* guarded() 每次打怪都要调，这里先数一遍拒马，没有就整段跳过（省掉一层 O(怪数) 循环）*/
+  G.guardN = 0;
+  for(i = 0; i < E.foes.length; i++) if(!E.foes[i].dead && E.foes[i].def.guard) G.guardN++;
   for(i = 0; i < E.foes.length; i++){
     f = E.foes[i]; if(f.dead) continue;
     f.t += dt; if(f.flash > 0) f.flash -= dt;
@@ -1207,6 +1330,57 @@ function updateFoes(dt){
           if(f.shotCd <= 0 && d < def.shot.keep * 1.6) f.castT = def.shot.warn || 0.45;
         }
       }
+      /* 「缝合者」：不打人，保持距离，每 cd 秒给身边伤得最重的一只回血。
+         ⚠️ 它是这一批里最该被优先点掉的一只 —— 留着它，拒马和精英就一直满血。 */
+      if(def.heal){
+        if(d < def.heal.keep * 0.8){ tx = -tx; ty = -ty; }
+        else if(d < def.heal.keep * 1.1){ tx = 0; ty = 0; }
+        f.healCd -= dt;
+        if(f.healCd <= 0){
+          f.healCd = def.heal.cd;
+          var worst = null, wf = 0.999;
+          for(j = 0; j < E.foes.length; j++){
+            o = E.foes[j];
+            if(o.dead || o === f) continue;
+            if(Math.hypot(o.x - f.x, o.y - f.y) > def.heal.r) continue;
+            var fr = o.hp / o.maxHp;
+            if(fr < wf){ wf = fr; worst = o; }
+          }
+          if(worst){
+            worst.hp = Math.min(worst.maxHp, worst.hp + Math.round(worst.maxHp * def.heal.pct));
+            fxBolt(f.x, f.y, worst.x, worst.y); fxRing(worst.x, worst.y, 22, "#3E7A5E");
+          }
+        }
+      }
+      /* 「缚锁者」：每 cd 秒封掉射程内最近的一座塔 sec 秒 —— 塔防层的专属克制。
+         ⚠️ 它封的是**塔**不是人，所以塔摆得散一点就不会被一锅端。 */
+      if(def.silence){
+        f.silCd -= dt;
+        if(f.silCd <= 0){
+          f.silCd = def.silence.cd;
+          var bt = null, bd2 = def.silence.r;
+          for(j = 0; j < E.builds.length; j++){
+            var b2 = E.builds[j];
+            if(b2.k !== "tower" || b2.silT > 0) continue;
+            var d3 = Math.hypot(b2.x - f.x, b2.y - f.y);
+            if(d3 < bd2){ bd2 = d3; bt = b2; }
+          }
+          if(bt){ bt.silT = def.silence.sec; fxBolt(f.x, f.y, bt.x, bt.y); fxRing(bt.x, bt.y, 26, "#6B4A8A"); }
+        }
+      }
+      /* 「爆囊」：贴到 at 之内就点火，warn 秒后自爆，自己也没了。
+         ⚠️ 引信期间它**站着不动**、身上画一圈收拢的预警 —— 走开就躲得掉（155 移速 1 秒跑 155 > 半径 100）。 */
+      if(def.boom){
+        if(f.fuse > 0){
+          f.fuse -= dt; sp = 0; tx = 0; ty = 0;
+          if(f.fuse <= 0){
+            if(Math.hypot(me.x - f.x, me.y - f.y) < def.boom.r) takeHit(f.boomDmg, f, {});
+            fxRing(f.x, f.y, def.boom.r, "#C2510E");
+            killFoe(f);
+            continue;
+          }
+        } else if(d < def.boom.at) f.fuse = def.boom.warn;
+      }
       /* 幽魂的飘移 */
       if(def.wob){ var w2 = Math.sin(f.t * 2.4) * 0.5;
         var nx = -ty, ny = tx; tx += nx * w2; ty += ny * w2; }
@@ -1229,7 +1403,7 @@ function updateFoes(dt){
     }
     /* 接触伤害 */
     f.touch -= dt;
-    if(!f.def.shot || f.boss){
+    if((!f.def.shot && !f.def.heal && !f.def.boom) || f.boss){
       if(Math.hypot(me.x - f.x, me.y - f.y) < f.r + 12 && f.touch <= 0){
         f.touch = BF.touchCd;
         takeHit(f.dmg, f, {haunt:f.haunt, hitByMe:(f.hitByMe || 0) >= 1, boss:!!f.boss,
@@ -1242,15 +1416,17 @@ function updateFoes(dt){
   if(E.foes.length > 260) E.foes = E.foes.filter(function(x){ return !x.dead; });
 }
 
+/* Boss 的技能是**数据驱动**的：def 上有哪个键就有哪个技能（BOSS_SKILLS 是那张表）。
+   加新技能要同时动三处：BOSS_SKILLS、bossAim()、bossFire()，外加 draw() 里的地面预警。 */
 function updateBoss(f, dt, d, tx, ty){
-  var def = f.def;
+  var def = f.def, i;
   if(!f.rage && f.hp <= f.maxHp * def.rage.at){ f.rage = true; }
   var cdx = f.rage ? def.rage.cd : 1, spx = f.rage ? def.rage.spd : 1;
-  /* 召唤 */
+  /* 召唤：血量过线就放一批 */
   var frac = f.hp / f.maxHp;
   while(f.called < def.call.at.length && frac <= def.call.at[f.called]){
     f.called++;
-    for(var i = 0; i < def.call.n; i++){
+    for(i = 0; i < def.call.n; i++){
       var a = i / def.call.n * Math.PI * 2;
       E.foes.push(makeFoe(def.call.id, P.wave, f.x + Math.cos(a) * def.call.ring,
                                                f.y + Math.sin(a) * def.call.ring));
@@ -1259,30 +1435,72 @@ function updateBoss(f, dt, d, tx, ty){
   }
   if(f.cast){
     f.castT -= dt;
-    if(f.castT <= 0){
-      if(f.cast === "sweep"){
-        var a2 = Math.atan2(E.me.y - f.y, E.me.x - f.x);
-        var dd = Math.hypot(E.me.x - f.x, E.me.y - f.y);
-        var da = Math.atan2(E.me.y - f.y, E.me.x - f.x) - a2;
-        if(dd < def.sweep.range) takeHit(Math.round(def.sweep.dmg * TIER.dmg), f, {boss:true});
-        fxArc(f.x, f.y, a2, def.sweep.range, def.sweep.arc, f.col);
-      } else if(f.cast === "quake"){
-        if(Math.hypot(E.me.x - f.qx, E.me.y - f.qy) < def.quake.r)
-          takeHit(Math.round(def.quake.dmg * TIER.dmg), f, {boss:true});
-        fxRing(f.qx, f.qy, def.quake.r, "#A93729");
-      }
-      f.cast = null;
-    }
+    if(f.castT <= 0){ bossFire(f, def); f.cast = null; }
     return;                                   // 施法时不动
   }
-  f.sweepCd -= dt; f.quakeCd -= dt;
-  if(f.sweepCd <= 0 && d < def.sweep.range){
-    f.sweepCd = def.sweep.cd * cdx; f.cast = "sweep"; f.castT = def.sweep.warn;
-    f.castDir = Math.atan2(E.me.y - f.y, E.me.x - f.x); return; }
-  if(f.quakeCd <= 0){
-    f.quakeCd = def.quake.cd * cdx; f.cast = "quake"; f.castT = def.quake.warn;
-    f.qx = E.me.x; f.qy = E.me.y; return; }
+  /* 谁的 CD 先到就放谁。⚠️ 横扫够不着就跳过，不然它会在远处空挥。 */
+  for(i = 0; i < BOSS_SKILLS.length; i++){
+    var k = BOSS_SKILLS[i];
+    if(!def[k]) continue;
+    f.skCd[k] -= dt;
+    if(f.skCd[k] > 0) continue;
+    if(k === "sweep" && d >= def.sweep.range) continue;
+    f.skCd[k] = def[k].cd * cdx;
+    f.cast = k; f.castT = def[k].warn;
+    bossAim(f, def, k);
+    return;
+  }
   f.x += tx * f.spd * spx * dt; f.y += ty * f.spd * spx * dt;
+}
+/* 抬手那一下把落点/朝向**锁死**（地上画的预警就是按这个画的）。 */
+function bossAim(f, def, k){
+  var me = E.me, i;
+  if(k === "sweep" || k === "chain") f.castDir = Math.atan2(me.y - f.y, me.x - f.x);
+  else if(k === "quake"){ f.qx = me.x; f.qy = me.y; }
+  else if(k === "nails"){
+    f.nails = [{x:me.x, y:me.y}];                     // 第一颗钉在脚下：站着不动必吃
+    for(i = 1; i < def.nails.n; i++){
+      var a = Math.random() * Math.PI * 2, rr = 40 + Math.random() * def.nails.spread;
+      f.nails.push({x: me.x + Math.cos(a) * rr, y: me.y + Math.sin(a) * rr});
+    }
+  }
+}
+function bossFire(f, def){
+  var me = E.me, i;
+  if(f.cast === "sweep"){
+    /* ⚠️ 判定按**抬手时锁的方向**算，跟地上画的扇形一致。
+       以前这儿只看距离不看角度 —— 画一个扇形却四面八方都打得到，已修。 */
+    var dd = Math.hypot(me.x - f.x, me.y - f.y);
+    var ad = Math.atan2(me.y - f.y, me.x - f.x) - f.castDir;
+    while(ad >  Math.PI) ad -= Math.PI * 2;
+    while(ad < -Math.PI) ad += Math.PI * 2;
+    if(dd < def.sweep.range && Math.abs(ad) <= def.sweep.arc * Math.PI / 360)
+      takeHit(Math.round(def.sweep.dmg * TIER.dmg), f, {boss:true});
+    fxArc(f.x, f.y, f.castDir, def.sweep.range, def.sweep.arc, f.col);
+  } else if(f.cast === "quake"){
+    if(Math.hypot(me.x - f.qx, me.y - f.qy) < def.quake.r)
+      takeHit(Math.round(def.quake.dmg * TIER.dmg), f, {boss:true});
+    fxRing(f.qx, f.qy, def.quake.r, "#A93729");
+  } else if(f.cast === "nails"){
+    /* 锈钉雨：一片圈一起落，逼你往空档挪几步 */
+    for(i = 0; i < f.nails.length; i++){
+      var n = f.nails[i];
+      if(Math.hypot(me.x - n.x, me.y - n.y) < def.nails.r)
+        takeHit(Math.round(def.nails.dmg * TIER.dmg), f, {boss:true});
+      fxRing(n.x, n.y, def.nails.r, "#8A6A10");
+    }
+    f.nails = null;
+  } else if(f.cast === "chain"){
+    /* 回廊链：一条从它伸出去的长带子，打中掉血 + 减速（站成一条线就吃满）*/
+    var ax = Math.cos(f.castDir), ay = Math.sin(f.castDir);
+    var px = me.x - f.x, py = me.y - f.y;
+    var along = px * ax + py * ay, perp = Math.abs(px * -ay + py * ax);
+    if(along > 0 && along < def.chain.len && perp < def.chain.w / 2){
+      takeHit(Math.round(def.chain.dmg * TIER.dmg), f, {boss:true});
+      me.slowT = def.chain.slow.sec; me.slowPct = def.chain.slow.pct;
+    }
+    fxArc(f.x, f.y, f.castDir, def.chain.len, 12, "#7A4A2A");
+  }
 }
 
 function updateShots(dt){
@@ -1340,7 +1558,8 @@ function popLeft(){ return P.dlvl - fieldTowers(); }
 
 function mkTower(tid, star, x, y){
   return {k:"tower", tid:tid, def:TW_MAP[tid], star:star, x:x, y:y,
-          t:0, cd:0, warn:0, vortT:0, tgt:null, lockX:0, lockY:0, beamT:0, ef:null};
+          t:0, cd:0, warn:0, vortT:0, tgt:null, lockX:0, lockY:0, beamT:0, ef:null,
+          silT:0};                       // 被「缚锁者」封住还剩几秒（见 updateTowers）
 }
 
 /* 三张同名同星 → 高一星，上限 3 星（云顶那套）。
@@ -1609,8 +1828,6 @@ function renderDeploy(){
     $("btnDSell").textContent = sc && sc.k === "tower"
       ? "出售 +" + (twCost(sc.tid) * starCopies(sc.star)) + " 金" : "丢掉";
   }
-  $("btnZoomIn").disabled  = ZOOM >= ZOOM_MAX - 0.001;
-  $("btnZoomOut").disabled = ZOOM <= ZOOM_MIN + 0.001;
 
   /* 备战区 9 格 */
   h = "";
@@ -1637,8 +1854,8 @@ function renderDeploy(){
          : "游商：卖遗物，每五波换一批货。不占人口。") + "　拖到画面上放下。";
   } else if(lastIncome){
     hint = "收入 +" + lastIncome.inc + (lastIncome.start ? "　开局 +" + lastIncome.start : "") +
-           "　·　拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指缩放。";
-  } else hint = "拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指缩放。";
+           "　·　拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
+  } else hint = "拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
   $("dHint").textContent = hint;
   camShift = $("deploy").offsetHeight / 2;
 }
@@ -1686,7 +1903,7 @@ function refreshTowerStats(){
     var aspdUp = 0, dmgUp = towerRelicPct(), cdCut = 0, rangeUp = 0;
     for(j = 0; j < E.builds.length; j++){
       o = E.builds[j];
-      if(o === t || o.k !== "tower" || !o.def.aura) continue;
+      if(o === t || o.k !== "tower" || !o.def.aura || o.silT > 0) continue;
       if(Math.hypot(o.x - t.x, o.y - t.y) > o.def.range) continue;
       var sa = STAR_AURA[o.star - 1], a = o.def.aura;
       if(a.aspd)    aspdUp  += a.aspd * sa;
@@ -1706,7 +1923,7 @@ function towerSlowAt(x, y){
   var best = 0;
   for(var i = 0; i < E.builds.length; i++){
     var o = E.builds[i];
-    if(o.k !== "tower" || !o.def.aura || !o.def.aura.slow) continue;
+    if(o.k !== "tower" || !o.def.aura || !o.def.aura.slow || o.silT > 0) continue;
     if(Math.hypot(o.x - x, o.y - y) > o.def.range) continue;
     best = Math.max(best, o.def.aura.slow * STAR_AURA[o.star - 1]);
   }
@@ -1718,7 +1935,7 @@ function buildCut(){
   var c = 0;
   for(var i = 0; i < E.builds.length; i++){
     var o = E.builds[i];
-    if(o.k !== "tower" || !o.def.aura || !o.def.aura.playerCut) continue;
+    if(o.k !== "tower" || !o.def.aura || !o.def.aura.playerCut || o.silT > 0) continue;
     if(Math.hypot(o.x - E.me.x, o.y - E.me.y) > o.def.range) continue;
     c += o.def.aura.playerCut * STAR_AURA[o.star - 1];
   }
@@ -1730,6 +1947,7 @@ function buildCut(){
 function towerHurt(f, d){
   if(f.dead || d <= 0) return;
   if(f.mark > 0) d = d * (1 + f.markPct / 100);
+  d = guarded(f, d);
   var out = Math.max(1, Math.round(d) - f.armor);
   f.hp -= out; f.flash = 0.12;
   fxNum(f.x, f.y - f.r - 4, out, false);
@@ -1842,6 +2060,8 @@ function updateTowers(dt){
     if(t.k !== "tower") continue;
     var d = t.def, ef = t.ef;
     if(t.beamT > 0) t.beamT -= dt;
+    /* 「缚锁者」封住的塔这几秒完全停手（光环塔也一样失效）—— 见 BF_FOES.warder */
+    if(t.silT > 0){ t.silT -= dt; t.warn = 0; t.vortT = 0; continue; }
     if(d.kind === "aura") continue;
     /* 塌陷核心：漩涡持续拽人，结束时炸一下 */
     if(t.vortT > 0){
@@ -1933,8 +2153,11 @@ function mkImg(svg, col){
 }
 function buildArt(){
   for(var k in BF_FOES) if(MOB_ART[BF_FOES[k].art]) IMG[k] = mkImg(MOB_ART[BF_FOES[k].art], BF_FOES[k].col);
-  IMG.boss = mkImg(MOB_ART[BF_BOSS.warden.art], BF_BOSS.warden.col);
-  IMG.bossRage = mkImg(MOB_ART[BF_BOSS.warden.art], "#D8412F");
+  /* 每只 Boss 各两张（常态 + 狂暴），按 f.bkey 取 —— 加 Boss 不用再动这儿 */
+  for(var bk in BF_BOSS){
+    IMG["b_" + bk] = mkImg(MOB_ART[BF_BOSS[bk].art], BF_BOSS[bk].col);
+    IMG["b_" + bk + "_r"] = mkImg(MOB_ART[BF_BOSS[bk].art], "#D8412F");
+  }
   IMG.hero = mkImg(HERO, "#245E8C");
   /* 击杀掉落的互动点：art.js 里现成的三张图，一张新的都没画 */
   IMG.spring = mkImg(SPRING, "#266F7B");
@@ -1992,9 +2215,19 @@ function draw(){
       ctx2.beginPath(); ctx2.moveTo(sx(b.x), sy(b.y));
       ctx2.arc(sx(b.x), sy(b.y), b.def.sweep.range, b.castDir - ha, b.castDir + ha);
       ctx2.closePath(); ctx2.fill(); ctx2.stroke();
-    } else {
+    } else if(b.cast === "quake"){
       ctx2.beginPath(); ctx2.arc(sx(b.qx), sy(b.qy), b.def.quake.r, 0, 6.2832);
       ctx2.fill(); ctx2.stroke();
+    } else if(b.cast === "nails" && b.nails){
+      for(var q = 0; q < b.nails.length; q++){
+        ctx2.beginPath(); ctx2.arc(sx(b.nails[q].x), sy(b.nails[q].y), b.def.nails.r, 0, 6.2832);
+        ctx2.fill(); ctx2.stroke();
+      }
+    } else if(b.cast === "chain"){
+      var cw2 = b.def.chain.w, cl = b.def.chain.len;
+      ctx2.save(); ctx2.translate(sx(b.x), sy(b.y)); ctx2.rotate(b.castDir);
+      ctx2.beginPath(); ctx2.rect(0, -cw2 / 2, cl, cw2);
+      ctx2.fill(); ctx2.stroke(); ctx2.restore();
     }
   }
   /* 建筑（塔 / 城墙 / 泉 / 商）画在怪底下 */
@@ -2028,6 +2261,21 @@ function draw(){
       var wt = f.castT / (f.def.shot.warn || 0.45);
       ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5;
       ctx2.beginPath(); ctx2.arc(px, py, f.r + 6 + wt * 26, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    /* 拒马：身上一圈淡光标出它护住的范围 —— 不画的话玩家不知道为什么打不动 */
+    if(f.def.guard){
+      ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.22; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(px, py, f.def.guard.r, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    /* 爆囊：引信期间一圈往里收的预警，收到实心那一下就炸 */
+    if(f.fuse > 0 && f.def.boom){
+      var ft = f.fuse / f.def.boom.warn;
+      ctx2.strokeStyle = "#C2510E"; ctx2.lineWidth = 3;
+      ctx2.beginPath(); ctx2.arc(px, py, f.def.boom.r * (0.25 + 0.75 * ft), 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 0.14; ctx2.fillStyle = "#C2510E";
+      ctx2.beginPath(); ctx2.arc(px, py, f.def.boom.r, 0, 6.2832); ctx2.fill();
       ctx2.globalAlpha = 1;
     }
     if(f.haunt){ ctx2.strokeStyle = "#6E1F16"; ctx2.lineWidth = 2;
@@ -2181,6 +2429,11 @@ function drawBuilds(){
 }
 function drawTower(b, px, py){
   var col = TW_COL[b.def.r], s = 13;
+  if(b.silT > 0){                       // 被封锁：整座画淡一档，外面套一圈紫环
+    ctx2.strokeStyle = "#6B4A8A"; ctx2.lineWidth = 2.5;
+    ctx2.beginPath(); ctx2.arc(px, py, s + 6, 0, 6.2832); ctx2.stroke();
+    ctx2.globalAlpha = 0.42;
+  }
   /* 底座 */
   ctx2.fillStyle = "rgba(46,42,35,.13)";
   ctx2.beginPath(); ctx2.ellipse(px, py + 9, s + 2, 5, 0, 0, 6.2832); ctx2.fill();
@@ -2235,9 +2488,10 @@ function drawTower(b, px, py){
     ctx2.beginPath();
     ctx2.arc(px + (st - (b.star - 1) / 2) * 6, py - s - 5, 2.2, 0, 6.2832); ctx2.fill();
   }
+  ctx2.globalAlpha = 1;
 }
 function drawImg(f, px, py, sz){
-  var im = f.boss ? (f.rage ? IMG.bossRage : IMG.boss) : IMG[f.id];
+  var im = f.boss ? IMG["b_" + (f.bkey || "warden") + (f.rage ? "_r" : "")] : IMG[f.id];
   if(im && im.complete && im.naturalWidth) ctx2.drawImage(im, px - sz / 2, py - sz / 2, sz, sz);
   else { ctx2.fillStyle = f.col; ctx2.beginPath(); ctx2.arc(px, py, f.r, 0, 6.2832); ctx2.fill(); }
 }
@@ -2535,7 +2789,7 @@ function updateSpecial(dt, s){
       if(f.dead || w.hit[j]) continue;
       if(Math.hypot(f.x - w.x, f.y - w.y) > w.r + f.r) continue;
       w.hit[j] = 1;
-      var d2 = Math.max(1, Math.round(s.atk * w.mult) - f.armor);
+      var d2 = guarded(f, Math.max(1, Math.round(s.atk * w.mult) - f.armor));
       f.hp -= d2; f.flash = 0.12;
       fxNum(f.x, f.y - f.r - 4, d2, false);
       if(f.hp <= 0) killFoe(f);
@@ -2642,6 +2896,9 @@ function rarityWeights(w){
   if(w <= 16) return [50, 40, 10, 0, 0];
   return [35, 45, 15, 5, 0];                    // 神圣恒为 0，只能靠合成和商店
 }
+/* ⚠️ **祝福系统（偏爱 / 封印）不作用于战场**（用户 2026-09-22 明确）——
+   battle.js 从头到尾不读 `youxu.town.v1`，也没有 blessPick()，这里就是纯随机。
+   以后别顺手把地牢的 blessPick() 搬过来。 */
 function relicPool(rar){
   var out = [], i, r;
   for(i = 0; i < RELICS.length; i++){ r = RELICS[i];
@@ -2683,7 +2940,8 @@ function openPick(){
 function rollPick(){
   pickOffer = rollRelics(BF.pickN, P.wave);
   if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
-  $("pickTitle").textContent = "升到 " + P.lvl + " 级" + (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
+  $("pickTitle").textContent = "升到 " + P.lvl + " 级 · 挑一件遗物" +
+    (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
   fillCards("pickList", pickOffer);
   /* ⚠️ 用完是**变灰**不是藏起来（用户 2026-09-22）—— 按钮突然消失会让下面的「都不要」跳位置。 */
   $("btnRedraw").hidden = false;
@@ -3076,11 +3334,17 @@ function boot(){
   $("btnDShop").addEventListener("click", openTwShop);
   $("btnDLvl").addEventListener("click", levelUp);
   $("btnDSell").addEventListener("click", function(){ if(selBench >= 0) sellBench(selBench); });
-  $("btnZoomIn").addEventListener("click",  function(){ setZoom(ZOOM + ZOOM_STEP); });
-  $("btnZoomOut").addEventListener("click", function(){ setZoom(ZOOM - ZOOM_STEP); });
   $("btnDeployGo").addEventListener("click", closeDeploy);
 
   /* ---- 塔的商店（弹窗）---- */
+  /* ⚠️ 缩放的 ± 按钮 2026-09-22 删了（用户：「不用加减按钮」）——
+     手机用两指捏合，桌面用滚轮。别把按钮加回来。 */
+  $("cv").addEventListener("wheel", function(e){
+    if(!DEPLOY) return;
+    e.preventDefault();
+    setZoom(ZOOM * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+  }, {passive:false});
+
   $("twShopList").addEventListener("click", function(e){
     var b = e.target.closest ? e.target.closest(".tw") : null;
     if(b && b.dataset.i !== undefined) buyCard(+b.dataset.i);

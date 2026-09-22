@@ -176,8 +176,6 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
      border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer}
 .dhint{flex:none;margin:5px 0 7px;font-size:11.5px;color:var(--faint);line-height:1.5;
        min-height:2.9em}
-/* 缩放那两个键只要挤一个符号，别让它们跟「商店」「升级」抢宽度 */
-.dbtn.zm{flex:0 0 46px;font-size:17px;line-height:1;padding:6px 0}
 
 /* 塔卡（商店弹窗里那 5 张）。⚠️ 以前它们直接铺在部署面板上，2026-09-22 搬进了弹窗。 */
 #twShopList{display:flex;flex-direction:column;gap:8px}
