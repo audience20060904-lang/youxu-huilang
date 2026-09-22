@@ -39,16 +39,25 @@ var BF = {
      ⚠️ p 是**每击杀一只**的概率，一波杀 30~50 只 → 合起来一波期望 ~1 个。
      ⚠️ 精英和 Boss 另算（eliteRate / Boss 必掉），走的是同一个 dropSite()。 */
   site: {
-    spring: {p:0.020, heal:0.25},           // 泉：踩上去直接回 25% 最大生命，免费、不弹窗
-    chest:  {p:0.014},                      // 箱：**踩上去直接白给一件**（用户 2026-09-22，不花钱、不弹窗）
-    shop:   {p:0.011, n:5, reroll:1},       // 商：5 个货位（用户 2026-09-22 从 3 个加到 5 个），能刷新一次
+    /* 泉：踩上去直接回 25% 最大生命，免费、不弹窗。
+       ⚠️ **喝完不消失**（用户 2026-09-22），只进 cool 秒的冷却 —— 它是这张无限地图上
+          唯一的固定补给点，回头找得到才有意义。冷却是为了别站在上面无限回血。 */
+    spring: {p:0.020, heal:0.25, cool:10},
+    /* 箱：踩上去直接白给一件，不花钱不弹窗。
+       ⚠️ **每 every 波最多掉 max 个**（用户 2026-09-22）—— 不封的话深波遗物白拿到手软。 */
+    chest:  {p:0.014, max:3, every:5},
+    /* 商：5 个货位，能刷新一次。
+       ⚠️ **只在场上留 life 波**（用户 2026-09-22：摊子会收），过期自动消失。
+       ⚠️ **每出现一个，下一个的概率就除以 decay**（用户 2026-09-22 报「商的爆率太高」），
+          最多除到 decayMax —— 留个地板，否则深波金币彻底没处花。 */
+    shop:   {p:0.011, n:5, reroll:1, life:5, decay:2, decayMax:8},
     eliteRate: 0.25,                        // 精英倒下时额外掷一次（三种等概率）
-    max: 6,                                 // 场上最多几个 —— 超了就删离玩家最远的那个
+    max: 8,                                 // 场上最多几个（泉不消失，所以从 6 抬到 8）
     r: 22,                                  // 踩上去的判定半径
     /* ⚠️ **每波保底一个**：一整波一个都没掉的话，进下一波时在玩家边上补一个。
        实测早期一波只杀 20 只（4.5% × 20 = 0.9 个），不兜底的话前几波经常一个商都见不到，
        而整备点已经删了 —— 金币就彻底没处花了。权重偏向商，因为它是唯一的花钱口。 */
-    pity: {shop:5, chest:3, spring:2}
+    pity: {spring:6, chest:3, shop:1}
   },
   shopReroll: 1
 };
@@ -74,14 +83,14 @@ var BF_FOES = {
  ghost:  {name:"低语幽魂",  art:"ghost",   col:"#6E86A8", hp:18, dmg:11, spd:112, armor:0, xp:6,  r:12, kind:"melee",
           phase:true, wob:22},
  prism:  {name:"碎色棱",    art:"prism",   col:"#A8608C", hp:26, dmg:6,  spd:62,  armor:1, xp:8,  r:12, kind:"ranged",
-          shot:{cd:2.2, keep:260, speed:190, r:6, n:1, spread:0}},
+          shot:{cd:2.2, keep:260, speed:190, r:6, n:1, spread:0, warn:0.45}},
  statue: {name:"守门石像",  art:"statue",  col:"#8A8378", hp:70, dmg:14, spd:34,  armor:4, xp:12, r:17, kind:"melee"},
  clock:  {name:"锈钟怪",    art:"clock",   col:"#B07A33", hp:44, dmg:9,  spd:50,  armor:1, xp:10, r:14, kind:"ranged",
-          shot:{cd:3.0, keep:300, speed:125, r:11, n:1, spread:0, slow:{pct:0.35, sec:2}}},
+          shot:{cd:3.0, keep:300, speed:125, r:11, n:1, spread:0, warn:0.6, slow:{pct:0.35, sec:2}}},
  warden2:{name:"回廊游影",  art:"warden2", col:"#5A5468", hp:32, dmg:12, spd:100, armor:0, xp:10, r:13, kind:"melee",
           blink:{every:5, warn:0.35, min:90, max:140}},
  dread:  {name:"吞惧者",    art:"dread",   col:"#8A4A4A", hp:40, dmg:7,  spd:54,  armor:1, xp:12, r:15, kind:"ranged",
-          shot:{cd:3.5, keep:240, speed:165, r:7, n:3, spread:20}},
+          shot:{cd:3.5, keep:240, speed:165, r:7, n:3, spread:20, warn:0.55}},
  gate:   {name:"层间守者",  art:"gate",    col:"#A93729", hp:150,dmg:16, spd:66,  armor:3, xp:45, r:20, kind:"melee",
           elite:true, noKnock:true, scale:1.4}
 };
@@ -213,7 +222,8 @@ function newRun(){
        killStreak:0, revived:0, shieldBroken:0, recoil:0, charge:0, chew:0, rend:0,
        bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
        primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false,
-       rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0};
+       rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0,
+       shopN:0, chestN:0, chestCycle:0};
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
   E = {foes:[], shots:[], drops:[], sites:[], pwaves:[], fx:[], boss:null};
@@ -887,7 +897,7 @@ function makeFoe(id, w, x, y){
     gold: ri(1, 3) + Math.floor(w / 2),
     r: d.r * sc, sc: sc, elite: !!d.elite, noKnock: !!d.noKnock, phase: !!d.phase,
     kx:0, ky:0, t: Math.random() * 10, touch:0, flash:0, haunt:false, dead:false,
-    shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0,
+    shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0, castT:0,
     dashT:0, dashCd: d.dash ? d.dash.every * Math.random() : 0,
     blinkCd: d.blink ? d.blink.every * Math.random() : 0, blinkWarn:0};
 }
@@ -1002,12 +1012,19 @@ function updateFoes(dt){
         else if(f.blinkCd <= 0 && d > 60){ f.blinkCd = def.blink.every; f.blinkWarn = def.blink.warn;
           f.ghostX = f.x; f.ghostY = f.y; }
       }
-      /* 远程：保持距离 + 开火 */
+      /* 远程：保持距离 + 开火。
+         ⚠️ **开火前有 warn 秒的前摇，前摇期间站着不动**（用户 2026-09-22）——
+            身上会画一圈收拢的预警环，玩家看得见才躲得开。 */
       if(def.shot){
-        f.shotCd -= dt;
-        if(d < def.shot.keep * 0.8){ tx = -tx; ty = -ty; }
-        else if(d < def.shot.keep * 1.1){ tx = 0; ty = 0; }
-        if(f.shotCd <= 0 && d < def.shot.keep * 1.6){ f.shotCd = def.shot.cd; shoot(f); }
+        if(f.castT > 0){
+          f.castT -= dt; sp = 0; tx = 0; ty = 0;       // 抬手时钉在原地
+          if(f.castT <= 0){ shoot(f); f.shotCd = def.shot.cd; }
+        } else {
+          f.shotCd -= dt;
+          if(d < def.shot.keep * 0.8){ tx = -tx; ty = -ty; }
+          else if(d < def.shot.keep * 1.1){ tx = 0; ty = 0; }
+          if(f.shotCd <= 0 && d < def.shot.keep * 1.6) f.castT = def.shot.warn || 0.45;
+        }
       }
       /* 幽魂的飘移 */
       if(def.wob){ var w2 = Math.sin(f.t * 2.4) * 0.5;
@@ -1203,6 +1220,13 @@ function draw(){
     if(px < -80 || px > cw + 80 || py < -80 || py > ch + 80) continue;
     if(f.blinkWarn > 0 && f.ghostX !== undefined){
       ctx2.globalAlpha = 0.3; drawImg(f, sx(f.ghostX), sy(f.ghostY), sz); ctx2.globalAlpha = 1; }
+    /* 远程怪的抬手预警：一圈往里收的环 + 身上一点高光 */
+    if(f.castT > 0 && f.def.shot){
+      var wt = f.castT / (f.def.shot.warn || 0.45);
+      ctx2.strokeStyle = f.col; ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5;
+      ctx2.beginPath(); ctx2.arc(px, py, f.r + 6 + wt * 26, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
     if(f.haunt){ ctx2.strokeStyle = "#6E1F16"; ctx2.lineWidth = 2;
       ctx2.beginPath(); ctx2.arc(px, py, f.r + 3, 0, 6.2832); ctx2.stroke(); }
     if(f.elite && !f.boss){ ctx2.strokeStyle = "#E3B23C"; ctx2.lineWidth = 2;
@@ -1251,7 +1275,15 @@ function draw(){
     }
   }
 
-  /* 主角 */
+  /* 主角。有护盾时外面套一圈会呼吸的蓝罩子 —— 血条上那一小段太容易看漏（用户 2026-09-22）。 */
+  if(P.shield > 0){
+    var sm = bstats().maxHp, lv = Math.min(1, P.shield / Math.max(1, sm));
+    ctx2.strokeStyle = "#6E86A8";
+    ctx2.globalAlpha = 0.30 + 0.22 * lv + 0.10 * Math.sin(P.time * 4);
+    ctx2.lineWidth = 2 + 3 * lv;
+    ctx2.beginPath(); ctx2.arc(sx(me.x), sy(me.y), 21 + 4 * lv, 0, 6.2832); ctx2.stroke();
+    ctx2.globalAlpha = 1;
+  }
   var him = IMG.hero;
   if(him && him.complete) ctx2.drawImage(him, sx(me.x) - 15, sy(me.y) - 17, 30, 30);
 
@@ -1276,7 +1308,8 @@ function fxSwing(x, y, dir, range, arc){
 }
 function fxNum(x, y, n, crit){
   if(REDUCE_MOTION) return;
-  E.fx.push({k:"n", x:x + ri(-6, 6), y:y, s:"" + n, crit:crit, t:0, life:0.55});
+  E.fx.push({k:"n", x:x + ri(-6, 6), y:y, s:"" + n, crit:crit, t:0, life:crit ? 0.75 : 0.55});
+  if(crit) E.fx.push({k:"cr", x:x, y:y + 8, t:0, life:0.26});
 }
 function fxText(s, col){ if(!REDUCE_MOTION) E.fx.push({k:"t", s:s, col:col, t:0, life:0.7}); }
 function fxPop(x, y, col){ if(!REDUCE_MOTION) E.fx.push({k:"p", x:x, y:y, col:col, t:0, life:0.3}); }
@@ -1296,9 +1329,26 @@ function drawFx(){
       ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.range * 0.82, f.dir - ha, f.dir + ha); ctx2.stroke();
       ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 2; ctx2.stroke();
     } else if(f.k === "n"){
-      ctx2.fillStyle = f.crit ? "#E3B23C" : "#2E2A23";
-      ctx2.font = (f.crit ? "bold " : "") + (f.crit ? 16 : 13) + "px system-ui";
-      ctx2.textAlign = "center"; ctx2.fillText(f.s, sx(f.x), sy(f.y) - f.t * 40);
+      /* 暴击的数字要一眼认出来（用户 2026-09-22 要求优化）：
+         更大、金色、带深色描边，前 1/3 段还会放大回弹。 */
+      ctx2.textAlign = "center";
+      var ny = sy(f.y) - f.t * (f.crit ? 58 : 40);
+      if(f.crit){
+        var pop = 1 + 0.55 * Math.max(0, 1 - f.t / (f.life * 0.33));
+        ctx2.save(); ctx2.translate(sx(f.x), ny); ctx2.scale(pop, pop);
+        ctx2.font = "bold 20px system-ui";
+        ctx2.lineWidth = 4; ctx2.strokeStyle = "#5A3A06"; ctx2.lineJoin = "round";
+        ctx2.strokeText(f.s, 0, 0);
+        ctx2.fillStyle = "#F0C23C"; ctx2.fillText(f.s, 0, 0);
+        ctx2.restore();
+      } else {
+        ctx2.fillStyle = "#2E2A23"; ctx2.font = "13px system-ui";
+        ctx2.fillText(f.s, sx(f.x), ny);
+      }
+    } else if(f.k === "cr"){
+      /* 暴击命中的金色冲击圈 */
+      ctx2.strokeStyle = "#F0C23C"; ctx2.lineWidth = 3 + 4 * k;
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), 10 + (1 - k) * 34, 0, 6.2832); ctx2.stroke();
     } else if(f.k === "t"){
       ctx2.fillStyle = f.col; ctx2.font = "bold 18px system-ui"; ctx2.textAlign = "center";
       ctx2.fillText(f.s, cw / 2, ch * 0.62 - f.t * 30);
@@ -1463,6 +1513,14 @@ function nextWave(){
   var w = P.wave + 1;
   P.wrong2 = P.wrong1; P.wrong1 = G.wrongN; P.brokeLast = G.broke;   // 循迹 / 惜盾看的是上一波
   if(!G.siteN) pitySite();                                           // 这一波一个互动点都没掉 → 补一个
+  /* 商摊只留 life 波就收（用户 2026-09-22）。泉和箱不过期 —— 泉是补给点，箱是一次性的。 */
+  for(var q = E.sites.length - 1; q >= 0; q--){
+    var t = E.sites[q];
+    if(t.kind === "shop" && w - t.bornWave >= BF.site.shop.life) E.sites.splice(q, 1);
+  }
+  /* 箱的次数每 every 波重置一轮 */
+  var cyc = Math.floor((w - 1) / BF.site.chest.every);
+  if(cyc !== P.chestCycle){ P.chestCycle = cyc; P.chestN = 0; }
   newWave(w);
   if(isBossWave(w)) startBoss(w);
 }
@@ -1491,6 +1549,13 @@ function renderHud(){
   var hp = Math.max(0, P.hp);
   $("hpFill").style.width = (hp / s.maxHp * 100) + "%";
   $("shFill").style.width = Math.min(100, P.shield / s.maxHp * 100) + "%";
+  /* 护盾涨了闪一下（用户 2026-09-22 要求优化显示）。跟地牢的 paintHp 一个套路：
+     上一次的数记在元素自己的 data 上，不用去每个改护盾的地方挂钩子。 */
+  var hb = $("hpFill").parentNode, was = +(hb.dataset.sh || 0), now = Math.round(P.shield);
+  if(now > was && !REDUCE_MOTION){
+    hb.classList.remove("shup"); void hb.offsetWidth; hb.classList.add("shup");
+  }
+  hb.dataset.sh = now;
   $("hpTxt").textContent = Math.ceil(hp) + " / " + s.maxHp + (P.shield > 0 ? "  +" + Math.round(P.shield) : "");
   var bb = $("bossBar");
   if(E.boss && !E.boss.dead){
@@ -1760,38 +1825,66 @@ function fuseGo(){
 function siteCount(){ return E.sites.length; }
 function dropSite(kind, x, y){
   if(G) G.siteN = (G.siteN || 0) + 1;
-  E.sites.push({kind:kind, x:x, y:y, t:0, stock:null, opened:false, rerollsLeft:BF.shopReroll});
-  /* 超上限就删离玩家最远的那个 —— 地图是无限的，跑远了的那个本来也回不去 */
+  if(kind === "shop")  P.shopN++;
+  if(kind === "chest") P.chestN++;
+  E.sites.push({kind:kind, x:x, y:y, t:0, cool:0, bornWave:P.wave,
+                stock:null, rerollsLeft:BF.shopReroll});
+  /* 超上限就删离玩家最远的那个 —— 地图是无限的，跑远了的那个本来也回不去。
+     ⚠️ **优先淘汰泉**：泉不消失、还一直掉，不这么挑的话场上很快全是泉，
+        把玩家想回头去的商摊和箱子挤没了（实测 5 波掉 7 个泉，名额直接占满）。 */
   while(E.sites.length > BF.site.max){
-    var far = 0, fd = -1;
-    for(var i = 0; i < E.sites.length; i++){
-      var d = Math.hypot(E.sites[i].x - E.me.x, E.sites[i].y - E.me.y);
+    var far = -1, fd = -1, i, d;
+    for(i = 0; i < E.sites.length; i++){
+      if(E.sites[i].kind !== "spring") continue;
+      d = Math.hypot(E.sites[i].x - E.me.x, E.sites[i].y - E.me.y);
       if(d > fd){ fd = d; far = i; }
+    }
+    if(far < 0){                                  // 一个泉都没有，再按最远删
+      for(i = 0; i < E.sites.length; i++){
+        d = Math.hypot(E.sites[i].x - E.me.x, E.sites[i].y - E.me.y);
+        if(d > fd){ fd = d; far = i; }
+      }
     }
     E.sites.splice(far, 1);
   }
 }
 /* 每次击杀掷一次。⚠️ 这不是遗物效果，所以用 Math.random() 不走 luck()。 */
+/* 商的实际概率：每出现过一个就除以 decay，最多除到 decayMax */
+function shopRate(){
+  var c = BF.site.shop;
+  return c.p / Math.min(c.decayMax, Math.pow(c.decay, P.shopN));
+}
+/* 箱这一轮（每 every 波一轮）还能不能掉 */
+function chestLeft(){ return BF.site.chest.max - P.chestN; }
+
 function maybeSite(f){
   var c = BF.site, r = Math.random();
-  if(f.boss){                                   // Boss 必掉：泉 + 商
+  if(f.boss){                                   // Boss 必掉：泉 + 商（不吃递减，它是奖励）
     dropSite("spring", f.x - 40, f.y); dropSite("shop", f.x + 40, f.y); return;
   }
   if(f.elite && Math.random() < c.eliteRate){
-    dropSite(pick(["spring", "chest", "shop"]), f.x, f.y); return;
+    var opts = ["spring"];
+    if(chestLeft() > 0) opts.push("chest");
+    opts.push("shop");
+    dropSite(pick(opts), f.x, f.y); return;
   }
   if(r < c.spring.p){ dropSite("spring", f.x, f.y); return; }
   r -= c.spring.p;
-  if(r < c.chest.p){ dropSite("chest", f.x, f.y); return; }
+  if(chestLeft() > 0){
+    if(r < c.chest.p){ dropSite("chest", f.x, f.y); return; }
+  }
   r -= c.chest.p;
-  if(r < c.shop.p) dropSite("shop", f.x, f.y);
+  if(r < shopRate()) dropSite("shop", f.x, f.y);
 }
 /* 每波保底：按 BF.site.pity 的权重挑一种，落在玩家边上 150~230px 处 */
 function pitySite(){
   var w = BF.site.pity, tot = 0, k;
-  for(k in w) tot += w[k];
-  var r = Math.random() * tot, kind = "shop";
-  for(k in w){ r -= w[k]; if(r <= 0){ kind = k; break; } }
+  for(k in w){ if(k === "chest" && chestLeft() <= 0) continue; tot += w[k]; }
+  var r = Math.random() * tot, kind = "spring";
+  for(k in w){
+    if(k === "chest" && chestLeft() <= 0) continue;
+    r -= w[k]; if(r <= 0){ kind = k; break; }
+  }
   var a = Math.random() * Math.PI * 2, d = 150 + Math.random() * 80;
   dropSite(kind, E.me.x + Math.cos(a) * d, E.me.y + Math.sin(a) * d);
 }
@@ -1806,7 +1899,7 @@ function updateSites(dt){
       if(P.hp >= s.maxHp) continue;             // 满血就留着，回头再来
       var got = healUp(s.maxHp * BF.site.spring.heal);
       fxText("+" + got, "#266F7B"); fxRing(t.x, t.y, 34, "#266F7B");
-      E.sites.splice(i, 1);
+      t.cool = BF.site.spring.cool;             // ⚠️ 泉**不消失**，只进冷却
     } else if(t.kind === "shop"){ openShop(t); return; }
     else {                                    // 箱：踩上去直接白给一件（不花钱、不弹窗）
       var got = rollRelics(1, P.wave + 6)[0];

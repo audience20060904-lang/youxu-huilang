@@ -47,7 +47,14 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 .hpbar{position:relative;height:18px;border-radius:9px;background:var(--stone-3);
        border:1px solid var(--edge);overflow:hidden}
 .hpbar i{position:absolute;inset:0;width:0;background:var(--blood);transition:width .12s linear}
-.hpbar u{position:absolute;left:0;top:0;height:42%;width:0;background:#6E86A8;opacity:.85}
+/* 护盾：血条上半条。加一道高光和右侧亮边，免得跟血条糊在一起（用户 2026-09-22 要求优化）。
+   ⚠️ 仍然只画上半条 —— 铺满整条会把低血告警盖掉。 */
+.hpbar u{position:absolute;left:0;top:0;height:46%;width:0;
+         background:linear-gradient(180deg,#9DB6D6 0%,#5C7CA6 100%);
+         border-right:2px solid #CFE0F2;
+         box-shadow:0 0 3px rgba(110,134,168,.75)}
+.hpbar.shup u{animation:shpop .45s ease-out}
+@keyframes shpop{0%{filter:brightness(2.2)}100%{filter:none}}
 .hpbar b{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;
          font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .fbtns{display:flex;gap:8px;margin-top:8px;pointer-events:auto}
@@ -73,6 +80,12 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 .box{width:min(100%,420px);max-height:calc(100dvh - 28px);overflow-y:auto;
      background:var(--stone);border:1px solid var(--edge);border-radius:14px;padding:16px}
 .box.wide{width:min(100%,520px)}
+/* 「列表自己滚、按钮钉在底下」的弹层（遗物页 / 特殊页 / 结算页）。
+   ⚠️ 别把按钮塞回 .scroll 里 —— 带满 15 件时列表很长，按钮会跟着滚下去找不着。 */
+.box.col{display:flex;flex-direction:column;overflow:hidden}
+.box.col .scroll{flex:1;min-height:0;overflow-y:auto;margin:0 -2px;padding:0 2px}
+.box.col .rowb.pin{flex:none;margin-top:10px;padding-top:10px;
+                   border-top:1px solid var(--edge-soft)}
 .box h2{font-family:var(--disp);font-size:20px;margin:0 0 6px}
 .box .sub{margin:0 0 12px;font-size:12.5px;color:var(--faint);line-height:1.6}
 .hr{margin:14px 0 8px;font-size:12px;color:var(--faint);border-top:1px solid var(--edge-soft);
