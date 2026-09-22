@@ -52,11 +52,13 @@
       <button class="dgo" id="btnDeployGo">开战</button>
     </div>
     <p class="dhint" id="dHint"></p>
-    <div class="dshop" id="dShop"></div>
+    <!-- ⚠️ 商店 2026-09-22 搬进了弹窗（用户要求「塔的商店改为按钮弹窗里面刷新和购买」），
+         城墙同一天整块删了。面板矮一半，上面看得见的营地就多一半。 -->
     <div class="drow">
+      <button class="dbtn" id="btnDShop">商店</button>
       <button class="dbtn" id="btnDLvl">升级</button>
-      <button class="dbtn" id="btnDRe">刷新</button>
-      <button class="dbtn" id="btnDWall">城墙</button>
+      <button class="dbtn zm" id="btnZoomOut">−</button>
+      <button class="dbtn zm" id="btnZoomIn">+</button>
       <button class="dbtn sell" id="btnDSell" hidden>出售</button>
     </div>
     <div class="dbench" id="dBench"></div>
@@ -76,6 +78,19 @@
       <div class="rowb">
         <a class="btn ghost" href="index.html">回主城</a>
         <button class="btn" id="btnGo">下场</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 塔的商店：部署阶段点「商店」弹出来，刷新和购买都在这儿（用户 2026-09-22）-->
+  <div class="veil" id="veilTwShop">
+    <div class="box wide col">
+      <h2>塔的商店</h2>
+      <p class="sub" id="twShopSub"></p>
+      <div class="scroll"><div id="twShopList"></div></div>
+      <div class="rowb pin">
+        <button class="btn ghost" id="btnTwRe">刷新</button>
+        <button class="btn" id="btnTwClose">回去摆</button>
       </div>
     </div>
   </div>

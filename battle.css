@@ -158,10 +158,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 /* ===== 部署阶段（用户 2026-09-22 的塔防改版）=====
    ⚠️ 它是**底部抽屉**不是弹层 —— 上半屏的 canvas 必须露出来，
       不然没法点着摆塔。所以别把它改成 .veil。
-   ⚠️ 高度封在 46dvh：390×667 上量过，上面还剩 360px 能看见营地 ——
-      这个数跟 BF.deploy.placeR(260) 是一对，改一个就得回来改另一个。 */
+   ⚠️ 商店搬进弹窗、城墙删掉之后面板矮了一大截（2026-09-22），高度封在 34dvh ——
+      390×667 上量过，上面还剩 440px 能看见营地。部署阶段能缩放和平移，
+      所以 BF.deploy.placeR 不用再跟这个数死死绑住了。 */
 .deploy{position:absolute;left:0;right:0;bottom:0;z-index:20;
-        max-height:46dvh;display:flex;flex-direction:column;
+        max-height:34dvh;display:flex;flex-direction:column;
         background:var(--stone);border-top:1px solid var(--edge);
         border-radius:14px 14px 0 0;padding:8px 10px 10px;
         box-shadow:0 -6px 18px rgba(46,42,35,.16)}
@@ -175,10 +176,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
      border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer}
 .dhint{flex:none;margin:5px 0 7px;font-size:11.5px;color:var(--faint);line-height:1.5;
        min-height:2.9em}
+/* 缩放那两个键只要挤一个符号，别让它们跟「商店」「升级」抢宽度 */
+.dbtn.zm{flex:0 0 46px;font-size:17px;line-height:1;padding:6px 0}
 
-/* 商店 5 张牌：自己滚，按钮和备战区钉在下面 */
-.dshop{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
-       margin:0 -2px;padding:0 2px}
+/* 塔卡（商店弹窗里那 5 张）。⚠️ 以前它们直接铺在部署面板上，2026-09-22 搬进了弹窗。 */
+#twShopList{display:flex;flex-direction:column;gap:8px}
 .tw{position:relative;text-align:left;width:100%;font:inherit;cursor:pointer;
     border:1px solid var(--edge);border-left-width:4px;border-radius:9px;
     background:var(--stone-2);padding:6px 9px;color:var(--bone)}

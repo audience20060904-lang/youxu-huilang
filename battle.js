@@ -29,9 +29,10 @@ var BF = {
   wagerInner: 0.45,     // 刀程内侧这一段算「贴身」（= 地牢的冒险）
   hauntMax: 5,          // 同时最多标记几只仇敌（= 心魔）
   bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
-  /* 升级所需经验（用户 2026-09-22：**升级难度增加 100%**，整条曲线 ×2）。
+  /* 升级所需经验。用户 2026-09-22 先 ×2（「升级难度增加 100%」），
+     同一天又 **+80%** —— 所以整条曲线现在是原始值的 **×3.6**（1→2 要 29，9→10 要 202）。
      ⚠️ 别去砍怪的 xp 来达到同样效果 —— 那会连带把金币和 Boss 的经验补偿也拖下水。 */
-  xpNeed: function(lv){ return (8 + 6 * (lv - 1)) * 2; },
+  xpNeed: function(lv){ return Math.ceil((8 + 6 * (lv - 1)) * 3.6); },
   /* 怪掉的金币统一乘这个（用户 2026-09-22：**金币爆率 −50%**）。
      Boss 掉的那一笔也吃，别单独开小灶。 */
   goldMult: 0.5,
@@ -60,28 +61,32 @@ var BF = {
     startGold: 60,      // 开局白给的一笔钱（用户：「玩家初始可以得到一笔钱」）
     incomeBase: 35,     // 每轮部署的固定收入
     incomePer: 15,      // 每多一轮再加这么多
-    interestPer: 10,    // 每攒 10 金 +1 利息（云顶那套）
-    interestMax: 5,
+    /* ⚠️ **利息已经取消了**（用户 2026-09-22）—— 云顶那套「攒钱生钱」在这儿只会让人
+       第一轮什么都不买。别把 interestPer / interestMax 加回来。
+       塔和升级的价格同一天 ×5 之后，**买塔的钱主要来自击杀**，固定收入只是个底。 */
     bench: 9,           // 备战区几格 —— 用户说的「九个卡槽」
     lvlMax: 9,          // 等级上限 = 人口上限 = 场上最多几座塔
     shopN: 5,           // 商店几个货位
     rerollCost: 6,
-    buildMax: 4,        // 泉 / 商各最多攒几个（场上 + 备战区一起数）
-    placeR: 260,        // 只能摆在离自己这么远之内
+    /* ⚠️ 泉 / 商**各只有一个**（用户 2026-09-22 从 4 改的）：开局那次部署白给一张泉 + 一张商，
+       之后 giveBuildCard() 查到已经有了就不再发。别改回攒一堆。 */
+    buildMax: 1,
+    placeR: 320,        // 只能摆在离自己这么远之内（部署阶段能缩放和平移，所以比原来大一圈）
                         // ⚠️ 这个数要跟「面板上方还看得见多大一块」对得上（390×667 上量过），
                         //    改面板高度就得回来改它，不然圈画出来了却摆不进视野。
     gap: 34             // 两座建筑最近隔多远 —— 用户：**不能重叠**
   },
-  /* 城墙：**唯一有血量的建筑**（用户原话「所有建筑除了城墙都没有血量」）。
-     它不占人口、不进备战区，在部署面板上点一下直接进入摆放状态，摆一段扣一段的钱。 */
-  wall: {cost:12, hp:200, per:45, r:16, cd:0.6},
+    /* ⚠️ **城墙 2026-09-22 已经整块删了**（用户要求）。于是**所有建筑都没有血量**，
+     怪根本不会去理它们，走位和塔的射程才是全部的防守。别把 BF.wall 加回来。 */
   springHeal: 0.25,        // 泉每波回多少（占最大生命）
   relicShopN: 5            // 游商建筑的货位（遗物「钥匙」再 +2）
 };
 /* 升到第 N 级要花多少（**下标 = 目标等级**，所以这张表必须有第 9 项）。
-   1 级白送，一路升到 9 级一共 400 金。
+   1 级白送，一路升到 9 级一共 **2000 金**。
+   ⚠️ **2026-09-22 用户把升级和塔的价格一起 ×5**，同时取消了利息 ——
+      于是「买得起几座塔」直接由**杀了多少怪**决定，固定收入只是个底。
    ⚠️ 少写一项就会在升 9 级那一下把 P.gold 变成 NaN（踩过）—— 改上限记得跟着补。 */
-var DLVL_COST = [0, 0, 8, 14, 22, 32, 46, 64, 90, 124];
+var DLVL_COST = [0, 0, 40, 70, 110, 160, 230, 320, 450, 620];
 
 /* 波次三旋钮（设计文档第三节）。Boss 波不走这套。 */
 function waveRate(w){ return 0.75 + 0.22 * (w - 1); }
@@ -296,8 +301,11 @@ var BF_TOWERS = [
 var TW_MAP = {};
 (function(){ for(var i = 0; i < BF_TOWERS.length; i++) TW_MAP[BF_TOWERS[i].id] = BF_TOWERS[i]; })();
 
-/* 买价（按品质）。卖出退 `买价 × 张数`（1★ 1 张 / 2★ 3 张 / 3★ 9 张），跟云顶一个口径。 */
-var TW_COST   = [4, 8, 14, 24, 40];
+/* 买价（按品质）。卖出退 `买价 × 张数`（1★ 1 张 / 2★ 3 张 / 3★ 9 张），跟云顶一个口径。
+   ⚠️ **2026-09-22 整排 ×5**（用户要求），跟 DLVL_COST 是一起的。
+   ⚠️ **刷新还是 6 金没动** —— 所以现在是「牌便宜、人贵」，多刷几次找想要的那张是划算的。
+      嫌刷新太便宜就抬 BF.deploy.rerollCost，别去动这张表。 */
+var TW_COST   = [20, 40, 70, 120, 200];
 /* 牌库里每种塔各有几张（云顶那套「大家抢同一个池子」）。卖掉会还回池子里。 */
 var TW_COPIES = [22, 18, 14, 10, 6];
 /* 星级倍率：伤害 ×，光环 × */
@@ -456,6 +464,7 @@ function bstats(){
   if(has("clean")) s.critMult += 0.4;                               // 战场改写
   if(has("maul"))  s.critMult += 1.0;
   if(has("crush")) s.critMult += 3.5;
+  if(has("boom"))  s.critMult += 1.2;                                // 战场改写
 
   /* --- ④ 加法：护甲 --- */
   if(has("iron"))      s.armor += 1;
@@ -711,6 +720,7 @@ function swing(mult){
   /* ---- 连击 ---- */
   P.combo += 1;
   if(has("offbeat") && moving) P.combo += 1;
+  if(has("boom") && crit) P.combo += 1;                              // 战场改写
   if(has("chase") && weak){ P.combo += 2; healUp(s.maxHp * 0.10); }
   if(P.combo > P.maxCombo) P.maxCombo = P.combo;
   G.lastPct = pct;
@@ -1206,23 +1216,7 @@ function updateFoes(dt){
     if(f.kx || f.ky){ f.x += f.kx; f.y += f.ky; f.kx *= 0.55; f.ky *= 0.55;
       if(Math.abs(f.kx) < 0.4){ f.kx = 0; f.ky = 0; } }
 
-    /* ---- 城墙：唯一挡路、唯一有血量的建筑（幽魂照旧穿过去）---- */
-    if(!f.phase && E.builds.length){
-      f.wallCd = (f.wallCd || 0) - dt;
-      for(j = 0; j < E.builds.length; j++){
-        var wb = E.builds[j];
-        if(wb.k !== "wall") continue;
-        var wx = f.x - wb.x, wy = f.y - wb.y, wd = Math.hypot(wx, wy), mn = wb.r + f.r;
-        if(wd <= 0 || wd >= mn) continue;
-        var pu = (mn - wd) / wd;
-        f.x += wx * pu; f.y += wy * pu;                   // 墙不动，推的是怪
-        if(f.wallCd <= 0){
-          f.wallCd = BF.wall.cd;
-          wb.hp -= f.dmg * (f.boss ? 6 : 1);              // Boss 拆墙很快，别让一堵墙把它关住
-          wb.flash = 0.12;
-        }
-      }
-    }
+    /* ⚠️ 城墙 2026-09-22 删了，所以这里**没有任何建筑碰撞** —— 建筑不挡路、打不掉。 */
 
     /* 互相排开（幽魂不参与） */
     if(!f.phase){
@@ -1425,20 +1419,20 @@ function buyCard(i){
   shopCards[i] = null;
   P.bench.push({k:"tower", tid:tid, star:1});
   combineAll();
-  renderDeploy();
+  renderDeploy(); renderTwShop();
 }
 function rerollShop(){
   var c = BF.deploy.rerollCost;
   if(P.gold < c) return;
   P.gold -= c; P.spent += c;
-  rollShopCards(); renderDeploy();
+  rollShopCards(); renderDeploy(); renderTwShop();
 }
 function levelUp(){
   if(P.dlvl >= BF.deploy.lvlMax) return;
   var c = DLVL_COST[P.dlvl + 1];
   if(!c || P.gold < c) return;
   P.gold -= c; P.spent += c; P.dlvl++;
-  renderDeploy();
+  renderDeploy(); renderTwShop();
 }
 function sellBench(i){
   var c = P.bench[i]; if(!c) return;
@@ -1452,14 +1446,24 @@ function sellBench(i){
 }
 
 /* ---- 摆放 ---- */
-var DEPLOY = false, selBench = -1, wallMode = false, lastIncome = null;
+var DEPLOY = false, selBench = -1, lastIncome = null;
 /* ⚠️ 用户明确说了「**不能重叠**」，所以两座建筑至少隔 BF.deploy.gap。
    另外只能摆在自己身边 placeR 之内 —— 摆到看不见的地方等于没摆。 */
-function canPlace(x, y){
+function canPlace(x, y, skip){
   if(Math.hypot(x - E.me.x, y - E.me.y) > BF.deploy.placeR) return false;
-  for(var i = 0; i < E.builds.length; i++)
+  for(var i = 0; i < E.builds.length; i++){
+    if(E.builds[i] === skip) continue;                 // 拖着自己挪位置时别跟自己比
     if(Math.hypot(E.builds[i].x - x, E.builds[i].y - y) < BF.deploy.gap) return false;
+  }
   return true;
+}
+function buildAt(x, y){
+  var best = null, bd = 26;
+  for(var i = 0; i < E.builds.length; i++){
+    var d = Math.hypot(E.builds[i].x - x, E.builds[i].y - y);
+    if(d < bd){ bd = d; best = E.builds[i]; }
+  }
+  return best;
 }
 function autoSpot(){
   for(var r = 60; r <= BF.deploy.placeR; r += 30)
@@ -1481,13 +1485,6 @@ function placeCard(card, x, y){
   return true;
 }
 function placeAt(x, y){
-  if(wallMode){
-    if(P.gold < BF.wall.cost || !canPlace(x, y)) return;
-    P.gold -= BF.wall.cost; P.spent += BF.wall.cost;
-    var hp = BF.wall.hp + BF.wall.per * (P.wave - 1);
-    E.builds.push({k:"wall", x:x, y:y, r:BF.wall.r, hp:hp, maxHp:hp, t:0, flash:0});
-    renderDeploy(); return;
-  }
   if(selBench < 0) return;
   var c = P.bench[selBench];
   if(!c || !canPlace(x, y)) return;
@@ -1495,14 +1492,9 @@ function placeAt(x, y){
   P.bench.splice(selBench, 1); selBench = -1;
   renderDeploy();
 }
-/* 点一下场上的建筑 = 收回备战区（城墙是拆掉，退一半钱）*/
+/* 点一下场上的建筑 = 收回备战区 */
 function pickUp(b){
   var i = E.builds.indexOf(b); if(i < 0) return;
-  if(b.k === "wall"){
-    E.builds.splice(i, 1);
-    P.gold += Math.floor(BF.wall.cost / 2);
-    renderDeploy(); return;
-  }
   if(benchFree() <= 0) return;
   E.builds.splice(i, 1);
   if(b.k === "tower") P.bench.push({k:"tower", tid:b.tid, star:b.star});
@@ -1546,23 +1538,49 @@ function openDeploy(){
   DEPLOY = true; PAUSED = true; P.round++;
   relocateCamp();
   if(P.round === 1) P.gold += d.startGold;                       // 开局那一笔钱
-  var inc = d.incomeBase + d.incomePer * (P.round - 1);
-  var it  = Math.min(d.interestMax, Math.floor(P.gold / d.interestPer));
-  P.gold += inc + it;
-  lastIncome = {inc:inc, it:it, start: P.round === 1 ? d.startGold : 0};
+  var inc = d.incomeBase + d.incomePer * (P.round - 1);          // ⚠️ 没有利息了（用户 2026-09-22）
+  P.gold += inc;
+  lastIncome = {inc:inc, start: P.round === 1 ? d.startGold : 0};
   giveBuildCard("spring"); giveBuildCard("shop");                // 用户：每次部署白给一张泉 + 一张商
   for(i = 0; i < E.builds.length; i++)                           // 用户：商店每五波刷新
     if(E.builds[i].k === "shop"){ E.builds[i].stock = null; E.builds[i].cool = 0; }
   rollShopCards();
-  selBench = -1; wallMode = false;
+  selBench = -1; DRAG = null; ZOOM = 1; PAN.x = 0; PAN.y = 0;
+  /* ⚠️ **进部署先把场上的弹幕全清掉**（用户 2026-09-22）——
+     不清的话「开战」那一下会直接吃一脸停在半空的弹，而且那是上一波留下的，躲都没法躲。
+     顺手把远程怪的抬手也打断，免得开战瞬间同时炸开一排。 */
+  E.shots.length = 0; E.tshots.length = 0; E.pwaves.length = 0;
+  for(i = 0; i < E.foes.length; i++){ E.foes[i].castT = 0; E.foes[i].shotCd = Math.max(E.foes[i].shotCd, 0.8); }
   $("deploy").hidden = false;
   renderDeploy();
 }
 /* 部署时镜头要往下推半个面板高，否则玩家正好被面板压住、营地只看得见上半圈。
    面板高度在 renderDeploy() 里量一次存这儿，别每帧去读 offsetHeight。 */
 var camShift = 0;
+/* ===== 部署阶段的镜头（用户 2026-09-22：「可以放大和缩小移动一定的镜头视野」）=====
+   ⚠️ **只在部署阶段生效**，closeDeploy() 会把两样都复位 —— 打起来的时候镜头永远是
+      居中、1 倍，那是这个模式的手感底线。
+   ⚠️ 缩放是在 draw() 里用 canvas 的 transform 做的（以屏幕中心为定点），
+      **sx() / sy() 一个字没改** —— 所有世界坐标的代码都不用管缩放这回事。
+      反过来「屏幕点换成世界点」走 screenToWorld()，那儿要自己除一次 ZOOM。 */
+var ZOOM = 1, ZOOM_MIN = 0.55, ZOOM_MAX = 1.5, ZOOM_STEP = 0.25;
+var PAN = {x:0, y:0};
+function clampPan(){
+  var r = BF.deploy.placeR, d = Math.hypot(PAN.x, PAN.y);
+  if(d > r){ PAN.x = PAN.x / d * r; PAN.y = PAN.y / d * r; }
+}
+function setZoom(z){
+  ZOOM = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  renderDeploy();
+}
+function screenToWorld(cx, cy){
+  var rect = cv.getBoundingClientRect();
+  return {x: CAM.x + (cx - rect.left - cw / 2) / ZOOM,
+          y: CAM.y + (cy - rect.top  - ch / 2) / ZOOM};
+}
 function closeDeploy(){
-  DEPLOY = false; selBench = -1; wallMode = false; camShift = 0;
+  DEPLOY = false; selBench = -1; camShift = 0;
+  DRAG = null; ZOOM = 1; PAN.x = 0; PAN.y = 0;
   $("deploy").hidden = true;
   PAUSED = anyVeil() || OVER;
   last = 0;
@@ -1579,35 +1597,20 @@ function renderDeploy(){
   $("dGold").textContent  = P.gold + " 金";
   $("dPop").textContent   = "等级 " + P.dlvl + " · 人口 " + fieldTowers() + "/" + P.dlvl;
 
-  /* 商店 */
-  h = "";
-  for(i = 0; i < shopCards.length; i++){
-    var tid = shopCards[i];
-    if(!tid){ h += '<div class="tw gone">已买走</div>'; continue; }
-    var t = TW_MAP[tid], c = twCost(tid);
-    var no = P.gold < c || (benchFree() <= 0 && !wouldCombine(tid));
-    h += '<button class="tw r' + t.r + (no ? " dim" : "") + '" data-i="' + i + '">' +
-         '<span class="tcost">' + c + ' 金</span>' +
-         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + ' · 池中 ' + poolLeft(tid) + '</i>' +
-         '<p>' + t.pw + '</p></button>';
-  }
-  $("dShop").innerHTML = h;
-
-  /* 三个按钮 */
-  var lvUp = P.dlvl >= d.lvlMax;
-  $("btnDLvl").textContent = lvUp ? "已满级" : "升级 " + DLVL_COST[P.dlvl + 1] + " 金";
-  $("btnDLvl").disabled = lvUp || P.gold < DLVL_COST[P.dlvl + 1] || !DLVL_COST[P.dlvl + 1];
-  $("btnDRe").textContent  = "刷新 " + d.rerollCost + " 金";
-  $("btnDRe").disabled = P.gold < d.rerollCost;
-  $("btnDWall").textContent = "城墙 " + BF.wall.cost + " 金";
-  $("btnDWall").classList.toggle("on", wallMode);
-  $("btnDWall").disabled = P.gold < BF.wall.cost;
+  /* 一排按钮。⚠️ 商店 2026-09-22 搬进了弹窗（用户要求）——
+     面板矮了一半，上面看得见的营地就多了一半。 */
+  var lvUp = P.dlvl >= d.lvlMax, lvc = DLVL_COST[P.dlvl + 1];
+  $("btnDLvl").textContent = lvUp ? "已满级" : "升级 " + lvc + " 金";
+  $("btnDLvl").disabled = lvUp || !lvc || P.gold < lvc;
+  $("btnDShop").textContent = "商店";
   $("btnDSell").hidden = selBench < 0;
   if(selBench >= 0){
     var sc = P.bench[selBench];
     $("btnDSell").textContent = sc && sc.k === "tower"
       ? "出售 +" + (twCost(sc.tid) * starCopies(sc.star)) + " 金" : "丢掉";
   }
+  $("btnZoomIn").disabled  = ZOOM >= ZOOM_MAX - 0.001;
+  $("btnZoomOut").disabled = ZOOM <= ZOOM_MIN + 0.001;
 
   /* 备战区 9 格 */
   h = "";
@@ -1627,19 +1630,38 @@ function renderDeploy(){
 
   /* 提示只写一行（这个游戏不需要太多提示）*/
   var hint;
-  if(wallMode) hint = "点画面摆城墙。城墙是唯一有血量的建筑，挡住怪、会被打掉。";
-  else if(selBench >= 0){
+  if(selBench >= 0){
     var sc2 = P.bench[selBench];
-    hint = sc2.k === "tower" ? TW_MAP[sc2.tid].pw
+    hint = (sc2.k === "tower" ? TW_MAP[sc2.tid].pw
          : sc2.k === "spring" ? "泉：每一波能喝一口，回 25% 最大生命。不占人口。"
-         : "游商：卖遗物，每五波换一批货。不占人口。";
+         : "游商：卖遗物，每五波换一批货。不占人口。") + "　拖到画面上放下。";
   } else if(lastIncome){
-    hint = "收入 +" + lastIncome.inc + (lastIncome.it ? "　利息 +" + lastIncome.it : "") +
-           (lastIncome.start ? "　开局 +" + lastIncome.start : "") +
-           "　·　点牌再点画面摆下去，点场上的建筑收回来。";
-  } else hint = "点牌再点画面摆下去，点场上的建筑收回来。";
+    hint = "收入 +" + lastIncome.inc + (lastIncome.start ? "　开局 +" + lastIncome.start : "") +
+           "　·　拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指缩放。";
+  } else hint = "拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指缩放。";
   $("dHint").textContent = hint;
   camShift = $("deploy").offsetHeight / 2;
+}
+
+/* ---- 塔的商店：一个弹窗（用户 2026-09-22 从面板里搬出来的）---- */
+function openTwShop(){ selBench = -1; renderTwShop(); show("veilTwShop"); }
+function renderTwShop(){
+  var h = "", i;
+  for(i = 0; i < shopCards.length; i++){
+    var tid = shopCards[i];
+    if(!tid){ h += '<div class="tw gone">已买走</div>'; continue; }
+    var t = TW_MAP[tid], c = twCost(tid);
+    var no = P.gold < c || (benchFree() <= 0 && !wouldCombine(tid));
+    h += '<button class="tw r' + t.r + (no ? " dim" : "") + '" data-i="' + i + '">' +
+         '<span class="tcost">' + c + ' 金</span>' +
+         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + ' · 池中 ' + poolLeft(tid) + '</i>' +
+         '<p>' + t.pw + '</p></button>';
+  }
+  $("twShopList").innerHTML = h;
+  $("twShopSub").textContent = "金币 " + P.gold + " · 备战区 " + P.bench.length + " / " + BF.deploy.bench +
+                               " · 等级 " + P.dlvl + " 决定抽到什么品质";
+  $("btnTwRe").textContent = "刷新 " + BF.deploy.rerollCost + " 金";
+  $("btnTwRe").disabled = P.gold < BF.deploy.rerollCost;
 }
 
 /* ================================================================
@@ -1652,12 +1674,16 @@ function towerPower(){ return Math.max(1, Math.round(P.power || bstats().atk)); 
 /* 光环只作用在范围内的**其它**塔身上，所以「摆在哪儿」才是这套系统的玩法。
    ⚠️ 光环不叠乘：aspd / dmg / cdCut / rangeUp 各自**相加**再用一次，跟别处「只有两个乘区」同一个规矩。
    ⚠️ 光环塔自己的射程**不吃别的光环**，否则会互相放大成死循环。 */
+/* 遗物给**全体塔**的伤害加成。现在只有「祭余」——
+   战场里合成本来就不要钱，它原来那条「合成花费 −50%」是完全空的（用户 2026-09-22 点名要修）。
+   以后再加「强化塔」的遗物就往这儿并，别散在 fireTower 里。 */
+function towerRelicPct(){ return has("spare") ? 0.10 : 0; }
 function refreshTowerStats(){
   var i, j, t, o;
   for(i = 0; i < E.builds.length; i++){
     t = E.builds[i]; if(t.k !== "tower") continue;
     var d = t.def, sd = STAR_DMG[t.star - 1];
-    var aspdUp = 0, dmgUp = 0, cdCut = 0, rangeUp = 0;
+    var aspdUp = 0, dmgUp = towerRelicPct(), cdCut = 0, rangeUp = 0;
     for(j = 0; j < E.builds.length; j++){
       o = E.builds[j];
       if(o === t || o.k !== "tower" || !o.def.aura) continue;
@@ -1870,15 +1896,6 @@ function updateTShots(dt){
     }
   }
 }
-/* 城墙是唯一会被打掉的建筑；泉 / 商 / 塔都没有血量（用户定的）。 */
-function updateWalls(dt){
-  for(var i = E.builds.length - 1; i >= 0; i--){
-    var b = E.builds[i];
-    if(b.k !== "wall") continue;
-    if(b.flash > 0) b.flash -= dt;
-    if(b.hp <= 0){ fxRing(b.x, b.y, 26, "#8A8378"); E.builds.splice(i, 1); }
-  }
-}
 /* 泉（每波喝一口）和游商（永久，每五波换货）—— 石箱还在 E.sites 里，走 updateSites */
 function updateBuilds(dt){
   var me = E.me;
@@ -1928,7 +1945,7 @@ function buildArt(){
 /* ================================================================
    画面
    ================================================================ */
-var cv, ctx2, cw = 360, ch = 640, dpr = 1;
+var cv, ctx2, cw = 360, ch = 640, dpr = 1, padX = 80, padY = 80;
 function resize(){
   cv = $("cv"); dpr = Math.min(2, window.devicePixelRatio || 1);
   cw = cv.clientWidth; ch = cv.clientHeight;
@@ -1941,18 +1958,27 @@ function sy(y){ return y - CAM.y + ch / 2; }
 function draw(){
   if(!ctx2) return;
   var me = E.me, i;
-  if(DEPLOY){ CAM.x = me.x; CAM.y = me.y + camShift; }   // 把人从面板底下挪上来
+  /* 部署时：镜头 = 人 + 半个面板 + 玩家自己平移的那一点，缩放以屏幕中心为定点。
+     ⚠️ camShift 要除以 ZOOM —— 它是**屏幕**上的半个面板高，换算回世界就得除一次。 */
+  if(DEPLOY){ CAM.x = me.x + PAN.x; CAM.y = me.y + camShift / ZOOM + PAN.y; }
+  ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx2.clearRect(0, 0, cw, ch);
-  /* 地板：56px 的格线 + 按坐标哈希撒的石纹。一个字节的地图数据都不存。 */
   ctx2.fillStyle = "#F1EBDD"; ctx2.fillRect(0, 0, cw, ch);
-  var GS = 56, x0 = Math.floor((CAM.x - cw / 2) / GS) * GS, y0 = Math.floor((CAM.y - ch / 2) / GS) * GS;
-  ctx2.strokeStyle = "#E4DDCE"; ctx2.lineWidth = 1; ctx2.beginPath();
-  for(var gx = x0; gx < CAM.x + cw / 2 + GS; gx += GS){ ctx2.moveTo(sx(gx), 0); ctx2.lineTo(sx(gx), ch); }
-  for(var gy = y0; gy < CAM.y + ch / 2 + GS; gy += GS){ ctx2.moveTo(0, sy(gy)); ctx2.lineTo(cw, sy(gy)); }
+  ctx2.save();
+  ctx2.translate(cw / 2, ch / 2); ctx2.scale(ZOOM, ZOOM); ctx2.translate(-cw / 2, -ch / 2);
+  /* 缩小之后看得见的范围变大了，所以视野和剔除边界都要按 1/ZOOM 放开 */
+  var vw = cw / ZOOM, vh = ch / ZOOM;
+  padX = (vw - cw) / 2 + 80; padY = (vh - ch) / 2 + 80;
+  /* 地板：56px 的格线 + 按坐标哈希撒的石纹。一个字节的地图数据都不存。 */
+  var GS = 56, x0 = Math.floor((CAM.x - vw / 2) / GS) * GS, y0 = Math.floor((CAM.y - vh / 2) / GS) * GS;
+  /* ⚠️ 线宽要除一次 ZOOM —— transform 会把它一起缩，缩到 0.55 就基本看不见了 */
+  ctx2.strokeStyle = "#E4DDCE"; ctx2.lineWidth = 1 / ZOOM; ctx2.beginPath();
+  for(var gx = x0; gx < CAM.x + vw / 2 + GS; gx += GS){ ctx2.moveTo(sx(gx), -padY); ctx2.lineTo(sx(gx), ch + padY); }
+  for(var gy = y0; gy < CAM.y + vh / 2 + GS; gy += GS){ ctx2.moveTo(-padX, sy(gy)); ctx2.lineTo(cw + padX, sy(gy)); }
   ctx2.stroke();
   ctx2.fillStyle = "#DED6C4";
-  for(gx = x0; gx < CAM.x + cw / 2 + GS; gx += GS)
-    for(gy = y0; gy < CAM.y + ch / 2 + GS; gy += GS){
+  for(gx = x0; gx < CAM.x + vw / 2 + GS; gx += GS)
+    for(gy = y0; gy < CAM.y + vh / 2 + GS; gy += GS){
       var h = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
       if(h % 7 === 0) ctx2.fillRect(sx(gx) + (h % 31), sy(gy) + (h % 23), 3, 3);
     }
@@ -1977,7 +2003,7 @@ function draw(){
   /* 石箱。脚下画一圈淡光圈，远远就能看见 */
   for(i = 0; i < E.sites.length; i++){
     var t = E.sites[i], tx2 = sx(t.x), ty2 = sy(t.y);
-    if(tx2 < -60 || tx2 > cw + 60 || ty2 < -60 || ty2 > ch + 60) continue;
+    if(tx2 < -padX || tx2 > cw + padX || ty2 < -padY || ty2 > ch + padY) continue;
     ctx2.strokeStyle = "#8A6A3A"; ctx2.globalAlpha = 0.30 + 0.16 * Math.sin(t.t * 2.6); ctx2.lineWidth = 2.5;
     ctx2.beginPath(); ctx2.arc(tx2, ty2, BF.site.r + 6, 0, 6.2832); ctx2.stroke();
     ctx2.globalAlpha = 1;
@@ -1994,7 +2020,7 @@ function draw(){
   for(i = 0; i < E.foes.length; i++){
     var f = E.foes[i]; if(f.dead) continue;
     var px = sx(f.x), py = sy(f.y), sz = f.r * 2.4;
-    if(px < -80 || px > cw + 80 || py < -80 || py > ch + 80) continue;
+    if(px < -padX || px > cw + padX || py < -padY || py > ch + padY) continue;
     if(f.blinkWarn > 0 && f.ghostX !== undefined){
       ctx2.globalAlpha = 0.3; drawImg(f, sx(f.ghostX), sy(f.ghostY), sz); ctx2.globalAlpha = 1; }
     /* 远程怪的抬手预警：一圈往里收的环 + 身上一点高光 */
@@ -2089,6 +2115,7 @@ function draw(){
 
   /* 特效 */
   drawFx();
+  ctx2.restore();
 }
 /* 建筑：塔是「品质色的底 + 一个形状 + 星点」，一张新图都没加。
    ⚠️ 射程圈只在**部署阶段**画 —— 打起来时九个圈会把画面糊死。 */
@@ -2107,6 +2134,20 @@ function drawBuilds(){
       ctx2.beginPath(); ctx2.arc(sx(b.x), sy(b.y), rr, 0, 6.2832); ctx2.stroke();
     }
     ctx2.globalAlpha = 1;
+    /* 拖动中的落点：绿圈能放、红圈放不下（挨太近或者出了摆放范围）*/
+    if(DRAG && (DRAG.mode === "place" || DRAG.mode === "move")){
+      var gx2 = DRAG.mode === "place" ? DRAG.x : DRAG.b.x;
+      var gy2 = DRAG.mode === "place" ? DRAG.y : DRAG.b.y;
+      ctx2.strokeStyle = DRAG.ok ? "#47702F" : "#A93729"; ctx2.lineWidth = 2.5;
+      ctx2.globalAlpha = 0.85;
+      ctx2.beginPath(); ctx2.arc(sx(gx2), sy(gy2), BF.deploy.gap / 2, 0, 6.2832); ctx2.stroke();
+      if(DRAG.mode === "place"){
+        ctx2.globalAlpha = 0.5;
+        ctx2.beginPath(); ctx2.moveTo(sx(gx2) - 9, sy(gy2)); ctx2.lineTo(sx(gx2) + 9, sy(gy2));
+        ctx2.moveTo(sx(gx2), sy(gy2) - 9); ctx2.lineTo(sx(gx2), sy(gy2) + 9); ctx2.stroke();
+      }
+      ctx2.globalAlpha = 1;
+    }
   }
   /* 范围塔（尖刺台 / 荆棘园 / 裁决之环）的覆盖范围常驻一圈很淡的 ——
      它们一秒打一次，不画的话玩家根本不知道自己站没站在里面。 */
@@ -2123,7 +2164,7 @@ function drawBuilds(){
   }
   for(i = 0; i < E.builds.length; i++){
     b = E.builds[i]; px = sx(b.x); py = sy(b.y);
-    if(px < -70 || px > cw + 70 || py < -70 || py > ch + 70) continue;
+    if(px < -padX || px > cw + padX || py < -padY || py > ch + padY) continue;
     if(b.k === "spring" || b.k === "shop"){
       var tc = b.k === "spring" ? "#266F7B" : "#9C6A10";
       var dim = (b.k === "spring" && b.used) || b.cool > 0 ? 0.38 : 1;
@@ -2133,16 +2174,6 @@ function drawBuilds(){
       var im = IMG[b.k];
       if(im && im.complete && im.naturalWidth) ctx2.drawImage(im, px - 21, py - 23, 42, 42);
       ctx2.globalAlpha = 1;
-      continue;
-    }
-    if(b.k === "wall"){
-      ctx2.fillStyle = b.flash > 0 ? "#C9C0AC" : "#9B9382";
-      ctx2.strokeStyle = "#6A6456"; ctx2.lineWidth = 2;
-      ctx2.fillRect(px - b.r, py - b.r, b.r * 2, b.r * 2);
-      ctx2.strokeRect(px - b.r, py - b.r, b.r * 2, b.r * 2);
-      ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 1;
-      ctx2.beginPath(); ctx2.moveTo(px - b.r, py); ctx2.lineTo(px + b.r, py); ctx2.stroke();
-      if(b.hp < b.maxHp) drawBar(px, py - b.r - 6, b.r * 2, b.hp / b.maxHp);
       continue;
     }
     drawTower(b, px, py);
@@ -2300,18 +2331,74 @@ function inputVec(){
   var m = Math.hypot(x, y); if(m > 1){ x /= m; y /= m; }
   return {x:x, y:y};
 }
-/* 部署阶段点画布：手上有牌就摆下去，空手点到建筑就收回来。 */
-function deployTap(cx, cy){
-  var rect = cv.getBoundingClientRect();
-  var wx = CAM.x - cw / 2 + (cx - rect.left), wy = CAM.y - ch / 2 + (cy - rect.top);
-  if(selBench < 0 && !wallMode){
-    for(var i = 0; i < E.builds.length; i++){
-      var b = E.builds[i];
-      if(Math.hypot(b.x - wx, b.y - wy) <= 22){ pickUp(b); return; }
-    }
+/* ================================================================
+   部署阶段的手势（用户 2026-09-22：「塔可以拖动选择位置在放置时」）
+   ⚠️ 监听挂在 **document** 上，不是画布 —— 这样「从备战区那一格按下去、一路拖到画面上松手」
+      才收得到 move/up。挂在画布上的话拖出画布就断了。
+   ⚠️ 三种手势用一个 DRAG 收口，别再各写一套：
+      place 手上有牌 → 松手那一点摆下去；move 拖场上的建筑挪位置（原地点一下 = 收回备战区）；
+      pan  空白处拖 = 平移镜头。两根手指 = 缩放（这时 DRAG 直接作废）。
+   ================================================================ */
+var DRAG = null, PTRS = {}, pinchD = 0, pinchZ = 1;
+function ptrN(){ var n = 0, k; for(k in PTRS) n++; return n; }
+function ptrDist(){
+  var a = null, b = null, k;
+  for(k in PTRS){ if(!a) a = PTRS[k]; else if(!b) b = PTRS[k]; }
+  return (a && b) ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+}
+/* 松手那一点是不是落在画面上（不是落在底下那块部署面板上）*/
+function overStage(cy){
+  var d = $("deploy");
+  return d.hidden || cy < d.getBoundingClientRect().top;
+}
+function deployDown(e, fromBench){
+  PTRS[e.pointerId] = {x:e.clientX, y:e.clientY};
+  if(ptrN() >= 2){ DRAG = null; pinchD = ptrDist(); pinchZ = ZOOM; return; }
+  var w = screenToWorld(e.clientX, e.clientY);
+  if(selBench >= 0){
+    DRAG = {mode:"place", x:w.x, y:w.y, ok:canPlace(w.x, w.y), fromBench:!!fromBench};
     return;
   }
-  placeAt(wx, wy);
+  if(fromBench) return;
+  var b = buildAt(w.x, w.y);
+  if(b) DRAG = {mode:"move", b:b, ox:b.x - w.x, oy:b.y - w.y, bx:b.x, by:b.y, moved:false, ok:true};
+  else  DRAG = {mode:"pan", sx0:e.clientX, sy0:e.clientY, px0:PAN.x, py0:PAN.y};
+}
+function deployMove(e){
+  if(!DEPLOY) return;
+  if(PTRS[e.pointerId]){ PTRS[e.pointerId].x = e.clientX; PTRS[e.pointerId].y = e.clientY; }
+  if(ptrN() >= 2){
+    var d = ptrDist();
+    if(pinchD > 8 && d > 8) setZoom(pinchZ * d / pinchD);
+    return;
+  }
+  if(!DRAG) return;
+  var w = screenToWorld(e.clientX, e.clientY);
+  if(DRAG.mode === "place"){
+    DRAG.x = w.x; DRAG.y = w.y; DRAG.ok = canPlace(w.x, w.y) && overStage(e.clientY);
+  } else if(DRAG.mode === "move"){
+    if(Math.hypot(w.x + DRAG.ox - DRAG.bx, w.y + DRAG.oy - DRAG.by) > 6) DRAG.moved = true;
+    DRAG.b.x = w.x + DRAG.ox; DRAG.b.y = w.y + DRAG.oy;
+    DRAG.ok = canPlace(DRAG.b.x, DRAG.b.y, DRAG.b);
+  } else {
+    PAN.x = DRAG.px0 - (e.clientX - DRAG.sx0) / ZOOM;
+    PAN.y = DRAG.py0 - (e.clientY - DRAG.sy0) / ZOOM;
+    clampPan();
+  }
+}
+function deployUp(e){
+  delete PTRS[e.pointerId];
+  if(ptrN() < 2) pinchD = 0;
+  if(!DEPLOY || !DRAG) return;
+  var d = DRAG; DRAG = null;
+  if(d.mode === "place"){
+    /* 松手落在面板上 = 不摆，牌还捏在手里（从备战区拖出来又拖回去时很自然）*/
+    if(overStage(e.clientY)) placeAt(d.x, d.y);
+  } else if(d.mode === "move"){
+    if(!d.moved){ d.b.x = d.bx; d.b.y = d.by; pickUp(d.b); }        // 原地点一下 = 收回备战区
+    else if(!canPlace(d.b.x, d.b.y, d.b)){ d.b.x = d.bx; d.b.y = d.by; }   // 摆不下就弹回原位
+  }
+  renderDeploy();
 }
 function bindInput(){
   var el = $("cv"), st = $("stick"), nub = $("stickNub");
@@ -2321,7 +2408,7 @@ function bindInput(){
        光靠 CSS 的 user-select 挡不住，还得把这一下的默认行为吃掉。
        ⚠️ 别挪到 return 后面 —— 暂停时按下去也一样会弹放大镜。 */
     e.preventDefault();
-    if(DEPLOY){ deployTap(e.clientX, e.clientY); return; }
+    if(DEPLOY){ deployDown(e, false); return; }
     if(PAUSED || OVER) return;
     IN.on = true; IN.id = e.pointerId; IN.ox = e.clientX; IN.oy = e.clientY; IN.x = 0; IN.y = 0;
     st.hidden = false; st.style.left = IN.ox + "px"; st.style.top = IN.oy + "px";
@@ -2346,6 +2433,11 @@ function bindInput(){
   document.addEventListener("selectstart", function(e){ if(!isInput(e.target)) e.preventDefault(); });
   document.addEventListener("contextmenu", function(e){ if(!isInput(e.target)) e.preventDefault(); });
   document.addEventListener("dragstart", function(e){ e.preventDefault(); });
+  /* 部署阶段的拖动/缩放挂在 document 上（见 deployDown 的注释），
+     跟摇杆那一套互不干扰 —— 它们各自先看 DEPLOY 再决定要不要接。 */
+  document.addEventListener("pointermove", deployMove);
+  document.addEventListener("pointerup", deployUp);
+  document.addEventListener("pointercancel", deployUp);
   addEventListener("keydown", function(e){ KEY[e.key] = 1; if(e.key === " ") e.preventDefault(); });
   addEventListener("keyup",   function(e){ KEY[e.key] = 0; });
 }
@@ -2383,7 +2475,7 @@ function step(dt){
   /* 二段：补的那一刀 */
   if(me.second > 0){ me.second -= dt; if(me.second <= 0) swing(0.7); }
   spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt); updateSites(dt);
-  updateTowers(dt); updateTShots(dt); updateWalls(dt); updateBuilds(dt);
+  updateTowers(dt); updateTShots(dt); updateBuilds(dt);
   updateSpecial(dt, s);
   for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
@@ -2625,10 +2717,10 @@ function doSwap(oldId){
   var nid = swapNewId, after = swapAfter;
   swapNewId = null; swapAfter = null;
   withMaxHp(function(){
-    if(oldId === null){ addGold(sellPrice(RMAP[nid])); }
+    if(oldId === null){ sellRelicGold(RMAP[nid]); }
     else {
       var i = P.relics.indexOf(oldId);
-      if(i >= 0){ addGold(sellPrice(RMAP[oldId])); P.relics.splice(i, 1); }
+      if(i >= 0){ sellRelicGold(RMAP[oldId]); P.relics.splice(i, 1); }
       P.relics.push(nid); reindex();
     }
     reindex();
@@ -2684,12 +2776,17 @@ function st2(k, v){ return '<div><span>' + k + '</span><b>' + v + '</b></div>'; 
 /* 分解是**两步确认**的（第一下只是亮起来，第二下才真卖）——
    遗物卡上本来就写着「分解 +N」，点了没反应更糟；一步到位又太容易误触。 */
 var sellArmed = null;
+/* 遗物换成金币的唯一口子 —— 「寄存」的护盾转化收口在这儿，别在别处再抄一份。 */
+function sellRelicGold(r){
+  addGold(sellPrice(r));
+  if(has("deposit")) addShield(Math.round(sellPrice(r) * 0.10));
+}
 function sellRelic(id){
   if(sellArmed !== id){ sellArmed = id; openBag(); return; }
   sellArmed = null;
   withMaxHp(function(){
     var i = P.relics.indexOf(id);
-    if(i >= 0){ addGold(sellPrice(RMAP[id])); P.relics.splice(i, 1); reindex(); }
+    if(i >= 0){ sellRelicGold(RMAP[id]); P.relics.splice(i, 1); reindex(); }
   });
   openBag();
 }
@@ -2964,25 +3061,32 @@ function boot(){
   });
 
   /* ---- 部署面板 ---- */
-  $("dShop").addEventListener("click", function(e){
-    var b = e.target.closest ? e.target.closest(".tw") : null;
-    if(b && b.dataset.i !== undefined) buyCard(+b.dataset.i);
-  });
-  $("dBench").addEventListener("click", function(e){
+  /* ⚠️ 备战区走 **pointerdown** 不走 click：按下去就选中并开始拖，
+     一路拖到画面上松手就摆下去（用户 2026-09-22 要的「拖动选择位置」）。
+     松手还在面板上就只是选中，牌还捏在手里。 */
+  $("dBench").addEventListener("pointerdown", function(e){
     var b = e.target.closest ? e.target.closest(".bs") : null;
     if(!b || b.dataset.i === undefined) return;
     var i = +b.dataset.i;
-    selBench = (selBench === i) ? -1 : i;
-    wallMode = false;
-    renderDeploy();
+    e.preventDefault();                                   // 别让拖备战区变成选文字
+    if(selBench === i){ selBench = -1; renderDeploy(); return; }
+    selBench = i; renderDeploy();
+    deployDown(e, true);
   });
+  $("btnDShop").addEventListener("click", openTwShop);
   $("btnDLvl").addEventListener("click", levelUp);
-  $("btnDRe").addEventListener("click", rerollShop);
-  $("btnDWall").addEventListener("click", function(){
-    wallMode = !wallMode; if(wallMode) selBench = -1; renderDeploy();
-  });
   $("btnDSell").addEventListener("click", function(){ if(selBench >= 0) sellBench(selBench); });
+  $("btnZoomIn").addEventListener("click",  function(){ setZoom(ZOOM + ZOOM_STEP); });
+  $("btnZoomOut").addEventListener("click", function(){ setZoom(ZOOM - ZOOM_STEP); });
   $("btnDeployGo").addEventListener("click", closeDeploy);
+
+  /* ---- 塔的商店（弹窗）---- */
+  $("twShopList").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".tw") : null;
+    if(b && b.dataset.i !== undefined) buyCard(+b.dataset.i);
+  });
+  $("btnTwRe").addEventListener("click", rerollShop);
+  $("btnTwClose").addEventListener("click", function(){ hide("veilTwShop"); renderDeploy(); });
 
   onCards("pickList", function(id){ takePick(id); });
   $("btnSkipPick").addEventListener("click", function(){ pendPicks--; hide("veilPick"); openPick(); });
