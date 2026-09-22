@@ -3270,9 +3270,9 @@ function rollShopStock(){
       if(c && !stock.some(function(x){ return x.relic === c; })) r = c;
     }
     if(!r) break;
-    // 标价 = 这件的分解价 × SHOP_MARKUP（1.3）—— 买进来再拆掉永远是亏的，
+    // 标价 = 这件的分解价 × shopMarkup()（普通/稀有 1.3，史诗以上 1.3×1.8）—— 买进来再拆掉永远是亏的，
     // 别改回那套 (10 + 品质×12 + 层数) × 5 的老公式：低品质在浅层比分解价还便宜。
-    stock.push({relic:r, price: Math.ceil(sellPrice(r) * SHOP_MARKUP), sold:false});
+    stock.push({relic:r, price: Math.ceil(sellPrice(r) * shopMarkup(r)), sold:false});
   }
   return stock;
 }
@@ -3302,6 +3302,12 @@ function shopReroll(){
 }
 /* 游商的实际标价：货是进店那一刻定下的（存在 th.stock 上），
    「熟客」的折扣**不写进货架**，每次现算 —— 这样进店之后才拿到熟客也能立刻便宜。*/
+/* 一件遗物在货架上标多少倍的分解价 —— **标价的唯一口径**（数值在 content.js）。
+   普通/稀有 `SHOP_MARKUP`(1.3)；**史诗以上再 ×`SHOP_HI_X`(1.8)**（用户 2026-09-22）。
+   ⚠️ 「熟客」的 −15% 不在这儿，它是**结账时**在 shopPrice() 里现算的。*/
+function shopMarkup(r){
+  return SHOP_MARKUP * ((((r && r.r) || 0) >= SHOP_HI_FROM) ? SHOP_HI_X : 1);
+}
 function shopPrice(row){
   return Math.max(1, Math.round(row.price * (hasRelic("regular") ? 0.85 : 1)));
 }
