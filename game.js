@@ -5211,12 +5211,21 @@ function mergeData(o){
      磁盘上那份层存档一个字节都不动（下面单独判断要不要接管）。 */
   commitPerm();
 
-  /* 战场模式的记录：三项都取大值 / 相加，跟宝石一个规矩（battle.js 拥有这个键） */
+  /* 战场模式的记录：三项都取大值 / 相加，跟宝石一个规矩（battle.js 拥有这个键）。
+     ⚠️ 这个对象是**整份重拼**出来的，所以 battle.js 往里加的字段必须在这儿一条条接上，
+        漏一个就会在「导入一次存档」之后静默消失。现在有两个：
+        `tb`（每个难度层的最深波数，解锁用）**按层取大值**；
+        `run`（战场没走完的那一趟）**本机有就一点不动**，跟地牢的层存档一个规矩。 */
   if(o.bf && typeof o.bf === "object"){
     const mine = load(BF_KEY, {best:0, kills:0, runs:0});
+    const tb = Object.assign({}, mine.tb || {});
+    const ob = o.bf.tb || {};
+    for(const k in ob) tb[k] = Math.max(tb[k] || 0, ob[k] || 0);
     put(BF_KEY, {best: Math.max(mine.best || 0, o.bf.best || 0),
                  kills: (mine.kills || 0) + (o.bf.kills || 0),
-                 runs:  (mine.runs  || 0) + (o.bf.runs  || 0)});
+                 runs:  (mine.runs  || 0) + (o.bf.runs  || 0),
+                 tb,
+                 run: mine.run || o.bf.run || null});
   }
 
   // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动

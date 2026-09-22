@@ -60,6 +60,9 @@ var BF = {
   specialMax: 5,        // 特殊遗物最多带几件（用户 2026-09-22）；满了再拿要换掉一件
   spawnPad: 60,         // 在相机外这么远的一圈上刷怪
   shieldSeedScale: 1,   // 护盾类种子的统一缩放（留给调平衡）
+  /* 护盾封顶 = 生命上限 × 这个数（用户 2026-09-22：「护盾不能超过血量上限的两倍」）。
+     ⚠️ 收口在 addShield() 里，**所有给盾的路都从那儿过**；别在别处再写一遍。 */
+  shieldMaxX: 2,
 
   /* ===== 石箱（击杀掉落）=====
      ⚠️ **泉和商已经不在这儿了**（用户 2026-09-22 的塔防改版）：它们现在是
@@ -462,8 +465,8 @@ var BF_TOWERS = [
   s3:{t:"鼓声覆盖全场，所有塔都吃", auraAll:true},
   lore:"鼓点不杀人，杀人的是跟上鼓点的那些。"},
  /* 回血 / 经济这两条线是 2026-09-22 用户点名加的 —— 它们不打人，靠「你能站多久」和「你买得起几座」赢。 */
- {id:"tw_well",  n:"涌泉台", r:0, shape:"well",  range:150, cd:4.0, kind:"heal", healPct:0.025,
-  pw:"没有伤害。每 4 秒，你站在范围内就回 2.5% 最大生命。",
+ {id:"tw_well",  n:"涌泉台", r:0, shape:"well",  range:150, cd:8.0, kind:"heal", healPct:0.025,
+  pw:"没有伤害。每 8 秒，你站在范围内就回 2.5% 最大生命。",
   s2:{t:"回复时还给 8 点护盾", healShield:8},
   s3:{t:"回复不再看距离；每次回复解除你的减速，并在 3 秒内受到的伤害 −20%",
       healAll:true, healCleanse:{sec:3, cut:20}},
@@ -473,6 +476,20 @@ var BF_TOWERS = [
   s2:{t:"范围内掉的金币直接入账，不用去捡", goldAuto:true},
   s3:{t:"范围内的敌人倒下时有 25% 概率再掉一份", goldDbl:0.25},
   lore:"它不杀人，它只是站在人倒下的地方。"},
+
+ /* 第三批（用户 2026-09-22「再新增一批塔楼」）：扇形齐射、地雷、狙击、削甲、给人加成的旗、穿透弩、停摆钟。 */
+ {id:"tw_fan",   n:"散花台", r:0, shape:"fan",   range:130, cd:1.3, dmg:0.30, kind:"burst",
+  burstN:3, spread:26, speed:360,
+  pw:"每 1.3 秒扇形射出 3 枚碎石，各自结算。射程不远。",
+  s2:{t:"一次射出 5 枚", burstN:5},
+  s3:{t:"碎石穿透，一条线上的敌人全中", pierce:true},
+  lore:"它从不瞄，它只是把手里的都撒出去。"},
+ {id:"tw_tack",  n:"铁蒺藜", r:0, shape:"tack",  range:130, cd:3.0, dmg:0.90, kind:"mine",
+  splash:55, mineMax:3, mineLife:25,
+  pw:"每 3 秒在附近埋一枚地刺，敌人踩到炸开 55 范围。最多同时埋 3 枚。",
+  s2:{t:"最多同时埋 6 枚", mineMax:6},
+  s3:{t:"炸开 80 范围，并把炸到的敌人定身 0.5 秒", splash:80, stun:0.5},
+  lore:"埋下去就不管了，反正总有人踩。"},
 
  /* ---- 稀有 ---- */
  {id:"tw_frost", n:"冰晶塔", r:1, shape:"crystal", range:165, cd:1.4, dmg:0.55, kind:"shot", speed:380,
@@ -503,6 +520,13 @@ var BF_TOWERS = [
   s3:{t:"场上每有一座塔就多产 2 金", mintPerTower:2},
   lore:"它一刻不停地数着这一趟还剩多少。"},
 
+ {id:"tw_sniper",n:"长瞄塔", r:1, shape:"scope", range:340, cd:2.4, dmg:1.50, kind:"shot",
+  speed:620, aimStrong:true,
+  pw:"每 2.4 秒挑射程内**血最多**的那只射一发。射程极远。",
+  s2:{t:"一次连射两发", shots:2},
+  s3:{t:"命中后生命低于 12% 的敌人直接死", exec:0.12},
+  lore:"它盯的从来不是最近的那个。"},
+
  /* ---- 史诗 ---- */
  {id:"tw_cannon",n:"重炮台", r:2, shape:"cannon", range:210, cd:2.8, dmg:2.60, kind:"lob",
   splash:60, speed:200, warn:0.8,
@@ -526,16 +550,29 @@ var BF_TOWERS = [
   s2:{t:"范围内其它塔射程也 +20%", auraAdd:{rangeUp:0.20}},
   s3:{t:"号角覆盖全场，所有塔都吃", auraAll:true},
   lore:"号角一响，谁都比平时狠一点。"},
- {id:"tw_chapel",n:"祷堂",   r:2, shape:"chapel", range:175, cd:3.0, kind:"heal", healPct:0.04,
-  pw:"没有伤害。每 3 秒，你站在范围内就回 4% 最大生命。",
+ {id:"tw_chapel",n:"祷堂",   r:2, shape:"chapel", range:175, cd:6.0, kind:"heal", healPct:0.04,
+  pw:"没有伤害。每 6 秒，你站在范围内就回 4% 最大生命。",
   s2:{t:"回复时还给 15 点护盾", healShield:15},
   s3:{t:"每波一次：你掉到 35% 生命以下时立刻回 25% 最大生命", healSave:true},
   lore:"没有神像，只有一张空着的长凳。"},
  {id:"tw_vault", n:"金库",   r:2, shape:"vault",  range:0, cd:0, kind:"vault", vault:60,
   pw:"没有伤害。每次部署时额外收入 60 金。",
-  s2:{t:"每次部署白送一次商店刷新", vaultReroll:true},
-  s3:{t:"每次部署白送一张塔牌", vaultCard:true},
+  s2:{t:"收入再 +60 金，并白送 3 次商店刷新", vaultBonus:60, vaultReroll:3},
+  s3:{t:"白送两张塔牌，并按波数再给「6 × 波数」金", vaultCard:2, vaultWave:6},
   lore:"钥匙早就丢了，可它每五波还是自己开一次。"},
+
+ {id:"tw_rend",  n:"裂甲桩", r:2, shape:"wedge", range:160, cd:1.6, dmg:0.50, kind:"shot",
+  speed:400, shred:2,
+  pw:"每 1.6 秒射一发，命中永久削掉那只 2 点护甲（可叠加）。",
+  s2:{t:"改成一次削 5 点", shred:5},
+  s3:{t:"命中炸开 80 范围，圈里的一起削甲", splash:80},
+  lore:"它不急，它一片一片地撬。"},
+ {id:"tw_banner",n:"督战旗", r:2, shape:"flag",  range:150, cd:0, kind:"aura",
+  aura:{playerAspd:0.25, playerRange:0.15},
+  pw:"没有伤害。**你**站在范围内时：攻速 +25%、刀程 +15%。",
+  s2:{t:"你在范围内时受到的伤害再 −10%", auraAdd:{playerCut:10}},
+  s3:{t:"旗影覆盖全场，走到哪儿都算", auraAll:true},
+  lore:"旗不替人挥刀，只是让人挥得快些。"},
 
  /* ---- 传奇 ---- */
  {id:"tw_storm", n:"雷云柱", r:3, shape:"storm",  range:240, cd:2.0, dmg:2.00, kind:"storm", splash:80,
@@ -553,11 +590,18 @@ var BF_TOWERS = [
   s2:{t:"范围内其它塔攻击间隔再 −15%", auraAdd:{cdCut:0.15}},
   s3:{t:"炉火覆盖全场，所有塔都吃", auraAll:true},
   lore:"它把别人烧得发红，自己一动不动。"},
- {id:"tw_grove", n:"生息树", r:3, shape:"grove",  range:200, cd:2.0, kind:"heal", healPct:0.03,
-  pw:"没有伤害。每 2 秒，你站在范围内就回 3% 最大生命。",
+ {id:"tw_grove", n:"生息树", r:3, shape:"grove",  range:200, cd:4.0, kind:"heal", healPct:0.03,
+  pw:"没有伤害。每 4 秒，你站在范围内就回 3% 最大生命。",
   s2:{t:"回复时还给 12 点护盾", healShield:12},
   s3:{t:"回复覆盖全场，溢出的部分转成护盾", healAll:true, healOver:true},
   lore:"树底下永远是湿的。"},
+
+ {id:"tw_rail",  n:"贯石弩", r:3, shape:"rail",  range:300, cd:2.6, dmg:1.90, kind:"shot",
+  speed:760, pierce:true,
+  pw:"每 2.6 秒射出一发穿透弹，打穿一条线上的所有敌人。",
+  s2:{t:"一次连射两发", shots:2},
+  s3:{t:"打中的每一只都炸开 60 范围", splash:60},
+  lore:"一条直线，后面的事它不管。"},
 
  /* ---- 神圣 ---- */
  {id:"tw_judge", n:"裁决之环",r:4,shape:"ring",   range:190, cd:1.0, dmg:0.70, kind:"aoe", ccX:2,
@@ -570,7 +614,13 @@ var BF_TOWERS = [
   pw:"没有伤害。范围内其它塔攻击间隔 −25%、射程 +25%；你站在范围内时受到的伤害 −20%。",
   s2:{t:"范围内其它塔伤害 +25%", auraAdd:{dmg:0.25}},
   s3:{t:"碑影覆盖全场，减伤再 −10%", auraAll:true, auraAdd:{playerCut:10}},
-  lore:"碑上没有字，站在它影子里的人却都记得回家的路。"}
+  lore:"碑上没有字，站在它影子里的人却都记得回家的路。"},
+ {id:"tw_clock", n:"停摆钟", r:4, shape:"clock", range:180, cd:0, kind:"aura",
+  aura:{slow:0.15}, freeze:{sec:1.5, every:8},
+  pw:"没有伤害。范围内的敌人移速 −15%，每 8 秒把范围内的敌人定身 1.5 秒。",
+  s2:{t:"改成每 5 秒定身一次", freeze:{sec:1.5, every:5}},
+  s3:{t:"钟声覆盖全场，不再看距离", auraAll:true},
+  lore:"指针早就不走了，可走过它的人也是。"}
 ];
 var TW_MAP = {};
 (function(){ for(var i = 0; i < BF_TOWERS.length; i++) TW_MAP[BF_TOWERS[i].id] = BF_TOWERS[i]; })();
@@ -865,6 +915,13 @@ function bstats(){
   if(hasSp("sp_magnet")) s.pickup *= 4;
   if(hasSp("sp_feast"))  s.maxHp += Math.min(400, P.kills);
   if(hasSp("sp_rampage") && P.rageT > 0) s.aspd *= 1 + 0.05 * P.rageN;
+
+  /* --- ⑧ 督战旗（塔的光环里唯一作用在**玩家**身上的一项，用户 2026-09-22 的新塔）---
+     ⚠️ 它读 E.builds，**不许反过来调 refreshTowerStats()** —— 那边要调 bstats()，会死循环。
+     ⚠️ 站进圈里才算，所以它跟「摆在哪儿」是一回事，跟别的光环一个规矩。 */
+  var pa = playerAura();
+  if(pa.aspd)  s.aspd *= (1 + pa.aspd);
+  if(pa.range) s.range = Math.round(s.range * (1 + pa.range));
 
   s.atk = Math.max(1, Math.round(s.atk));
   s.maxHp = Math.max(1, Math.round(s.maxHp));
@@ -1214,10 +1271,16 @@ function healUp(n, force){
   if(over > 0 && (force || has("well"))) addShield(Math.floor(over / 2));
   return real;
 }
+/* 护盾的硬上限：**生命上限的两倍**（用户 2026-09-22）。
+   ⚠️ 这是全局的一道闸，凝盾自己那个 AEGIS_MAX 仍然照吃（取两者里小的那个）——
+      护盾不走减伤链也不进结算，堆到四五百就是「这一趟不会死了」。 */
+function shieldCap(s){ return Math.max(1, Math.round((s || bstats()).maxHp * BF.shieldMaxX)); }
 function addShield(n, cap){
   if(n <= 0) return;
   P.shield += Math.round(n);
   if(cap && P.shield > cap) P.shield = cap;
+  var hard = shieldCap();
+  if(P.shield > hard) P.shield = hard;
 }
 function addGold(n){
   var s = bstats();
@@ -1454,8 +1517,10 @@ function killFoe(f){
   }
   /* 窥影镜三星：被标记的敌人倒下时自己炸开（伤害按它的最大生命算，跟塔的出手伤害无关）。
      ⚠️ 排在 dropGold 之前，炸死的那些照样各掉各的金币。 */
-  if(f.markBoom && f.mark > 0)
-    towerAoe(f.x, f.y, 90, Math.max(1, Math.round(f.maxHp * 0.4)), "#6F3D98");
+  if(f.markBoom && f.mark > 0){
+    fxBoom(f.x, f.y, 90, "#6F3D98");
+    towerAoe(f.x, f.y, 90, Math.max(1, Math.round(f.maxHp * 0.4)), null);
+  }
   gainXp(f.xp);
   /* 拾荒幡：倒在它范围里就多掉一笔（三星还有概率再掉一份、二星直接入账）*/
   var ga = goldAuraAt(f.x, f.y), gn = f.gold;
@@ -1463,7 +1528,7 @@ function killFoe(f){
     gn += Math.max(1, Math.round(f.gold * ga.pct));
     if(ga.dbl && Math.random() < ga.dbl) gn += f.gold;
   }
-  if(ga.auto) addGold(gn);
+  if(ga.auto){ addGold(gn); fxCoin(f.x, f.y - 8); }
   else dropGold(f.x, f.y, gn);
   fxPop(f.x, f.y, f.col);
   maybeSite(f);
@@ -2192,10 +2257,14 @@ function relocateCamp(){
 
 /* ---- 部署阶段的开关 ---- */
 function isDeployWave(w){ return (w - 1) % BF.deploy.every === 0; }
-function openDeploy(){
+/* `resume = true` 表示这是**读档回到部署阶段**：钱、货架、白送的卡都已经在存档里了，
+   这一半（P.round++ / 收入 / 回收 / 摇货架）**一次都不许再走**，否则读一次档多发一轮。 */
+function openDeploy(resume){
   var d = BF.deploy, i;
-  DEPLOY = true; PAUSED = true; P.round++;
+  DEPLOY = true; PAUSED = true;
   relocateCamp();
+  if(resume){ openDeployUI(); return; }
+  P.round++;
   if(P.round === 1) P.gold += d.startGold;                       // 开局那一笔钱
   var inc = d.incomeBase + d.incomePer * (P.round - 1);          // ⚠️ 没有利息了（用户 2026-09-22）
   P.gold += inc;
@@ -2214,8 +2283,12 @@ function openDeploy(){
     if(vb.k !== "tower" || vb.def.kind !== "vault") continue;
     vse = starEff(vb);
     vg += vb.def.vault;
-    if(vse.vaultReroll) vre++;
-    if(vse.vaultCard) vcard++;
+    /* 二星：再给一笔固定的；三星：再按波数给一笔（越往后越值钱）。
+       刷新次数和白送的牌数都是**数量**，不是开关 —— 用户 2026-09-22 要求把二三星做厚。 */
+    if(vse.vaultBonus) vg += vse.vaultBonus;
+    if(vse.vaultWave)  vg += vse.vaultWave * P.wave;
+    vre   += vse.vaultReroll || 0;
+    vcard += vse.vaultCard || 0;
   }
   if(vg > 0) addGold(vg);
   P.freeRe = (P.freeRe || 0) + vre;
@@ -2225,6 +2298,13 @@ function openDeploy(){
     if(E.builds[i].k === "shop"){ E.builds[i].stock = null; E.builds[i].cool = 0; }
   rollShopCards();
   for(vi = 0; vi < vcard; vi++) giveFreeCard();      // ⚠️ 要排在 rollShopCards 之后（它会动牌库）
+  openDeployUI();
+  /* ⚠️ **存在发完钱、摇完货架之后**（用户 2026-09-22 的「每一波一次存档」）——
+     存在之前的话，读一次档就是重摇一次货架，等于免费刷新。 */
+  saveWave(true);
+}
+function openDeployUI(){
+  var i;
   selBench = -1; DRAG = null; ZOOM = 1; PAN.x = 0; PAN.y = 0;
   /* ⚠️ **进部署先把场上的弹幕全清掉**（用户 2026-09-22）——
      不清的话「开战」那一下会直接吃一脸停在半空的弹，而且那是上一波留下的，躲都没法躲。
@@ -2266,6 +2346,7 @@ function screenToWorld(cx, cy){
 }
 function closeDeploy(){
   DEPLOY = false; selBench = -1; camShift = 0;
+  saveWave(false);                       // 摆完塔开战：把这一轮买的塔和花掉的钱落盘
   DRAG = null; ZOOM = 1; PAN.x = 0; PAN.y = 0;
   $("deploy").hidden = true;
   PAUSED = anyVeil() || OVER;
@@ -2402,7 +2483,12 @@ function refreshTowerStats(){
       shots:  se.shots || 1,
       splash: se.splash || d.splash || 0,
       bounce: se.bounce || 0,
-      pierce: !!se.pierce,
+      /* ⚠️ 穿透 / 扇形枚数 / 地雷上限 / 削甲**底表上也能写**（贯石弩、散花台、铁蒺藜、裂甲桩），
+         所以这四项都是「升星优先、底表兜底」。 */
+      pierce: !!(se.pierce || d.pierce),
+      burstN: se.burstN || d.burstN || 1,
+      mineMax: se.mineMax || d.mineMax || 0,
+      shred:  se.shred || d.shred || 0,
       chain:  se.chain || d.chain || 0,
       markN:  se.markN || d.markN || 0,
       markPct: se.markPct || d.markPct || 0,
@@ -2441,6 +2527,23 @@ function towerSlowAt(x, y){
   }
   return Math.min(0.6, best);
 }
+/* 督战旗那一类作用在**玩家**身上的光环（攻速 / 刀程）。
+   ⚠️ 跟 buildCut() 是一对：只看「你站没站在圈里」，三星的 auraAll 例外。
+   ⚠️ 这里不许调 bstats()（bstats 要调它）。 */
+function playerAura(){
+  var o = {aspd:0, range:0};
+  if(!E || !E.builds) return o;
+  for(var i = 0; i < E.builds.length; i++){
+    var b = E.builds[i];
+    if(b.k !== "tower" || b.silT > 0) continue;
+    var a = auraOf(b);
+    if(!a || (!a.playerAspd && !a.playerRange)) continue;
+    if(Math.hypot(b.x - E.me.x, b.y - E.me.y) > auraRange(b)) continue;
+    o.aspd  += a.playerAspd || 0;
+    o.range += a.playerRange || 0;
+  }
+  return o;
+}
 /* 归墟碑给玩家的减伤（mitigate 里跟别的减伤一起吃 BF.cutMax 的封顶）*/
 function buildCut(){
   if(!E || !E.builds) return 0;
@@ -2476,6 +2579,8 @@ function towerHurt(f, d, ef){
       f.slowT = Math.max(f.slowT || 0, ef.slowHit.sec); f.slowPct = ef.slowHit.pct;
     }
     if(ef.stun && !f.def.noSlow) f.stunT = Math.max(f.stunT || 0, ef.stun);
+    /* 裂甲桩：**永久**削掉这只身上的护甲（最低 0），可叠加 —— 一层一层撬的手感就靠它 */
+    if(ef.shred && f.armor > 0){ f.armor = Math.max(0, f.armor - ef.shred); fxSpark(f.x, f.y, "#6F3D98", 4); }
     /* 处决：三星那一档的质变。**Boss 免疫**，不然 40 波的冕者会被一圈荆棘直接抹掉。 */
     if(ef.exec && !f.boss && f.hp <= f.maxHp * ef.exec){ f.hp = 0; fxPop(f.x, f.y, "#A8891C"); }
   }
@@ -2513,17 +2618,21 @@ function towerZap(from, d, n, ef){
     if(best < 0) return;
     var tt = E.foes[best]; seen[best] = 1;
     fxBolt(cur.x, cur.y, tt.x, tt.y);
+    fxSpark(tt.x, tt.y, "#7FA8D8", 3);
     towerHurt(tt, d, ef);
     if(ef && ef.splash) towerAoe(tt.x, tt.y, ef.splash, d, null, 0, ef);
     cur = tt;
   }
 }
+/* 默认挑**最近**的；长瞄塔（aimStrong）挑射程内**血最多**的 —— 它是专门用来点精英和 Boss 的。 */
 function towerTarget(t, range){
-  var best = null, bd = 1e9;
+  var best = null, bd = 1e9, strong = !!t.def.aimStrong, bh = -1;
   for(var i = 0; i < E.foes.length; i++){
     var f = E.foes[i]; if(f.dead) continue;
     var d = Math.hypot(f.x - t.x, f.y - t.y);
-    if(d <= range + f.r && d < bd){ bd = d; best = f; }
+    if(d > range + f.r) continue;
+    if(strong){ if(f.hp > bh){ bh = f.hp; best = f; } }
+    else if(d < bd){ bd = d; best = f; }
   }
   return best;
 }
@@ -2549,10 +2658,30 @@ function fireTower(t, ef){
     f = t.tgt;
     if(!f || f.dead) return;
     var a = Math.atan2(f.y - t.y, f.x - t.x);
+    /* 曳光：从塔口朝目标划一条短线 —— 直射塔以前只有一个小方块在飞，看不出谁在开火 */
+    fxLine(t.x, t.y - 6, t.x + Math.cos(a) * Math.min(56, ef.range), t.y - 6 + Math.sin(a) * Math.min(56, ef.range),
+           col, d.pierce ? 3 : 2);
     E.tshots.push({kind:"bolt", x:t.x, y:t.y, vx:Math.cos(a) * d.speed, vy:Math.sin(a) * d.speed,
                    r:5, dmg:ef.dmg, col:col, ef:ef, life:1.6,
                    /* 升星：穿透 / 弹射 / 命中炸开 —— 三样都在 updateTShots 里结算 */
                    pierce:ef.pierce, bounce:ef.bounce, splash:ef.splash, hit:[]});
+  } else if(d.kind === "burst"){
+    /* 散花台：一次甩出一把，每一枚各自结算（跟「一次打两下」不是一回事，那个是 shots）*/
+    f = t.tgt;
+    if(!f || f.dead) return;
+    var a0 = Math.atan2(f.y - t.y, f.x - t.x), n0 = ef.burstN;
+    fxCone(t.x, t.y, a0, d.spread * (n0 - 1) + 16, Math.min(ef.range, 70), col);
+    for(i = 0; i < n0; i++){
+      var off = (i - (n0 - 1) / 2) * d.spread * Math.PI / 180;
+      E.tshots.push({kind:"bolt", x:t.x, y:t.y, vx:Math.cos(a0 + off) * d.speed, vy:Math.sin(a0 + off) * d.speed,
+                     r:4, dmg:ef.dmg, col:col, ef:ef, life:ef.range / d.speed + 0.1,
+                     pierce:ef.pierce, bounce:ef.bounce, splash:ef.splash, hit:[]});
+    }
+  } else if(d.kind === "mine"){
+    /* 铁蒺藜：埋下去就不管了，踩到才炸（上限在 updateTowers 里数）*/
+    var ma = Math.random() * 6.2832, mr = 26 + Math.random() * (ef.range - 26);
+    E.tshots.push({kind:"mine", x:t.x + Math.cos(ma) * mr, y:t.y + Math.sin(ma) * mr,
+                   src:t, r:16, arm:0.4, life:d.mineLife, splash:ef.splash, dmg:ef.dmg, col:col, ef:ef});
   } else if(d.kind === "lob"){
     var lx = d.warn ? t.lockX : (t.tgt ? t.tgt.x : t.x);
     var ly = d.warn ? t.lockY : (t.tgt ? t.tgt.y : t.y);
@@ -2560,8 +2689,10 @@ function fireTower(t, ef){
     E.tshots.push({kind:"lob", x:t.x, y:t.y, x0:t.x, y0:t.y, tx:lx, ty:ly, ef:ef,
                    t:0, dur:Math.max(0.15, dist / d.speed), splash:ef.splash, dmg:ef.dmg, col:col});
   } else if(d.kind === "aoe"){
-    /* ⚠️ 不传颜色 = 不闪圈：范围塔一秒打一次，每次闪一个大圈会把画面糊死。
-       它的覆盖范围改成在 drawBuilds() 里常驻画一圈很淡的。 */
+    /* ⚠️ 不闪整圈：范围塔一秒打一次，每次闪一个大圈会把画面糊死。
+       改成一道**扫掠的扇形**（每次角度接着上次转），覆盖范围照旧在 drawBuilds() 里常驻画一圈淡的。 */
+    t.sweepA = (t.sweepA || 0) + 1.9;
+    fxCone(t.x, t.y, t.sweepA, 70, ef.range, col);
     towerAoe(t.x, t.y, ef.range, ef.dmg, null, ef.ccX, ef);
   } else if(d.kind === "chain"){
     f = t.tgt; if(f && !f.dead){ fxBolt(t.x, t.y, f.x, f.y); towerZap(f, ef.dmg, ef.chain, ef); }
@@ -2581,7 +2712,7 @@ function fireTower(t, ef){
       }
     }
   } else if(d.kind === "pull"){
-    fxRing(t.x, t.y, ef.range, col);
+    fxPull(t.x, t.y, ef.range, col);
     for(i = 0; i < E.foes.length; i++){
       f = E.foes[i]; if(f.dead) continue;
       var dx = t.x - f.x, dy = t.y - f.y, dd = Math.hypot(dx, dy);
@@ -2597,15 +2728,17 @@ function fireTower(t, ef){
       f = E.foes[i]; if(f.dead) continue;
       if(Math.hypot(f.x - t.x, f.y - t.y) > ef.range) continue;
       f.mark = d.markSec; f.markPct = ef.markPct; f.markBoom = ef.markBoom ? 1 : 0; n++;
+      fxBracket(f.x, f.y, f.r + 5, col);
     }
   } else if(d.kind === "storm"){
     f = densestSpot(t, ef.range, d.splash);
     if(f){
-      towerAoe(f.x, f.y, d.splash, ef.dmg, col, 0, ef);
+      fxPillar(f.x, f.y, col); fxBoom(f.x, f.y, d.splash, col);
+      towerAoe(f.x, f.y, d.splash, ef.dmg, null, 0, ef);
       if(se.stormChain) towerZap(f, ef.dmg, se.stormChain, ef);     // 三星：雷落下后再连锁
     }
   } else if(d.kind === "vortex"){
-    t.vortT = d.dur; t.vortHit = 0; fxRing(t.x, t.y, ef.range, col);
+    t.vortT = d.dur; t.vortHit = 0; fxSwirl(t.x, t.y, ef.range, col);
   } else if(d.kind === "heal"){
     /* ---- 回血塔（用户 2026-09-22 点名要的一条线）----
        ⚠️ 回血一律走 healUp()，别直接改 P.hp —— 「泉涌」那条溢出转护盾就在里面。 */
@@ -2617,7 +2750,7 @@ function fireTower(t, ef){
       E.me.wardT = se.healCleanse.sec; E.me.wardCut = se.healCleanse.cut;
     }
     if(got > 0) fxText("+" + got, "#266F7B");
-    fxRing(t.x, t.y, 26, "#266F7B");
+    fxPlus(t.x, t.y - 10, "#266F7B"); fxPlus(E.me.x, E.me.y - 14, "#266F7B");
   } else if(d.kind === "mint"){
     /* ---- 经济塔：自己产币 ---- */
     var raw = d.mint + P.wave;
@@ -2625,7 +2758,7 @@ function fireTower(t, ef){
     var amt = Math.max(1, Math.round(raw * BF.goldMult));
     if(se.goldAuto){ addGold(amt); fxText("+" + amt + " 金", "#9C6A10"); }
     else dropGold(t.x, t.y, amt);
-    fxRing(t.x, t.y, 22, "#9C6A10");
+    fxCoin(t.x, t.y - 10);
   }
 }
 
@@ -2661,17 +2794,20 @@ function updateTowers(dt){
     if(t.silT > 0){ t.silT -= dt; t.warn = 0; t.vortT = 0; t.rep = 0; continue; }
     /* 纯被动：光环 / 拾荒幡 / 金库。霜灯三星的「冻一下」是光环塔里唯一会动的东西。 */
     if(d.kind === "aura" || d.kind === "gold" || d.kind === "vault"){
-      if(se.freeze){
+      /* ⚠️ 定身**底表上也能写**（停摆钟自带，霜灯是三星才有）—— 升星那一份优先。 */
+      var fz = se.freeze || d.freeze;
+      if(fz){
         t.frz = (t.frz || 0) - dt;
         if(t.frz <= 0){
-          t.frz = se.freeze.every;
+          t.frz = fz.every;
           var rr = se.auraAll ? Infinity : ef.range;
-          if(rr < Infinity) fxRing(t.x, t.y, rr, TW_COL[d.r]);
+          if(rr < Infinity) fxDash(t.x, t.y, rr, TW_COL[d.r]);
           for(var q = 0; q < E.foes.length; q++){
-            var fz = E.foes[q];
-            if(fz.dead || fz.def.noSlow) continue;
-            if(Math.hypot(fz.x - t.x, fz.y - t.y) > rr) continue;
-            fz.stunT = Math.max(fz.stunT || 0, se.freeze.sec);
+            var fq = E.foes[q];
+            if(fq.dead || fq.def.noSlow) continue;
+            if(Math.hypot(fq.x - t.x, fq.y - t.y) > rr) continue;
+            fq.stunT = Math.max(fq.stunT || 0, fz.sec);
+            fxSpark(fq.x, fq.y, "#2A62AD", 3);
           }
         }
       }
@@ -2704,7 +2840,10 @@ function updateTowers(dt){
         t.vortHit = (t.vortHit || 0) - dt;
         if(t.vortHit <= 0){ t.vortHit = 0.5; towerAoe(t.x, t.y, ef.range, Math.round(ef.dmg * 0.5), null, 0, ef); }
       }
-      if(t.vortT <= 0) towerAoe(t.x, t.y, ef.range * 0.55, ef.dmg, TW_COL[d.r], 0, ef);
+      if(t.vortT <= 0){
+        fxBoom(t.x, t.y, ef.range * 0.55, TW_COL[d.r]);
+        towerAoe(t.x, t.y, ef.range * 0.55, ef.dmg, null, 0, ef);
+      }
       continue;
     }
     /* 重炮台的抬手：锁死落点之后目标照样会跑 —— 这就是它「很容易打空」的来源 */
@@ -2715,6 +2854,16 @@ function updateTowers(dt){
     }
     t.cd -= dt;
     if(t.cd > 0) continue;
+    /* 铁蒺藜：自己埋的雷到上限就歇着（数的是场上还剩几枚）*/
+    if(d.kind === "mine"){
+      var mn = 0;
+      for(var mi = 0; mi < E.tshots.length; mi++)
+        if(E.tshots[mi].kind === "mine" && E.tshots[mi].src === t) mn++;
+      if(mn >= ef.mineMax){ t.cd = 0.5; continue; }
+      t.cd = ef.cd; fireTower(t, ef);
+      t.rep = ef.shots - 1; t.repT = 0.12;
+      continue;
+    }
     /* 回血塔 / 铸币台不需要敌人 —— 它们只看自己的 CD（回血塔还要你站在圈里）*/
     if(d.kind === "heal" || d.kind === "mint"){
       if(d.kind === "heal" && !se.healAll && Math.hypot(me.x - t.x, me.y - t.y) > ef.range){
@@ -2737,7 +2886,7 @@ function updateTowers(dt){
       if(d.kind === "beam" && t.tgt !== old) t.rampN = 0;       // 换人，三星的灼烧层数清零
     }
     var needTgt = d.kind !== "aoe" && d.kind !== "pull" && d.kind !== "mark" &&
-                  d.kind !== "storm" && d.kind !== "vortex";
+                  d.kind !== "storm" && d.kind !== "vortex";                 // burst / shot / lob / chain / beam 都要目标
     if(needTgt && !t.tgt) continue;                 // 射程内没人就不空转 CD
     if(!needTgt && !towerTarget(t, ef.range)) continue;
     t.cd = ef.cd;
@@ -2748,11 +2897,31 @@ function updateTowers(dt){
 function updateTShots(dt){
   for(var i = E.tshots.length - 1; i >= 0; i--){
     var s = E.tshots[i];
+    if(s.kind === "mine"){
+      /* 埋着不动，踩上去才炸（arm 是刚埋下去那一小段引信，免得贴脸自爆）*/
+      s.life -= dt; if(s.arm > 0) s.arm -= dt;
+      if(s.life <= 0){ E.tshots.splice(i, 1); continue; }
+      if(s.arm > 0) continue;
+      for(var mj = 0; mj < E.foes.length; mj++){
+        var mf = E.foes[mj];
+        if(mf.dead) continue;
+        if(Math.hypot(mf.x - s.x, mf.y - s.y) > mf.r + s.r) continue;
+        fxBoom(s.x, s.y, s.splash, s.col);
+        towerAoe(s.x, s.y, s.splash, s.dmg, null, 0, s.ef);
+        E.tshots.splice(i, 1);
+        break;
+      }
+      continue;
+    }
     if(s.kind === "lob"){
       s.t += dt;
       var k = Math.min(1, s.t / s.dur);
       s.x = s.x0 + (s.tx - s.x0) * k; s.y = s.y0 + (s.ty - s.y0) * k;
-      if(k >= 1){ towerAoe(s.tx, s.ty, s.splash, s.dmg, s.col, 0, s.ef); E.tshots.splice(i, 1); }
+      if(k >= 1){
+        fxBoom(s.tx, s.ty, s.splash, s.col);
+        towerAoe(s.tx, s.ty, s.splash, s.dmg, null, 0, s.ef);
+        E.tshots.splice(i, 1);
+      }
       continue;
     }
     s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
@@ -2765,7 +2934,8 @@ function updateTShots(dt){
       if(s.hit && s.hit.indexOf(f) >= 0) continue;
       if(Math.hypot(f.x - s.x, f.y - s.y) > f.r + s.r) continue;
       towerHurt(f, s.dmg, s.ef);
-      if(s.splash) towerAoe(s.x, s.y, s.splash, s.dmg, s.col, 0, s.ef);
+      fxSpark(s.x, s.y, s.col, 3);
+      if(s.splash){ fxBoom(s.x, s.y, s.splash, s.col); towerAoe(s.x, s.y, s.splash, s.dmg, null, 0, s.ef); }
       if(s.pierce){ s.hit.push(f); continue; }              // 穿过去，接着飞
       if(s.bounce > 0){                                     // 弹射：拐向下一个没打过的
         s.hit.push(f); s.bounce--;
@@ -2877,8 +3047,15 @@ function draw(){
       if(h % 7 === 0) ctx2.fillRect(sx(gx) + (h % 31), sy(gy) + (h % 23), 3, 3);
     }
 
+  /* ===== 部署阶段把「打起来的那一层」整个藏掉（用户 2026-09-22）=====
+     怪、Boss 预警、地面危险区、各种弹幕和打击特效在部署时一概不画 ——
+     摆塔的时候屏幕上只剩地板、营地和你自己，看得清阵型。
+     ⚠️ 这是**只改画面**：怪还在场上、状态一点没变（部署时 PAUSED，它们本来也不动）。
+     ⚠️ 别顺手把 E.foes 清了 —— 开战那一下场上该是什么样就得是什么样。 */
+  var fight = !DEPLOY;
+
   /* Boss 预警（画在地上） */
-  for(i = 0; i < E.foes.length; i++){
+  if(fight) for(i = 0; i < E.foes.length; i++){
     var b = E.foes[i]; if(b.dead || !b.boss || !b.cast) continue;
     ctx2.fillStyle = "rgba(169,55,41,.20)"; ctx2.strokeStyle = "rgba(169,55,41,.75)"; ctx2.lineWidth = 2;
     if(b.cast === "sweep"){
@@ -2916,7 +3093,7 @@ function draw(){
     }
   }
   /* 地面危险区（唤雷者的落雷 / 蚀空的尸块 / 祭司的火场）—— 画在最底下，贴着地板 */
-  for(i = 0; i < E.zones.length; i++){
+  if(fight) for(i = 0; i < E.zones.length; i++){
     var z = E.zones[i], zx = sx(z.x), zy = sy(z.y);
     if(zx < -padX || zx > cw + padX || zy < -padY || zy > ch + padY) continue;
     ctx2.strokeStyle = z.col; ctx2.fillStyle = z.col;
@@ -2955,7 +3132,7 @@ function draw(){
     ctx2.beginPath(); ctx2.arc(sx(dp.x), sy(dp.y), 5, 0, 6.2832); ctx2.fill(); ctx2.stroke(); }
 
   /* 怪 */
-  for(i = 0; i < E.foes.length; i++){
+  if(fight) for(i = 0; i < E.foes.length; i++){
     var f = E.foes[i]; if(f.dead) continue;
     var px = sx(f.x), py = sy(f.y), sz = f.r * 2.4;
     if(px < -padX || px > cw + padX || py < -padY || py > ch + padY) continue;
@@ -3028,7 +3205,7 @@ function draw(){
   }
 
   /* 破空的冲击波 */
-  for(i = 0; i < E.pwaves.length; i++){ var pw = E.pwaves[i];
+  if(fight) for(i = 0; i < E.pwaves.length; i++){ var pw = E.pwaves[i];
     ctx2.strokeStyle = "#245E8C"; ctx2.globalAlpha = Math.min(1, pw.life * 1.6); ctx2.lineWidth = 5;
     ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, 0, 6.2832); ctx2.stroke();
     ctx2.globalAlpha = 1; }
@@ -3047,9 +3224,24 @@ function draw(){
   }
 
   /* 塔的弹丸：直射是小方块，抛射是带影子的圆 */
-  for(i = 0; i < E.tshots.length; i++){
+  if(fight) for(i = 0; i < E.tshots.length; i++){
     var ts = E.tshots[i];
     ctx2.fillStyle = ts.col;
+    if(ts.kind === "mine"){
+      /* 埋在地上的刺：引信没走完时淡一点，看得出「还没生效」 */
+      ctx2.globalAlpha = ts.arm > 0 ? 0.45 : 0.9;
+      ctx2.strokeStyle = ts.col; ctx2.lineWidth = 2;
+      ctx2.beginPath();
+      for(var mk2 = 0; mk2 < 4; mk2++){
+        var ma2 = mk2 / 4 * 6.2832 + 0.4;
+        ctx2.moveTo(sx(ts.x), sy(ts.y));
+        ctx2.lineTo(sx(ts.x) + Math.cos(ma2) * 7, sy(ts.y) + Math.sin(ma2) * 7);
+      }
+      ctx2.stroke();
+      ctx2.beginPath(); ctx2.arc(sx(ts.x), sy(ts.y), 2.5, 0, 6.2832); ctx2.fill();
+      ctx2.globalAlpha = 1;
+      continue;
+    }
     if(ts.kind === "lob"){
       var kk = Math.min(1, ts.t / ts.dur), lift = Math.sin(kk * Math.PI) * 26;
       ctx2.globalAlpha = 0.18;
@@ -3061,7 +3253,7 @@ function draw(){
     }
   }
   /* 灼光塔的光束 */
-  for(i = 0; i < E.builds.length; i++){
+  if(fight) for(i = 0; i < E.builds.length; i++){
     var bt = E.builds[i];
     if(bt.k !== "tower" || !(bt.beamT > 0) || !bt.tgt || bt.tgt.dead) continue;
     ctx2.strokeStyle = TW_COL[bt.def.r]; ctx2.globalAlpha = 0.75; ctx2.lineWidth = 3;
@@ -3070,12 +3262,12 @@ function draw(){
   }
 
   /* 弹丸 */
-  for(i = 0; i < E.shots.length; i++){ var s2 = E.shots[i];
+  if(fight) for(i = 0; i < E.shots.length; i++){ var s2 = E.shots[i];
     ctx2.fillStyle = s2.col; ctx2.beginPath(); ctx2.arc(sx(s2.x), sy(s2.y), s2.r, 0, 6.2832); ctx2.fill();
     ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 1; ctx2.stroke(); }
 
   /* Boss 跑出取景框时，在屏幕边上画一个指向它的三角 */
-  if(E.boss && !E.boss.dead){
+  if(fight && E.boss && !E.boss.dead){
     var bx = sx(E.boss.x), by = sy(E.boss.y);
     if(bx < 10 || bx > cw - 10 || by < 10 || by > ch - 10){
       var ang = Math.atan2(E.boss.y - me.y, E.boss.x - me.x);
@@ -3100,8 +3292,12 @@ function draw(){
   var him = IMG.hero;
   if(him && him.complete) ctx2.drawImage(him, sx(me.x) - 15, sy(me.y) - 17, 30, 30);
 
-  /* 特效 */
-  drawFx();
+  /* 特效。⚠️ 部署阶段整段跳过（用户 2026-09-22 要「临时屏蔽所有怪物和特效」）——
+     E.fx 本身不清，开战那一下还剩下的会接着演完，反正都是 0.2~0.6 秒的东西。 */
+  if(fight) drawFx();
+  /* ⚠️ 不画的时候也得把过期的特效清掉 —— 清理本来是挂在 drawFx() 末尾的，
+     跳过它的话 E.fx 会一直涨（部署阶段是暂停的，涨不起来，但别把这条删了）。 */
+  else for(var fj = E.fx.length - 1; fj >= 0; fj--) if(E.fx[fj].t >= E.fx[fj].life) E.fx.splice(fj, 1);
   ctx2.restore();
 }
 /* 建筑：塔是「品质色的底 + 一个形状 + 星点」，一张新图都没加。
@@ -3237,6 +3433,27 @@ function drawTower(b, px, py){
       ctx2.moveTo(px - 3, py + 1); ctx2.lineTo(px + 3, py + 1); ctx2.stroke(); }
   else if(k === "vault"){ ctx2.rect(px - 8, py - 5, 16, 11); ctx2.stroke();
       ctx2.beginPath(); ctx2.arc(px, py + 0.5, 3, 0, 6.2832); ctx2.stroke(); }
+  else if(k === "fan"){ for(var fa = 0; fa < 3; fa++){ var fan = -0.5 + fa * 0.5;
+      ctx2.moveTo(px - 2, py + 7);
+      ctx2.lineTo(px - 2 + Math.cos(fan - 1.57) * 13, py + 7 + Math.sin(fan - 1.57) * 13); } ctx2.stroke(); }
+  else if(k === "tack"){ for(var ta = 0; ta < 4; ta++){ var tan = ta / 4 * 6.2832 + 0.4;
+      ctx2.moveTo(px, py); ctx2.lineTo(px + Math.cos(tan) * 9, py + Math.sin(tan) * 9); } ctx2.stroke();
+      ctx2.beginPath(); ctx2.arc(px, py, 2.4, 0, 6.2832); ctx2.fill(); }
+  else if(k === "scope"){ ctx2.arc(px, py, 7, 0, 6.2832); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px - 9, py); ctx2.lineTo(px + 9, py);
+      ctx2.moveTo(px, py - 9); ctx2.lineTo(px, py + 9); ctx2.stroke(); }
+  else if(k === "wedge"){ ctx2.moveTo(px - 6, py - 7); ctx2.lineTo(px + 2, py - 7);
+      ctx2.lineTo(px + 2, py + 8); ctx2.closePath(); ctx2.fill();
+      ctx2.beginPath(); ctx2.moveTo(px + 5, py - 6); ctx2.lineTo(px + 5, py + 6); ctx2.stroke(); }
+  else if(k === "flag"){ ctx2.moveTo(px - 5, py + 8); ctx2.lineTo(px - 5, py - 8); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px - 5, py - 8); ctx2.lineTo(px + 8, py - 5);
+      ctx2.lineTo(px + 4, py - 1); ctx2.lineTo(px + 8, py + 3); ctx2.lineTo(px - 5, py + 1);
+      ctx2.closePath(); ctx2.fill(); }
+  else if(k === "rail"){ ctx2.moveTo(px - 9, py + 5); ctx2.lineTo(px + 9, py - 5); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px - 4, py - 4); ctx2.lineTo(px + 4, py + 4); ctx2.stroke(); }
+  else if(k === "clock"){ ctx2.arc(px, py, 8, 0, 6.2832); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px, py); ctx2.lineTo(px, py - 5);
+      ctx2.moveTo(px, py); ctx2.lineTo(px + 4, py + 2); ctx2.stroke(); }
   else if(k === "grove"){ ctx2.moveTo(px - 1.6, py + 8); ctx2.lineTo(px - 1.6, py + 1);
       ctx2.lineTo(px + 1.6, py + 1); ctx2.lineTo(px + 1.6, py + 8); ctx2.closePath(); ctx2.fill();
       ctx2.beginPath(); ctx2.arc(px, py - 3, 6.5, 0, 6.2832); ctx2.stroke(); }
@@ -3276,6 +3493,51 @@ function fxRing(x, y, r, col){ if(!REDUCE_MOTION) E.fx.push({k:"r", x:x, y:y, r:
 function fxBolt(x1, y1, x2, y2){
   if(!REDUCE_MOTION) E.fx.push({k:"b", x:x1, y:y1, x2:x2, y2:y2, t:0, life:0.16});
 }
+/* ===== 塔的打击特效（用户 2026-09-22：「只有圆圈波很单调」）=====
+   ⚠️ 一律**只用线、点、扇形和一次性的实心圆**，别往里加渐变、粒子系统、多段动画 ——
+      用户原话「不要太复杂华丽的」，而且一波几十只怪，每一发都画复杂图形会直接掉帧。
+   ⚠️ 全部走 E.fx，`REDUCE_MOTION` 开着就整段跳过；它们是纯装饰，一个字的逻辑都不许写在这儿。 */
+function fxLine(x1, y1, x2, y2, col, w){          // 直射的曳光
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"ln", x:x1, y:y1, x2:x2, y2:y2, col:col, w:w || 2, t:0, life:0.16});
+}
+function fxSpark(x, y, col, n){                    // 命中处甩几根短线
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"sk", x:x, y:y, col:col, n:n || 4, a:Math.random() * 6.28, t:0, life:0.24});
+}
+function fxBoom(x, y, r, col){                     // 炸开：一圈实心往外推
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"bm", x:x, y:y, r:r, col:col, t:0, life:0.28});
+}
+function fxDash(x, y, r, col){                     // 虚线圈（光环触发那一下，比实心圈轻得多）
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"ds", x:x, y:y, r:r, col:col, t:0, life:0.4});
+}
+function fxPlus(x, y, col){                        // 回血的十字，往上飘
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"pl", x:x, y:y, col:col, t:0, life:0.6});
+}
+function fxCoin(x, y){                             // 进账的小金币
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"co", x:x, y:y, col:"#E3B23C", t:0, life:0.5});
+}
+function fxPillar(x, y, col){                      // 雷击：从画面上方劈下来的折线
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"pi", x:x, y:y, col:col, t:0, life:0.26});
+}
+function fxSwirl(x, y, r, col){                    // 漩涡：一段螺线
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"sr", x:x, y:y, r:r, col:col, a:Math.random() * 6.28, t:0, life:0.45});
+}
+function fxPull(x, y, r, col){                     // 牵引：一圈朝里收的短线
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"pu", x:x, y:y, r:r, col:col, t:0, life:0.35});
+}
+function fxBracket(x, y, r, col){                  // 标记：四个角的小折角
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"bk", x:x, y:y, r:r, col:col, t:0, life:0.5});
+}
+function fxCone(x, y, dir, arc, range, col){ fxArc(x, y, dir, range, arc, col); }
 function fxArc(x, y, dir, range, arc, col){
   if(!REDUCE_MOTION) E.fx.push({k:"a", x:x, y:y, dir:dir, range:range, arc:arc, col:col, t:0, life:0.3}); }
 function drawFx(){
@@ -3328,6 +3590,75 @@ function drawFx(){
       var ha2 = f.arc * Math.PI / 360;
       ctx2.fillStyle = f.col; ctx2.beginPath(); ctx2.moveTo(sx(f.x), sy(f.y));
       ctx2.arc(sx(f.x), sy(f.y), f.range, f.dir - ha2, f.dir + ha2); ctx2.closePath(); ctx2.fill();
+    } else if(f.k === "ln"){                       // 曳光
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = f.w; ctx2.lineCap = "round";
+      ctx2.beginPath(); ctx2.moveTo(sx(f.x), sy(f.y)); ctx2.lineTo(sx(f.x2), sy(f.y2)); ctx2.stroke();
+    } else if(f.k === "sk"){                       // 命中的火星
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 2; ctx2.lineCap = "round";
+      ctx2.beginPath();
+      for(var sk = 0; sk < f.n; sk++){
+        var sa = f.a + sk / f.n * 6.2832, r0 = 4 + (1 - k) * 8, r1 = r0 + 6;
+        ctx2.moveTo(sx(f.x) + Math.cos(sa) * r0, sy(f.y) + Math.sin(sa) * r0);
+        ctx2.lineTo(sx(f.x) + Math.cos(sa) * r1, sy(f.y) + Math.sin(sa) * r1);
+      }
+      ctx2.stroke();
+    } else if(f.k === "bm"){                       // 炸开
+      var br = f.r * (0.45 + 0.55 * (1 - k));
+      ctx2.fillStyle = f.col; ctx2.globalAlpha = Math.max(0, k) * 0.35;
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), br, 0, 6.2832); ctx2.fill();
+      ctx2.globalAlpha = Math.max(0, k); ctx2.strokeStyle = f.col; ctx2.lineWidth = 2.5;
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), br, 0, 6.2832); ctx2.stroke();
+    } else if(f.k === "ds"){                       // 虚线圈
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 2; ctx2.setLineDash([6, 8]);
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.r, 0, 6.2832); ctx2.stroke();
+      ctx2.setLineDash([]);
+    } else if(f.k === "pl"){                       // 回血的十字
+      var py2 = sy(f.y) - f.t * 34;
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 3; ctx2.lineCap = "round";
+      ctx2.beginPath();
+      ctx2.moveTo(sx(f.x) - 5, py2); ctx2.lineTo(sx(f.x) + 5, py2);
+      ctx2.moveTo(sx(f.x), py2 - 5); ctx2.lineTo(sx(f.x), py2 + 5);
+      ctx2.stroke();
+    } else if(f.k === "co"){                       // 金币
+      var cy2 = sy(f.y) - f.t * 40;
+      ctx2.fillStyle = f.col; ctx2.strokeStyle = "#8A5F0C"; ctx2.lineWidth = 1;
+      ctx2.beginPath(); ctx2.ellipse(sx(f.x), cy2, 3.5, 5, 0, 0, 6.2832); ctx2.fill(); ctx2.stroke();
+    } else if(f.k === "pi"){                       // 雷柱
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 3; ctx2.lineCap = "round";
+      ctx2.beginPath();
+      var pxx = sx(f.x), pyy = sy(f.y);
+      ctx2.moveTo(pxx, pyy - 150);
+      ctx2.lineTo(pxx - 7, pyy - 95); ctx2.lineTo(pxx + 6, pyy - 52);
+      ctx2.lineTo(pxx - 4, pyy - 20); ctx2.lineTo(pxx, pyy);
+      ctx2.stroke();
+    } else if(f.k === "sr"){                       // 漩涡的螺线
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 2;
+      ctx2.beginPath();
+      for(var sv = 0; sv <= 26; sv++){
+        var sa2 = f.a + sv * 0.36 + f.t * 6, rr2 = f.r * (1 - sv / 26) * (0.5 + 0.5 * k);
+        var vx = sx(f.x) + Math.cos(sa2) * rr2, vy = sy(f.y) + Math.sin(sa2) * rr2;
+        if(sv === 0) ctx2.moveTo(vx, vy); else ctx2.lineTo(vx, vy);
+      }
+      ctx2.stroke();
+    } else if(f.k === "pu"){                       // 牵引：朝里收的短线
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 2.5; ctx2.lineCap = "round";
+      ctx2.beginPath();
+      for(var pu = 0; pu < 8; pu++){
+        var pa2 = pu / 8 * 6.2832, ro = f.r * (0.55 + 0.45 * k);
+        ctx2.moveTo(sx(f.x) + Math.cos(pa2) * ro, sy(f.y) + Math.sin(pa2) * ro);
+        ctx2.lineTo(sx(f.x) + Math.cos(pa2) * (ro - 16), sy(f.y) + Math.sin(pa2) * (ro - 16));
+      }
+      ctx2.stroke();
+    } else if(f.k === "bk"){                       // 标记的四个折角
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 2;
+      var bq = f.r + 4 - (1 - k) * 4;
+      ctx2.beginPath();
+      for(var bi = 0; bi < 4; bi++){
+        var dxb = bi < 2 ? -1 : 1, dyb = bi % 2 === 0 ? -1 : 1;
+        var cx2 = sx(f.x) + dxb * bq, cy3 = sy(f.y) + dyb * bq;
+        ctx2.moveTo(cx2 - dxb * 5, cy3); ctx2.lineTo(cx2, cy3); ctx2.lineTo(cx2, cy3 - dyb * 5);
+      }
+      ctx2.stroke();
     }
     ctx2.globalAlpha = 1;
   }
@@ -3567,17 +3898,10 @@ function nextWave(){
   var cyc = Math.floor((w - 1) / BF.site.chest.every);
   if(cyc !== P.chestCycle){ P.chestCycle = cyc; P.chestN = 0; }
   newWave(w);
-  /* 第 40 波是终点（用户 2026-09-22）：踏进第 41 波的那一下**当场把「这一层通了」写进存档** ——
-     不写的话「打过 40 波但没死就关了页面」会白打一趟，下一层永远解锁不了。
-     ⚠️ 一整趟只写这一次（w 正好等于 lateFrom+1），别改成每波都写。 */
-  if(w === BF.lateFrom + 1){
-    var mm = bfMeta();
-    mm.tb = mm.tb || {};
-    mm.tb[TIER.id] = Math.max(mm.tb[TIER.id] || 0, w);
-    mm.best = Math.max(mm.best || 0, w);
-    bfSave(mm);
-    fxText("通关 · 往后是混战", "#E3B23C");
-  }
+  if(w === BF.lateFrom + 1) fxText("通关 · 往后是混战", "#E3B23C");
+  /* ⚠️ **每一波存一次档**（用户 2026-09-22）：存的是「刚进这一波」的样子。
+     部署波下面那句 openDeploy() 还会**再存一次**（发完钱、摇完货架之后），后面那一次说了算。 */
+  saveWave(false);
   if(isBossWave(w)) startBoss(w);
   /* 每 BF.deploy.every 波一次部署阶段（用户 2026-09-22）。
      ⚠️ 部署波（w%5===1）和 Boss 波（w%10===0）永远撞不上，不用兜。 */
@@ -4045,6 +4369,82 @@ var BF_KEY = "youxu.bf.v1";
 function bfMeta(){ return load(BF_KEY, {best:0, kills:0, runs:0, tb:{}}); }
 function bfSave(m){ if(!save(BF_KEY, m) && window.showErr) showErr("存档写不进去"); }
 
+/* ================================================================
+   每一波存一次档（用户 2026-09-22：「战场每一波进行一次存档」）
+   ⚠️ **没有开新的 localStorage 键** —— 整份塞在 youxu.bf.v1 的 `run` 字段里，
+      所以 game.js 那边的 snapshot / overwriteAll / mergeData 自动带上它（mergeData 里单写了一条）。
+   ⚠️ 存的是「**刚进这一波**的样子」（跟地牢续玩档同一个口径）：
+      这一波打的怪、捡的金币、升的级都不算数，读档退回本波开头。
+   ⚠️ **场上的怪一只都不存** —— 波是定时刷的，读档重刷一遍就行。
+   ⚠️ 存档点只有两个：`nextWave()`（进新一波）和 `closeDeploy()`（摆完塔开战）。
+      别再往别处加，尤其别每帧存。
+   ================================================================ */
+var BFRUN_V = 1;
+function bfBuildRow(b){
+  return {k:b.k, tid:b.tid, star:b.star, x:Math.round(b.x), y:Math.round(b.y),
+          used:!!b.used, stock:b.stock || null};
+}
+function saveWave(needDeploy){
+  if(!P || OVER) return;
+  var m = bfMeta(), i;
+  /* 记录顺手一起写：这样「打到很深但没死就关了页面」也不会白打一趟 */
+  m.best = Math.max(m.best || 0, P.wave);
+  m.tb = m.tb || {};
+  m.tb[TIER.id] = Math.max(m.tb[TIER.id] || 0, P.wave);
+  var bs = [];
+  for(i = 0; i < E.builds.length; i++) bs.push(bfBuildRow(E.builds[i]));
+  m.run = {v:BFRUN_V, tier:TIER.id, wave:P.wave, nd:!!needDeploy,
+           p:P, me:{x:Math.round(E.me.x), y:Math.round(E.me.y)}, builds:bs,
+           shop: needDeploy ? shopCards.slice() : null};
+  bfSave(m);
+}
+function savedRun(){
+  var m = bfMeta(), r = m.run;
+  return (r && r.v === BFRUN_V && r.p && r.wave) ? r : null;
+}
+function clearSavedRun(){
+  var m = bfMeta();
+  if(m.run){ m.run = null; bfSave(m); }
+}
+/* 读档：先用 newRun() 把骨架搭好，再把存下来的那一份换进去。
+   ⚠️ 塔一律用 mkTower() 重建 —— 存档里只有「哪座塔、几星、在哪儿」，
+      def 和一堆运行时字段（cd / warn / tgt…）都得是新的。 */
+function resumeSaved(r){
+  var i, t = BF_TIERS[0];
+  for(i = 0; i < BF_TIERS.length; i++) if(BF_TIERS[i].id === r.tier) t = BF_TIERS[i];
+  TIER = t;
+  newRun();
+  P = r.p;
+  /* 老档兜底：删掉的遗物 / 塔不认，新加的塔给它补上牌库（跟地牢 resumeRun 一个规矩）*/
+  P.relics = (P.relics || []).filter(function(id){ return !!RMAP[id]; });
+  P.special = (P.special || []).filter(function(id){ return !!spDef(id); });
+  P.bench = (P.bench || []).filter(function(c){ return c.k !== "tower" || !!TW_MAP[c.tid]; });
+  reindex();
+  P.sset = {};
+  for(i = 0; i < P.special.length; i++) P.sset[P.special[i]] = 1;
+  if(!P.pool) P.pool = {};
+  for(i = 0; i < BF_TOWERS.length; i++)
+    if(P.pool[BF_TOWERS[i].id] === undefined) P.pool[BF_TOWERS[i].id] = TW_COPIES[BF_TOWERS[i].r];
+  E.me.x = r.me.x; E.me.y = r.me.y; CAM.x = E.me.x; CAM.y = E.me.y;
+  E.builds = [];
+  for(i = 0; i < (r.builds || []).length; i++){
+    var b = r.builds[i];
+    if(b.k === "tower"){
+      if(!TW_MAP[b.tid]) continue;
+      E.builds.push(mkTower(b.tid, b.star, b.x, b.y));
+    } else if(b.k === "spring") E.builds.push({k:"spring", x:b.x, y:b.y, t:0, used:!!b.used});
+    else if(b.k === "shop")     E.builds.push({k:"shop", x:b.x, y:b.y, t:0, cool:0, stock:b.stock || null});
+  }
+  newWave(r.wave, true);                 // quiet：进波的遗物上次已经发过了，别重发
+  P.wave = r.wave;
+  P.hp = Math.max(1, Math.min(P.hp || 1, bstats().maxHp));
+  OVER = false; pendPicks = 0; pendSpecial = 0;
+  if(isBossWave(r.wave)) startBoss(r.wave);
+  /* 存在部署阶段里的档：货架原样摆回去，**不再发一遍钱**（openDeploy 的 resume 分支）*/
+  if(r.nd){ shopCards = (r.shop || []).slice(); openDeploy(true); }
+  else { PAUSED = false; last = 0; }
+}
+
 function endRun(){
   if(OVER) return;
   OVER = true; PAUSED = true;
@@ -4053,6 +4453,7 @@ function endRun(){
   m.best = Math.max(m.best || 0, P.wave);
   m.tb = m.tb || {};
   m.tb[TIER.id] = Math.max(m.tb[TIER.id] || 0, P.wave);       // 这一层自己的最深波数（解锁下一层用）
+  m.run = null;                                               // 倒下了，这一趟的档就没了
   m.kills = (m.kills || 0) + P.kills;
   m.runs = (m.runs || 0) + 1;
   bfSave(m);
@@ -4094,6 +4495,12 @@ function renderTiers(){
          ' · 密度 ×' + t.rate.toFixed(2) + '）</p></button>';
   }
   $("tierList").innerHTML = h;
+  /* 有没有没走完的那一趟（每一波存一次档）—— 有就露出「继续」*/
+  var sr = savedRun(), rb = $("btnResume");
+  if(rb){
+    rb.hidden = !sr;
+    if(sr) rb.textContent = "继续 · 第 " + sr.wave + " 波";
+  }
   $("veilStart").querySelector(".sub").textContent =
     "走位躲怪，刀会自己挥。每升两级从四件遗物里挑一件。第 " + BF.lateFrom +
     " 波是终点，往后是 1–" + BF.lateFrom + " 波的怪混着出。" +
@@ -4117,9 +4524,16 @@ function boot(){
     TIER = BF_TIERS[+b.dataset.i]; renderTiers();
   });
   $("btnGo").addEventListener("click", function(){
+    clearSavedRun();                       // 重开一趟：把上一趟没走完的档丢掉
     newRun(); pendPicks = 0; pendSpecial = 0;
     $("veilStart").classList.remove("on"); last = 0;
-    openDeploy();                          // 用户：**开始游戏时也进入一次部署阶段**
+    openDeploy();                          // 用户：**开始游戏时也进入一次部署阶段**（它自己会存一次档）
+  });
+  $("btnResume").addEventListener("click", function(){
+    var r = savedRun();
+    if(!r) return;
+    $("veilStart").classList.remove("on"); last = 0;
+    resumeSaved(r);
   });
 
   /* ---- 部署面板 ---- */
