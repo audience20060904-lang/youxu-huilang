@@ -36,7 +36,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 #hGold{color:var(--torch)}
 #hKill::before{content:"⚔ "}
 #hTime{font-variant-numeric:tabular-nums}
+/* ⚠️ 血条和经验条 2026-09-22 **互换了位置**（用户要求）：血条在顶栏、经验条在底部。
+   两个类都没改样子，只是挂的地方换了，所以这儿各补一条位置微调。 */
 .xpbar{height:6px;margin-top:4px;border-radius:3px;background:var(--stone-3);overflow:hidden}
+.hud .hpbar{margin-top:5px}
+.foot .xpbar{height:8px;margin-top:0;border-radius:4px;border:1px solid var(--edge)}
 .xpbar i{display:block;height:100%;width:0;background:var(--coin);transition:width .12s linear}
 
 /* Boss 血条：Boss 会跑出取景框，没有这条就完全不知道打到哪儿了 */
@@ -47,7 +51,7 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .bossbar b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--disp);
            font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
 
-/* ===== 底部血条 ===== */
+/* ===== 底部：经验条 + 按钮 ===== */
 .foot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:0 10px 10px;pointer-events:none}
 .hpbar{position:relative;height:18px;border-radius:9px;background:var(--stone-3);
        border:1px solid var(--edge);overflow:hidden}
@@ -186,6 +190,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .tw i{font-size:10.5px;font-style:normal;color:var(--faint);margin-left:6px}
 .tw p{margin:2px 0 0;font-size:11.5px;color:var(--dim);line-height:1.45;padding-right:48px}
 .tw .tcost{position:absolute;right:9px;top:7px;font-size:12px;color:var(--torch)}
+/* 升星那两行（用户 2026-09-22：升星给的是效果不是数值，所以卡面上必须写清楚）。
+   没点亮的淡一档，点亮的用金色 —— 别改成一段长 note，一座塔就这两行。 */
+.tw em{display:block;font-style:normal;font-size:10.5px;line-height:1.5;color:var(--faint);
+       padding-right:48px}
+.tw em.on{color:var(--coin)}
 .tw.dim{opacity:.42}
 .tw.gone{border:1px dashed var(--edge-soft);border-radius:9px;padding:9px;
          font-size:11.5px;color:var(--faint);text-align:center;background:none}
