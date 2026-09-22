@@ -25,7 +25,10 @@
 金币是纯局内货币，去处是**击杀掉落的泉 / 游商 / 石箱** —— 泉免费不弹窗，商和箱花钱且弹窗。
 ⚠️ **「每 5 波一次的整备点」2026-09-22 已经整块删了，别加回来。**
 
-- 入口：主城「战场」按钮 → `battle.html`（`index.html` 只多了那一个 `<a>`）。
+- 入口：主城「战场」按钮 → `battle.html`（`index.html` 只多了那一个 `<a>`），
+  另外**图鉴里多了一页「战场遗物」**（同一批 209 件，词条换成战场里的说法）。
+- ⚠️ 战场的文案替换表（`BFW` / `BFW_RE` / `bfWord()`）**住在 `content.js` 末尾**，
+  不在 `battle.js` 里 —— 主城图鉴要用它，而 `index.html` 不加载 `battle.js`。
 - ⚠️ **`game.js` 只改了三处**（`snapshot()` / `overwriteAll()` / `mergeData()` 带上新键 `youxu.bf.v1`），
   地牢的玩法逻辑**一个字都没动** —— 战场炸了也影响不到地牢。
 - ⚠️ **全部细节在 `战场模式.md` 里**（数值、映射表、Boss 技能、待办）。
@@ -73,7 +76,7 @@
 | `style.css` | 全部样式，颜色变量在 `:root` |
 | `util.js` | 全局小工具（随机、localStorage 存档、语音朗读），必须最先加载 |
 | `words-a1.js` | 词库 6925 词（A1 460 / A2 465 / B1 2000 / B2 2000 / **B2–C1 2000**）+ 类别名 `CAT_CN`、词性名 `POS_CN` + 派生索引 `WMAP` / `BYCAT` / `BYPOS` / `BYLV`（**`BYLV` 现在有 1~5 五个桶**，加难度就得给它加桶）。文件名是历史遗留，**装的是全部五档**。这个仓库里**只有它是 CRLF 换行**，重新生成时别改成 LF |
-| `content.js` | 数值配置：共用数值 `CHAPTER`、各章 `CHAPTERS`、结算 `SCORE`、怪物 `FOES`、遗物 `RELICS`。**调平衡只改这个文件** |
+| `content.js` | 数值配置：共用数值 `CHAPTER`、各章 `CHAPTERS`、结算 `SCORE`、怪物 `FOES`、遗物 `RELICS`。**调平衡只改这个文件**。末尾还有**战场模式的文案替换表** `BFW` / `BFW_RE` / `bfWord()`（两边都要用，见「战场模式」那一节）|
 | `art.js` | SVG 美术（怪物立绘 `ART`、主角 `HERO`、泉 `SPRING`、商 `SHOP`、金币 `COIN`、粒子碎屑），主体用 `currentColor`，颜色交给 CSS（金币走 `--coin`，不是 `--torch`）|
 | `game.js` | 全部游戏逻辑，约 4300 行（含联机 COOP 分支，见下面三行和 `联机方案.md`） |
 | `coop.html` | **联机入口**（2026-09 加，第一期）。跟 `index.html` 结构一样，多了进房间的弹层和队友状态条，在 `game.js` 之前设 `window.__COOP = true`。**`index.html` 一个字没改**，单人版零风险 |

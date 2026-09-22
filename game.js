@@ -4736,10 +4736,37 @@ function openCodex(tab){
     b.classList.toggle("on", b.dataset.tab === cTab);
   });
   const M = meta();
-  $("codexTally").innerHTML = "最深 <b>第 " + M.best + " 层</b>　通关 <b>" + M.clears + "</b> 次　探索 <b>" + M.runs + "</b> 次";
+  if(cTab === "bf"){
+    const BM = load(BF_KEY, {best:0, kills:0, runs:0});
+    $("codexTally").innerHTML = "最深 <b>第 " + (BM.best||0) + " 波</b>　击杀 <b>" + (BM.kills||0) +
+      "</b>　下场 <b>" + (BM.runs||0) + "</b> 次";
+  } else {
+    $("codexTally").innerHTML = "最深 <b>第 " + M.best + " 层</b>　通关 <b>" + M.clears + "</b> 次　探索 <b>" + M.runs + "</b> 次";
+  }
   const box = $("codexList");
   box.innerHTML = "";
-  if(cTab === "leg"){
+  if(cTab === "bf"){
+    /* 战场遗物：**同一批 209 件**，只是把词条换成战场里的说法（content.js 的 bfWord）。
+       战场模式不写 CODEX，所以这一页没有「拿过几次」—— 别去蹭地牢那份计数，会看混。*/
+    $("codexTitle").textContent = "战场遗物";
+    const q = codexFind();
+    RELICS.map(function(R, i){ return {r:R, i:i}; })
+      .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
+      .map(function(x){ return x.r; })
+      .filter(function(R){
+        if(!q) return true;
+        return (R.n + bfWord(R) + R.lore + (RAR_CN[R.r||0] || "")).toLowerCase().indexOf(q) >= 0;
+      })
+      .forEach(function(R){
+        const d = document.createElement("div");
+        d.className = "cx found";
+        d.innerHTML =
+          "<div class=\"cn\">" + R.n + "</div>" +
+          "<div class=\"cd\" style=\"color:var(--q" + (R.r||0) + ")\">" + RAR_CN[R.r||0] + " · " + bfWord(R) + "</div>" +
+          "<div class=\"cd\" style=\"font-family:var(--flavor);font-style:italic\">" + R.lore + "</div>";
+        box.appendChild(d);
+      });
+  } else if(cTab === "leg"){
     const book = CODEX;
     $("codexTitle").textContent = "遗物 " + Object.keys(book).length + " / " + RELICS.length;
     /* 图鉴**默认全解锁**：名字、效果、铭文一律直接给，没拿过的只是没有计数。
