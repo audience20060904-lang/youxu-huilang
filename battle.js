@@ -16,8 +16,8 @@ var BF = {
 
   waveSec: 30,          // 每波多少秒
   bossEvery: 10,        // 每几波一个 Boss
-  campEvery: 5,         // 每几波一个整备点
   pickN: 4,             // 升级几选一
+  rerollN: 1,           // 每次升级能「换一批」几次（遗物「集齐」再 +1）
   relicMax: 15,
   cutMax: 75,           // 常驻减伤封顶 %
   touchCd: 0.65,        // 同一只怪的接触伤害冷却（秒）
@@ -31,7 +31,27 @@ var BF = {
   bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
   xpNeed: function(lv){ return 8 + 6 * (lv - 1); },
   spawnPad: 60,         // 在相机外这么远的一圈上刷怪
-  shieldSeedScale: 1    // 护盾类种子的统一缩放（留给调平衡）
+  shieldSeedScale: 1,   // 护盾类种子的统一缩放（留给调平衡）
+
+  /* ===== 击杀掉落的互动点（用户 2026-09-22）=====
+     「整备点」那套每 5 波强制暂停的弹层已经整块删掉了，别加回来 ——
+     商 / 泉 / 箱现在全部从击杀里掉，什么时候能补给变成运气和击杀效率的回报。
+     ⚠️ p 是**每击杀一只**的概率，一波杀 30~50 只 → 合起来一波期望 ~1 个。
+     ⚠️ 精英和 Boss 另算（eliteRate / Boss 必掉），走的是同一个 dropSite()。 */
+  site: {
+    spring: {p:0.020, heal:0.25},           // 泉：踩上去直接回 25% 最大生命，免费、不弹窗
+    chest:  {p:0.014, pick:2},              // 箱：花钱撬开，里面两件挑一件
+    shop:   {p:0.011, n:3, reroll:1},       // 商：3 件货，能刷新一次
+    eliteRate: 0.25,                        // 精英倒下时额外掷一次（三种等概率）
+    max: 6,                                 // 场上最多几个 —— 超了就删离玩家最远的那个
+    r: 22,                                  // 踩上去的判定半径
+    /* ⚠️ **每波保底一个**：一整波一个都没掉的话，进下一波时在玩家边上补一个。
+       实测早期一波只杀 20 只（4.5% × 20 = 0.9 个），不兜底的话前几波经常一个商都见不到，
+       而整备点已经删了 —— 金币就彻底没处花了。权重偏向商，因为它是唯一的花钱口。 */
+    pity: {shop:5, chest:3, spring:2}
+  },
+  chestCost: function(w){ return 80 + 30 * w; },
+  shopReroll: 1
 };
 
 /* 波次三旋钮（设计文档第三节）。Boss 波不走这套。 */
@@ -184,10 +204,10 @@ function newRun(){
        kills:0, spent:0, bought:0, time:0, wave:1,
        killStreak:0, revived:0, shieldBroken:0, recoil:0, charge:0, chew:0, rend:0,
        bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
-       primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false, campN:0};
+       primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false};
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
-  E = {foes:[], shots:[], drops:[], fx:[], boss:null};
+  E = {foes:[], shots:[], drops:[], sites:[], fx:[], boss:null};
   E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0};
   CAM.x = 0; CAM.y = 0;
   P.hp = bstats().maxHp;
@@ -199,7 +219,7 @@ function newWave(w, quiet){
   var prevHurt = G ? G.hurt : true;
   G = {w:w, t:0, spawnAcc:0, echoUsed:false, reciteFree:0, holdUsed:0, corrodeArmor:0,
        openLeft:5, glassCut:0, aspdCut:0, dice:0, borrowUsed:false, braceUsed:false,
-       burlapUsed:false, warmthUsed:false, rerollUsed:0, nerveN:0, reboundUsed:false,
+       burlapUsed:false, warmthUsed:false, nerveN:0, reboundUsed:false,
        tickN:0, longN:0, exorN:0, calmsN:0, stepArmor:0, fastRun:0, instantReady:false,
        wholeUsed:false, needleN:0, ropeN:0, capN:0, critShN:0, songN:0, bladeN:0,
        glyphArmor:0, healed:0, lastPct:0, greetN:0, shatterN:0, shatterFree:0, whim:0,
@@ -764,6 +784,7 @@ function killFoe(f){
   gainXp(f.xp);
   dropGold(f.x, f.y, f.gold);
   fxPop(f.x, f.y, f.col);
+  maybeSite(f);
   if(f.boss) onBossDown(f);
 }
 
@@ -1020,6 +1041,10 @@ function buildArt(){
   IMG.boss = mkImg(MOB_ART[BF_BOSS.warden.art], BF_BOSS.warden.col);
   IMG.bossRage = mkImg(MOB_ART[BF_BOSS.warden.art], "#D8412F");
   IMG.hero = mkImg(HERO, "#245E8C");
+  /* 击杀掉落的互动点：art.js 里现成的三张图，一张新的都没画 */
+  IMG.spring = mkImg(SPRING, "#266F7B");
+  IMG.shop   = mkImg(SHOP,   "#9C6A10");
+  IMG.chest  = mkImg(CHEST,  "#8A6A3A");
 }
 
 /* ================================================================
@@ -1067,6 +1092,21 @@ function draw(){
       ctx2.fill(); ctx2.stroke();
     }
   }
+  /* 互动点：泉 / 商 / 箱。脚下画一圈淡光圈，远远就能看见 */
+  for(i = 0; i < E.sites.length; i++){
+    var t = E.sites[i], tx2 = sx(t.x), ty2 = sy(t.y);
+    if(tx2 < -60 || tx2 > cw + 60 || ty2 < -60 || ty2 > ch + 60) continue;
+    var tc = t.kind === "spring" ? "#266F7B" : t.kind === "shop" ? "#9C6A10" : "#8A6A3A";
+    var dim = t.cool > 0 ? 0.35 : 1;                 // 冷却中的画淡一点
+    ctx2.strokeStyle = tc; ctx2.globalAlpha = (0.30 + 0.16 * Math.sin(t.t * 2.6)) * dim; ctx2.lineWidth = 2.5;
+    ctx2.beginPath(); ctx2.arc(tx2, ty2, BF.site.r + 6, 0, 6.2832); ctx2.stroke();
+    ctx2.globalAlpha = 1;
+    var tim = IMG[t.kind];
+    ctx2.globalAlpha = dim;
+    if(tim && tim.complete && tim.naturalWidth) ctx2.drawImage(tim, tx2 - 21, ty2 - 23, 42, 42);
+    ctx2.globalAlpha = 1;
+  }
+
   /* 掉落 */
   ctx2.fillStyle = "#E3B23C"; ctx2.strokeStyle = "#8A5F0C"; ctx2.lineWidth = 1;
   for(i = 0; i < E.drops.length; i++){ var dp = E.drops[i];
@@ -1239,7 +1279,7 @@ function step(dt){
   me.swingCd -= dt;
   if(me.swingCd <= 0){ me.swingCd += 1 / s.aspd; swing(); }
 
-  spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt);
+  spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt); updateSites(dt);
   for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
 
@@ -1249,9 +1289,9 @@ function step(dt){
 function nextWave(){
   var w = P.wave + 1;
   P.wrong2 = P.wrong1; P.wrong1 = G.wrongN; P.brokeLast = G.broke;   // 循迹 / 惜盾看的是上一波
+  if(!G.siteN) pitySite();                                           // 这一波一个互动点都没掉 → 补一个
   newWave(w);
   if(isBossWave(w)) startBoss(w);
-  if((w - 1) % BF.campEvery === 0) openCamp();
 }
 function startBoss(w){
   E.foes.length = 0; E.shots.length = 0;
@@ -1353,14 +1393,21 @@ function rollRelics(n, w){
 }
 
 /* ---- 升级四选一 ---- */
-var pendPicks = 0, pickOffer = [];
+var pendPicks = 0, pickOffer = [], rerollLeft = 0;
+/* ⚠️ 「换一批」是**每次升级重新给**的基础功能（BF.rerollN，遗物「集齐」再 +1），
+   不是以前那种「每波一次」—— 别改回去。 */
 function openPick(){
   if(pendPicks <= 0){ hide("veilPick"); return; }
+  rerollLeft = BF.rerollN + (has("fullset") ? 1 : 0);
+  rollPick();
+}
+function rollPick(){
   pickOffer = rollRelics(BF.pickN, P.wave);
   if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
   $("pickTitle").textContent = "升到 " + P.lvl + " 级" + (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
   fillCards("pickList", pickOffer);
-  $("btnRedraw").hidden = !(has("fullset") && G.rerollUsed < 1);
+  $("btnRedraw").hidden = rerollLeft <= 0;
+  $("btnRedraw").textContent = rerollLeft > 1 ? "换一批（还剩 " + rerollLeft + " 次）" : "换一批";
   show("veilPick");
 }
 function takePick(id){
@@ -1421,49 +1468,37 @@ function openBag(){
     st2("攻速", s.aspd.toFixed(2) + " 刀/秒") + st2("刀程", Math.round(s.range)) +
     st2("连击", P.combo + "（+" + comboPct(s) + "%）") + st2("护盾", Math.round(P.shield));
   fillCards("bagList", P.relics.map(function(x){ return RMAP[x]; }),
-            function(r){ return '<span class="cost">分解 +' + sellPrice(r) + '</span>'; });
+            function(r){
+              if(fuseMode) return "";
+              return r.id === sellArmed
+                ? '<span class="cost">再点一下 · 分解 +' + sellPrice(r) + '</span>'
+                : '<span class="cost">分解 +' + sellPrice(r) + '</span>';
+            },
+            function(r){
+              if(fuseSel.indexOf(r.id) >= 0) return "sel";
+              if(!fuseMode && r.id === sellArmed) return "sel";
+              return fuseMode && r.r >= 4 ? "dim" : "";
+            });
+  renderFuse();
   show("veilBag");
 }
 function st2(k, v){ return '<div><span>' + k + '</span><b>' + v + '</b></div>'; }
 
-/* ---- 整备点：商店 + 合成 + 补给 ---- */
-var shopRow = [], shopRe = 0, fuseMode = false, fuseSel = [];
-function shopMarkup(r){ return (r.r >= 2 ? 1.3 * 1.8 : 1.3); }
-function rollShop(){
-  var n = 5 + (has("key") ? 1 : 0);
-  shopRow = rollRelics(n, P.wave + 4).map(function(r){
-    return {id:r.id, price: Math.ceil(sellPrice(r) * shopMarkup(r)), sold:false};
+/* 分解是**两步确认**的（第一下只是亮起来，第二下才真卖）——
+   遗物卡上本来就写着「分解 +N」，点了没反应更糟；一步到位又太容易误触。 */
+var sellArmed = null;
+function sellRelic(id){
+  if(sellArmed !== id){ sellArmed = id; openBag(); return; }
+  sellArmed = null;
+  withMaxHp(function(){
+    var i = P.relics.indexOf(id);
+    if(i >= 0){ addGold(sellPrice(RMAP[id])); P.relics.splice(i, 1); reindex(); }
   });
+  openBag();
 }
-function shopPrice(row){ return Math.ceil(row.price * (has("regular") ? 0.85 : 1)); }
-function openCamp(){
-  P.campN++;
-  shopRe = 1 + (has("key") ? 1 : 0);
-  rollShop(); fuseMode = false; fuseSel = [];
-  renderCamp(); show("veilCamp");
-}
-function renderCamp(){
-  var s = bstats();
-  $("campSub").textContent = "金币 " + P.gold + " · 补给 " + supplyCost() + " 金回满血";
-  var h = "", i;
-  for(i = 0; i < shopRow.length; i++){
-    var row = shopRow[i], r = RMAP[row.id];
-    h += cardHtml(r, '<span class="cost">' + shopPrice(row) + ' 金</span>',
-                  row.sold || P.gold < shopPrice(row) ? "dim" : "");
-  }
-  $("shopList").innerHTML = h;
-  $("btnShopRe").textContent = "刷新货架" + (shopRe > 0 ? "（还剩 " + shopRe + " 次）" : "（没了）");
-  $("btnShopRe").disabled = shopRe <= 0;
-  $("btnSupply").disabled = P.gold < supplyCost() || P.hp >= s.maxHp;
-  $("fuseSub").textContent = fuseMode
-    ? "挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length + " · 花费 " + fuseCost() + " 金"
-    : fuseN() + " 件同品质 + " + fuseCost() + " 金 → 高一档，从 " + FUSE_PICK + " 件里挑";
-  fillCards("fuseList", P.relics.map(function(x){ return RMAP[x]; }), null,
-            function(r){ return fuseSel.indexOf(r.id) >= 0 ? "sel" : (fuseMode && r.r >= 4 ? "dim" : ""); });
-  $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
-  $("btnFuseGo").disabled = !(fuseSel.length === fuseN() && P.gold >= fuseCost());
-}
-function supplyCost(){ return 50 * P.wave; }
+
+/* ---- 合成（面板在遗物页上，随时能开）---- */
+var fuseMode = false, fuseSel = [];
 function fuseN(){ return has("recipe") ? 2 : FUSE_N; }
 function fuseCost(){
   var c = FUSE_COST;
@@ -1471,13 +1506,14 @@ function fuseCost(){
   if(has("spare"))  c = Math.round(c / 2);          // 战场改写
   return c;
 }
-function buyShop(id){
-  var row = null, i;
-  for(i = 0; i < shopRow.length; i++) if(shopRow[i].id === id && !shopRow[i].sold) row = shopRow[i];
-  if(!row || P.gold < shopPrice(row)) return;
-  P.gold -= shopPrice(row); P.spent += shopPrice(row); P.bought++; P.everBought = true;
-  row.sold = true;
-  grantRelic(id, renderCamp);
+function renderFuse(){
+  $("fuseSub").textContent = fuseMode
+    ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length +
+      " · 花费 " + fuseCost() + " 金（你有 " + P.gold + "）"
+    : fuseN() + " 件同品质 + " + fuseCost() + " 金 → 换一件高一档的，从 " + FUSE_PICK + " 件里挑";
+  $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
+  $("btnFuseGo").disabled = !(fuseSel.length === fuseN() && P.gold >= fuseCost());
+  $("btnFuseGo").textContent = fuseSel.length === fuseN() && P.gold < fuseCost() ? "金币不够" : "合成";
 }
 function fuseGo(){
   if(fuseSel.length !== fuseN() || P.gold < fuseCost()) return;
@@ -1491,14 +1527,162 @@ function fuseGo(){
   fuseSel = []; fuseMode = false;
   var want = Math.min(4, rar + 1), pool = relicPool(want);
   while(!pool.length && want > 0){ want--; pool = relicPool(want); }
-  if(!pool.length){ renderCamp(); return; }
+  if(!pool.length){ openBag(); return; }
   var picks = [], t = 0;
   while(picks.length < Math.min(FUSE_PICK, pool.length) && t++ < 100){
     var r = pick(pool); if(picks.indexOf(r) < 0) picks.push(r); }
-  if(picks.length === 1){ grantRelic(picks[0].id, renderCamp); return; }
+  if(picks.length === 1){ grantRelic(picks[0].id, openBag); return; }
   $("gotTitle").textContent = "合成出了 " + RAR_CN[want] + " · 挑一件";
   fillCards("gotList", picks);
   show("veilGot");                                  // ⚠️ 材料已经砸了，这个窗没有关闭钮
+}
+
+/* ================================================================
+   击杀掉落的互动点：泉 / 箱 / 商（用户 2026-09-22）
+   ⚠️ 「每 5 波一次的整备点」已经整块删了，别加回来 —— 补给现在全部从击杀里掉。
+   ⚠️ 泉**不弹窗**（踩上去直接回血，跟捡金币一样不打断节奏），商和箱弹窗（要选）。
+   ================================================================ */
+function siteCount(){ return E.sites.length; }
+function dropSite(kind, x, y){
+  if(G) G.siteN = (G.siteN || 0) + 1;
+  E.sites.push({kind:kind, x:x, y:y, t:0, stock:null, opened:false, rerollsLeft:BF.shopReroll});
+  /* 超上限就删离玩家最远的那个 —— 地图是无限的，跑远了的那个本来也回不去 */
+  while(E.sites.length > BF.site.max){
+    var far = 0, fd = -1;
+    for(var i = 0; i < E.sites.length; i++){
+      var d = Math.hypot(E.sites[i].x - E.me.x, E.sites[i].y - E.me.y);
+      if(d > fd){ fd = d; far = i; }
+    }
+    E.sites.splice(far, 1);
+  }
+}
+/* 每次击杀掷一次。⚠️ 这不是遗物效果，所以用 Math.random() 不走 luck()。 */
+function maybeSite(f){
+  var c = BF.site, r = Math.random();
+  if(f.boss){                                   // Boss 必掉：泉 + 商
+    dropSite("spring", f.x - 40, f.y); dropSite("shop", f.x + 40, f.y); return;
+  }
+  if(f.elite && Math.random() < c.eliteRate){
+    dropSite(pick(["spring", "chest", "shop"]), f.x, f.y); return;
+  }
+  if(r < c.spring.p){ dropSite("spring", f.x, f.y); return; }
+  r -= c.spring.p;
+  if(r < c.chest.p){ dropSite("chest", f.x, f.y); return; }
+  r -= c.chest.p;
+  if(r < c.shop.p) dropSite("shop", f.x, f.y);
+}
+/* 每波保底：按 BF.site.pity 的权重挑一种，落在玩家边上 150~230px 处 */
+function pitySite(){
+  var w = BF.site.pity, tot = 0, k;
+  for(k in w) tot += w[k];
+  var r = Math.random() * tot, kind = "shop";
+  for(k in w){ r -= w[k]; if(r <= 0){ kind = k; break; } }
+  var a = Math.random() * Math.PI * 2, d = 150 + Math.random() * 80;
+  dropSite(kind, E.me.x + Math.cos(a) * d, E.me.y + Math.sin(a) * d);
+}
+function updateSites(dt){
+  var me = E.me;
+  for(var i = E.sites.length - 1; i >= 0; i--){
+    var t = E.sites[i]; t.t += dt;
+    if(t.cool > 0){ t.cool -= dt; continue; }
+    if(Math.hypot(me.x - t.x, me.y - t.y) > BF.site.r) continue;
+    if(t.kind === "spring"){                    // 泉：不弹窗，踩上去就喝
+      var s = bstats();
+      if(P.hp >= s.maxHp) continue;             // 满血就留着，回头再来
+      var got = healUp(s.maxHp * BF.site.spring.heal);
+      fxText("+" + got, "#266F7B"); fxRing(t.x, t.y, 34, "#266F7B");
+      E.sites.splice(i, 1);
+    } else if(t.kind === "shop"){ openShop(t); return; }
+    else { openChest(t); return; }
+  }
+}
+/* 把人从这个点上推开一格 —— 不推的话站在原地下一拍就会再弹一次
+   （跟地牢「说了再待一会儿要退开阶梯」是同一个坑）。 */
+function stepOffSite(t){
+  var a = Math.atan2(E.me.y - t.y, E.me.x - t.x);
+  if(!isFinite(a) || (E.me.x === t.x && E.me.y === t.y)) a = Math.random() * Math.PI * 2;
+  E.me.x = t.x + Math.cos(a) * (BF.site.r + 16);
+  E.me.y = t.y + Math.sin(a) * (BF.site.r + 16);
+}
+/* 「走了 / 不开了」：**不删这个点**，只给它 SITE_COOL 秒的冷却。
+   ⚠️ 别改回「关窗就删」—— 钱不够的时候玩家应该能去刷一波再回来。
+   冷却是为了防止在旁边绕圈时弹窗刷屏。 */
+var SITE_COOL = 5;
+function leaveSite(t){ t.cool = SITE_COOL; stepOffSite(t); }
+/* 真的消耗掉了（箱子拿走了东西）才删 */
+function closeSite(t){
+  var i = E.sites.indexOf(t); if(i >= 0) E.sites.splice(i, 1);
+  stepOffSite(t);
+}
+
+/* ---- 游商 ---- */
+var curShop = null;
+function shopMarkup(r){ return (r.r >= 2 ? 1.3 * 1.8 : 1.3); }
+function shopPrice(row){ return Math.ceil(row.price * (has("regular") ? 0.85 : 1)); }
+function rollShopStock(){
+  var n = BF.site.shop.n + (has("key") ? 1 : 0);
+  return rollRelics(n, P.wave + 4).map(function(r){
+    return {id:r.id, price: Math.ceil(sellPrice(r) * shopMarkup(r)), sold:false};
+  });
+}
+function openShop(t){
+  curShop = t;
+  if(!t.stock){ t.stock = rollShopStock(); t.rerollsLeft = BF.shopReroll + (has("key") ? 1 : 0); }
+  renderShop(); show("veilShop");
+}
+function renderShop(){
+  var t = curShop; if(!t) return;
+  $("shopSub").textContent = "金币 " + P.gold;
+  var h = "", i;
+  for(i = 0; i < t.stock.length; i++){
+    var row = t.stock[i], r = RMAP[row.id];
+    h += cardHtml(r, '<span class="cost">' + shopPrice(row) + ' 金</span>',
+                  row.sold || P.gold < shopPrice(row) ? "dim" : "");
+  }
+  $("shopList").innerHTML = h || '<p class="sub">货架空了。</p>';
+  $("btnShopRe").textContent = "刷新货架" + (t.rerollsLeft > 0 ? "（还剩 " + t.rerollsLeft + " 次）" : "（没了）");
+  $("btnShopRe").disabled = t.rerollsLeft <= 0;
+}
+function buyShop(id){
+  var t = curShop; if(!t) return;
+  var row = null, i;
+  for(i = 0; i < t.stock.length; i++) if(t.stock[i].id === id && !t.stock[i].sold) row = t.stock[i];
+  if(!row || P.gold < shopPrice(row)) return;
+  P.gold -= shopPrice(row); P.spent += shopPrice(row); P.bought++; P.everBought = true;
+  row.sold = true;
+  grantRelic(id, renderShop);
+}
+
+/* ---- 石箱：花钱撬开，里面两件挑一件 ---- */
+var curChest = null;
+function chestCost(){ return BF.chestCost(P.wave); }
+function openChest(t){
+  curChest = t;
+  renderChest(); show("veilChest");
+}
+function renderChest(){
+  var t = curChest; if(!t) return;
+  if(!t.opened){
+    $("chestSub").textContent = "撬开要 " + chestCost() + " 金（你有 " + P.gold + "）。里面是两件遗物，挑一件带走。";
+    $("chestList").innerHTML = "";
+    $("btnChestOpen").hidden = false;
+    $("btnChestOpen").disabled = P.gold < chestCost();
+    $("btnChestOpen").textContent = P.gold < chestCost() ? "金币不够" : "撬开";
+    $("btnChestSkip").textContent = "不开了";
+  } else {
+    $("chestSub").textContent = "挑一件带走";
+    fillCards("chestList", t.loot);
+    $("btnChestOpen").hidden = true;
+    $("btnChestSkip").textContent = "都不要";
+  }
+}
+function chestOpen(){
+  var t = curChest; if(!t || t.opened || P.gold < chestCost()) return;
+  P.gold -= chestCost(); P.spent += chestCost();
+  t.opened = true;
+  t.loot = rollRelics(BF.site.chest.pick, P.wave + 6);
+  if(!t.loot.length){ addGold(chestCost()); closeSite(t); hide("veilChest"); return; }
+  renderChest();
 }
 
 /* ================================================================
@@ -1571,39 +1755,60 @@ function boot(){
 
   onCards("pickList", function(id){ takePick(id); });
   $("btnSkipPick").addEventListener("click", function(){ pendPicks--; hide("veilPick"); openPick(); });
-  $("btnRedraw").addEventListener("click", function(){ G.rerollUsed++; openPick(); });
+  $("btnRedraw").addEventListener("click", function(){
+    if(rerollLeft <= 0) return;
+    rerollLeft--; rollPick();
+  });
 
   onCards("swapNew", function(){ doSwap(null); });
   onCards("swapOld", function(id){ doSwap(id); });
 
-  $("btnBag").addEventListener("click", openBag);
-  $("btnBagClose").addEventListener("click", function(){ hide("veilBag"); });
-
-  $("btnPause").addEventListener("click", function(){ show("veilPause"); });
-  $("btnResume").addEventListener("click", function(){ hide("veilPause"); });
-  $("btnQuit").addEventListener("click", function(){ hide("veilPause"); endRun(); });
-
-  onCards("shopList", buyShop);
-  $("btnShopRe").addEventListener("click", function(){ if(shopRe > 0){ shopRe--; rollShop(); renderCamp(); } });
-  $("btnSupply").addEventListener("click", function(){
-    if(P.gold < supplyCost()) return;
-    P.gold -= supplyCost(); P.spent += supplyCost(); healUp(bstats().maxHp); renderCamp(); });
-  $("btnFuseMode").addEventListener("click", function(){ fuseMode = !fuseMode; fuseSel = []; renderCamp(); });
-  onCards("fuseList", function(id){
-    if(!fuseMode) return;
+  /* ---- 遗物页（合成面板在这儿）---- */
+  $("btnBag").addEventListener("click", function(){ fuseMode = false; fuseSel = []; sellArmed = null; openBag(); });
+  $("btnBagClose").addEventListener("click", function(){ fuseMode = false; fuseSel = []; sellArmed = null; hide("veilBag"); });
+  $("btnFuseMode").addEventListener("click", function(){ fuseMode = !fuseMode; fuseSel = []; sellArmed = null; openBag(); });
+  $("btnFuseGo").addEventListener("click", fuseGo);
+  onCards("bagList", function(id){
+    if(!fuseMode){ sellRelic(id); return; }                 // 不在挑材料时，点卡片 = 分解（两步确认）
     var r = RMAP[id];
-    if(r.r >= 4) return;                                   // 神圣不能当材料
+    if(r.r >= 4) return;                                    // 神圣不能当材料
     var k = fuseSel.indexOf(id);
     if(k >= 0) fuseSel.splice(k, 1);
     else {
       if(fuseSel.length && RMAP[fuseSel[0]].r !== r.r) fuseSel = [];
       if(fuseSel.length < fuseN()) fuseSel.push(id);
     }
-    renderCamp();
+    openBag();
   });
-  $("btnFuseGo").addEventListener("click", fuseGo);
-  $("btnCampClose").addEventListener("click", function(){ hide("veilCamp"); });
-  onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, renderCamp); });
+  onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, openBag); });
+
+  $("btnPause").addEventListener("click", function(){ show("veilPause"); });
+  $("btnResume").addEventListener("click", function(){ hide("veilPause"); });
+  $("btnQuit").addEventListener("click", function(){ hide("veilPause"); endRun(); });
+
+  /* ---- 游商 ---- */
+  onCards("shopList", buyShop);
+  $("btnShopRe").addEventListener("click", function(){
+    var t = curShop; if(!t || t.rerollsLeft <= 0) return;
+    t.rerollsLeft--; t.stock = rollShopStock(); renderShop();
+  });
+  $("btnShopClose").addEventListener("click", function(){
+    if(curShop) leaveSite(curShop);                          // 摊子留着，回头攒够钱还能来
+    curShop = null; hide("veilShop");
+  });
+
+  /* ---- 石箱 ---- */
+  $("btnChestOpen").addEventListener("click", chestOpen);
+  onCards("chestList", function(id){
+    var t = curChest; if(!t || !t.opened) return;
+    closeSite(t); curChest = null; hide("veilChest");
+    grantRelic(id, null);
+  });
+  $("btnChestSkip").addEventListener("click", function(){
+    /* 已经花钱撬开了却一件都不要 → 箱子就算消耗掉了；没撬开就留着，回头攒够钱再来 */
+    if(curChest){ if(curChest.opened) closeSite(curChest); else leaveSite(curChest); }
+    curChest = null; hide("veilChest");
+  });
 
   $("btnAgain").addEventListener("click", function(){
     $("veilEnd").classList.remove("on"); OVER = false;

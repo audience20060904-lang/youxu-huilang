@@ -64,7 +64,7 @@
       <p class="sub">挑一件带走</p>
       <div id="pickList" class="cards"></div>
       <div class="rowb">
-        <button class="btn ghost" id="btnRedraw" hidden>重抽</button>
+        <button class="btn ghost" id="btnRedraw" hidden>换一批</button>
         <button class="btn ghost" id="btnSkipPick">都不要</button>
       </div>
     </div>
@@ -81,11 +81,17 @@
     </div>
   </div>
 
-  <!-- 遗物页 -->
+  <!-- 遗物页（合成面板就在这儿，随时能开）-->
   <div class="veil" id="veilBag">
     <div class="box wide">
       <h2 id="bagTitle">遗物 0 / 15</h2>
       <div id="bagStats" class="stats"></div>
+      <div class="hr">合成</div>
+      <p class="sub" id="fuseSub"></p>
+      <div class="rowb">
+        <button class="btn ghost" id="btnFuseMode">选择材料</button>
+        <button class="btn ghost" id="btnFuseGo">合成</button>
+      </div>
       <div id="bagList" class="cards"></div>
       <div class="rowb">
         <button class="btn" id="btnBagClose">继续</button>
@@ -93,24 +99,28 @@
     </div>
   </div>
 
-  <!-- 整备点 -->
-  <div class="veil" id="veilCamp">
+  <!-- 游商（击杀掉落，踩上去弹出）-->
+  <div class="veil" id="veilShop">
     <div class="box wide">
-      <h2>整备</h2>
-      <p class="sub" id="campSub">金币 0</p>
-      <div class="hr">商店</div>
+      <h2>游商</h2>
+      <p class="sub" id="shopSub">金币 0</p>
       <div id="shopList" class="cards"></div>
       <div class="rowb">
         <button class="btn ghost" id="btnShopRe">刷新货架</button>
-        <button class="btn ghost" id="btnSupply">补给</button>
+        <button class="btn" id="btnShopClose">走了</button>
       </div>
-      <div class="hr">合成</div>
-      <p class="sub" id="fuseSub"></p>
-      <div id="fuseList" class="cards"></div>
+    </div>
+  </div>
+
+  <!-- 石箱（击杀掉落，花钱撬开）-->
+  <div class="veil" id="veilChest">
+    <div class="box">
+      <h2>石箱</h2>
+      <p class="sub" id="chestSub"></p>
+      <div id="chestList" class="cards"></div>
       <div class="rowb">
-        <button class="btn ghost" id="btnFuseMode">选择材料</button>
-        <button class="btn ghost" id="btnFuseGo">合成</button>
-        <button class="btn" id="btnCampClose">下一波</button>
+        <button class="btn ghost" id="btnChestSkip">不开了</button>
+        <button class="btn" id="btnChestOpen">撬开</button>
       </div>
     </div>
   </div>
