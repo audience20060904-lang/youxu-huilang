@@ -228,7 +228,7 @@ function newRun(){
        bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
        primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false,
        rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0,
-       shopN:0, chestN:0, chestCycle:0};
+       shopN:0, chestN:0, chestCycle:0, bagAlerted:false};
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
   E = {foes:[], shots:[], drops:[], sites:[], pwaves:[], fx:[], boss:null};
@@ -403,6 +403,19 @@ function confTiers(s){
          Math.min(3, Math.floor(P.combo / 10));
 }
 function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0); }
+/* 遗物刚好装满时自动把遗物页弹出来（用户 2026-09-22）——
+   下一件就要做取舍了，先让玩家看一眼手里有什么、顺手合成掉几件。
+   ⚠️ 只在**从没满到满**的那一下弹一次（P.bagAlerted），掉到满以下才复位；
+      而且挂在 step() 里（暂停时不跑），所以不会打断别的弹层。 */
+function maybeFullBag(){
+  if(P.relics.length >= relicCap()){
+    if(!P.bagAlerted && !anyVeil() && !OVER){
+      P.bagAlerted = true;
+      fuseMode = false; fuseSel = []; sellArmed = null;
+      openBag();
+    }
+  } else P.bagAlerted = false;
+}
 function comboPct(s){ return Math.floor(P.combo / s.comboStep) * BF.comboPct; }
 
 /* 概率类效果的唯一口子（幸运 +25% 相对、再摇没中再掷一次）—— 别再直接写 Math.random() < p */
@@ -1463,6 +1476,7 @@ function step(dt){
   for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
 
+  maybeFullBag();
   if(G.bossDown){ G.bossDown = false; nextWave(); openSpecialPick(); return; }
   if(!isBossWave(P.wave) && G.t >= BF.waveSec) nextWave();
 }
@@ -1842,8 +1856,11 @@ function renderFuse(){
     ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length
     : fuseN() + " 件同品质 → 换一件高一档的，从 " + FUSE_PICK + " 件里挑（不要金币）";
   $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
-  $("btnFuseGo").disabled = fuseSel.length !== fuseN();
+  var ready = fuseSel.length === fuseN();
+  $("btnFuseGo").disabled = !ready;
   $("btnFuseGo").textContent = "合成";
+  /* 选满了就把「合成」点亮（用户 2026-09-22）—— 不然要低头数选了几件才知道能不能点 */
+  $("btnFuseGo").classList.toggle("hot", ready);
 }
 function fuseGo(){
   if(fuseSel.length !== fuseN()) return;

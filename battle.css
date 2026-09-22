@@ -104,6 +104,15 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
      text-align:center;text-decoration:none;display:block}
 .btn.ghost{background:var(--stone-2);color:var(--dim);border-color:var(--edge)}
 .btn:disabled{opacity:.4;cursor:default}
+/* 材料选满了，「合成」高亮提醒一下（用户 2026-09-22）——
+   不然要低头去数选了几件才知道能不能点。 */
+.btn.hot{background:var(--torch);border-color:var(--torch);color:#FFF8E6;font-weight:600;
+         animation:fusepulse 1.1s ease-in-out infinite}
+@keyframes fusepulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(156,106,16,.55)}
+  50%    {box-shadow:0 0 0 6px rgba(156,106,16,0)}
+}
+@media (prefers-reduced-motion: reduce){ .btn.hot{animation:none} }
 
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;font-size:13px;margin:8px 0}
 .stats div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--edge-soft);

@@ -150,11 +150,12 @@
 
   <!-- 游商（击杀掉落，踩上去弹出）-->
   <div class="veil" id="veilShop">
-    <div class="box wide">
+    <div class="box wide col">
       <h2>游商</h2>
       <p class="sub" id="shopSub">金币 0</p>
-      <div id="shopList" class="cards"></div>
-      <div class="rowb">
+      <div class="scroll"><div id="shopList" class="cards"></div></div>
+      <!-- 货架 5 件会把弹层撑到要滚，这两个钉在下面（用户 2026-09-22）。别塞回 .scroll 里。 -->
+      <div class="rowb pin">
         <button class="btn ghost" id="btnShopRe">刷新货架</button>
         <button class="btn" id="btnShopClose">走了</button>
       </div>
