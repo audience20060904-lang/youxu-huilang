@@ -29,7 +29,13 @@ var BF = {
   wagerInner: 0.45,     // 刀程内侧这一段算「贴身」（= 地牢的冒险）
   hauntMax: 5,          // 同时最多标记几只仇敌（= 心魔）
   bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
-  xpNeed: function(lv){ return 8 + 6 * (lv - 1); },
+  /* 升级所需经验（用户 2026-09-22：**升级难度增加 100%**，整条曲线 ×2）。
+     ⚠️ 别去砍怪的 xp 来达到同样效果 —— 那会连带把金币和 Boss 的经验补偿也拖下水。 */
+  xpNeed: function(lv){ return (8 + 6 * (lv - 1)) * 2; },
+  /* 怪掉的金币统一乘这个（用户 2026-09-22：**金币爆率 −50%**）。
+     Boss 掉的那一笔也吃，别单独开小灶。 */
+  goldMult: 0.5,
+  specialMax: 5,        // 特殊遗物最多带几件（用户 2026-09-22）；满了再拿要换掉一件
   spawnPad: 60,         // 在相机外这么远的一圈上刷怪
   shieldSeedScale: 1,   // 护盾类种子的统一缩放（留给调平衡）
 
@@ -40,9 +46,8 @@ var BF = {
      ⚠️ 精英和 Boss 另算（eliteRate / Boss 必掉），走的是同一个 dropSite()。 */
   site: {
     /* 泉：踩上去直接回 25% 最大生命，免费、不弹窗。
-       ⚠️ **喝完不消失**（用户 2026-09-22），只进 cool 秒的冷却 —— 它是这张无限地图上
-          唯一的固定补给点，回头找得到才有意义。冷却是为了别站在上面无限回血。 */
-    spring: {p:0.020, heal:0.25, cool:10},
+       ⚠️ **喝一次就没了**（用户 2026-09-22 定的，撤掉了在这之前那版「泉不消失 + 10 秒冷却」）。 */
+    spring: {p:0.020, heal:0.25},
     /* 箱：踩上去直接白给一件，不花钱不弹窗。
        ⚠️ **每 every 波最多掉 max 个**（用户 2026-09-22）—— 不封的话深波遗物白拿到手软。 */
     chest:  {p:0.014, max:3, every:5},
@@ -894,7 +899,7 @@ function makeFoe(id, w, x, y){
     dmg: Math.max(1, Math.round(d.dmg * dmgMul(w) * TIER.dmg)),
     spd: d.spd * spdMul(w), armor: d.armor,
     xp: Math.max(1, Math.round(d.xp * xpMul(w))),
-    gold: ri(1, 3) + Math.floor(w / 2),
+    gold: Math.max(1, Math.round((ri(1, 3) + Math.floor(w / 2)) * BF.goldMult)),
     r: d.r * sc, sc: sc, elite: !!d.elite, noKnock: !!d.noKnock, phase: !!d.phase,
     kx:0, ky:0, t: Math.random() * 10, touch:0, flash:0, haunt:false, dead:false,
     shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0, castT:0,
@@ -907,7 +912,7 @@ function makeBoss(w){
     x: E.me.x, y: E.me.y - 200,
     hp: Math.round(d.hp * TIER.hp), maxHp: Math.round(d.hp * TIER.hp),
     dmg: Math.round(d.dmg * TIER.dmg), spd:d.spd, armor:d.armor,
-    xp:d.xp, gold:d.gold, r:d.r, sc:d.scale, elite:true, boss:true, noKnock:true,
+    xp:d.xp, gold:Math.round(d.gold * BF.goldMult), r:d.r, sc:d.scale, elite:true, boss:true, noKnock:true,
     kx:0, ky:0, t:0, touch:0, flash:0, dead:false,
     sweepCd:d.sweep.cd * 0.6, quakeCd:d.quake.cd * 0.8, cast:null, castT:0,
     called:0, rage:false};
@@ -963,7 +968,7 @@ function dropGold(x, y, n){ if(n > 0) E.drops.push({x:x, y:y, n:n, t:0}); }
 function dropCoinPile(k){
   for(var i = 0; i < k; i++){
     var a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 220;
-    var n = (ri(2, 6) + P.wave) * 2;
+    var n = Math.max(1, Math.round((ri(2, 6) + P.wave) * 2 * BF.goldMult));
     if(has("alms") && luck(0.30)) n *= 2;
     E.drops.push({x: E.me.x + Math.cos(a) * d, y: E.me.y + Math.sin(a) * d, n:n, t:0});
   }
@@ -1388,6 +1393,11 @@ function inputVec(){
 function bindInput(){
   var el = $("cv"), st = $("stick"), nub = $("stickNub");
   el.addEventListener("pointerdown", function(e){
+    /* ⚠️ **必须 preventDefault**（用户 2026-09-22 报：弹窗关掉之后第一次按屏幕会弹出放大镜）。
+       手机浏览器把 canvas 上的按下拖动当成"选文字"，于是弹出选择放大镜。
+       光靠 CSS 的 user-select 挡不住，还得把这一下的默认行为吃掉。
+       ⚠️ 别挪到 return 后面 —— 暂停时按下去也一样会弹放大镜。 */
+    e.preventDefault();
     if(PAUSED || OVER) return;
     IN.on = true; IN.id = e.pointerId; IN.ox = e.clientX; IN.oy = e.clientY; IN.x = 0; IN.y = 0;
     st.hidden = false; st.style.left = IN.ox + "px"; st.style.top = IN.oy + "px";
@@ -1406,6 +1416,12 @@ function bindInput(){
   function up(e){ if(e.pointerId !== IN.id) return; IN.on = false; IN.x = 0; IN.y = 0; st.hidden = true; }
   el.addEventListener("pointerup", up);
   el.addEventListener("pointercancel", up);
+  /* 放大镜的另外三条口子：选中、长按菜单、拖拽。
+     ⚠️ 输入框（现在没有，以后可能加）要放行，别把打字也挡了。 */
+  function isInput(t){ return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"); }
+  document.addEventListener("selectstart", function(e){ if(!isInput(e.target)) e.preventDefault(); });
+  document.addEventListener("contextmenu", function(e){ if(!isInput(e.target)) e.preventDefault(); });
+  document.addEventListener("dragstart", function(e){ e.preventDefault(); });
   addEventListener("keydown", function(e){ KEY[e.key] = 1; if(e.key === " ") e.preventDefault(); });
   addEventListener("keyup",   function(e){ KEY[e.key] = 0; });
 }
@@ -1557,6 +1573,8 @@ function renderHud(){
   }
   hb.dataset.sh = now;
   $("hpTxt").textContent = Math.ceil(hp) + " / " + s.maxHp + (P.shield > 0 ? "  +" + Math.round(P.shield) : "");
+  /* 遗物快满了（还剩 1 格）就在「遗物」按钮上挂个红点 —— 再捡就要弹取舍窗了（用户 2026-09-22）*/
+  $("btnBag").classList.toggle("warn", P.relics.length >= relicCap() - 1);
   var bb = $("bossBar");
   if(E.boss && !E.boss.dead){
     bb.hidden = false;
@@ -1570,7 +1588,14 @@ function renderHud(){
    ================================================================ */
 function anyVeil(){ return !!document.querySelector(".veil.on"); }
 function show(id){ $(id).classList.add("on"); PAUSED = true; }
-function hide(id){ $(id).classList.remove("on"); PAUSED = anyVeil() || OVER; }
+function hide(id){
+  $(id).classList.remove("on");
+  clearSel();                       // ⚠️ 弹层里全是字，关掉时残留的选区会把下一次触摸变成放大镜
+  PAUSED = anyVeil() || OVER;
+}
+function clearSel(){
+  try{ var s = window.getSelection && window.getSelection(); if(s && s.removeAllRanges) s.removeAllRanges(); }catch(e){}
+}
 
 function cardHtml(r, extra, cls){
   return '<button class="card r' + r.r + (cls ? " " + cls : "") + '" data-id="' + r.id + '">' +
@@ -1644,8 +1669,11 @@ function rollPick(){
   if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
   $("pickTitle").textContent = "升到 " + P.lvl + " 级" + (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
   fillCards("pickList", pickOffer);
-  $("btnRedraw").hidden = rerollLeft <= 0;
-  $("btnRedraw").textContent = rerollLeft > 1 ? "换一批（还剩 " + rerollLeft + " 次）" : "换一批";
+  /* ⚠️ 用完是**变灰**不是藏起来（用户 2026-09-22）—— 按钮突然消失会让下面的「都不要」跳位置。 */
+  $("btnRedraw").hidden = false;
+  $("btnRedraw").disabled = rerollLeft <= 0;
+  $("btnRedraw").textContent = rerollLeft <= 0 ? "已经换过了"
+                             : rerollLeft > 1 ? "换一批（还剩 " + rerollLeft + " 次）" : "换一批";
   show("veilPick");
 }
 function takePick(id){
@@ -1766,15 +1794,36 @@ function openSpecialPick(){
   $("spPickList").innerHTML = spOffer.map(spCardHtml).join("");
   show("veilSpPick");
 }
+var spSwapNew = null;
 function takeSpecial(id){
   if(!spDef(id) || hasSp(id)) return;
   pendSpecial--;
-  withMaxHp(function(){ P.special.push(id); P.sset[id] = 1; });
   hide("veilSpPick");
-  if(pendSpecial > 0) openSpecialPick();                  // 一口气打死两只 Boss 的极端情况
+  if(P.special.length < BF.specialMax){
+    withMaxHp(function(){ P.special.push(id); P.sset[id] = 1; });
+    if(pendSpecial > 0) openSpecialPick();                // 一口气打死两只 Boss 的极端情况
+    return;
+  }
+  /* 满 5 件了：弹取舍窗换一件（跟遗物带满时是同一个套路）*/
+  spSwapNew = id;
+  $("spSwapNew").innerHTML = spCardHtml(spDef(id));
+  $("spSwapOld").innerHTML = P.special.map(function(x){ return spCardHtml(spDef(x)); }).join("");
+  show("veilSpSwap");
+}
+function doSpSwap(oldId){
+  var nid = spSwapNew; spSwapNew = null;
+  hide("veilSpSwap");
+  if(nid && oldId){
+    withMaxHp(function(){
+      var i = P.special.indexOf(oldId);
+      if(i >= 0){ P.special.splice(i, 1); delete P.sset[oldId]; }
+      P.special.push(nid); P.sset[nid] = 1;
+    });
+  }
+  if(pendSpecial > 0) openSpecialPick();
 }
 function openSp(){
-  $("spTitle").textContent = "特殊遗物 " + P.special.length + " / " + BF_SPECIAL.length;
+  $("spTitle").textContent = "特殊遗物 " + P.special.length + " / " + BF.specialMax;
   $("spList").innerHTML = P.special.length
     ? P.special.map(function(id){ return spCardHtml(spDef(id)); }).join("")
     : '<p class="sub">还没有。每打倒一只 Boss（每 10 波）就能三选一拿一件。</p>';
@@ -1899,7 +1948,7 @@ function updateSites(dt){
       if(P.hp >= s.maxHp) continue;             // 满血就留着，回头再来
       var got = healUp(s.maxHp * BF.site.spring.heal);
       fxText("+" + got, "#266F7B"); fxRing(t.x, t.y, 34, "#266F7B");
-      t.cool = BF.site.spring.cool;             // ⚠️ 泉**不消失**，只进冷却
+      E.sites.splice(i, 1);                     // 喝一次就没了
     } else if(t.kind === "shop"){ openShop(t); return; }
     else {                                    // 箱：踩上去直接白给一件（不花钱、不弹窗）
       var got = rollRelics(1, P.wave + 6)[0];
@@ -2059,6 +2108,8 @@ function boot(){
   $("btnSp").addEventListener("click", openSp);
   $("btnSpClose").addEventListener("click", function(){ hide("veilSp"); });
   onCards("spPickList", function(id){ takeSpecial(id); });
+  onCards("spSwapOld", function(id){ doSpSwap(id); });
+  $("btnSpSwapSkip").addEventListener("click", function(){ doSpSwap(null); });
 
   /* ---- 遗物页（合成面板在这儿）---- */
   $("btnBag").addEventListener("click", function(){ fuseMode = false; fuseSel = []; sellArmed = null; openBag(); });

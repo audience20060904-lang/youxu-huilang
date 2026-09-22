@@ -11,10 +11,15 @@
   --body:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",system-ui,-apple-system,sans-serif;
   --flavor:"Spectral","Songti SC",Georgia,serif;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* ⚠️ 选择与放大镜（用户 2026-09-22 报：弹窗关掉后第一次按屏幕会弹放大镜）：
+   user-select 和 touch-callout 必须铺到**每一个元素**上，光给 body 挡不住 canvas；
+   另外 battle.js 的 pointerdown 还要 preventDefault，两边缺一不可。 */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+  -webkit-touch-callout:none}
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none}
-body{background:var(--void);color:var(--bone);font-family:var(--body);
-     user-select:none;-webkit-user-select:none}
+body{background:var(--void);color:var(--bone);font-family:var(--body)}
+#cv{touch-action:none;-webkit-user-drag:none}
 
 #errbar{position:fixed;left:0;right:0;top:0;z-index:99;background:var(--blood);color:#fff;
         font-size:12px;padding:6px 10px;white-space:pre-wrap}
@@ -58,8 +63,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 .hpbar b{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;
          font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .fbtns{display:flex;gap:8px;margin-top:8px;pointer-events:auto}
-.fb{flex:none;font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;
+.fb{position:relative;flex:none;font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;
     border:1px solid var(--edge);background:var(--stone);color:var(--dim);cursor:pointer}
+/* 遗物只剩 1 格时的红点（用户 2026-09-22）：再捡就要弹取舍窗了 */
+.fb.warn::after{content:"";position:absolute;right:-3px;top:-3px;width:9px;height:9px;
+                border-radius:50%;background:var(--blood);border:1.5px solid var(--stone)}
 
 /* 暂停挪到了右上角（用户 2026-09-22），底部那一行空出来给 信息 / 遗物 / 特殊 */
 .pausebtn{position:absolute;right:10px;top:8px;z-index:6;font:inherit;font-size:12px;
