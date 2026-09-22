@@ -55,6 +55,10 @@ function coopNoteLocked(){
   say("这一层的怪还没清完 —— 两人先一起点「寻路」走。", "sys");
 }
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
+/* 战场模式的记录键（battle.js 拥有它，只有 battle.js 写）。
+   game.js 里只出现在 snapshot() / overwriteAll() / mergeData() 三处 ——
+   它不是地牢的进度，所以 commit() / commitPerm() 故意不碰它。 */
+const BF_KEY = "youxu.bf.v1";
 
 /* 所有落盘都过这一道。util 的 save 写不进去会返回 false（无痕模式、本地存储被禁、配额满），
    以前是静默丢档 —— 玩家一路玩一路以为在存，关掉才发现什么都没有。现在第一次失败就顶到
@@ -5180,6 +5184,14 @@ function mergeData(o){
      磁盘上那份层存档一个字节都不动（下面单独判断要不要接管）。 */
   commitPerm();
 
+  /* 战场模式的记录：三项都取大值 / 相加，跟宝石一个规矩（battle.js 拥有这个键） */
+  if(o.bf && typeof o.bf === "object"){
+    const mine = load(BF_KEY, {best:0, kills:0, runs:0});
+    put(BF_KEY, {best: Math.max(mine.best || 0, o.bf.best || 0),
+                 kills: (mine.kills || 0) + (o.bf.kills || 0),
+                 runs:  (mine.runs  || 0) + (o.bf.runs  || 0)});
+  }
+
   // 没走完的那一趟：只有这台设备手头没有在进行的探索时才接过来，有就一点不动
   let gotRun = false;
   if(o.run && o.run.P && !readRun() && !(SCENE === "run" && G && !G.over)){
@@ -5205,7 +5217,9 @@ function snapshot(){
   return {
     game: FILE_TAG, v: FILE_V, app: "幽墟回廊", ch: CH.id, t: Date.now(),
     lex: LEX, codex: CODEX, meta: meta(),
-    town: TOWN, opt: OPT, run: load(RUN_KEY, null)
+    town: TOWN, opt: OPT, run: load(RUN_KEY, null),
+    /* 战场模式的记录（battle.js 自己写这个键，game.js 只负责让它跟着搬家）*/
+    bf: load(BF_KEY, null)
   };
 }
 function pad2(n){ return (n < 10 ? "0" : "") + n; }
@@ -5303,6 +5317,7 @@ function overwriteAll(o){
   put(META_KEY, o.meta || {best:0, runs:0, clears:0, t:0});
   put(TOWN_KEY, o.town || {gem:0});
   if(o.opt && typeof o.opt === "object") put(OPT_KEY, o.opt);
+  if(o.bf && typeof o.bf === "object") put(BF_KEY, o.bf);
   if(o.run && o.run.P && o.run.v === RUN_V && chapterById(o.run.ch || 1)) put(RUN_KEY, o.run);
   else try{ localStorage.removeItem(RUN_KEY); }catch(e){}
   setTimeout(function(){ try{ location.reload(); }catch(e){} }, 700);

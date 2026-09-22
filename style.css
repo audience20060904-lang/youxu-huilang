@@ -707,6 +707,8 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .place.off{cursor:default;opacity:.55;background:var(--stone-3)}
 .place.off:hover{border-color:var(--edge);background:var(--stone-3)}
 .place.off i{color:var(--faint)}
+/* 战场模式的入口是个 <a>（跳到 battle.html），别让它带下划线 */
+a.place{text-decoration:none}
 
 /* ===== 洞窟的路线卡 ===== */
 .routes{display:flex;flex-direction:column;gap:8px}

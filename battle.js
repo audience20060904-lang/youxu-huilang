@@ -1,0 +1,1617 @@
+/* 幽墟回廊 · 战场模式
+   ==================================================================
+   跟背单词无关的幸存者模式。设计文档是 `战场模式.md`，**改了数值回去同步那一份**。
+   ⚠️ 这个文件跟 game.js 完全独立，只共用 util.js / art.js / content.js（RELICS 那几张表）。
+   ⚠️ 遗物一律在 bstats() / 伤害四层桶里**现算**，`P` 上只许存「发生过几次」这种事实
+      —— 跟地牢那条硬规矩一样，卖掉遗物加成必须当场失效。 */
+"use strict";
+
+/* ===== 数值配置（设计文档第二、三节）===== */
+var BF = {
+  /* 玩家起手面板 */
+  base: {maxHp:100, atk:12, aspd:1.25, range:78, arc:120, spd:155,
+         armor:0, crit:10, critMult:2.0, pickup:75, knock:14},
+  perLevel: {maxHp:6, atk:1},
+  levelHealPct: 0.08,
+
+  waveSec: 30,          // 每波多少秒
+  bossEvery: 10,        // 每几波一个 Boss
+  campEvery: 5,         // 每几波一个整备点
+  pickN: 4,             // 升级几选一
+  relicMax: 15,
+  cutMax: 75,           // 常驻减伤封顶 %
+  touchCd: 0.65,        // 同一只怪的接触伤害冷却（秒）
+  comboStep: 5,
+  comboPct: 2,
+  /* onKill 那一类（回血/护盾）统一乘这个 —— 一波的怪比一层多 2~6 倍，
+     不折算的话「杀怪回血」会直接无敌。见设计文档 6.1。 */
+  killScale: 0.45,
+  wagerInner: 0.45,     // 刀程内侧这一段算「贴身」（= 地牢的冒险）
+  hauntMax: 5,          // 同时最多标记几只仇敌（= 心魔）
+  bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
+  xpNeed: function(lv){ return 8 + 6 * (lv - 1); },
+  spawnPad: 60,         // 在相机外这么远的一圈上刷怪
+  shieldSeedScale: 1    // 护盾类种子的统一缩放（留给调平衡）
+};
+
+/* 波次三旋钮（设计文档第三节）。Boss 波不走这套。 */
+function waveRate(w){ return 0.75 + 0.22 * (w - 1); }
+function waveCap(w){  return Math.min(70, 22 + 4 * w); }
+function hpMul(w){    return 1 + 0.20 * (w - 1); }
+function dmgMul(w){   return 1 + 0.09 * (w - 1); }
+function spdMul(w){   return Math.min(1.35, 1 + 0.015 * (w - 1)); }
+function xpMul(w){    return 1 + 0.12 * (w - 1); }
+
+/* ===== 怪物基础数值（设计文档 4.1）=====
+   art 是 MOB_ART 的键 —— **一张新图都没画**。
+   kind: melee 近战 / ranged 远程 / elite 精英
+   r 碰撞半径；big 由 r >= BF.bigR 自动判定 */
+var BF_FOES = {
+ rat:    {name:"廊道灰鼠",  art:"rat",     col:"#7A6E5C", hp:12, dmg:5,  spd:96,  armor:0, xp:2,  r:11, kind:"melee"},
+ slime:  {name:"食橱泥怪",  art:"slime",   col:"#6E8A4A", hp:34, dmg:8,  spd:52,  armor:0, xp:5,  r:15, kind:"melee"},
+ spider: {name:"洞穴长足蛛",art:"spider",  col:"#6B5B7A", hp:20, dmg:7,  spd:72,  armor:0, xp:4,  r:12, kind:"melee",
+          dash:{every:3.2, dur:0.55, mult:2.6, warn:0.25, rest:0.4}},
+ bone:   {name:"残骨兵",    art:"bone",    col:"#9A9079", hp:30, dmg:9,  spd:82,  armor:2, xp:6,  r:13, kind:"melee"},
+ ghost:  {name:"低语幽魂",  art:"ghost",   col:"#6E86A8", hp:18, dmg:11, spd:112, armor:0, xp:6,  r:12, kind:"melee",
+          phase:true, wob:22},
+ prism:  {name:"碎色棱",    art:"prism",   col:"#A8608C", hp:26, dmg:6,  spd:62,  armor:1, xp:8,  r:12, kind:"ranged",
+          shot:{cd:2.2, keep:260, speed:190, r:6, n:1, spread:0}},
+ statue: {name:"守门石像",  art:"statue",  col:"#8A8378", hp:70, dmg:14, spd:34,  armor:4, xp:12, r:17, kind:"melee"},
+ clock:  {name:"锈钟怪",    art:"clock",   col:"#B07A33", hp:44, dmg:9,  spd:50,  armor:1, xp:10, r:14, kind:"ranged",
+          shot:{cd:3.0, keep:300, speed:125, r:11, n:1, spread:0, slow:{pct:0.35, sec:2}}},
+ warden2:{name:"回廊游影",  art:"warden2", col:"#5A5468", hp:32, dmg:12, spd:100, armor:0, xp:10, r:13, kind:"melee",
+          blink:{every:5, warn:0.35, min:90, max:140}},
+ dread:  {name:"吞惧者",    art:"dread",   col:"#8A4A4A", hp:40, dmg:7,  spd:54,  armor:1, xp:12, r:15, kind:"ranged",
+          shot:{cd:3.5, keep:240, speed:165, r:7, n:3, spread:20}},
+ gate:   {name:"层间守者",  art:"gate",    col:"#A93729", hp:150,dmg:16, spd:66,  armor:3, xp:45, r:20, kind:"melee",
+          elite:true, noKnock:true, scale:1.4}
+};
+
+/* ===== 每一波（设计文档 4.2）=====
+   pool 是权重表；fix 是这一波固定额外刷的。
+   第 11 波往后没有单独的表，走 BF_WAVES 最后一条 + 公式继续加压（文档「待办」里记着）。*/
+var BF_WAVES = [
+ {pool:{rat:100}},
+ {pool:{rat:70, slime:30}},
+ {pool:{rat:55, slime:25, spider:20}},
+ {pool:{rat:40, slime:22, spider:22, bone:16}},
+ {pool:{rat:30, slime:20, spider:20, bone:20, ghost:10}, fix:{gate:1}},
+ {pool:{rat:22, slime:16, spider:18, bone:18, ghost:14, prism:12}, fix:{gate:1}},
+ {pool:{rat:16, slime:14, spider:16, bone:16, ghost:14, prism:14, statue:10}, fix:{gate:1}},
+ {pool:{rat:12, slime:12, spider:14, bone:14, ghost:14, prism:14, statue:10, clock:10}, fix:{gate:1}},
+ {pool:{rat:10, slime:10, spider:12, bone:12, ghost:14, prism:12, statue:10, clock:10, warden2:10}, fix:{gate:2}}
+];
+
+/* ===== Boss（设计文档 4.3）=====
+   数值写死、不吃波次倍率（跟地牢的章末 Boss fixed:true 一个规矩），但吃难度层倍率。
+   第 20/30/40 波预定换成 steward / priest / crown，现在先用同一只按 rep 加压。 */
+var BF_BOSS = {
+ warden: {name:"石廊守卫", art:"warden", col:"#8A3223", hp:1400, dmg:18, spd:58, armor:4,
+          xp:260, gold:400, r:30, noKnock:true, boss:true, scale:2.5,
+          sweep: {cd:6.0, warn:0.8, arc:200, range:150, dmg:26},
+          quake: {cd:9.0, warn:1.2, r:95,  dmg:34},
+          call:  {at:[0.75, 0.50, 0.25], n:8, id:"rat", ring:150, warn:0.6},
+          rage:  {at:0.30, spd:1.30, cd:0.70},
+          adds:  {id:"dread", n:2, respawn:8}}
+};
+function bossFor(w){
+  var d = {}, k;
+  for(k in BF_BOSS.warden) d[k] = BF_BOSS.warden[k];
+  var rep = Math.floor(w / BF.bossEvery);          // 第 10 波 rep=1
+  if(rep > 1){ var m = 1 + 0.9 * (rep - 1);
+    d.hp = Math.round(d.hp * m); d.dmg = Math.round(d.dmg * (1 + 0.35 * (rep - 1)));
+    d.xp = Math.round(d.xp * m); d.gold = Math.round(d.gold * m); }
+  return d;
+}
+
+/* ===== 难度层（设计文档第八节）=====
+   ⚠️ 只动怪，不动玩家。⚠️ 别让 spd 跟着涨 —— 那会把走位玩法关掉。
+   2~5 层的数据就在表里，去掉 locked 就开放。 */
+var BF_TIERS = [
+ {id:1, name:"一层", hp:1.00, dmg:1.00, rate:1.00, cap:1.00, desc:"现在唯一开放的难度"},
+ {id:2, name:"二层", hp:1.30, dmg:1.15, rate:1.20, cap:1.15, desc:"怪更硬、更密", locked:true},
+ {id:3, name:"三层", hp:1.70, dmg:1.30, rate:1.45, cap:1.30, desc:"清不干净了", locked:true},
+ {id:4, name:"四层", hp:2.20, dmg:1.50, rate:1.75, cap:1.45, desc:"没有遗物撑不过十波", locked:true},
+ {id:5, name:"五层", hp:2.90, dmg:1.75, rate:2.10, cap:1.60, desc:"为局外养成准备的", locked:true}
+];
+var TIER = BF_TIERS[0];
+
+/* ===== 战场文案替换（设计文档 6.4）=====
+   content.js 的 RELICS 一个字没改，这里只换**显示**。 */
+var BFW = {
+ stroke:  "暴击率 +8%",
+ clean:   "暴击伤害 +40%",
+ wellread:"刀程 +10%",
+ key:     "整备点的商店多一件货，且多刷新一次",
+ spare:   "合成花费 −50%",
+ atone:   "每波 +12 点护盾",
+ pace:    "这一波没受过伤，下一波开局回复 55% 最大生命",
+ ascetic: "没在整备点买过东西时，每过一波受到的伤害 −5%（最多 −25%）",
+ water:   "每波自动吃掉最近的一份补给，溢出的每 2 点转成 1 点护盾",
+ lesson:  "本波第一次击杀某一种怪时 +10 金币",
+ tome:    "击杀本局已经杀过 20 只以上的怪种时 +8 金币",
+ dig:     "每波开场空投 3 堆金币",
+ /* 下面这些只是把「层」换成「波」、「答对」换成「挥刀」，数值一个没动 */
+ glass:   "被远程弹丸命中不掉血，但每触发一次这一波攻速 −3%",
+ steady:  "生命低于 25% 时，移速 +25%",
+ buffer:  "远程弹丸的伤害 −55%",
+ poise:   "连续移动每满 1 秒，伤害 +10%（最多 +60%）"
+};
+/* 显示用：把遗物词条里的地牢说法换成战场说法。数值不变，只换词。 */
+var BFW_RE = [
+ [/答对已掌握的词/g,"击杀熟悉的怪"], [/答对从没见过的生词/g,"第一次击杀某种怪"],
+ [/拼写题答对|拼对/g,"暴击"], [/拼写答对/g,"暴击"], [/拼写答错|拼错/g,"没暴击"],
+ [/拼写题出现率/g,"暴击率"], [/拼写题/g,"暴击"],
+ [/心魔词/g,"仇敌"], [/心魔/g,"仇敌"],
+ [/冒险答对/g,"贴身命中"], [/冒险答错/g,"贴身时受伤"], [/冒险/g,"贴身"],
+ [/3 秒内答对/g,"移动中挥刀"], [/读条每剩 1 秒/g,"连续移动每满 1 秒"], [/读条/g,"移动"],
+ [/超时/g,"被弹丸命中"],
+ [/答对 8 个字母以上的词/g,"命中大体型敌人"], [/答对的词每超过 6 个字母/g,"每命中一只大体型敌人"],
+ [/打中弱点/g,"命中精英或 Boss"], [/所有题都算打中弱点/g,"所有命中都算弱点"],
+ [/怪物弱点类的词/g,"精英和 Boss"],
+ [/答对一题|答对/g,"挥刀"], [/答错一次|答错/g,"受伤"], [/每答一题/g,"每挥一刀"],
+ [/答\s*(\d+)\s*题/g,"挥 $1 刀"], [/(\d+)\s*题/g,"$1 刀"],
+ [/守层者/g,"精英"], [/清空时/g,"这一波结束时"], [/每层清空/g,"每波结束"],
+ [/每深入一层/g,"每过一波"], [/每进一层/g,"每进一波"], [/第 30 层起/g,"第 30 波起"],
+ [/当前层数/g,"当前波数"], [/Boss 层/g,"Boss 波"], [/每层/g,"每波"], [/本层/g,"本波"],
+ [/下一层/g,"下一波"], [/上层/g,"上一波"], [/连续 2 层/g,"连续 2 波"], [/一层/g,"一波"],
+ [/这一层/g,"这一波"], [/层数 ×2/g,"波数 ×2"], [/游商/g,"整备点商店"],
+ [/祭坛献祭/g,"整备补给"], [/宝箱/g,"补给"], [/撤退/g,"受伤"], [/这一刀必定暴击/g,"这一刀必定暴击"]
+];
+function bfWord(r){
+  if(BFW[r.id]) return BFW[r.id];
+  var s = r.pw;
+  for(var i = 0; i < BFW_RE.length; i++) s = s.replace(BFW_RE[i][0], BFW_RE[i][1]);
+  return s;
+}
+
+/* ================================================================
+   状态
+   P 这一趟（遗物、等级、金币…）  G 这一波（每波清零的计数）  E 场上的实体
+   ⚠️ P 上只许存「发生过几次 / 攒了多少」这种事实，换算成属性那一步必须在 bstats() 里。
+   ================================================================ */
+var P = null, G = null, E = null, CAM = {x:0, y:0}, PAUSED = true, OVER = false;
+var RMAP = {};                                   // id -> relic def
+(function(){ for(var i = 0; i < RELICS.length; i++) RMAP[RELICS[i].id] = RELICS[i]; })();
+var REDUCE_MOTION = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+function has(id){ return P && P.rset[id] === 1; }
+function reindex(){ P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1; }
+function nRar(r){ var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r === r) n++; return n; }
+
+function newRun(){
+  P = {hp:0, lvl:1, xp:0, gold:0, relics:[], rset:{}, combo:0, maxCombo:0, shield:0,
+       kills:0, spent:0, bought:0, time:0, wave:1,
+       killStreak:0, revived:0, shieldBroken:0, recoil:0, charge:0, chew:0, rend:0,
+       bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
+       primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false, campN:0};
+  reindex();
+  newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
+  E = {foes:[], shots:[], drops:[], fx:[], boss:null};
+  E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0};
+  CAM.x = 0; CAM.y = 0;
+  P.hp = bstats().maxHp;
+  OVER = false; pendPicks = 0;
+}
+
+/* 每波清零的那一堆（跟地牢 nextFloor() 是一回事） */
+function newWave(w, quiet){
+  var prevHurt = G ? G.hurt : true;
+  G = {w:w, t:0, spawnAcc:0, echoUsed:false, reciteFree:0, holdUsed:0, corrodeArmor:0,
+       openLeft:5, glassCut:0, aspdCut:0, dice:0, borrowUsed:false, braceUsed:false,
+       burlapUsed:false, warmthUsed:false, rerollUsed:0, nerveN:0, reboundUsed:false,
+       tickN:0, longN:0, exorN:0, calmsN:0, stepArmor:0, fastRun:0, instantReady:false,
+       wholeUsed:false, needleN:0, ropeN:0, capN:0, critShN:0, songN:0, bladeN:0,
+       glyphArmor:0, healed:0, lastPct:0, greetN:0, shatterN:0, shatterFree:0, whim:0,
+       swings:0, wrongN:0, hurt:false, kindsSeen:{}, catSeen:{}, hauntN:0, bossAdds:0,
+       fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false,
+       cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0};
+  P.wave = w;
+  if(quiet) return;
+  /* 「稳步」：上一波没受过伤 */
+  if(has("pace") && !prevHurt) healUp(bstats().maxHp * 0.55);
+  onWaveRelics(w);
+}
+
+/* ================================================================
+   面板：bstats()
+   ⚠️ **全部现算**，一点加成都不许攒进 P —— 卖掉遗物必须当场失效。
+   ⚠️ 顺序写死（跟 game.js 的 stats() 同一套）：
+      加血件 → 铁躯 ×1.5 → 献身 ÷2 → 血量/连杀条件件 → 重装 (甲+1)×4 →
+      硬茧 (甲+4)×1.2 → 破晓甲 → 叠甲 ×2 → 蚀甲 → 最低 1 → defGear 快照
+   ================================================================ */
+function bstats(){
+  var b = BF.base, lv = P.lvl - 1, g = P.gold, sh = P.shield, cb = P.combo, w = P.wave;
+  var s = {maxHp: b.maxHp + BF.perLevel.maxHp * lv, atk: b.atk + BF.perLevel.atk * lv,
+           armor: b.armor, crit: b.crit, critMult: b.critMult, spd: b.spd, aspd: b.aspd,
+           range: b.range, arc: b.arc, pickup: b.pickup, knock: b.knock,
+           cut: 0, goldPct: 0, xpPct: 0, comboStep: BF.comboStep, defGear: 0};
+
+  /* --- ① 加法：最大生命 --- */
+  if(has("heart"))       s.maxHp += 6;
+  if(has("grind"))       s.maxHp -= 5;
+  if(has("vigor"))       s.maxHp += 17;
+  if(has("gird"))        s.maxHp -= 2;
+  if(has("ward"))        s.maxHp += 7;
+  if(has("pad"))         s.maxHp += 8;
+  if(has("paperweight")) s.maxHp += 6;
+  if(has("engrave"))     s.maxHp += Math.min(30, 3 * lv);
+  if(has("titan"))       s.maxHp = Math.round(s.maxHp * 1.5);      // 铁躯
+  if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
+  s.maxHp = Math.max(1, Math.round(s.maxHp));
+  var hpPct = s.maxHp > 0 ? P.hp / s.maxHp : 1;
+
+  /* --- ② 加法：攻击 --- */
+  if(has("whet"))  s.atk += 3;
+  if(has("grind")) s.atk += 5;
+  if(has("nick"))  s.atk += 1;
+  if(has("vigor")) s.atk -= 4;
+  if(has("brand")) s.atk += Math.min(20, lv);
+  if(has("paperweight")) s.atk += Math.min(8, Math.floor(s.maxHp / 40));
+  if(has("moltengold")) s.atk += 2 * Math.min(12, Math.floor(g / 100));
+  if(has("triplecut") && P.killStreak >= 3) s.atk += 10;
+
+  /* --- ③ 加法：暴击 --- */
+  if(has("keen"))      s.crit += 5;
+  if(has("nick"))      s.crit += 4;
+  if(has("rustplate")) s.crit -= 6;
+  if(has("spark"))     s.crit += 20;
+  if(has("maul"))      s.crit += 10;
+  if(has("carve"))     s.crit += 15;
+  if(has("recite"))    s.crit += 30;
+  if(has("caution"))   s.crit += 2;
+  if(has("stroke"))    s.crit += 8;                                 // 战场改写
+  if(has("tempo") && cb >= 5)  s.crit += 25;
+  if(has("charge"))    s.crit += 5 * P.charge;
+  if(has("dice"))      s.crit += G.dice;
+  if(has("weight"))    s.crit += 3 + Math.min(8, 2 * Math.floor(g / 200));
+  if(has("moltengold")) s.crit += 2 * Math.min(12, Math.floor(g / 100));
+  if(has("mirroredge")) s.crit += Math.min(20, 4 * Math.floor(sh / 15));
+  if(has("vim") && hpPct >= 1)     s.crit += 30;
+  if(has("slaughter") && P.killStreak >= 5) s.crit += 50;
+  if(has("edge"))  s.critMult += 0.5;
+  if(has("clean")) s.critMult += 0.4;                               // 战场改写
+  if(has("maul"))  s.critMult += 1.0;
+  if(has("crush")) s.critMult += 3.5;
+
+  /* --- ④ 加法：护甲 --- */
+  if(has("iron"))      s.armor += 1;
+  if(has("plate"))     s.armor += 2;
+  if(has("gird"))      s.armor += 1;
+  if(has("twoply"))    s.armor += 4;
+  if(has("rustplate")) s.armor += 2;
+  if(has("bastion"))   s.armor += 4;
+  if(has("armpad"))    s.armor += 1;
+  if(has("underarmor"))s.armor += 2;
+  if(has("armblade"))  s.armor += 2;
+  if(has("ironvow"))   s.armor += 3;
+  if(has("rampart"))   s.armor += 10;
+  if(has("chainmail")) s.armor += 1 + Math.min(3, Math.floor(cb / 6));
+  if(has("bloodplate"))s.armor += Math.min(6, Math.floor(s.maxHp / 40));
+  if(has("twin"))      s.armor += Math.min(8, Math.floor(sh / 15));
+  if(has("shieldking"))s.armor += Math.min(4, Math.floor(sh / 30));
+  if(has("veteran"))   s.armor += Math.min(10, 2 * Math.floor(P.shieldBroken / 5));
+  if(has("spry"))      s.armor += Math.min(7, Math.max(0, relicCap() - P.relics.length));
+  if(has("stand") && hpPct < 0.50) s.armor += 5;
+  if(has("whole") && hpPct >= 1)   s.armor += 8;
+  if(has("slaughter") && P.killStreak >= 5) s.armor += 6;
+  s.armor += G.stepArmor + G.glyphArmor + G.corrodeArmor;
+  if(has("dawn") && G.swings < 20) s.armor += 5;
+  /* 乘法几件，位置写死 */
+  if(has("heavy"))  s.armor = (s.armor + 1) * 4;
+  if(has("callus")) s.armor = Math.floor((s.armor + 3) * 1.2);
+  if(has("stack")){ s.armor += 5; if(P.noHitWaves >= 2) s.armor *= 2; }
+  s.armor = Math.max(0, Math.round(s.armor));
+
+  /* --- ⑤ 常驻减伤（cutStatic 的唯一口径，封在 BF.cutMax）--- */
+  var c = 0;
+  if(has("soft"))  c += 7;
+  if(has("hide"))  c += 3;
+  if(has("shed"))  c += 10;
+  if(has("still")) c += 20;
+  if(has("quell")) c += 20;
+  if(has("bile"))  c += 5;
+  if(has("janus")) c += 8;
+  if(has("linked"))c += 5 + Math.min(25, 5 * Math.floor(cb / 4));
+  if(has("goldplate")) c += 5 + Math.min(16, 4 * Math.floor(g / 300));
+  if(has("evervow")) c += 6;
+  if(has("tough"))  c += Math.min(15, w - 1);
+  if(has("deep") && w >= 30) c += 15;
+  if(has("nemesis"))c += Math.min(45, 5 * P.bossSeen);
+  if(has("ascetic") && !P.everBought) c += Math.min(25, 5 * (w - 1));
+  if(has("familiar")) c += Math.min(15, 5 * Object.keys(G.kindsSeen).length);
+  if(has("grit"))   c += Math.min(15, 5 * G.wrongN);
+  if(has("shieldheart") && sh >= 50) c += 18;
+  if(has("scale") && hpPct < 0.50) c += 15;
+  if(has("ease")  && hpPct > 0.80) c += 12;
+  if(has("ironvow")) c += 2 * Math.min(5, Math.floor(s.armor / 3));
+  if(has("confluence")) c += 2 * confTiers(s);
+  s.cutStatic = c;
+  s.cut = c;
+
+  /* --- ⑥ 别的 --- */
+  if(has("greed")) s.goldPct += 20;
+  if(has("rust"))  s.goldPct += 10;
+  if(has("study")) s.xpPct  += 10;
+  if(has("spark")) s.comboStep = 2;
+  if(has("wellread")) s.range = Math.round(s.range * 1.10);         // 战场改写
+  if(has("steady") && hpPct < 0.25) s.spd = Math.round(s.spd * 1.25);
+  s.aspd = Math.max(0.35, s.aspd * (1 - G.aspdCut / 100));          // 沙漏的代价
+
+  s.atk = Math.max(1, Math.round(s.atk));
+  s.defGear = s.armor;                                              // 铁壁读的是这个
+  return s;
+}
+
+/* 「万流归宗」的三条线各几档（护盾每 50 / 护甲每 5 / 连击每 10，各最多 3 档） */
+function confTiers(s){
+  return Math.min(3, Math.floor(P.shield / 50)) +
+         Math.min(3, Math.floor(s.armor / 5)) +
+         Math.min(3, Math.floor(P.combo / 10));
+}
+function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0); }
+function comboPct(s){ return Math.floor(P.combo / s.comboStep) * BF.comboPct; }
+
+/* 概率类效果的唯一口子（幸运 +25% 相对、再摇没中再掷一次）—— 别再直接写 Math.random() < p */
+function luck(p){
+  if(has("fortune")) p *= 1.25;
+  if(Math.random() < p) return true;
+  if(has("reshake") && Math.random() < 0.20) return Math.random() < p;
+  return false;
+}
+
+/* ================================================================
+   打人这一侧
+   伤害 =（atk + base + extra）×（1 + pct/100）+ flat，再 ×暴击倍率，最后 −护甲，最低 1
+   ⚠️ 全局只有「×(1+pct)」和「×暴击倍率」两个乘区，别再加第三个。
+   ================================================================ */
+var swingDepth = 0;
+
+/* 刀朝哪儿：**优先朝最近的敌人**，附近没人才用移动方向。
+   ⚠️ 别改回「只朝移动方向」—— 实测那样绕圈跑 100 秒只砍到 2 只，
+      怪永远在你背后，自动挥刀等于没有。幸存者类都是自动瞄准的。 */
+function aimDir(s){
+  var me = E.me, best = null, bd = 1e9, i, f, d;
+  var reach = s.range * 2.4;
+  for(i = 0; i < E.foes.length; i++){
+    f = E.foes[i]; if(f.dead) continue;
+    d = Math.hypot(f.x - me.x, f.y - me.y) - f.r;
+    if(d < bd && d <= reach){ bd = d; best = f; }
+  }
+  return best ? Math.atan2(best.y - me.y, best.x - me.x) : me.dir;
+}
+
+function swing(){
+  var s = bstats(), me = E.me;
+  var aim = aimDir(s);
+  var halfArc = s.arc * Math.PI / 360, inner = s.range * BF.wagerInner;
+  var hits = [], wager = false, i, f, dx, dy, d, a, big = 0, weak = false, hauntHit = false;
+
+  for(i = 0; i < E.foes.length; i++){
+    f = E.foes[i]; if(f.dead) continue;
+    dx = f.x - me.x; dy = f.y - me.y; d = Math.hypot(dx, dy);
+    if(d > s.range + f.r) continue;
+    a = Math.atan2(dy, dx) - aim;
+    while(a >  Math.PI) a -= Math.PI * 2;
+    while(a < -Math.PI) a += Math.PI * 2;
+    if(Math.abs(a) > halfArc) continue;
+    hits.push(f);
+    if(d <= inner + f.r) wager = true;
+    if(f.r >= BF.bigR) big++;
+    if(f.elite || f.boss) weak = true;
+    if(f.haunt) hauntHit = true;
+  }
+  G.swings++;
+  fxSwing(me.x, me.y, aim, s.range, s.arc);
+  if(!hits.length){ return; }
+
+  var moving = me.moving > 0.05;
+  if(has("synes")) weak = true;
+
+  /* ---- 四层桶 ---- */
+  var base = 0, pct = comboPct(s), flat = 0, extra = 0, noArmor = false, forceCrit = false;
+  var hp1 = P.hp / s.maxHp, cb = P.combo, g = P.gold, w = P.wave;
+
+  if(weak) base += 2;
+  if(wager){ pct += 100; if(has("nerve")) pct += 30; if(has("gambler")) flat += 10; }
+  if(has("quick"))   pct += Math.min(40, 4 * Math.floor(cb / 5));
+  if(has("snow"))    extra += 25 * Math.floor(cb / 5);
+  if(has("inertia") && cb >= 5) pct += 40;
+  if(has("scent") && weak)  pct += 20;
+  if(has("synes"))   pct += 30;
+  if(has("flaw")){   pct += 30; noArmor = true; }
+  if(has("ember") && hp1 < 0.33) pct += 95;
+  if(has("hoard"))   pct += 2 * Math.floor(g / 100);
+  if(has("spend"))   pct += Math.min(40, 2 * Math.floor(P.spent / 300));
+  if(has("delve"))   pct += Math.min(20, 0.5 * (w - 1));
+  if(has("slay")){   pct += 30; if(weak) pct += 100; }
+  if(has("opening") && G.openLeft > 0){ pct += 100; G.openLeft--; }
+  if(has("greet")   && G.greetN < 6){   pct += 130; G.greetN++; }
+  if(has("bastion")) pct += 3 * s.defGear;
+  if(has("recoil"))  pct += 50 * Math.min(3, P.recoil);
+  if(has("knock") && isBossWave(w)) pct += 50;
+  if(has("stockpile")) pct += Math.min(30, 5 * P.bought);
+  if(has("feeddemon")) pct += Math.min(40, 5 * G.hauntN);
+  if(has("fearless") && hauntHit) pct += 80;
+  if(has("full") && hp1 > 0.80) pct += 10;
+  if(has("prime")){ if(hp1 >= 1) pct += 85; if(P.primeLeft > 0) pct += 40; }
+  if(has("whole") && hp1 >= 1) pct += 80;
+  if(has("bamboo"))  pct += Math.min(32, 4 * P.killStreak);
+  if(has("swift") && moving) pct += 12;
+  if(has("poise"))   pct += Math.min(60, 10 * Math.floor(me.moveT || 0));
+  if(has("longword") && big) pct += 15;
+  if(has("keenrise") && P.riseLeft > 0) pct += 120;
+  if(has("spellblade") && P.bladeLeft > 0) pct += 80;
+  if(has("shedge"))  pct += Math.min(12, 3 * Math.floor(P.shield / 20));
+  if(has("towel"))   pct += Math.min(12, 2 * Math.floor(G.healed / Math.max(1, s.maxHp * 0.1)));
+  if(has("janus")){  pct += 15 + 6 * Math.floor(s.cutStatic / 10); }
+  if(has("confluence")) pct += 6 * confTiers(s);
+  if(has("ironvow"))  pct += 5 * Math.min(5, Math.floor(s.armor / 3));
+  if(has("shieldking")) pct += 5 * Math.min(4, Math.floor(P.shield / 30));
+  if(has("empty"))    pct += 7 * Math.max(0, BF.relicMax - P.relics.length);
+  if(has("whim"))     pct += G.whim;
+  if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
+  if(has("rend")){ extra += 20; if(P.rend < 100){ P.rend++; P.hp = Math.max(1, P.hp - 1); } }
+  if(has("volume"))   extra += 4 * big;
+  if(has("keenfull") && hp1 > 0.50) extra += 30;
+  if(has("snap") && moving) extra += 20;
+  if(has("surge") && luck(0.25)) extra += 25;
+  if(has("mirror"))   flat += Math.min(200, Math.floor(P.shield / 5));
+  if(has("bloodmaul"))flat += Math.min(15, 3 * Math.floor(G.healed / 10));
+  if(has("flash") && cb > 0 && cb % 5 === 0) forceCrit = true;
+  if(has("instant") && moving) forceCrit = true;
+
+  /* ---- 暴击 ---- */
+  var cr = s.crit, cm = s.critMult;
+  if(cr > 100) cm += 0.1 * Math.floor((cr - 100) / 5);
+  var crit = forceCrit || (Math.random() * 100 < cr);
+  if(crit && has("crush")) noArmor = true;
+
+  var raw = (s.atk + base + extra) * (1 + pct / 100) + flat;
+  if(crit) raw *= cm;
+  raw = Math.max(1, Math.round(raw));
+
+  /* ---- 落到每一只身上 ---- */
+  for(i = 0; i < hits.length; i++){
+    f = hits[i];
+    var d2 = Math.max(1, raw - (noArmor ? 0 : f.armor));
+    hurtFoe(f, d2, s, crit);
+  }
+
+  /* ---- 连击 ---- */
+  P.combo += 1;
+  if(has("offbeat") && moving) P.combo += 1;
+  if(has("chase") && weak){ P.combo += 2; healUp(s.maxHp * 0.10); }
+  if(P.combo > P.maxCombo) P.maxCombo = P.combo;
+  G.lastPct = pct;
+
+  /* ---- 挥刀触发（= 地牢的「答对」）---- */
+  onSwingRelics(s, {crit:crit, moving:moving, wager:wager, big:big, weak:weak});
+
+  /* 回响之厅：立刻再挥一刀（防无限递归） */
+  if(has("hall") && swingDepth < 3 && luck(0.50)){ swingDepth++; swing(); swingDepth--; }
+}
+
+function onSwingRelics(s, c){
+  if(has("drain") && luck(0.10)) healUp(4);
+  if(has("pulse")) healUp(s.maxHp * 0.01);
+  if(has("midas") && luck(0.25)) addGold(10);
+  if(has("phoenix") && P.hp / s.maxHp < 0.15) healUp(s.maxHp * 0.05);
+  if(has("allin") && c.wager && luck(0.10)) healUp(s.maxHp * 0.10);
+  if(has("restring") && luck(0.20)){ P.combo = Math.max(P.combo, P.maxCombo); healUp(5); }
+  if(has("chew") && P.chew){ P.chew = 0; healUp(s.maxHp * 0.04); }
+  if(has("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(10);
+  if(has("aegis")){ P.aegisN++; if(P.aegisN % 10 === 0) addShield(10, 300); }
+  if(has("corrode")) G.corrodeArmor = Math.min(5, G.corrodeArmor + 1);
+  if(has("dice") && luck(0.50)) G.dice += 25;
+  if(has("charge")) P.charge = c.crit ? 0 : P.charge + 1;
+  if(has("oldrope") && P.combo % 8 === 0 && G.ropeN < 6){ G.ropeN++; addShield(2); }
+  if(has("longsong") && P.combo % 10 === 0 && G.songN < 4){ G.songN++; addShield(15); healUp(s.maxHp * 0.03); }
+  if(has("secondhand") && c.moving && G.tickN < 4){ G.tickN++; addShield(7); }
+  if(has("ponder") && c.big && G.longN < 3){ G.longN++; addShield(10); }
+  if(c.crit){
+    if(has("vamp")) healUp(5);
+    if(has("needle") && G.needleN < 4){ G.needleN++; addShield(3); }
+    if(has("cap") && G.capN < 4){ G.capN++; healUp(s.maxHp * 0.03); }
+    if(has("critshield") && G.critShN < 8){ G.critShN++; addShield(6); }
+    if(has("glyph")) G.glyphArmor = Math.min(6, G.glyphArmor + 2);
+    if(has("spellblade") && G.bladeN < 4){ G.bladeN++; P.bladeLeft = 5; }
+  }
+  if(has("whim")){ var r = ri(0, 2);
+    if(r === 0) G.whim += 8; else if(r === 1) healUp(s.maxHp * 0.05); else addGold(60); }
+  if(has("instant") && c.moving){ G.fastRun++; if(G.fastRun >= 5) G.instantReady = true; }
+  else if(has("instant")) G.fastRun = 0;
+  if(P.riseLeft > 0)  P.riseLeft--;
+  if(P.bladeLeft > 0) P.bladeLeft--;
+  if(P.primeLeft > 0) P.primeLeft--;
+}
+
+/* ================================================================
+   挨打这一侧
+   takeHit() 是「真的要掉血」的唯一入口（护盾就扣在这儿）
+   mitigate() 是减伤链的唯一入口，顺序写死
+   ================================================================ */
+function mitigate(dmg, s, o){
+  o = o || {};
+  var cut = s.cutStatic;
+  if(has("twice") && o.repeat)  cut += 25;
+  if(has("psyche") && o.haunt)  cut += 15;
+  if(has("calm")   && !o.ranged)cut += 7;
+  if(has("buffer") && o.ranged) cut += 55;
+  if(has("chain"))              cut += 10;
+  if(has("grudge") && o.hitByMe)cut += 10;
+  if(has("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += 25; }
+  if(has("quell")  && o.boss)   cut += 50;
+  if(has("rampart") && P.rampartOn) cut += 50;
+  cut = Math.min(BF.cutMax, cut);
+  var out = Math.floor(dmg * (100 - cut) / 100);            // ⚠️ 先乘后除，别写成 ×(1−cut/100)
+
+  if(has("hold") && G.holdUsed < 2){ G.holdUsed++; out = Math.floor(out / 2); }
+  if(has("warmth") && P.warmthLeft > 0){ P.warmthLeft--; out = Math.floor(out / 2); }
+  var capPct = 0;
+  if(has("blunt")) capPct = 16;
+  if(has("womb"))  capPct = capPct ? Math.min(capPct, 12) : 12;
+  if(capPct) out = Math.min(out, Math.ceil(s.maxHp * capPct / 100));
+  if(has("endure") && out > s.maxHp * 0.10) out = Math.floor(out * 0.80);
+  if(has("brace") && !G.braceUsed && P.hp > s.maxHp * 0.5 && P.hp - out <= s.maxHp * 0.5){
+    G.braceUsed = true; out = Math.floor(out * 0.45); }
+  out = Math.max(0, out - s.armor);
+  if(has("slip") && luck(0.20)) out = 0;
+  return Math.max(out > 0 ? 1 : 0, out);
+}
+
+/* 每一条「怪打你」的路都必须接到这儿，否则护盾会被绕过去 */
+function takeHit(dmg, foe, o){
+  if(OVER) return;
+  o = o || {};
+  var s = bstats();
+  /* ---- 连击处理（优先级：铁胆 ＞ 断链 ＞ 惯性 ＞ 长链 ＞ 清零，归位兜一次）---- */
+  var free = false, cb = P.combo;
+  if(has("nerve") && o.wager && G.nerveN < 2){ G.nerveN++; }
+  else if(has("unchain") && cb >= P.wave){ P.combo = cb - P.wave; free = true; }
+  else if(has("inertia") && cb >= 5) P.combo = 5;
+  else if(has("chain")) P.combo = Math.floor(cb / 2);
+  else {
+    if(has("rebound") && !G.reboundUsed && cb >= 10){
+      G.reboundUsed = true; P.combo = Math.floor(cb / 2); healUp(s.maxHp * 0.20);
+    } else P.combo = 0;
+  }
+  G.wrongN++; G.hurt = true;
+
+  /* ---- 免伤（排在减伤链之前，别白吃屏息/错身的次数）---- */
+  if(!free && has("echo") && !G.echoUsed){ G.echoUsed = true; healUp(s.maxHp * 0.05); free = true; }
+  if(!free && has("recite") && G.reciteFree < 1){ G.reciteFree++; free = true; }
+  if(!free && has("caution") && o.ranged && G.cautionN < 2){ G.cautionN++; free = true; }
+  if(!free && has("fearless") && o.haunt) free = true;
+  if(!free && has("glass") && o.ranged){ G.aspdCut += 3; free = true; }
+  if(!free && has("shatter") && G.shatterFree > 0){ G.shatterFree--; free = true; }
+
+  if(has("thorns")) splash(foe, 30);
+  if(has("build")) addShield(2);
+
+  if(free){ fxText("免伤", "#47702F"); return; }
+
+  var raw = dmg;
+  if(o.wager) raw = Math.round(raw * (has("cushion") ? 1.8 : 2));
+  var out = mitigate(raw, s, o);
+  if(out <= 0){ fxText("0", "#47702F"); return; }
+
+  /* ---- 护盾先吃 ---- */
+  var hadShield = P.shield > 0;
+  if(P.shield > 0){
+    var eat = Math.min(P.shield, out);
+    P.shield -= eat; out -= eat;
+    if(hadShield && P.shield <= 0) onShieldBroken();
+  }
+  if(out <= 0){ fxText("盾", "#6E86A8"); return; }
+
+  P.hp -= out; G.dmgTaken += out;
+  P.killStreak = 0; P.noHitWaves = 0;
+  if(has("recoil")) P.recoil = Math.min(3, P.recoil + 1);
+  if(has("chew")) P.chew = 1;
+  if(has("prime")) P.primeLeft = 3;
+  fxText("-" + out, "#A93729");
+  if(foe && !foe.haunt && G.hauntN < BF.hauntMax * (has("bind") ? 2 : 1)){
+    foe.haunt = true; G.hauntN++;
+  }
+  if(has("warmth") && !G.warmthUsed && P.hp <= s.maxHp * 0.5){ G.warmthUsed = true; P.warmthLeft = 5; }
+  if(has("rampart")){ if(P.hp <= s.maxHp * 0.10) P.rampartOn = true;
+                      if(P.hp >= s.maxHp * 0.50) P.rampartOn = false; }
+  if(has("whole") && !G.wholeUsed && P.hp < s.maxHp * 0.5){
+    G.wholeUsed = true; P.hp = Math.round(s.maxHp * 0.8); }
+  if(P.hp <= 0) deathSave(s);
+}
+
+function onShieldBroken(){
+  P.shieldBroken++; G.broke = true;
+  if(has("borrow") && !G.borrowUsed){ G.borrowUsed = true; addShield(20); }
+  if(has("shatter") && G.shatterN < 6){ G.shatterN++; G.shatterFree++; }
+}
+
+/* 「打完发现血 ≤ 0」的唯一入口 */
+function deathSave(s){
+  if(has("undying") && !G.undyingUsed){ G.undyingUsed = true; P.hp = Math.round(s.maxHp * 0.25);
+    fxText("薪火", "#E3B23C"); return; }
+  if(has("revive") && P.revived < 3){ P.revived++; P.hp = Math.round(s.maxHp * 0.50);
+    fxText("回魂", "#E3B23C"); return; }
+  endRun();
+}
+
+/* 回血的唯一入口（泉涌把溢出转成护盾） */
+function healUp(n, force){
+  if(n <= 0 || OVER) return 0;
+  var s = bstats(), room = s.maxHp - P.hp, real = Math.min(room, Math.round(n));
+  var over = Math.round(n) - real;
+  P.hp += real; G.healed += real;
+  if(over > 0 && (force || has("well"))) addShield(Math.floor(over / 2));
+  return real;
+}
+function addShield(n, cap){
+  if(n <= 0) return;
+  P.shield += Math.round(n);
+  if(cap && P.shield > cap) P.shield = cap;
+}
+function addGold(n){
+  var s = bstats();
+  P.gold += Math.max(0, Math.round(n * (1 + s.goldPct / 100)));
+}
+
+/* ================================================================
+   进一波 / 升级 时触发的遗物
+   ================================================================ */
+function onWaveRelics(w){
+  var s = bstats();
+  if(has("lamp"))    healUp(s.maxHp * 0.08);
+  if(has("well"))    healUp(s.maxHp * 0.20);
+  if(has("towel"))   healUp(s.maxHp * 0.05);
+  if(has("bloodmaul")) healUp(s.maxHp * 0.10);
+  if(has("water"))   healUp(s.maxHp * 0.15, true);
+  if(has("finale"))  healUp(s.maxHp * 0.30);
+  if(has("underarmor")) healUp(s.maxHp * Math.min(0.18, 0.02 * s.armor));
+  if(has("clasp"))   healUp(s.maxHp * Math.min(0.06, 0.02 * Math.floor(P.gold / 200)));
+  if(has("foresight")) healUp(s.maxHp * 0.03 * Math.floor(P.gold / 100));
+  if(has("thick"))   addShield(7);
+  if(has("mirror"))  addShield(30);
+  if(has("borrow"))  addShield(20);
+  if(has("cherish")){ addShield(10); if(!P.brokeLast) healUp(s.maxHp * 0.15); }
+  if(has("shatter")) addShield(10);
+  if(has("veteran")) addShield(15);
+  if(has("shedge"))  addShield(8);
+  if(has("twin"))    addShield(25);
+  if(has("shieldking")) addShield(30);
+  if(has("mirroredge")) addShield(15);
+  if(has("shieldheart")) addShield(15);
+  if(has("evervow")) addShield(20);
+  if(has("atone"))   addShield(12);                            // 战场改写
+  if(has("armpad"))  addShield(Math.min(20, 4 * s.armor));
+  if(has("vow"))     P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.20));  // 取大值，别按回去
+  if(has("track") && P.wrong2 !== undefined && P.wrong1 < P.wrong2) addShield(110);
+  if(has("gatewait") && isBossWave(w)){ addShield(120); healUp(s.maxHp * 0.25); }
+  if(has("purse"))   P.gold += 30;
+  if(has("welfare")) addGold(w * 2);
+  if(has("dig"))     dropCoinPile(3);
+  if(!G.hurt) P.noHitWaves++;
+}
+
+function onLevelRelics(){
+  var s = bstats();
+  if(has("sprout")) healUp(s.maxHp * 0.04);
+  if(has("satori")) addShield(8);
+  if(has("keenrise")) P.riseLeft = 5;
+  if(has("ascend")){ G.stepArmor = Math.min(12, G.stepArmor + 3); healUp(s.maxHp * 0.05); }
+}
+
+function xpNeed(){
+  var n = BF.xpNeed(P.lvl);
+  if(has("adept")) n = Math.ceil(n * 0.8);
+  return n;
+}
+function gainXp(n){
+  var s = bstats();
+  P.xp += Math.max(1, Math.round(n * (1 + s.xpPct / 100)));
+  var up = 0;
+  while(P.xp >= xpNeed()){ P.xp -= xpNeed(); P.lvl++; up++; }
+  if(up){
+    var s2 = bstats();
+    P.hp = Math.min(s2.maxHp, P.hp + Math.round(s2.maxHp * BF.levelHealPct));
+    for(var i = 0; i < up; i++) onLevelRelics();
+    pendPicks += up;
+    openPick();
+  }
+}
+
+/* ================================================================
+   怪：受伤 / 倒下
+   ================================================================ */
+function hurtFoe(f, d, s, crit){
+  f.hp -= d;
+  f.flash = 0.12;
+  if(!f.noKnock){
+    var a = Math.atan2(f.y - E.me.y, f.x - E.me.x);
+    f.kx = Math.cos(a) * s.knock; f.ky = Math.sin(a) * s.knock;
+  }
+  f.hitByMe = (f.hitByMe || 0) + 1;
+  fxNum(f.x, f.y - f.r - 4, d, crit);
+  if(f.hp <= 0) killFoe(f);
+}
+function splash(near, d){
+  var f = near && !near.dead ? near : nearestFoe();
+  if(f){ f.hp -= d; if(f.hp <= 0) killFoe(f); }
+}
+function nearestFoe(){
+  var best = null, bd = 1e9, i, f, d;
+  for(i = 0; i < E.foes.length; i++){ f = E.foes[i]; if(f.dead) continue;
+    d = Math.hypot(f.x - E.me.x, f.y - E.me.y); if(d < bd){ bd = d; best = f; } }
+  return best;
+}
+function killFoe(f){
+  if(f.dead) return;
+  f.dead = true;
+  var s = bstats(), k = BF.killScale;
+  P.kills++; P.killStreak++;
+  P.kinds[f.id] = (P.kinds[f.id] || 0) + 1;
+  if(f.haunt){ G.hauntN--; P.hauntKills++;
+    if(has("exorcise") && G.exorN < 3){ G.exorN++; healUp(s.maxHp * 0.02); }
+    if(has("calmsoul") && G.calmsN < 3){ G.calmsN++; addShield(5); } }
+  if(has("salve") && luck(0.40)) healUp(4 * k);
+  if(has("reap"))     healUp(2 * k);
+  if(has("breath"))   healUp(s.maxHp * 0.02 * k);
+  if(has("mend"))     healUp(s.maxHp * 0.04 * k);
+  if(has("reapfull")) healUp(s.maxHp * 0.025 * k);
+  if(has("lesson") && !G.kindsSeen[f.id]) addGold(10);
+  if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
+  G.kindsSeen[f.id] = 1;
+  gainXp(f.xp);
+  dropGold(f.x, f.y, f.gold);
+  fxPop(f.x, f.y, f.col);
+  if(f.boss) onBossDown(f);
+}
+
+/* ================================================================
+   实体：生成 / AI / 弹丸 / 掉落
+   ================================================================ */
+function isBossWave(w){ return w % BF.bossEvery === 0; }
+
+function makeFoe(id, w, x, y){
+  var d = BF_FOES[id], sc = d.scale || 1;
+  return {id:id, def:d, name:d.name, col:d.col, art:d.art, x:x, y:y,
+    hp: Math.max(1, Math.round(d.hp * hpMul(w) * TIER.hp)),
+    maxHp: Math.max(1, Math.round(d.hp * hpMul(w) * TIER.hp)),
+    dmg: Math.max(1, Math.round(d.dmg * dmgMul(w) * TIER.dmg)),
+    spd: d.spd * spdMul(w), armor: d.armor,
+    xp: Math.max(1, Math.round(d.xp * xpMul(w))),
+    gold: ri(1, 3) + Math.floor(w / 2),
+    r: d.r * sc, sc: sc, elite: !!d.elite, noKnock: !!d.noKnock, phase: !!d.phase,
+    kx:0, ky:0, t: Math.random() * 10, touch:0, flash:0, haunt:false, dead:false,
+    shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0,
+    dashT:0, dashCd: d.dash ? d.dash.every * Math.random() : 0,
+    blinkCd: d.blink ? d.blink.every * Math.random() : 0, blinkWarn:0};
+}
+function makeBoss(w){
+  var d = bossFor(w);
+  var f = {id:"boss", def:d, name:d.name, col:d.col, art:d.art,
+    x: E.me.x, y: E.me.y - 200,
+    hp: Math.round(d.hp * TIER.hp), maxHp: Math.round(d.hp * TIER.hp),
+    dmg: Math.round(d.dmg * TIER.dmg), spd:d.spd, armor:d.armor,
+    xp:d.xp, gold:d.gold, r:d.r, sc:d.scale, elite:true, boss:true, noKnock:true,
+    kx:0, ky:0, t:0, touch:0, flash:0, dead:false,
+    sweepCd:d.sweep.cd * 0.6, quakeCd:d.quake.cd * 0.8, cast:null, castT:0,
+    called:0, rage:false};
+  return f;
+}
+
+function spawnRing(){
+  var a = Math.random() * Math.PI * 2;
+  var R = Math.hypot(cw, ch) / 2 + BF.spawnPad;
+  return {x: E.me.x + Math.cos(a) * R, y: E.me.y + Math.sin(a) * R};
+}
+function pickFromPool(pool){
+  var tot = 0, k;
+  for(k in pool) tot += pool[k];
+  var r = Math.random() * tot;
+  for(k in pool){ r -= pool[k]; if(r <= 0) return k; }
+  return "rat";
+}
+function waveDef(w){ return BF_WAVES[Math.min(w, BF_WAVES.length) - 1]; }
+
+function spawnTick(dt){
+  var w = P.wave;
+  if(isBossWave(w)) return spawnBossAdds(dt);
+  var wd = waveDef(w);
+  /* 这一波固定刷的（精英） */
+  if(!G.fixDone){ G.fixDone = true;
+    if(wd.fix) for(var k in wd.fix) for(var i = 0; i < wd.fix[k]; i++){
+      var p = spawnRing(); E.foes.push(makeFoe(k, w, p.x, p.y)); } }
+  var alive = liveFoes();
+  if(alive >= waveCap(w) * TIER.cap) return;
+  G.spawnAcc += dt * waveRate(w) * TIER.rate;
+  while(G.spawnAcc >= 1 && liveFoes() < waveCap(w) * TIER.cap){
+    G.spawnAcc -= 1;
+    var q = spawnRing();
+    E.foes.push(makeFoe(pickFromPool(wd.pool), w, q.x, q.y));
+  }
+}
+function spawnBossAdds(dt){
+  var d = bossFor(P.wave);
+  if(!E.boss || E.boss.dead) return;
+  var n = 0;
+  for(var i = 0; i < E.foes.length; i++) if(!E.foes[i].dead && E.foes[i].id === d.adds.id) n++;
+  G.addsT = (G.addsT || 0) - dt;
+  if(n < d.adds.n && G.addsT <= 0){
+    G.addsT = d.adds.respawn;
+    var p = spawnRing(); E.foes.push(makeFoe(d.adds.id, P.wave, p.x, p.y));
+  }
+}
+function liveFoes(){ var n = 0; for(var i = 0; i < E.foes.length; i++) if(!E.foes[i].dead) n++; return n; }
+
+/* ---- 掉落 ---- */
+function dropGold(x, y, n){ if(n > 0) E.drops.push({x:x, y:y, n:n, t:0}); }
+function dropCoinPile(k){
+  for(var i = 0; i < k; i++){
+    var a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 220;
+    var n = (ri(2, 6) + P.wave) * 2;
+    if(has("alms") && luck(0.30)) n *= 2;
+    E.drops.push({x: E.me.x + Math.cos(a) * d, y: E.me.y + Math.sin(a) * d, n:n, t:0});
+  }
+}
+
+/* ---- 弹丸 ---- */
+function shoot(f, s){
+  var d = f.def.shot, n = d.n, i;
+  var a0 = Math.atan2(E.me.y - f.y, E.me.x - f.x);
+  for(i = 0; i < n; i++){
+    var off = n > 1 ? (i - (n - 1) / 2) * d.spread * Math.PI / 180 : 0;
+    E.shots.push({x:f.x, y:f.y, vx:Math.cos(a0 + off) * d.speed, vy:Math.sin(a0 + off) * d.speed,
+                  r:d.r, dmg:f.dmg, col:f.col, life:4, slow:d.slow || null});
+  }
+}
+
+/* ================================================================
+   每帧
+   ================================================================ */
+function updateFoes(dt){
+  var me = E.me, i, j, f, o, dx, dy, d, sp;
+  for(i = 0; i < E.foes.length; i++){
+    f = E.foes[i]; if(f.dead) continue;
+    f.t += dt; if(f.flash > 0) f.flash -= dt;
+    dx = me.x - f.x; dy = me.y - f.y; d = Math.hypot(dx, dy) || 1;
+    sp = f.spd;
+    var def = f.def, tx = dx / d, ty = dy / d;
+
+    if(f.boss){ updateBoss(f, dt, d, tx, ty); }
+    else {
+      /* 冲刺 */
+      if(def.dash){
+        f.dashCd -= dt;
+        if(f.dashT > 0){ f.dashT -= dt; sp *= def.dash.mult; }
+        else if(f.dashCd <= -def.dash.rest && f.dashCd <= 0 && d < 420){
+          f.dashT = def.dash.dur; f.dashCd = def.dash.every; }
+      }
+      /* 瞬移 */
+      if(def.blink){
+        f.blinkCd -= dt;
+        if(f.blinkWarn > 0){ f.blinkWarn -= dt; sp = 0;
+          if(f.blinkWarn <= 0){
+            var a = Math.random() * Math.PI * 2, rr = def.blink.min + Math.random() * (def.blink.max - def.blink.min);
+            f.x = me.x + Math.cos(a) * rr; f.y = me.y + Math.sin(a) * rr; } }
+        else if(f.blinkCd <= 0 && d > 60){ f.blinkCd = def.blink.every; f.blinkWarn = def.blink.warn;
+          f.ghostX = f.x; f.ghostY = f.y; }
+      }
+      /* 远程：保持距离 + 开火 */
+      if(def.shot){
+        f.shotCd -= dt;
+        if(d < def.shot.keep * 0.8){ tx = -tx; ty = -ty; }
+        else if(d < def.shot.keep * 1.1){ tx = 0; ty = 0; }
+        if(f.shotCd <= 0 && d < def.shot.keep * 1.6){ f.shotCd = def.shot.cd; shoot(f); }
+      }
+      /* 幽魂的飘移 */
+      if(def.wob){ var w2 = Math.sin(f.t * 2.4) * 0.5;
+        var nx = -ty, ny = tx; tx += nx * w2; ty += ny * w2; }
+      f.x += tx * sp * dt; f.y += ty * sp * dt;
+    }
+    /* 击退 */
+    if(f.kx || f.ky){ f.x += f.kx; f.y += f.ky; f.kx *= 0.55; f.ky *= 0.55;
+      if(Math.abs(f.kx) < 0.4){ f.kx = 0; f.ky = 0; } }
+
+    /* 互相排开（幽魂不参与） */
+    if(!f.phase){
+      for(j = i + 1; j < E.foes.length; j++){
+        o = E.foes[j]; if(o.dead || o.phase) continue;
+        var ox = o.x - f.x, oy = o.y - f.y, od = Math.hypot(ox, oy), mn = f.r + o.r;
+        if(od > 0 && od < mn){ var push = (mn - od) / 2 / od;
+          f.x -= ox * push; f.y -= oy * push; o.x += ox * push; o.y += oy * push; }
+      }
+    }
+    /* 接触伤害 */
+    f.touch -= dt;
+    if(!f.def.shot || f.boss){
+      if(Math.hypot(me.x - f.x, me.y - f.y) < f.r + 12 && f.touch <= 0){
+        f.touch = BF.touchCd;
+        takeHit(f.dmg, f, {haunt:f.haunt, hitByMe:(f.hitByMe || 0) >= 1, boss:!!f.boss,
+                           repeat:!!G.catSeen[f.id], wager:false});
+        G.catSeen[f.id] = 1;
+      }
+    }
+  }
+  /* 清掉尸体 */
+  if(E.foes.length > 260) E.foes = E.foes.filter(function(x){ return !x.dead; });
+}
+
+function updateBoss(f, dt, d, tx, ty){
+  var def = f.def;
+  if(!f.rage && f.hp <= f.maxHp * def.rage.at){ f.rage = true; }
+  var cdx = f.rage ? def.rage.cd : 1, spx = f.rage ? def.rage.spd : 1;
+  /* 召唤 */
+  var frac = f.hp / f.maxHp;
+  while(f.called < def.call.at.length && frac <= def.call.at[f.called]){
+    f.called++;
+    for(var i = 0; i < def.call.n; i++){
+      var a = i / def.call.n * Math.PI * 2;
+      E.foes.push(makeFoe(def.call.id, P.wave, f.x + Math.cos(a) * def.call.ring,
+                                               f.y + Math.sin(a) * def.call.ring));
+    }
+    fxRing(f.x, f.y, def.call.ring, f.col);
+  }
+  if(f.cast){
+    f.castT -= dt;
+    if(f.castT <= 0){
+      if(f.cast === "sweep"){
+        var a2 = Math.atan2(E.me.y - f.y, E.me.x - f.x);
+        var dd = Math.hypot(E.me.x - f.x, E.me.y - f.y);
+        var da = Math.atan2(E.me.y - f.y, E.me.x - f.x) - a2;
+        if(dd < def.sweep.range) takeHit(Math.round(def.sweep.dmg * TIER.dmg), f, {boss:true});
+        fxArc(f.x, f.y, a2, def.sweep.range, def.sweep.arc, f.col);
+      } else if(f.cast === "quake"){
+        if(Math.hypot(E.me.x - f.qx, E.me.y - f.qy) < def.quake.r)
+          takeHit(Math.round(def.quake.dmg * TIER.dmg), f, {boss:true});
+        fxRing(f.qx, f.qy, def.quake.r, "#A93729");
+      }
+      f.cast = null;
+    }
+    return;                                   // 施法时不动
+  }
+  f.sweepCd -= dt; f.quakeCd -= dt;
+  if(f.sweepCd <= 0 && d < def.sweep.range){
+    f.sweepCd = def.sweep.cd * cdx; f.cast = "sweep"; f.castT = def.sweep.warn;
+    f.castDir = Math.atan2(E.me.y - f.y, E.me.x - f.x); return; }
+  if(f.quakeCd <= 0){
+    f.quakeCd = def.quake.cd * cdx; f.cast = "quake"; f.castT = def.quake.warn;
+    f.qx = E.me.x; f.qy = E.me.y; return; }
+  f.x += tx * f.spd * spx * dt; f.y += ty * f.spd * spx * dt;
+}
+
+function updateShots(dt){
+  var me = E.me;
+  for(var i = E.shots.length - 1; i >= 0; i--){
+    var s = E.shots[i];
+    s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+    if(s.life <= 0){ E.shots.splice(i, 1); continue; }
+    if(Math.hypot(me.x - s.x, me.y - s.y) < s.r + 11){
+      takeHit(s.dmg, null, {ranged:true});
+      if(s.slow){ me.slowT = s.slow.sec; me.slowPct = s.slow.pct; }
+      E.shots.splice(i, 1);
+    }
+  }
+}
+function updateDrops(dt){
+  var s = bstats(), me = E.me;
+  for(var i = E.drops.length - 1; i >= 0; i--){
+    var d = E.drops[i]; d.t += dt;
+    var dx = me.x - d.x, dy = me.y - d.y, dd = Math.hypot(dx, dy);
+    if(dd < s.pickup){ d.x += dx / dd * 320 * dt; d.y += dy / dd * 320 * dt; }
+    if(dd < 16){ addGold(d.n); E.drops.splice(i, 1); }
+  }
+}
+
+/* ================================================================
+   美术：把 art.js 的 SVG 转成 Image
+   ⚠️ MOB_ART / HERO 的主体是 currentColor，这里换成每只怪自己的颜色。
+   ⚠️ data URI 必须带 xmlns 和 width/height，不然有的浏览器画不出来。
+   ================================================================ */
+var IMG = {};
+function mkImg(svg, col){
+  var s = svg.replace(/currentColor/g, col)
+             .replace(/^<svg /, '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" ');
+  var im = new Image(); im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(s);
+  return im;
+}
+function buildArt(){
+  for(var k in BF_FOES) if(MOB_ART[BF_FOES[k].art]) IMG[k] = mkImg(MOB_ART[BF_FOES[k].art], BF_FOES[k].col);
+  IMG.boss = mkImg(MOB_ART[BF_BOSS.warden.art], BF_BOSS.warden.col);
+  IMG.bossRage = mkImg(MOB_ART[BF_BOSS.warden.art], "#D8412F");
+  IMG.hero = mkImg(HERO, "#245E8C");
+}
+
+/* ================================================================
+   画面
+   ================================================================ */
+var cv, ctx2, cw = 360, ch = 640, dpr = 1;
+function resize(){
+  cv = $("cv"); dpr = Math.min(2, window.devicePixelRatio || 1);
+  cw = cv.clientWidth; ch = cv.clientHeight;
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  ctx2 = cv.getContext("2d"); ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function sx(x){ return x - CAM.x + cw / 2; }
+function sy(y){ return y - CAM.y + ch / 2; }
+
+function draw(){
+  if(!ctx2) return;
+  var me = E.me, i;
+  ctx2.clearRect(0, 0, cw, ch);
+  /* 地板：56px 的格线 + 按坐标哈希撒的石纹。一个字节的地图数据都不存。 */
+  ctx2.fillStyle = "#F1EBDD"; ctx2.fillRect(0, 0, cw, ch);
+  var GS = 56, x0 = Math.floor((CAM.x - cw / 2) / GS) * GS, y0 = Math.floor((CAM.y - ch / 2) / GS) * GS;
+  ctx2.strokeStyle = "#E4DDCE"; ctx2.lineWidth = 1; ctx2.beginPath();
+  for(var gx = x0; gx < CAM.x + cw / 2 + GS; gx += GS){ ctx2.moveTo(sx(gx), 0); ctx2.lineTo(sx(gx), ch); }
+  for(var gy = y0; gy < CAM.y + ch / 2 + GS; gy += GS){ ctx2.moveTo(0, sy(gy)); ctx2.lineTo(cw, sy(gy)); }
+  ctx2.stroke();
+  ctx2.fillStyle = "#DED6C4";
+  for(gx = x0; gx < CAM.x + cw / 2 + GS; gx += GS)
+    for(gy = y0; gy < CAM.y + ch / 2 + GS; gy += GS){
+      var h = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+      if(h % 7 === 0) ctx2.fillRect(sx(gx) + (h % 31), sy(gy) + (h % 23), 3, 3);
+    }
+
+  /* Boss 预警（画在地上） */
+  for(i = 0; i < E.foes.length; i++){
+    var b = E.foes[i]; if(b.dead || !b.boss || !b.cast) continue;
+    ctx2.fillStyle = "rgba(169,55,41,.20)"; ctx2.strokeStyle = "rgba(169,55,41,.75)"; ctx2.lineWidth = 2;
+    if(b.cast === "sweep"){
+      var ha = b.def.sweep.arc * Math.PI / 360;
+      ctx2.beginPath(); ctx2.moveTo(sx(b.x), sy(b.y));
+      ctx2.arc(sx(b.x), sy(b.y), b.def.sweep.range, b.castDir - ha, b.castDir + ha);
+      ctx2.closePath(); ctx2.fill(); ctx2.stroke();
+    } else {
+      ctx2.beginPath(); ctx2.arc(sx(b.qx), sy(b.qy), b.def.quake.r, 0, 6.2832);
+      ctx2.fill(); ctx2.stroke();
+    }
+  }
+  /* 掉落 */
+  ctx2.fillStyle = "#E3B23C"; ctx2.strokeStyle = "#8A5F0C"; ctx2.lineWidth = 1;
+  for(i = 0; i < E.drops.length; i++){ var dp = E.drops[i];
+    ctx2.beginPath(); ctx2.arc(sx(dp.x), sy(dp.y), 5, 0, 6.2832); ctx2.fill(); ctx2.stroke(); }
+
+  /* 怪 */
+  for(i = 0; i < E.foes.length; i++){
+    var f = E.foes[i]; if(f.dead) continue;
+    var px = sx(f.x), py = sy(f.y), sz = f.r * 2.4;
+    if(px < -80 || px > cw + 80 || py < -80 || py > ch + 80) continue;
+    if(f.blinkWarn > 0 && f.ghostX !== undefined){
+      ctx2.globalAlpha = 0.3; drawImg(f, sx(f.ghostX), sy(f.ghostY), sz); ctx2.globalAlpha = 1; }
+    if(f.haunt){ ctx2.strokeStyle = "#6E1F16"; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(px, py, f.r + 3, 0, 6.2832); ctx2.stroke(); }
+    if(f.elite && !f.boss){ ctx2.strokeStyle = "#E3B23C"; ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(px, py, f.r + 5, 0, 6.2832); ctx2.stroke(); }
+    if(f.flash > 0){ ctx2.globalAlpha = 0.55; }
+    drawImg(f, px, py, sz);
+    ctx2.globalAlpha = 1;
+    if(f.boss || f.elite || f.hp < f.maxHp) drawBar(px, py - f.r - 7, f.r * 2, f.hp / f.maxHp);
+  }
+
+  /* 弹丸 */
+  for(i = 0; i < E.shots.length; i++){ var s2 = E.shots[i];
+    ctx2.fillStyle = s2.col; ctx2.beginPath(); ctx2.arc(sx(s2.x), sy(s2.y), s2.r, 0, 6.2832); ctx2.fill();
+    ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 1; ctx2.stroke(); }
+
+  /* Boss 跑出取景框时，在屏幕边上画一个指向它的三角 */
+  if(E.boss && !E.boss.dead){
+    var bx = sx(E.boss.x), by = sy(E.boss.y);
+    if(bx < 10 || bx > cw - 10 || by < 10 || by > ch - 10){
+      var ang = Math.atan2(E.boss.y - me.y, E.boss.x - me.x);
+      var mx = cw / 2 + Math.cos(ang) * (Math.min(cw, ch) / 2 - 26);
+      var my = ch / 2 + Math.sin(ang) * (Math.min(cw, ch) / 2 - 26);
+      ctx2.save(); ctx2.translate(mx, my); ctx2.rotate(ang);
+      ctx2.fillStyle = "#8A3223"; ctx2.beginPath();
+      ctx2.moveTo(11, 0); ctx2.lineTo(-7, 7); ctx2.lineTo(-7, -7); ctx2.closePath(); ctx2.fill();
+      ctx2.restore();
+    }
+  }
+
+  /* 主角 */
+  var him = IMG.hero;
+  if(him && him.complete) ctx2.drawImage(him, sx(me.x) - 15, sy(me.y) - 17, 30, 30);
+
+  /* 特效 */
+  drawFx();
+}
+function drawImg(f, px, py, sz){
+  var im = f.boss ? (f.rage ? IMG.bossRage : IMG.boss) : IMG[f.id];
+  if(im && im.complete && im.naturalWidth) ctx2.drawImage(im, px - sz / 2, py - sz / 2, sz, sz);
+  else { ctx2.fillStyle = f.col; ctx2.beginPath(); ctx2.arc(px, py, f.r, 0, 6.2832); ctx2.fill(); }
+}
+function drawBar(x, y, w, p){
+  w = Math.max(18, w);
+  ctx2.fillStyle = "rgba(46,42,35,.25)"; ctx2.fillRect(x - w / 2, y, w, 3);
+  ctx2.fillStyle = "#A93729"; ctx2.fillRect(x - w / 2, y, w * Math.max(0, p), 3);
+}
+
+/* ---- 特效（全部纯装饰，REDUCE_MOTION 开着就整段跳过）---- */
+function fxSwing(x, y, dir, range, arc){
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"sw", x:x, y:y, dir:dir, range:range, arc:arc, t:0, life:0.18});
+}
+function fxNum(x, y, n, crit){
+  if(REDUCE_MOTION) return;
+  E.fx.push({k:"n", x:x + ri(-6, 6), y:y, s:"" + n, crit:crit, t:0, life:0.55});
+}
+function fxText(s, col){ if(!REDUCE_MOTION) E.fx.push({k:"t", s:s, col:col, t:0, life:0.7}); }
+function fxPop(x, y, col){ if(!REDUCE_MOTION) E.fx.push({k:"p", x:x, y:y, col:col, t:0, life:0.3}); }
+function fxRing(x, y, r, col){ if(!REDUCE_MOTION) E.fx.push({k:"r", x:x, y:y, r:r, col:col, t:0, life:0.4}); }
+function fxArc(x, y, dir, range, arc, col){
+  if(!REDUCE_MOTION) E.fx.push({k:"a", x:x, y:y, dir:dir, range:range, arc:arc, col:col, t:0, life:0.3}); }
+function drawFx(){
+  for(var i = E.fx.length - 1; i >= 0; i--){
+    var f = E.fx[i], k = 1 - f.t / f.life;
+    ctx2.globalAlpha = Math.max(0, k);
+    if(f.k === "sw"){
+      var ha = f.arc * Math.PI / 360;
+      ctx2.strokeStyle = "#FCF8F0"; ctx2.lineWidth = 7; ctx2.lineCap = "round";
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.range * 0.82, f.dir - ha, f.dir + ha); ctx2.stroke();
+      ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 2; ctx2.stroke();
+    } else if(f.k === "n"){
+      ctx2.fillStyle = f.crit ? "#E3B23C" : "#2E2A23";
+      ctx2.font = (f.crit ? "bold " : "") + (f.crit ? 16 : 13) + "px system-ui";
+      ctx2.textAlign = "center"; ctx2.fillText(f.s, sx(f.x), sy(f.y) - f.t * 40);
+    } else if(f.k === "t"){
+      ctx2.fillStyle = f.col; ctx2.font = "bold 18px system-ui"; ctx2.textAlign = "center";
+      ctx2.fillText(f.s, cw / 2, ch * 0.62 - f.t * 30);
+    } else if(f.k === "p"){
+      ctx2.fillStyle = f.col; ctx2.beginPath();
+      ctx2.arc(sx(f.x), sy(f.y), 6 + f.t * 40, 0, 6.2832); ctx2.fill();
+    } else if(f.k === "r"){
+      ctx2.strokeStyle = f.col; ctx2.lineWidth = 4;
+      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.r * (0.6 + k * 0.5), 0, 6.2832); ctx2.stroke();
+    } else if(f.k === "a"){
+      var ha2 = f.arc * Math.PI / 360;
+      ctx2.fillStyle = f.col; ctx2.beginPath(); ctx2.moveTo(sx(f.x), sy(f.y));
+      ctx2.arc(sx(f.x), sy(f.y), f.range, f.dir - ha2, f.dir + ha2); ctx2.closePath(); ctx2.fill();
+    }
+    ctx2.globalAlpha = 1;
+  }
+  for(var j = E.fx.length - 1; j >= 0; j--) if(E.fx[j].t >= E.fx[j].life) E.fx.splice(j, 1);
+}
+
+/* ================================================================
+   输入：虚拟摇杆（触屏）+ WASD / 方向键（桌面）
+   ================================================================ */
+var IN = {x:0, y:0, on:false, id:-1, ox:0, oy:0};
+var KEY = {};
+function inputVec(){
+  if(IN.on) return {x:IN.x, y:IN.y};
+  var x = (KEY.d || KEY.ArrowRight ? 1 : 0) - (KEY.a || KEY.ArrowLeft ? 1 : 0);
+  var y = (KEY.s || KEY.ArrowDown ? 1 : 0) - (KEY.w || KEY.ArrowUp ? 1 : 0);
+  var m = Math.hypot(x, y); if(m > 1){ x /= m; y /= m; }
+  return {x:x, y:y};
+}
+function bindInput(){
+  var el = $("cv"), st = $("stick"), nub = $("stickNub");
+  el.addEventListener("pointerdown", function(e){
+    if(PAUSED || OVER) return;
+    IN.on = true; IN.id = e.pointerId; IN.ox = e.clientX; IN.oy = e.clientY; IN.x = 0; IN.y = 0;
+    st.hidden = false; st.style.left = IN.ox + "px"; st.style.top = IN.oy + "px";
+    nub.style.transform = "translate(0,0)";
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener("pointermove", function(e){
+    if(!IN.on || e.pointerId !== IN.id) return;
+    var dx = e.clientX - IN.ox, dy = e.clientY - IN.oy, d = Math.hypot(dx, dy);
+    if(d < 12){ IN.x = 0; IN.y = 0; nub.style.transform = "translate(0,0)"; return; }
+    var k = Math.min(1, (d - 12) / 28);
+    IN.x = dx / d * k; IN.y = dy / d * k;
+    var cl = Math.min(d, 40);
+    nub.style.transform = "translate(" + (dx / d * cl) + "px," + (dy / d * cl) + "px)";
+  });
+  function up(e){ if(e.pointerId !== IN.id) return; IN.on = false; IN.x = 0; IN.y = 0; st.hidden = true; }
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  addEventListener("keydown", function(e){ KEY[e.key] = 1; if(e.key === " ") e.preventDefault(); });
+  addEventListener("keyup",   function(e){ KEY[e.key] = 0; });
+}
+
+/* ================================================================
+   主循环
+   ================================================================ */
+var last = 0, rafOn = false;
+function frame(ts){
+  requestAnimationFrame(frame);
+  var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
+  if(!PAUSED && !OVER && P) step(dt);
+  if(P) draw();
+  if(P) renderHud();
+}
+function step(dt){
+  var me = E.me, s = bstats();
+  P.time += dt; G.t += dt;
+
+  /* 移动 */
+  var v = inputVec(), sp = s.spd;
+  if(me.slowT > 0){ me.slowT -= dt; sp *= (1 - me.slowPct); }
+  var mag = Math.hypot(v.x, v.y);
+  me.moving = mag;
+  if(mag > 0.05){
+    me.x += v.x * sp * dt; me.y += v.y * sp * dt;
+    me.dir = Math.atan2(v.y, v.x);
+    me.moveT = (me.moveT || 0) + dt;
+  } else me.moveT = 0;
+
+  /* 挥刀 */
+  me.swingCd -= dt;
+  if(me.swingCd <= 0){ me.swingCd += 1 / s.aspd; swing(); }
+
+  spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt);
+  for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
+  CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
+
+  if(G.bossDown){ G.bossDown = false; nextWave(); return; }
+  if(!isBossWave(P.wave) && G.t >= BF.waveSec) nextWave();
+}
+function nextWave(){
+  var w = P.wave + 1;
+  P.wrong2 = P.wrong1; P.wrong1 = G.wrongN; P.brokeLast = G.broke;   // 循迹 / 惜盾看的是上一波
+  newWave(w);
+  if(isBossWave(w)) startBoss(w);
+  if((w - 1) % BF.campEvery === 0) openCamp();
+}
+function startBoss(w){
+  E.foes.length = 0; E.shots.length = 0;
+  E.boss = makeBoss(w); E.foes.push(E.boss); P.bossSeen++;
+  fxText(E.boss.name, "#8A3223");
+}
+function onBossDown(b){
+  E.boss = null; G.bossDown = true;
+  for(var i = 0; i < E.foes.length; i++){ var f = E.foes[i]; if(!f.dead && f !== b) killFoe(f); }
+  E.shots.length = 0;
+}
+
+/* ================================================================
+   顶栏
+   ================================================================ */
+function renderHud(){
+  var s = bstats();
+  $("hWave").textContent = "第 " + P.wave + " 波" + (isBossWave(P.wave) ? " ·  BOSS" : "");
+  $("hTime").textContent = isBossWave(P.wave) ? "杀光它" : Math.max(0, Math.ceil(BF.waveSec - G.t)) + "";
+  $("hLvl").textContent  = "Lv " + P.lvl;
+  $("hGold").textContent = P.gold;
+  $("hKill").textContent = P.kills;
+  $("xpFill").style.width = Math.min(100, P.xp / xpNeed() * 100) + "%";
+  var hp = Math.max(0, P.hp);
+  $("hpFill").style.width = (hp / s.maxHp * 100) + "%";
+  $("shFill").style.width = Math.min(100, P.shield / s.maxHp * 100) + "%";
+  $("hpTxt").textContent = Math.ceil(hp) + " / " + s.maxHp + (P.shield > 0 ? "  +" + Math.round(P.shield) : "");
+  var bb = $("bossBar");
+  if(E.boss && !E.boss.dead){
+    bb.hidden = false;
+    $("bossFill").style.width = Math.max(0, E.boss.hp / E.boss.maxHp * 100) + "%";
+    $("bossName").textContent = E.boss.name + (E.boss.rage ? " · 狂暴" : "");
+  } else bb.hidden = true;
+}
+
+/* ================================================================
+   弹层与遗物界面
+   ================================================================ */
+function anyVeil(){ return !!document.querySelector(".veil.on"); }
+function show(id){ $(id).classList.add("on"); PAUSED = true; }
+function hide(id){ $(id).classList.remove("on"); PAUSED = anyVeil() || OVER; }
+
+function cardHtml(r, extra, cls){
+  return '<button class="card r' + r.r + (cls ? " " + cls : "") + '" data-id="' + r.id + '">' +
+         (extra || "") +
+         '<div class="cr">' + RAR_CN[r.r] + '</div>' +
+         '<div class="cn">' + r.n + '</div>' +
+         '<div class="cp">' + bfWord(r) + '</div>' +
+         '<div class="cl">' + r.lore + '</div></button>';
+}
+function fillCards(box, list, extraFn, clsFn){
+  var h = "", i;
+  for(i = 0; i < list.length; i++)
+    h += cardHtml(list[i], extraFn ? extraFn(list[i]) : "", clsFn ? clsFn(list[i]) : "");
+  $(box).innerHTML = h;
+}
+function onCards(box, fn){
+  $(box).addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".card") : null;
+    if(b && b.dataset.id) fn(b.dataset.id, b);
+  });
+}
+
+/* 掉率表：跟地牢那张同一个形状，横坐标换成波数 */
+function rarityWeights(w){
+  if(w <= 4)  return [87.5, 12.5, 0, 0, 0];
+  if(w <= 8)  return [75, 25, 0, 0, 0];
+  if(w <= 12) return [60, 35, 5, 0, 0];
+  if(w <= 16) return [50, 40, 10, 0, 0];
+  return [35, 45, 15, 5, 0];                    // 神圣恒为 0，只能靠合成和商店
+}
+function relicPool(rar){
+  var out = [], i, r;
+  for(i = 0; i < RELICS.length; i++){ r = RELICS[i];
+    if(has(r.id)) continue;
+    if(rar !== undefined && r.r !== rar) continue;
+    out.push(r); }
+  return out;
+}
+function rollRar(w){
+  var ws = rarityWeights(w), t = 0, i;
+  for(i = 0; i < 5; i++) t += ws[i];
+  var x = Math.random() * t;
+  for(i = 0; i < 5; i++){ x -= ws[i]; if(x <= 0) break; }
+  var want = Math.min(4, i);
+  if(has("omen") && want < 3 && luck(0.15)) want++;      // 吉兆：抬不到神圣
+  return want;
+}
+function rollRelics(n, w){
+  var out = [], tries = 0;
+  while(out.length < n && tries++ < 200){
+    var rar = rollRar(w), pool = relicPool(rar);
+    while(!pool.length && rar > 0){ rar--; pool = relicPool(rar); }
+    if(!pool.length) break;
+    var r = pick(pool);
+    if(out.indexOf(r) < 0) out.push(r);
+  }
+  return out;
+}
+
+/* ---- 升级四选一 ---- */
+var pendPicks = 0, pickOffer = [];
+function openPick(){
+  if(pendPicks <= 0){ hide("veilPick"); return; }
+  pickOffer = rollRelics(BF.pickN, P.wave);
+  if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
+  $("pickTitle").textContent = "升到 " + P.lvl + " 级" + (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
+  fillCards("pickList", pickOffer);
+  $("btnRedraw").hidden = !(has("fullset") && G.rerollUsed < 1);
+  show("veilPick");
+}
+function takePick(id){
+  pendPicks--;
+  hide("veilPick");
+  grantRelic(id, function(){ openPick(); });
+}
+
+/* ---- 给遗物（带满了弹取舍窗，换下来的当场分解成金币）---- */
+var swapNewId = null, swapAfter = null;
+function grantRelic(id, after){
+  if(!id){ if(after) after(); return; }
+  if(P.relics.length < relicCap()){
+    withMaxHp(function(){ P.relics.push(id); reindex(); });
+    if(after) after();
+    return;
+  }
+  swapNewId = id; swapAfter = after;
+  fillCards("swapNew", [RMAP[id]], function(r){ return '<span class="cost">卖 ' + sellPrice(r) + ' 金</span>'; });
+  fillCards("swapOld", P.relics.map(function(x){ return RMAP[x]; }),
+            function(r){ return '<span class="cost">+' + sellPrice(r) + ' 金</span>'; });
+  show("veilSwap");
+}
+function doSwap(oldId){
+  var nid = swapNewId, after = swapAfter;
+  swapNewId = null; swapAfter = null;
+  withMaxHp(function(){
+    if(oldId === null){ addGold(sellPrice(RMAP[nid])); }
+    else {
+      var i = P.relics.indexOf(oldId);
+      if(i >= 0){ addGold(sellPrice(RMAP[oldId])); P.relics.splice(i, 1); }
+      P.relics.push(nid); reindex();
+    }
+    reindex();
+  });
+  hide("veilSwap");
+  if(after) after();
+}
+function sellPrice(r){ return RAR_SELL[r.r]; }
+/* 生命上限涨了要补当前血；掉了要把当前血压回去（至少留 1 点）。
+   ⚠️ 所有动 P.relics 的地方都必须从这儿过。 */
+function withMaxHp(fn){
+  var before = bstats().maxHp;
+  fn();
+  var after = bstats().maxHp, d = after - before;
+  if(d > 0) P.hp += d;
+  P.hp = Math.max(1, Math.min(P.hp, after));
+}
+
+/* ---- 遗物页 ---- */
+function openBag(){
+  var s = bstats();
+  $("bagTitle").textContent = "遗物 " + P.relics.length + " / " + relicCap();
+  $("bagStats").innerHTML =
+    st2("攻击", s.atk) + st2("生命", Math.ceil(P.hp) + " / " + s.maxHp) +
+    st2("护甲", s.armor) + st2("减伤", s.cutStatic + "%") +
+    st2("暴击", s.crit + "% ×" + s.critMult.toFixed(1)) + st2("移速", Math.round(s.spd)) +
+    st2("攻速", s.aspd.toFixed(2) + " 刀/秒") + st2("刀程", Math.round(s.range)) +
+    st2("连击", P.combo + "（+" + comboPct(s) + "%）") + st2("护盾", Math.round(P.shield));
+  fillCards("bagList", P.relics.map(function(x){ return RMAP[x]; }),
+            function(r){ return '<span class="cost">分解 +' + sellPrice(r) + '</span>'; });
+  show("veilBag");
+}
+function st2(k, v){ return '<div><span>' + k + '</span><b>' + v + '</b></div>'; }
+
+/* ---- 整备点：商店 + 合成 + 补给 ---- */
+var shopRow = [], shopRe = 0, fuseMode = false, fuseSel = [];
+function shopMarkup(r){ return (r.r >= 2 ? 1.3 * 1.8 : 1.3); }
+function rollShop(){
+  var n = 5 + (has("key") ? 1 : 0);
+  shopRow = rollRelics(n, P.wave + 4).map(function(r){
+    return {id:r.id, price: Math.ceil(sellPrice(r) * shopMarkup(r)), sold:false};
+  });
+}
+function shopPrice(row){ return Math.ceil(row.price * (has("regular") ? 0.85 : 1)); }
+function openCamp(){
+  P.campN++;
+  shopRe = 1 + (has("key") ? 1 : 0);
+  rollShop(); fuseMode = false; fuseSel = [];
+  renderCamp(); show("veilCamp");
+}
+function renderCamp(){
+  var s = bstats();
+  $("campSub").textContent = "金币 " + P.gold + " · 补给 " + supplyCost() + " 金回满血";
+  var h = "", i;
+  for(i = 0; i < shopRow.length; i++){
+    var row = shopRow[i], r = RMAP[row.id];
+    h += cardHtml(r, '<span class="cost">' + shopPrice(row) + ' 金</span>',
+                  row.sold || P.gold < shopPrice(row) ? "dim" : "");
+  }
+  $("shopList").innerHTML = h;
+  $("btnShopRe").textContent = "刷新货架" + (shopRe > 0 ? "（还剩 " + shopRe + " 次）" : "（没了）");
+  $("btnShopRe").disabled = shopRe <= 0;
+  $("btnSupply").disabled = P.gold < supplyCost() || P.hp >= s.maxHp;
+  $("fuseSub").textContent = fuseMode
+    ? "挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length + " · 花费 " + fuseCost() + " 金"
+    : fuseN() + " 件同品质 + " + fuseCost() + " 金 → 高一档，从 " + FUSE_PICK + " 件里挑";
+  fillCards("fuseList", P.relics.map(function(x){ return RMAP[x]; }), null,
+            function(r){ return fuseSel.indexOf(r.id) >= 0 ? "sel" : (fuseMode && r.r >= 4 ? "dim" : ""); });
+  $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
+  $("btnFuseGo").disabled = !(fuseSel.length === fuseN() && P.gold >= fuseCost());
+}
+function supplyCost(){ return 50 * P.wave; }
+function fuseN(){ return has("recipe") ? 2 : FUSE_N; }
+function fuseCost(){
+  var c = FUSE_COST;
+  if(has("recipe")) c = Math.round(c / 2);
+  if(has("spare"))  c = Math.round(c / 2);          // 战场改写
+  return c;
+}
+function buyShop(id){
+  var row = null, i;
+  for(i = 0; i < shopRow.length; i++) if(shopRow[i].id === id && !shopRow[i].sold) row = shopRow[i];
+  if(!row || P.gold < shopPrice(row)) return;
+  P.gold -= shopPrice(row); P.spent += shopPrice(row); P.bought++; P.everBought = true;
+  row.sold = true;
+  grantRelic(id, renderCamp);
+}
+function fuseGo(){
+  if(fuseSel.length !== fuseN() || P.gold < fuseCost()) return;
+  var rar = RMAP[fuseSel[0]].r;
+  P.gold -= fuseCost(); P.spent += fuseCost();
+  withMaxHp(function(){
+    for(var i = 0; i < fuseSel.length; i++){
+      var k = P.relics.indexOf(fuseSel[i]); if(k >= 0) P.relics.splice(k, 1); }
+    reindex();
+  });
+  fuseSel = []; fuseMode = false;
+  var want = Math.min(4, rar + 1), pool = relicPool(want);
+  while(!pool.length && want > 0){ want--; pool = relicPool(want); }
+  if(!pool.length){ renderCamp(); return; }
+  var picks = [], t = 0;
+  while(picks.length < Math.min(FUSE_PICK, pool.length) && t++ < 100){
+    var r = pick(pool); if(picks.indexOf(r) < 0) picks.push(r); }
+  if(picks.length === 1){ grantRelic(picks[0].id, renderCamp); return; }
+  $("gotTitle").textContent = "合成出了 " + RAR_CN[want] + " · 挑一件";
+  fillCards("gotList", picks);
+  show("veilGot");                                  // ⚠️ 材料已经砸了，这个窗没有关闭钮
+}
+
+/* ================================================================
+   存档与结算
+   ⚠️ 这一轮**不发宝石、不碰续玩档** —— 宝石要等局外养成定了口径再接，
+      现在两套代码写同一个 youxu.town.v1 是白白冒险。
+   ================================================================ */
+var BF_KEY = "youxu.bf.v1";
+function bfMeta(){ return load(BF_KEY, {best:0, kills:0, runs:0}); }
+function bfSave(m){ if(!save(BF_KEY, m) && window.showErr) showErr("存档写不进去"); }
+
+function endRun(){
+  if(OVER) return;
+  OVER = true; PAUSED = true;
+  var m = bfMeta();
+  m.best = Math.max(m.best || 0, P.wave);
+  m.kills = (m.kills || 0) + P.kills;
+  m.runs = (m.runs || 0) + 1;
+  bfSave(m);
+  $("endTitle").textContent = "倒在第 " + P.wave + " 波";
+  $("endStats").innerHTML =
+    st2("到达波数", P.wave) + st2("历史最深", m.best) +
+    st2("击杀", P.kills) + st2("等级", P.lvl) +
+    st2("存活", Math.floor(P.time / 60) + " 分 " + Math.floor(P.time % 60) + " 秒") +
+    st2("最大连击", P.maxCombo);
+  fillCards("endRelics", P.relics.map(function(x){ return RMAP[x]; }));
+  document.querySelectorAll(".veil.on").forEach(function(v){ v.classList.remove("on"); });
+  show("veilEnd");
+}
+
+/* ================================================================
+   开场：难度层
+   ================================================================ */
+function renderTiers(){
+  var h = "", i, m = bfMeta();
+  for(i = 0; i < BF_TIERS.length; i++){
+    var t = BF_TIERS[i];
+    h += '<button class="tier' + (t === TIER ? " on" : "") + '"' + (t.locked ? " disabled" : "") +
+         ' data-i="' + i + '"><b>' + t.name + '</b>' +
+         '<p>' + (t.locked ? "局外养成解锁" : t.desc) +
+         '（怪血 ×' + t.hp.toFixed(2) + ' · 伤害 ×' + t.dmg.toFixed(2) +
+         ' · 密度 ×' + t.rate.toFixed(2) + '）</p></button>';
+  }
+  $("tierList").innerHTML = h;
+  $("veilStart").querySelector(".sub").textContent =
+    "走位躲怪，刀会自己挥。每升一级从四件遗物里挑一件。轮数没有尽头。" +
+    (m.best ? "　历史最深：第 " + m.best + " 波。" : "");
+}
+
+/* ================================================================
+   启动
+   ================================================================ */
+function boot(){
+  window.showErr = function(msg){ var b = $("errbar"); b.hidden = false; b.textContent = msg; };
+  window.addEventListener("error", function(e){ showErr("出错了：" + (e.message || e)); });
+
+  buildArt(); resize(); bindInput();
+  addEventListener("resize", resize);
+
+  renderTiers();
+  $("tierList").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".tier") : null;
+    if(!b || b.disabled) return;
+    TIER = BF_TIERS[+b.dataset.i]; renderTiers();
+  });
+  $("btnGo").addEventListener("click", function(){
+    newRun(); pendPicks = 0;
+    $("veilStart").classList.remove("on"); PAUSED = false; last = 0;
+  });
+
+  onCards("pickList", function(id){ takePick(id); });
+  $("btnSkipPick").addEventListener("click", function(){ pendPicks--; hide("veilPick"); openPick(); });
+  $("btnRedraw").addEventListener("click", function(){ G.rerollUsed++; openPick(); });
+
+  onCards("swapNew", function(){ doSwap(null); });
+  onCards("swapOld", function(id){ doSwap(id); });
+
+  $("btnBag").addEventListener("click", openBag);
+  $("btnBagClose").addEventListener("click", function(){ hide("veilBag"); });
+
+  $("btnPause").addEventListener("click", function(){ show("veilPause"); });
+  $("btnResume").addEventListener("click", function(){ hide("veilPause"); });
+  $("btnQuit").addEventListener("click", function(){ hide("veilPause"); endRun(); });
+
+  onCards("shopList", buyShop);
+  $("btnShopRe").addEventListener("click", function(){ if(shopRe > 0){ shopRe--; rollShop(); renderCamp(); } });
+  $("btnSupply").addEventListener("click", function(){
+    if(P.gold < supplyCost()) return;
+    P.gold -= supplyCost(); P.spent += supplyCost(); healUp(bstats().maxHp); renderCamp(); });
+  $("btnFuseMode").addEventListener("click", function(){ fuseMode = !fuseMode; fuseSel = []; renderCamp(); });
+  onCards("fuseList", function(id){
+    if(!fuseMode) return;
+    var r = RMAP[id];
+    if(r.r >= 4) return;                                   // 神圣不能当材料
+    var k = fuseSel.indexOf(id);
+    if(k >= 0) fuseSel.splice(k, 1);
+    else {
+      if(fuseSel.length && RMAP[fuseSel[0]].r !== r.r) fuseSel = [];
+      if(fuseSel.length < fuseN()) fuseSel.push(id);
+    }
+    renderCamp();
+  });
+  $("btnFuseGo").addEventListener("click", fuseGo);
+  $("btnCampClose").addEventListener("click", function(){ hide("veilCamp"); });
+  onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, renderCamp); });
+
+  $("btnAgain").addEventListener("click", function(){
+    $("veilEnd").classList.remove("on"); OVER = false;
+    newRun(); pendPicks = 0; PAUSED = false; last = 0;
+  });
+
+  show("veilStart");
+  requestAnimationFrame(frame);
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+else boot();

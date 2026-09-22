@@ -1,0 +1,117 @@
+/* 幽墟回廊 · 战场模式样式
+   ⚠️ 故意不加载 style.css —— 战场是独立页面，样式互不干扰。
+   颜色变量从 style.css 抄了一份需要的（改主色调时两边一起改）。 */
+:root{
+  --void:#F1EBDD; --stone:#FCF8F0; --stone-2:#F6F1E5; --stone-3:#ECE5D5;
+  --edge:#CDC0A7; --edge-soft:#E0D7C4;
+  --bone:#2E2A23; --dim:#655D50; --faint:#7E7566;
+  --torch:#9C6A10; --coin:#E3B23C; --blood:#A93729; --venom:#47702F; --hero:#245E8C;
+  --q0:#6B665C; --q1:#2A62AD; --q2:#6F3D98; --q3:#B45B12; --q4:#A8891C;
+  --disp:"Cinzel","Songti SC",Georgia,serif;
+  --body:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",system-ui,-apple-system,sans-serif;
+  --flavor:"Spectral","Songti SC",Georgia,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none}
+body{background:var(--void);color:var(--bone);font-family:var(--body);
+     user-select:none;-webkit-user-select:none}
+
+#errbar{position:fixed;left:0;right:0;top:0;z-index:99;background:var(--blood);color:#fff;
+        font-size:12px;padding:6px 10px;white-space:pre-wrap}
+
+#app{position:fixed;inset:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* ===== 顶栏 ===== */
+.hud{position:absolute;left:0;right:0;top:0;z-index:4;padding:6px 10px 0;
+     pointer-events:none;text-shadow:0 1px 2px rgba(255,255,255,.7)}
+.hudrow{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--dim)}
+.hudrow b{font-family:var(--disp);font-size:15px;color:var(--bone)}
+.hudrow .sp{flex:1}
+#hGold{color:var(--torch)}
+#hKill::before{content:"⚔ "}
+#hTime{font-variant-numeric:tabular-nums}
+.xpbar{height:6px;margin-top:4px;border-radius:3px;background:var(--stone-3);overflow:hidden}
+.xpbar i{display:block;height:100%;width:0;background:var(--coin);transition:width .12s linear}
+
+/* Boss 血条：Boss 会跑出取景框，没有这条就完全不知道打到哪儿了 */
+.bossbar{position:relative;height:14px;margin-top:6px;border-radius:7px;
+         background:var(--stone-3);border:1px solid var(--edge);overflow:hidden}
+.bossbar[hidden]{display:none}
+.bossbar i{position:absolute;inset:0;width:0;background:#8A3223;transition:width .12s linear}
+.bossbar b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--disp);
+           font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+
+/* ===== 底部血条 ===== */
+.foot{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:0 10px 10px;pointer-events:none}
+.hpbar{position:relative;height:18px;border-radius:9px;background:var(--stone-3);
+       border:1px solid var(--edge);overflow:hidden}
+.hpbar i{position:absolute;inset:0;width:0;background:var(--blood);transition:width .12s linear}
+.hpbar u{position:absolute;left:0;top:0;height:42%;width:0;background:#6E86A8;opacity:.85}
+.hpbar b{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;
+         font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.fbtns{display:flex;gap:8px;margin-top:8px;pointer-events:auto}
+.fb{flex:none;font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;
+    border:1px solid var(--edge);background:var(--stone);color:var(--dim);cursor:pointer}
+
+/* ===== 摇杆 ===== */
+#stick{position:absolute;z-index:5;width:104px;height:104px;margin:-52px 0 0 -52px;
+       border-radius:50%;border:2px solid var(--edge);background:rgba(252,248,240,.35);
+       pointer-events:none}
+#stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;
+         border-radius:50%;background:var(--hero);opacity:.55}
+
+/* ===== 弹层 ===== */
+.veil{position:absolute;inset:0;z-index:30;display:none;place-items:center;
+      background:rgba(46,42,35,.45);padding:14px}
+.veil.on{display:grid}
+.box{width:min(100%,420px);max-height:calc(100dvh - 28px);overflow-y:auto;
+     background:var(--stone);border:1px solid var(--edge);border-radius:14px;padding:16px}
+.box.wide{width:min(100%,520px)}
+.box h2{font-family:var(--disp);font-size:20px;margin:0 0 6px}
+.box .sub{margin:0 0 12px;font-size:12.5px;color:var(--faint);line-height:1.6}
+.hr{margin:14px 0 8px;font-size:12px;color:var(--faint);border-top:1px solid var(--edge-soft);
+    padding-top:8px}
+.rowb{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{flex:1;min-width:104px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;
+     border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer;
+     text-align:center;text-decoration:none;display:block}
+.btn.ghost{background:var(--stone-2);color:var(--dim);border-color:var(--edge)}
+.btn:disabled{opacity:.4;cursor:default}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;font-size:13px;margin:8px 0}
+.stats div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--edge-soft);
+           padding:3px 0}
+.stats span{color:var(--faint)}
+
+/* ===== 遗物卡 ===== */
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{position:relative;text-align:left;width:100%;font:inherit;cursor:pointer;
+      border:1px solid var(--edge);border-left-width:4px;border-radius:10px;
+      background:var(--stone-2);padding:9px 11px;color:var(--bone)}
+.card .cr{font-size:11px;letter-spacing:.08em}
+.card .cn{font-family:var(--disp);font-size:15px;margin:1px 0 3px}
+.card .cp{font-size:12.5px;color:var(--dim);line-height:1.55}
+.card .cl{font-size:11.5px;color:var(--faint);font-family:var(--flavor);margin-top:4px}
+.card .cost{position:absolute;right:10px;top:9px;font-size:12px;color:var(--torch)}
+.card.sel{outline:2px solid var(--hero);outline-offset:1px}
+.card.dim{opacity:.45}
+.card.r0{border-left-color:var(--q0)} .card.r0 .cr{color:var(--q0)}
+.card.r1{border-left-color:var(--q1)} .card.r1 .cr{color:var(--q1)}
+.card.r2{border-left-color:var(--q2)} .card.r2 .cr{color:var(--q2)}
+.card.r3{border-left-color:var(--q3)} .card.r3 .cr{color:var(--q3)}
+.card.r4{border-left-color:var(--q4)} .card.r4 .cr{color:var(--q4)}
+
+/* 难度层卡 */
+.tier{width:100%;text-align:left;font:inherit;cursor:pointer;margin-bottom:8px;
+      border:1px solid var(--edge);border-radius:10px;background:var(--stone-2);
+      padding:10px 12px;color:var(--bone)}
+.tier.on{border-color:var(--bone);background:var(--stone-3)}
+.tier[disabled]{opacity:.45;cursor:default}
+.tier b{font-family:var(--disp);font-size:15px}
+.tier p{margin:3px 0 0;font-size:12px;color:var(--faint)}
+
+@media (hover:hover){
+  .card:hover,.tier:not([disabled]):hover,.fb:hover{background:var(--stone-3)}
+  .btn:not(:disabled):hover{opacity:.88}
+}
