@@ -23,7 +23,7 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* ===== 顶栏 ===== */
-.hud{position:absolute;left:0;right:0;top:0;z-index:4;padding:6px 10px 0;
+.hud{position:absolute;left:0;right:0;top:0;z-index:4;padding:6px 76px 0 10px;
      pointer-events:none;text-shadow:0 1px 2px rgba(255,255,255,.7)}
 .hudrow{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--dim)}
 .hudrow b{font-family:var(--disp);font-size:15px;color:var(--bone)}
@@ -53,6 +53,11 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 .fbtns{display:flex;gap:8px;margin-top:8px;pointer-events:auto}
 .fb{flex:none;font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;
     border:1px solid var(--edge);background:var(--stone);color:var(--dim);cursor:pointer}
+
+/* 暂停挪到了右上角（用户 2026-09-22），底部那一行空出来给 信息 / 遗物 / 特殊 */
+.pausebtn{position:absolute;right:10px;top:8px;z-index:6;font:inherit;font-size:12px;
+          padding:5px 12px;border-radius:8px;border:1px solid var(--edge);
+          background:rgba(252,248,240,.9);color:var(--dim);cursor:pointer}
 
 /* ===== 摇杆 ===== */
 #stick{position:absolute;z-index:5;width:104px;height:104px;margin:-52px 0 0 -52px;
@@ -101,6 +106,10 @@ body{background:var(--void);color:var(--bone);font-family:var(--body);
 .card.r2{border-left-color:var(--q2)} .card.r2 .cr{color:var(--q2)}
 .card.r3{border-left-color:var(--q3)} .card.r3 .cr{color:var(--q3)}
 .card.r4{border-left-color:var(--q4)} .card.r4 .cr{color:var(--q4)}
+/* 特殊遗物（Boss 掉的）：整圈金边 + 深一点的底，跟五档品质一眼分开 */
+.card.sp{border-color:#A8891C;border-left-color:#A8891C;background:#F7EFD8}
+.card.sp .cr{color:#8A6A10;letter-spacing:.14em}
+.card.sp .cn{color:#6B4E08}
 
 /* 难度层卡 */
 .tier{width:100%;text-align:left;font:inherit;cursor:pointer;margin-bottom:8px;

@@ -14,6 +14,7 @@
 <div id="app">
 
   <!-- ===== 顶栏 ===== -->
+  <button class="pausebtn" id="btnPause">暂停</button>
   <div class="hud" id="hud">
     <div class="hudrow">
       <b id="hWave">第 1 波</b>
@@ -34,8 +35,9 @@
   <div class="foot">
     <div class="hpbar"><i id="hpFill"></i><u id="shFill"></u><b id="hpTxt">100 / 100</b></div>
     <div class="fbtns">
+      <button class="fb" id="btnInfo">信息</button>
       <button class="fb" id="btnBag">遗物</button>
-      <button class="fb" id="btnPause">暂停</button>
+      <button class="fb" id="btnSp">特殊</button>
     </div>
   </div>
 
@@ -81,11 +83,43 @@
     </div>
   </div>
 
+  <!-- 信息：面板数值单独一个按钮（用户 2026-09-22 从遗物页拆出来的）-->
+  <div class="veil" id="veilInfo">
+    <div class="box">
+      <h2>信息</h2>
+      <p class="sub" id="infoSub"></p>
+      <div id="infoStats" class="stats"></div>
+      <div class="rowb">
+        <button class="btn" id="btnInfoClose">继续</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 特殊遗物：打 Boss 掉的，不占 15 个遗物位 -->
+  <div class="veil" id="veilSp">
+    <div class="box wide">
+      <h2 id="spTitle">特殊遗物</h2>
+      <p class="sub">打倒 Boss 才有，不占遗物位，也不能分解或当合成材料。</p>
+      <div id="spList" class="cards"></div>
+      <div class="rowb">
+        <button class="btn" id="btnSpClose">继续</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boss 掉落的特殊遗物三选一 -->
+  <div class="veil" id="veilSpPick">
+    <div class="box">
+      <h2>Boss 倒下了</h2>
+      <p class="sub">从三件特殊遗物里挑一件 —— 它不占遗物位</p>
+      <div id="spPickList" class="cards"></div>
+    </div>
+  </div>
+
   <!-- 遗物页（合成面板就在这儿，随时能开）-->
   <div class="veil" id="veilBag">
     <div class="box wide">
       <h2 id="bagTitle">遗物 0 / 15</h2>
-      <div id="bagStats" class="stats"></div>
       <div class="hr">合成</div>
       <p class="sub" id="fuseSub"></p>
       <div class="rowb">

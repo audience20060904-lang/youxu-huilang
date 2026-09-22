@@ -123,6 +123,58 @@ function bossFor(w){
   return d;
 }
 
+/* ===== 特殊遗物（Boss 掉落，用户 2026-09-22）=====
+   打倒每 10 波一只的 Boss 之后，从这个池子里**三选一**。
+   ⚠️ **不占那 15 个遗物位**，也不能分解、不能当合成材料 —— 纯增益，没有取舍。
+   ⚠️ **它们跟那 209 件是两套东西**：id 全部带 `sp_` 前缀，存在 `P.special` 上，
+      判定走 `hasSp()` 不走 `has()`。别混进 RELICS。
+
+   设计口径（用户原话：「现在的遗物数值都太保守了，要有割草的爽感」）：
+   **一件都不许是「伤害 +N%」那种**。每一件都得改变「一刀能打到多少东西」——
+   张角、刀程、攻速、补刀、爆炸、连锁、冲击波、绕转刀、践踏、光环。
+   一趟拿得到的件数 = 波数 ÷ 10，所以第 30 波才 3 件 —— 单件必须够猛。 */
+var BF_SPECIAL = [
+ {id:"sp_whirl",   n:"回旋",  pw:"刀挥出一整圈（张角 360°）",
+  lore:"他学会了不再看敌人在哪边。"},
+ {id:"sp_reach",   n:"长臂",  pw:"刀程 +60%，击退翻倍",
+  lore:"手臂长的人，不需要走那么近。"},
+ {id:"sp_haste",   n:"疾风",  pw:"攻速 +60%",
+  lore:"风过处，连回声都跟不上。"},
+ {id:"sp_second",  n:"二段",  pw:"每一刀之后补一刀（70% 伤害）",
+  lore:"第一刀是问，第二刀是答。"},
+ {id:"sp_burst",   n:"爆裂",  pw:"击杀时原地炸开：范围 80，伤害 = 那只怪最大生命的 60%，能连锁",
+  lore:"死得越壮，炸得越响。"},
+ {id:"sp_chain",   n:"雷链",  pw:"每次命中，闪电跳到最近 3 个敌人，各受 40% 伤害",
+  lore:"它只认最近的那个，一个接一个。"},
+ {id:"sp_wave",    n:"破空",  pw:"每一刀射出一道穿透冲击波（70% 伤害）",
+  lore:"刀停在半空，风继续往前走。"},
+ {id:"sp_orbit",   n:"悬刃",  pw:"两把刀绕着你转，碰到的敌人每 0.4 秒受 60% 伤害",
+  lore:"它们不听指挥，只是一直转。"},
+ {id:"sp_trample", n:"践踏",  pw:"移动时每 0.3 秒对身边的敌人造成 35% 伤害",
+  lore:"路是踩出来的，尸体也是。"},
+ {id:"sp_thorn",   n:"荆棘",  pw:"每秒对身边 130 范围内所有敌人造成 50% 伤害",
+  lore:"站着不动，也在杀人。"},
+ {id:"sp_exec",    n:"处决",  pw:"敌人生命低于 25% 时，命中直接击杀（Boss 除外）",
+  lore:"最后那一下，他从来懒得补。"},
+ {id:"sp_vortex",  n:"漩涡",  pw:"每 3 秒把周围的敌人拽到身边",
+  lore:"不必去找，让它们自己过来。"},
+ {id:"sp_frost",   n:"霜环",  pw:"身边 220 范围内的敌人移速 −40%",
+  lore:"越靠近他，越像在水里跑。"},
+ {id:"sp_horde",   n:"人海",  pw:"身边每有一个敌人，伤害 +3%（不封顶）",
+  lore:"围上来的越多，他笑得越开。"},
+ {id:"sp_rampage", n:"狂暴",  pw:"每次击杀攻速 +5%，持续 4 秒，最多叠 15 层",
+  lore:"停下来就凉了，所以别停。"},
+ {id:"sp_skull",   n:"裂颅",  pw:"暴击时以那只怪为心炸开：范围 100，130% 伤害",
+  lore:"头盖骨是最好的引信。"},
+ {id:"sp_magnet",  n:"磁石",  pw:"拾取范围 ×4；每捡一枚金币，下一刀伤害 +3%（挥刀后清零）",
+  lore:"钱贴着他走，刀也是。"},
+ {id:"sp_feast",   n:"盛宴",  pw:"每次击杀回复 1% 最大生命，并且最大生命 +1（最多 +400）",
+  lore:"他是靠这条廊子里的死人长大的。"}
+];
+var SPECIAL_PICK = 3;      // Boss 掉落时几选一
+var SP_SECOND_MS = 0.15;   // 二段补刀的延时（秒）
+var SP_ORBIT_R = 72;       // 悬刃的绕转半径
+
 /* ===== 难度层（设计文档第八节）=====
    ⚠️ 只动怪，不动玩家。⚠️ 别让 spd 跟着涨 —— 那会把走位玩法关掉。
    2~5 层的数据就在表里，去掉 locked 就开放。 */
@@ -149,19 +201,23 @@ var RMAP = {};                                   // id -> relic def
 var REDUCE_MOTION = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function has(id){ return P && P.rset[id] === 1; }
+/* 特殊遗物（Boss 掉的）跟那 209 件是**两套**，别混：判定走 hasSp，不走 has。 */
+function hasSp(id){ return P && P.sset[id] === 1; }
+function spDef(id){ for(var i = 0; i < BF_SPECIAL.length; i++) if(BF_SPECIAL[i].id === id) return BF_SPECIAL[i]; return null; }
 function reindex(){ P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1; }
 function nRar(r){ var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r === r) n++; return n; }
 
 function newRun(){
-  P = {hp:0, lvl:1, xp:0, gold:0, relics:[], rset:{}, combo:0, maxCombo:0, shield:0,
+  P = {hp:0, lvl:1, xp:0, gold:0, relics:[], rset:{}, special:[], sset:{}, combo:0, maxCombo:0, shield:0,
        kills:0, spent:0, bought:0, time:0, wave:1,
        killStreak:0, revived:0, shieldBroken:0, recoil:0, charge:0, chew:0, rend:0,
        bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
-       primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false};
+       primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false,
+       rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0};
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
-  E = {foes:[], shots:[], drops:[], sites:[], fx:[], boss:null};
-  E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0};
+  E = {foes:[], shots:[], drops:[], sites:[], pwaves:[], fx:[], boss:null};
+  E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0, second:0, aim:0};
   CAM.x = 0; CAM.y = 0;
   P.hp = bstats().maxHp;
   OVER = false; pendPicks = 0;
@@ -177,7 +233,7 @@ function newWave(w, quiet){
        wholeUsed:false, needleN:0, ropeN:0, capN:0, critShN:0, songN:0, bladeN:0,
        glyphArmor:0, healed:0, lastPct:0, greetN:0, shatterN:0, shatterFree:0, whim:0,
        swings:0, wrongN:0, hurt:false, kindsSeen:{}, catSeen:{}, hauntN:0, bossAdds:0,
-       fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false,
+       fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false, magnetN:0,
        cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0};
   P.wave = w;
   if(quiet) return;
@@ -311,7 +367,16 @@ function bstats(){
   if(has("steady") && hpPct < 0.25) s.spd = Math.round(s.spd * 1.25);
   s.aspd = Math.max(0.35, s.aspd * (1 - G.aspdCut / 100));          // 沙漏的代价
 
+  /* --- ⑦ 特殊遗物（Boss 掉的）：只改「一刀能打到多少」，不给伤害百分比 --- */
+  if(hasSp("sp_whirl"))  s.arc = 360;
+  if(hasSp("sp_reach")){ s.range = Math.round(s.range * 1.6); s.knock *= 2; }
+  if(hasSp("sp_haste"))  s.aspd *= 1.6;
+  if(hasSp("sp_magnet")) s.pickup *= 4;
+  if(hasSp("sp_feast"))  s.maxHp += Math.min(400, P.kills);
+  if(hasSp("sp_rampage") && P.rageT > 0) s.aspd *= 1 + 0.05 * P.rageN;
+
   s.atk = Math.max(1, Math.round(s.atk));
+  s.maxHp = Math.max(1, Math.round(s.maxHp));
   s.defGear = s.armor;                                              // 铁壁读的是这个
   return s;
 }
@@ -354,9 +419,10 @@ function aimDir(s){
   return best ? Math.atan2(best.y - me.y, best.x - me.x) : me.dir;
 }
 
-function swing(){
+function swing(mult){
   var s = bstats(), me = E.me;
-  var aim = aimDir(s);
+  var aim = aimDir(s); me.aim = aim;
+  mult = mult || 1;
   var halfArc = s.arc * Math.PI / 360, inner = s.range * BF.wagerInner;
   var hits = [], wager = false, i, f, dx, dy, d, a, big = 0, weak = false, hauntHit = false;
 
@@ -376,6 +442,11 @@ function swing(){
   }
   G.swings++;
   fxSwing(me.x, me.y, aim, s.range, s.arc);
+  /* 破空：每一刀射出一道穿透冲击波 —— 空刀也射，不然跑图时它就白瞎了 */
+  if(hasSp("sp_wave") && mult === 1)
+    E.pwaves.push({x:me.x, y:me.y, vx:Math.cos(aim) * 420, vy:Math.sin(aim) * 420,
+                   r:24, life:1.1, hit:{}, mult:0.7});
+  if(hasSp("sp_second") && mult === 1) me.second = SP_SECOND_MS;
   if(!hits.length){ return; }
 
   var moving = me.moving > 0.05;
@@ -424,6 +495,8 @@ function swing(){
   if(has("empty"))    pct += 7 * Math.max(0, BF.relicMax - P.relics.length);
   if(has("whim"))     pct += G.whim;
   if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
+  if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
+  if(hasSp("sp_magnet")){ pct += 3 * G.magnetN; G.magnetN = 0; }
   if(has("rend")){ extra += 20; if(P.rend < 100){ P.rend++; P.hp = Math.max(1, P.hp - 1); } }
   if(has("volume"))   extra += 4 * big;
   if(has("keenfull") && hp1 > 0.50) extra += 30;
@@ -442,13 +515,21 @@ function swing(){
 
   var raw = (s.atk + base + extra) * (1 + pct / 100) + flat;
   if(crit) raw *= cm;
-  raw = Math.max(1, Math.round(raw));
+  raw = Math.max(1, Math.round(raw * mult));
 
   /* ---- 落到每一只身上 ---- */
   for(i = 0; i < hits.length; i++){
-    f = hits[i];
+    f = hits[i]; if(f.dead) continue;
+    /* 处决：残血直接抹掉（Boss 除外）*/
+    if(hasSp("sp_exec") && !f.boss && f.hp / f.maxHp < 0.25){
+      fxText("处决", "#8A6A10"); killFoe(f); continue;
+    }
     var d2 = Math.max(1, raw - (noArmor ? 0 : f.armor));
     hurtFoe(f, d2, s, crit);
+    /* 雷链：跳到最近的 3 个 */
+    if(hasSp("sp_chain")) zap(f, Math.max(1, Math.round(raw * 0.4)), 3);
+    /* 裂颅：暴击时以那只怪为心炸开 */
+    if(crit && hasSp("sp_skull")) aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12");
   }
 
   /* ---- 连击 ---- */
@@ -711,6 +792,52 @@ function splash(near, d){
   var f = near && !near.dead ? near : nearestFoe();
   if(f){ f.hp -= d; if(f.hp <= 0) killFoe(f); }
 }
+/* 身边 r 之内有几只（人海、霜环都要用）*/
+function nearFoes(r){
+  var n = 0, me = E.me;
+  for(var i = 0; i < E.foes.length; i++){ var f = E.foes[i];
+    if(!f.dead && Math.hypot(f.x - me.x, f.y - me.y) <= r) n++; }
+  return n;
+}
+/* 范围伤害的唯一口子（爆裂、裂颅、荆棘、践踏、冲击波都走它）。
+   ⚠️ **必须带递归深度**：爆裂是能连锁的，一片怪挨着炸会一路递归下去。 */
+var aoeDepth = 0;
+function aoe(x, y, r, dmg, col){
+  if(dmg <= 0 || aoeDepth > 6) return;
+  aoeDepth++;
+  if(col) fxRing(x, y, r, col);
+  var list = E.foes.slice();                 // 打的过程里会有新怪被召唤出来，先拍个快照
+  for(var i = 0; i < list.length; i++){
+    var f = list[i]; if(f.dead) continue;
+    if(Math.hypot(f.x - x, f.y - y) > r + f.r) continue;
+    f.hp -= dmg; f.flash = 0.12;
+    fxNum(f.x, f.y - f.r - 4, dmg, false);
+    if(f.hp <= 0) killFoe(f);
+  }
+  aoeDepth--;
+}
+/* 雷链：从 from 起，一路跳到最近的 n 个（不重复） */
+function zap(from, dmg, n){
+  var seen = {}, cur = from, i, j;
+  seen[E.foes.indexOf(from)] = 1;
+  for(i = 0; i < n; i++){
+    var best = -1, bd = 260;
+    for(j = 0; j < E.foes.length; j++){
+      var f = E.foes[j];
+      if(f.dead || seen[j]) continue;
+      var d = Math.hypot(f.x - cur.x, f.y - cur.y);
+      if(d < bd){ bd = d; best = j; }
+    }
+    if(best < 0) return;
+    var t = E.foes[best]; seen[best] = 1;
+    fxBolt(cur.x, cur.y, t.x, t.y);
+    t.hp -= dmg; t.flash = 0.12;
+    fxNum(t.x, t.y - t.r - 4, dmg, false);
+    cur = t;
+    if(t.hp <= 0) killFoe(t);
+  }
+}
+
 function nearestFoe(){
   var best = null, bd = 1e9, i, f, d;
   for(i = 0; i < E.foes.length; i++){ f = E.foes[i]; if(f.dead) continue;
@@ -734,6 +861,9 @@ function killFoe(f){
   if(has("lesson") && !G.kindsSeen[f.id]) addGold(10);
   if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
   G.kindsSeen[f.id] = 1;
+  if(hasSp("sp_rampage")){ P.rageN = Math.min(15, P.rageN + 1); P.rageT = 4; }
+  if(hasSp("sp_feast")) healUp(s.maxHp * 0.01);
+  if(hasSp("sp_burst")) aoe(f.x, f.y, 80, Math.max(1, Math.round(f.maxHp * 0.6)), "#C2510E");
   gainXp(f.xp);
   dropGold(f.x, f.y, f.gold);
   fxPop(f.x, f.y, f.col);
@@ -850,6 +980,7 @@ function updateFoes(dt){
     f.t += dt; if(f.flash > 0) f.flash -= dt;
     dx = me.x - f.x; dy = me.y - f.y; d = Math.hypot(dx, dy) || 1;
     sp = f.spd;
+    if(hasSp("sp_frost") && d <= 220) sp *= 0.6;          // 霜环
     var def = f.def, tx = dx / d, ty = dy / d;
 
     if(f.boss){ updateBoss(f, dt, d, tx, ty); }
@@ -973,7 +1104,7 @@ function updateDrops(dt){
     var d = E.drops[i]; d.t += dt;
     var dx = me.x - d.x, dy = me.y - d.y, dd = Math.hypot(dx, dy);
     if(dd < s.pickup){ d.x += dx / dd * 320 * dt; d.y += dy / dd * 320 * dt; }
-    if(dd < 16){ addGold(d.n); E.drops.splice(i, 1); }
+    if(dd < 16){ addGold(d.n); E.drops.splice(i, 1); if(hasSp("sp_magnet")) G.magnetN++; }
   }
 }
 
@@ -1082,6 +1213,25 @@ function draw(){
     if(f.boss || f.elite || f.hp < f.maxHp) drawBar(px, py - f.r - 7, f.r * 2, f.hp / f.maxHp);
   }
 
+  /* 破空的冲击波 */
+  for(i = 0; i < E.pwaves.length; i++){ var pw = E.pwaves[i];
+    ctx2.strokeStyle = "#245E8C"; ctx2.globalAlpha = Math.min(1, pw.life * 1.6); ctx2.lineWidth = 5;
+    ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, 0, 6.2832); ctx2.stroke();
+    ctx2.globalAlpha = 1; }
+
+  /* 悬刃：两把绕转的刀 */
+  if(hasSp("sp_orbit")){
+    ctx2.strokeStyle = "#8A6A10"; ctx2.lineWidth = 4; ctx2.lineCap = "round";
+    for(i = 0; i < 2; i++){
+      var oa = P.orbA + i * Math.PI;
+      var ox = sx(me.x + Math.cos(oa) * SP_ORBIT_R), oy = sy(me.y + Math.sin(oa) * SP_ORBIT_R);
+      ctx2.beginPath();
+      ctx2.moveTo(ox - Math.cos(oa) * 11, oy - Math.sin(oa) * 11);
+      ctx2.lineTo(ox + Math.cos(oa) * 11, oy + Math.sin(oa) * 11);
+      ctx2.stroke();
+    }
+  }
+
   /* 弹丸 */
   for(i = 0; i < E.shots.length; i++){ var s2 = E.shots[i];
     ctx2.fillStyle = s2.col; ctx2.beginPath(); ctx2.arc(sx(s2.x), sy(s2.y), s2.r, 0, 6.2832); ctx2.fill();
@@ -1131,6 +1281,9 @@ function fxNum(x, y, n, crit){
 function fxText(s, col){ if(!REDUCE_MOTION) E.fx.push({k:"t", s:s, col:col, t:0, life:0.7}); }
 function fxPop(x, y, col){ if(!REDUCE_MOTION) E.fx.push({k:"p", x:x, y:y, col:col, t:0, life:0.3}); }
 function fxRing(x, y, r, col){ if(!REDUCE_MOTION) E.fx.push({k:"r", x:x, y:y, r:r, col:col, t:0, life:0.4}); }
+function fxBolt(x1, y1, x2, y2){
+  if(!REDUCE_MOTION) E.fx.push({k:"b", x:x1, y:y1, x2:x2, y2:y2, t:0, life:0.16});
+}
 function fxArc(x, y, dir, range, arc, col){
   if(!REDUCE_MOTION) E.fx.push({k:"a", x:x, y:y, dir:dir, range:range, arc:arc, col:col, t:0, life:0.3}); }
 function drawFx(){
@@ -1155,6 +1308,11 @@ function drawFx(){
     } else if(f.k === "r"){
       ctx2.strokeStyle = f.col; ctx2.lineWidth = 4;
       ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.r * (0.6 + k * 0.5), 0, 6.2832); ctx2.stroke();
+    } else if(f.k === "b"){
+      ctx2.strokeStyle = "#7FA8D8"; ctx2.lineWidth = 3; ctx2.lineCap = "round";
+      ctx2.beginPath(); ctx2.moveTo(sx(f.x), sy(f.y));
+      var mx2 = (f.x + f.x2) / 2 + ri(-14, 14), my2 = (f.y + f.y2) / 2 + ri(-14, 14);
+      ctx2.lineTo(sx(mx2), sy(my2)); ctx2.lineTo(sx(f.x2), sy(f.y2)); ctx2.stroke();
     } else if(f.k === "a"){
       var ha2 = f.arc * Math.PI / 360;
       ctx2.fillStyle = f.col; ctx2.beginPath(); ctx2.moveTo(sx(f.x), sy(f.y));
@@ -1232,13 +1390,75 @@ function step(dt){
   me.swingCd -= dt;
   if(me.swingCd <= 0){ me.swingCd += 1 / s.aspd; swing(); }
 
+  /* 二段：补的那一刀 */
+  if(me.second > 0){ me.second -= dt; if(me.second <= 0) swing(0.7); }
   spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt); updateSites(dt);
+  updateSpecial(dt, s);
   for(var i = 0; i < E.fx.length; i++) E.fx[i].t += dt;
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
 
-  if(G.bossDown){ G.bossDown = false; nextWave(); return; }
+  if(G.bossDown){ G.bossDown = false; nextWave(); openSpecialPick(); return; }
   if(!isBossWave(P.wave) && G.t >= BF.waveSec) nextWave();
 }
+/* 特殊遗物里那几个「一直在跑」的：悬刃 / 践踏 / 荆棘 / 漩涡 / 狂暴的计时 */
+function updateSpecial(dt, s){
+  var me = E.me, i, f;
+  if(P.rageT > 0){ P.rageT -= dt; if(P.rageT <= 0) P.rageN = 0; }
+
+  /* 悬刃：两把刀绕着你转 */
+  if(hasSp("sp_orbit")){
+    P.orbA += dt * 2.6; P.orbCd -= dt;
+    if(P.orbCd <= 0){
+      P.orbCd = 0.4;
+      for(var k = 0; k < 2; k++){
+        var a = P.orbA + k * Math.PI;
+        aoe(me.x + Math.cos(a) * SP_ORBIT_R, me.y + Math.sin(a) * SP_ORBIT_R, 26,
+            Math.max(1, Math.round(s.atk * 0.6)));
+      }
+    }
+  }
+  /* 践踏：只在移动时 */
+  if(hasSp("sp_trample") && me.moving > 0.05){
+    P.trampCd -= dt;
+    if(P.trampCd <= 0){ P.trampCd = 0.3; aoe(me.x, me.y, 45, Math.max(1, Math.round(s.atk * 0.35))); }
+  }
+  /* 荆棘：站着也在杀 */
+  if(hasSp("sp_thorn")){
+    P.thornCd -= dt;
+    if(P.thornCd <= 0){ P.thornCd = 1; aoe(me.x, me.y, 130, Math.max(1, Math.round(s.atk * 0.5)), "#47702F"); }
+  }
+  /* 漩涡：把周围的拽过来 */
+  if(hasSp("sp_vortex")){
+    P.vortexCd -= dt;
+    if(P.vortexCd <= 0){
+      P.vortexCd = 3; fxRing(me.x, me.y, 400, "#266F7B");
+      for(i = 0; i < E.foes.length; i++){
+        f = E.foes[i]; if(f.dead) continue;
+        var dx = me.x - f.x, dy = me.y - f.y, d = Math.hypot(dx, dy);
+        if(d > 400 || d < 40) continue;
+        var pull = Math.min(140, d - 30);
+        f.x += dx / d * pull; f.y += dy / d * pull;
+      }
+    }
+  }
+  /* 冲击波（破空）：穿透，同一只只打一次 */
+  for(i = E.pwaves.length - 1; i >= 0; i--){
+    var w = E.pwaves[i];
+    w.x += w.vx * dt; w.y += w.vy * dt; w.life -= dt;
+    if(w.life <= 0){ E.pwaves.splice(i, 1); continue; }
+    for(var j = 0; j < E.foes.length; j++){
+      f = E.foes[j];
+      if(f.dead || w.hit[j]) continue;
+      if(Math.hypot(f.x - w.x, f.y - w.y) > w.r + f.r) continue;
+      w.hit[j] = 1;
+      var d2 = Math.max(1, Math.round(s.atk * w.mult) - f.armor);
+      f.hp -= d2; f.flash = 0.12;
+      fxNum(f.x, f.y - f.r - 4, d2, false);
+      if(f.hp <= 0) killFoe(f);
+    }
+  }
+}
+
 function nextWave(){
   var w = P.wave + 1;
   P.wrong2 = P.wrong1; P.wrong1 = G.wrongN; P.brokeLast = G.broke;   // 循迹 / 惜盾看的是上一波
@@ -1252,7 +1472,7 @@ function startBoss(w){
   fxText(E.boss.name, "#8A3223");
 }
 function onBossDown(b){
-  E.boss = null; G.bossDown = true;
+  E.boss = null; G.bossDown = true; pendSpecial++;
   for(var i = 0; i < E.foes.length; i++){ var f = E.foes[i]; if(!f.dead && f !== b) killFoe(f); }
   E.shots.length = 0;
 }
@@ -1411,15 +1631,22 @@ function withMaxHp(fn){
 }
 
 /* ---- 遗物页 ---- */
-function openBag(){
+/* 「信息」是从遗物页里拆出来的（用户 2026-09-22），单独一个按钮 */
+function openInfo(){
   var s = bstats();
-  $("bagTitle").textContent = "遗物 " + P.relics.length + " / " + relicCap();
-  $("bagStats").innerHTML =
+  $("infoSub").textContent = "第 " + P.wave + " 波 · " + TIER.name + " · 击杀 " + P.kills +
+    " · 遗物 " + P.relics.length + " / " + relicCap() + " · 特殊 " + P.special.length;
+  $("infoStats").innerHTML =
     st2("攻击", s.atk) + st2("生命", Math.ceil(P.hp) + " / " + s.maxHp) +
     st2("护甲", s.armor) + st2("减伤", s.cutStatic + "%") +
     st2("暴击", s.crit + "% ×" + s.critMult.toFixed(1)) + st2("移速", Math.round(s.spd)) +
     st2("攻速", s.aspd.toFixed(2) + " 刀/秒") + st2("刀程", Math.round(s.range)) +
+    st2("张角", Math.round(s.arc) + "°") + st2("拾取", Math.round(s.pickup)) +
     st2("连击", P.combo + "（+" + comboPct(s) + "%）") + st2("护盾", Math.round(P.shield));
+  show("veilInfo");
+}
+function openBag(){
+  $("bagTitle").textContent = "遗物 " + P.relics.length + " / " + relicCap();
   fillCards("bagList", P.relics.map(function(x){ return RMAP[x]; }),
             function(r){
               if(fuseMode) return "";
@@ -1450,28 +1677,63 @@ function sellRelic(id){
   openBag();
 }
 
+/* ---- 特殊遗物：Boss 掉落的三选一 / 列表页 ---- */
+var pendSpecial = 0, spOffer = [];
+function spPool(){
+  var out = [];
+  for(var i = 0; i < BF_SPECIAL.length; i++) if(!hasSp(BF_SPECIAL[i].id)) out.push(BF_SPECIAL[i]);
+  return out;
+}
+function spCardHtml(d){
+  return '<button class="card sp" data-id="' + d.id + '">' +
+         '<div class="cr">特殊</div><div class="cn">' + d.n + '</div>' +
+         '<div class="cp">' + d.pw + '</div>' +
+         '<div class="cl">' + d.lore + '</div></button>';
+}
+function openSpecialPick(){
+  if(pendSpecial <= 0) return;
+  var pool = spPool();
+  if(!pool.length){ pendSpecial = 0; return; }            // 18 件全拿齐了
+  spOffer = []; var t = 0;
+  while(spOffer.length < Math.min(SPECIAL_PICK, pool.length) && t++ < 100){
+    var d = pick(pool); if(spOffer.indexOf(d) < 0) spOffer.push(d);
+  }
+  $("spPickList").innerHTML = spOffer.map(spCardHtml).join("");
+  show("veilSpPick");
+}
+function takeSpecial(id){
+  if(!spDef(id) || hasSp(id)) return;
+  pendSpecial--;
+  withMaxHp(function(){ P.special.push(id); P.sset[id] = 1; });
+  hide("veilSpPick");
+  if(pendSpecial > 0) openSpecialPick();                  // 一口气打死两只 Boss 的极端情况
+}
+function openSp(){
+  $("spTitle").textContent = "特殊遗物 " + P.special.length + " / " + BF_SPECIAL.length;
+  $("spList").innerHTML = P.special.length
+    ? P.special.map(function(id){ return spCardHtml(spDef(id)); }).join("")
+    : '<p class="sub">还没有。每打倒一只 Boss（每 10 波）就能三选一拿一件。</p>';
+  show("veilSp");
+}
+
 /* ---- 合成（面板在遗物页上，随时能开）---- */
 var fuseMode = false, fuseSel = [];
 function fuseN(){ return has("recipe") ? 2 : FUSE_N; }
-function fuseCost(){
-  var c = FUSE_COST;
-  if(has("recipe")) c = Math.round(c / 2);
-  if(has("spare"))  c = Math.round(c / 2);          // 战场改写
-  return c;
-}
+/* ⚠️ **战场模式的合成不要金币**（用户 2026-09-22）——
+   金币现在只有游商一个去处。别把 FUSE_COST 加回来。
+   「配方」还在（少一件材料），「祭余」在战场里是另一条词条（见 BFW）。 */
+function fuseCost(){ return 0; }
 function renderFuse(){
   $("fuseSub").textContent = fuseMode
-    ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length +
-      " · 花费 " + fuseCost() + " 金（你有 " + P.gold + "）"
-    : fuseN() + " 件同品质 + " + fuseCost() + " 金 → 换一件高一档的，从 " + FUSE_PICK + " 件里挑";
+    ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length
+    : fuseN() + " 件同品质 → 换一件高一档的，从 " + FUSE_PICK + " 件里挑（不要金币）";
   $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
-  $("btnFuseGo").disabled = !(fuseSel.length === fuseN() && P.gold >= fuseCost());
-  $("btnFuseGo").textContent = fuseSel.length === fuseN() && P.gold < fuseCost() ? "金币不够" : "合成";
+  $("btnFuseGo").disabled = fuseSel.length !== fuseN();
+  $("btnFuseGo").textContent = "合成";
 }
 function fuseGo(){
-  if(fuseSel.length !== fuseN() || P.gold < fuseCost()) return;
+  if(fuseSel.length !== fuseN()) return;
   var rar = RMAP[fuseSel[0]].r;
-  P.gold -= fuseCost(); P.spent += fuseCost();
   withMaxHp(function(){
     for(var i = 0; i < fuseSel.length; i++){
       var k = P.relics.indexOf(fuseSel[i]); if(k >= 0) P.relics.splice(k, 1); }
@@ -1639,8 +1901,11 @@ function endRun(){
     st2("到达波数", P.wave) + st2("历史最深", m.best) +
     st2("击杀", P.kills) + st2("等级", P.lvl) +
     st2("存活", Math.floor(P.time / 60) + " 分 " + Math.floor(P.time % 60) + " 秒") +
-    st2("最大连击", P.maxCombo);
-  fillCards("endRelics", P.relics.map(function(x){ return RMAP[x]; }));
+    st2("最大连击", P.maxCombo) +
+    st2("遗物", P.relics.length) + st2("特殊遗物", P.special.length);
+  $("endRelics").innerHTML =
+    P.special.map(function(id){ return spCardHtml(spDef(id)); }).join("") +
+    P.relics.map(function(x){ return cardHtml(RMAP[x]); }).join("");
   document.querySelectorAll(".veil.on").forEach(function(v){ v.classList.remove("on"); });
   show("veilEnd");
 }
@@ -1681,7 +1946,7 @@ function boot(){
     TIER = BF_TIERS[+b.dataset.i]; renderTiers();
   });
   $("btnGo").addEventListener("click", function(){
-    newRun(); pendPicks = 0;
+    newRun(); pendPicks = 0; pendSpecial = 0;
     $("veilStart").classList.remove("on"); PAUSED = false; last = 0;
   });
 
@@ -1694,6 +1959,13 @@ function boot(){
 
   onCards("swapNew", function(){ doSwap(null); });
   onCards("swapOld", function(id){ doSwap(id); });
+
+  /* ---- 信息 / 特殊遗物 ---- */
+  $("btnInfo").addEventListener("click", openInfo);
+  $("btnInfoClose").addEventListener("click", function(){ hide("veilInfo"); });
+  $("btnSp").addEventListener("click", openSp);
+  $("btnSpClose").addEventListener("click", function(){ hide("veilSp"); });
+  onCards("spPickList", function(id){ takeSpecial(id); });
 
   /* ---- 遗物页（合成面板在这儿）---- */
   $("btnBag").addEventListener("click", function(){ fuseMode = false; fuseSel = []; sellArmed = null; openBag(); });
@@ -1731,7 +2003,7 @@ function boot(){
 
   $("btnAgain").addEventListener("click", function(){
     $("veilEnd").classList.remove("on"); OVER = false;
-    newRun(); pendPicks = 0; PAUSED = false; last = 0;
+    newRun(); pendPicks = 0; pendSpecial = 0; PAUSED = false; last = 0;
   });
 
   show("veilStart");
