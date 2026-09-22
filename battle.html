@@ -41,6 +41,27 @@
     </div>
   </div>
 
+  <!-- ===== 部署阶段（用户 2026-09-22 的塔防改版）=====
+       ⚠️ **故意不是 .veil** —— 摆塔得看得见画面、点得到画面。
+       它自己一个 DEPLOY 开关管暂停，hide() 里也认这个开关。 -->
+  <div class="deploy" id="deploy" hidden>
+    <div class="dtop">
+      <b id="dTitle">部署</b>
+      <span id="dGold">0 金</span>
+      <span id="dPop">等级 1 · 人口 0/1</span>
+      <button class="dgo" id="btnDeployGo">开战</button>
+    </div>
+    <p class="dhint" id="dHint"></p>
+    <div class="dshop" id="dShop"></div>
+    <div class="drow">
+      <button class="dbtn" id="btnDLvl">升级</button>
+      <button class="dbtn" id="btnDRe">刷新</button>
+      <button class="dbtn" id="btnDWall">城墙</button>
+      <button class="dbtn sell" id="btnDSell" hidden>出售</button>
+    </div>
+    <div class="dbench" id="dBench"></div>
+  </div>
+
   <!-- 摇杆（触屏按下才显示） -->
   <div id="stick" hidden><i id="stickNub"></i></div>
 
@@ -155,8 +176,9 @@
       <p class="sub" id="shopSub">金币 0</p>
       <div class="scroll"><div id="shopList" class="cards"></div></div>
       <!-- 货架 5 件会把弹层撑到要滚，这两个钉在下面（用户 2026-09-22）。别塞回 .scroll 里。 -->
+      <!-- ⚠️ 「刷新货架」2026-09-22 已经删了（用户：商店不再可以手动刷新）——
+           货架改成**每五波自动换一批**（openDeploy 里清 stock）。别把按钮加回来。 -->
       <div class="rowb pin">
-        <button class="btn ghost" id="btnShopRe">刷新货架</button>
         <button class="btn" id="btnShopClose">走了</button>
       </div>
     </div>

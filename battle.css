@@ -154,3 +154,69 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
   .card:hover,.tier:not([disabled]):hover,.fb:hover{background:var(--stone-3)}
   .btn:not(:disabled):hover{opacity:.88}
 }
+
+/* ===== 部署阶段（用户 2026-09-22 的塔防改版）=====
+   ⚠️ 它是**底部抽屉**不是弹层 —— 上半屏的 canvas 必须露出来，
+      不然没法点着摆塔。所以别把它改成 .veil。
+   ⚠️ 高度封在 46dvh：390×667 上量过，上面还剩 360px 能看见营地 ——
+      这个数跟 BF.deploy.placeR(260) 是一对，改一个就得回来改另一个。 */
+.deploy{position:absolute;left:0;right:0;bottom:0;z-index:20;
+        max-height:46dvh;display:flex;flex-direction:column;
+        background:var(--stone);border-top:1px solid var(--edge);
+        border-radius:14px 14px 0 0;padding:8px 10px 10px;
+        box-shadow:0 -6px 18px rgba(46,42,35,.16)}
+.deploy[hidden]{display:none}
+.dtop{display:flex;align-items:baseline;gap:9px;flex:none}
+.dtop b{font-family:var(--disp);font-size:15px}
+.dtop span{font-size:12px;color:var(--faint)}
+#dGold{color:var(--torch);font-variant-numeric:tabular-nums}
+#dPop{margin-left:auto}
+.dgo{flex:none;font:inherit;font-size:13px;padding:6px 16px;border-radius:9px;
+     border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer}
+.dhint{flex:none;margin:5px 0 7px;font-size:11.5px;color:var(--faint);line-height:1.5;
+       min-height:2.9em}
+
+/* 商店 5 张牌：自己滚，按钮和备战区钉在下面 */
+.dshop{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+       margin:0 -2px;padding:0 2px}
+.tw{position:relative;text-align:left;width:100%;font:inherit;cursor:pointer;
+    border:1px solid var(--edge);border-left-width:4px;border-radius:9px;
+    background:var(--stone-2);padding:6px 9px;color:var(--bone)}
+.tw b{font-family:var(--disp);font-size:14px}
+.tw i{font-size:10.5px;font-style:normal;color:var(--faint);margin-left:6px}
+.tw p{margin:2px 0 0;font-size:11.5px;color:var(--dim);line-height:1.45;padding-right:48px}
+.tw .tcost{position:absolute;right:9px;top:7px;font-size:12px;color:var(--torch)}
+.tw.dim{opacity:.42}
+.tw.gone{border:1px dashed var(--edge-soft);border-radius:9px;padding:9px;
+         font-size:11.5px;color:var(--faint);text-align:center;background:none}
+.tw.r0{border-left-color:var(--q0)} .tw.r1{border-left-color:var(--q1)}
+.tw.r2{border-left-color:var(--q2)} .tw.r3{border-left-color:var(--q3)}
+.tw.r4{border-left-color:var(--q4)}
+
+.drow{flex:none;display:flex;gap:6px;margin-top:7px}
+.dbtn{flex:1;font:inherit;font-size:12.5px;padding:7px 4px;border-radius:9px;
+      border:1px solid var(--edge);background:var(--stone-2);color:var(--dim);cursor:pointer}
+.dbtn.on{border-color:var(--bone);background:var(--stone-3);color:var(--bone)}
+.dbtn.sell{color:var(--torch)}
+.dbtn:disabled{opacity:.4;cursor:default}
+
+/* 备战区 9 格 —— 用户说的「九个卡槽」。5 列两行，390 宽上一格 68px。 */
+.dbench{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:7px}
+.bs{font:inherit;cursor:pointer;border:1px solid var(--edge);border-top-width:3px;
+    border-radius:8px;background:var(--stone-2);color:var(--bone);
+    padding:5px 2px;text-align:center;min-height:42px}
+.bs b{display:block;font-size:11.5px;font-weight:600;line-height:1.25;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bs i{display:block;font-style:normal;font-size:10px;color:var(--faint)}
+.bs.empty{border-style:dashed;border-top-width:1px;background:none;cursor:default}
+.bs.sel{outline:2px solid var(--hero);outline-offset:1px}
+.bs.bld{border-top-color:var(--venom)}
+.bs.r0{border-top-color:var(--q0)} .bs.r1{border-top-color:var(--q1)}
+.bs.r2{border-top-color:var(--q2)} .bs.r3{border-top-color:var(--q3)}
+.bs.r4{border-top-color:var(--q4)}
+
+@media (hover:hover){
+  .tw:not(.dim):hover,.bs:not(.empty):hover{background:var(--stone-3)}
+  .dbtn:not(:disabled):hover{background:var(--stone-3)}
+  .dgo:hover{opacity:.88}
+}
