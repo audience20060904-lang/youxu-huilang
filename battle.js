@@ -4392,6 +4392,18 @@ function drawTower(b, px, py){
       ctx2.beginPath(); ctx2.moveTo(px - 5, py + 3); ctx2.lineTo(px - 1, py - 1); ctx2.lineTo(px + 1, py + 1);
       ctx2.lineTo(px + 5, py - 3); ctx2.stroke(); }
   else { ctx2.moveTo(px, py - 9); ctx2.lineTo(px + 4, py + 7); ctx2.lineTo(px - 4, py + 7); ctx2.closePath(); ctx2.fill(); }
+  /* 攻击冷却（用户 2026-09-23）：刚出手那一下，整块塔贴图盖一层 50% 透明的暗色；
+     冷却走多少，遮罩就从**下往上**退多少 —— 走一半只剩上半截，走完就全亮（= 可以出手了）。
+     ⚠️ 只看 b.cd / b.ef.cd（剩余 ÷ 总长），光环 / 拾荒幡 / 金库没有冷却（def.cd 为 0），不画。
+     ⚠️ 部署阶段 openDeploy() 会把 cd 清 0，所以摆塔的时候塔都是亮的。 */
+  if(b.def.cd > 0 && b.ef && b.ef.cd > 0 && b.cd > 0){
+    var cf = Math.min(1, b.cd / b.ef.cd);
+    ctx2.save();
+    ctx2.beginPath(); ctx2.arc(px, py, s + 1.3, 0, 6.2832); ctx2.clip();
+    ctx2.fillStyle = "rgba(30,26,20,0.5)";
+    ctx2.fillRect(px - s - 2, py - s - 2, (s + 2) * 2, (s + 2) * 2 * cf);
+    ctx2.restore();
+  }
   /* 星点：几星就几个点 */
   ctx2.fillStyle = "#A8891C";
   for(var st = 0; st < b.star; st++){
