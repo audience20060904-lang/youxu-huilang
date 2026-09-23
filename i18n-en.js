@@ -1781,6 +1781,22 @@ if(LANG_LEARN === "es"){
   });
 }
 
+/* ===== 英语母语学日语（2026-09-23）===== 同上，把跟中文绑死的几条换成日语的说法。
+   拼写题拼的是**假名读音**（漢字当提示）；三件词长遗物按罗马字母数估（game.js 的 wordLen()）。*/
+if(LANG_LEARN === "ja"){
+  I18N["用英语怎么说？"] = "How do you say it in Japanese?";
+  I18N["搜索：英文 / 中文 / 遗物名"] = "Search: Japanese / kana / English / relic";
+  I18N_BLOCKS["#veilHelp .rules"] = I18N_BLOCKS["#veilHelp .rules"]
+    .replace("Chapters 1–5 have <b>50 floors</b> each", "Chapters 1–4 have <b>50 floors</b> each")
+    .replace(/<li><b>Question types<\/b>:.*?<\/li>/,
+      "<li><b>Question types</b>: pick the English meaning of a Japanese word, pick the Japanese word for an English meaning, or (sometimes) <b>spell its reading from kana tiles</b> — the kanji is your hint. The kana reading is shown under the word; tap 🔊 to hear it.</li>")
+    .replace(/<li><b>Words<\/b>:.*?<\/li>/,
+      "<li><b>Words</b>: <b>each chapter uses one JLPT level</b> — Chapter 1 <b>N5</b>, Chapter 2 <b>N4</b>, Chapter 3 <b>N3</b>, Chapter 4 <b>N2</b>; Chapter 5 \"Endless\" <b>mixes N3, N2 and N1</b>. Words you miss come back <b>more often</b> until you've got them.</li>");
+  ["longword", "volume", "ponder"].forEach(function(id){
+    if(RELIC_EN[id]) RELIC_EN[id][1] = RELIC_EN[id][1].replace(" (pinyin)", " (romaji)");
+  });
+}
+
 var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spider", bone:"Bone Soldier",
   statue:"Gate Statue", ghost:"Whispering Ghost", clock:"Rusty Bell", warden2:"Wandering Shade",
   dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade",
@@ -1804,7 +1820,7 @@ function i18nApplyContent(){
     var c = chapterById0(r.ch);
     r.name = CH_EN[r.ch] || r.name;
     r.tag = "Chapter " + (c ? (c.no || c.id) : r.ch) + " · " + (c ? c.level : "");
-    r.desc = r.ch === 5 ? ((LEARN_ZH ? "HSK 4 / 5 / 6" : "B1 / B2 / C1") + " mixed · go until you fall")
+    r.desc = r.ch === 5 ? ((LEARN_ZH ? "HSK 4 / 5 / 6" : LEARN_JA ? "N3 / N2 / N1" : "B1 / B2 / C1") + " mixed · go until you fall")
                         : ((c ? c.level : "") + " words · 50 floors");
   });
   DIFFS.forEach(function(d){

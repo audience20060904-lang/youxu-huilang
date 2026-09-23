@@ -1,0 +1,361 @@
+# JLPT N2 · 写法|读音|英文释义|类别|词性
+哺乳類|ほにゅうるい|mammal|an
+爬虫類|はちゅうるい|reptile|an
+鳥類|ちょうるい|birds (class)|an
+魚類|ぎょるい|fishes|an
+生物|せいぶつ|living thing|an
+生き物|いきもの|creature|an
+猛獣|もうじゅう|wild beast|an
+害虫|がいちゅう|pest (insect)|an
+雄|おす|male (animal)|an
+雌|めす|female (animal)|an
+飼う|かう|to keep (a pet)|an|v
+飼育|しいく|breeding (raising)|an
+繁殖|はんしょく|reproduction|an
+狼|おおかみ|wolf (grey)|an
+鷹|たか|hawk|an
+梟|ふくろう|owl|an
+燕|つばめ|swallow (bird)|an
+蜥蜴|とかげ|lizard|an
+蚯蚓|みみず|earthworm|an
+蝸牛|かたつむり|snail|an
+鰐|わに|crocodile|an
+駱駝|らくだ|camel|an
+栗鼠|りす|squirrel|an
+穀類|こくるい|cereals|fo
+加工|かこう|processing|fo
+食物|しょくもつ|foodstuff|fo
+食糧|しょくりょう|food supply|fo
+飲料|いんりょう|beverage|fo
+酒類|しゅるい|liquor|fo
+果物屋|くだものや|fruit shop|pl
+調理|ちょうり|cooking (preparing)|fo
+炊く|たく|to cook (rice)|fo|v
+煮込む|にこむ|to stew|fo|v
+刻む|きざむ|to chop|fo|v
+絞る|しぼる|to squeeze|fo|v
+盛る|もる|to heap (serve)|fo|v
+すする||to slurp|fo|v
+風味|ふうみ|flavor|fo
+食感|しょっかん|texture (food)|fo
+旨味|うまみ|umami|fo
+薄味|うすあじ|light seasoning|fo
+濃厚|のうこう|rich (dense)|fo|adj
+新米|しんまい|new rice (novice)|fo
+玄米|げんまい|brown rice|fo
+干物|ひもの|dried fish|fo
+燻製|くんせい|smoked food|fo
+色合い|いろあい|hue (tone)|co|n
+色調|しきちょう|color tone|co|n
+配色|はいしょく|color scheme|co|n
+単色|たんしょく|single color|co|n
+原色|げんしょく|primary color|co|n
+白黒|しろくろ|black and white|co|n
+真紅|しんく|crimson|co|n
+純白|じゅんぱく|snow-white|co|n
+漆黒|しっこく|pitch black|co|n
+褪せる|あせる|to fade|co|v
+色褪せる|いろあせる|to discolor|co|v
+くすむ||to be dull (color)|co|v
+艶|つや|gloss (luster)|co|n
+黄ばむ|きばむ|to turn yellow|co|v
+器官|きかん|organ|bo
+細胞|さいぼう|cell|bo
+体格|たいかく|physique|bo
+体質|たいしつ|constitution (body)|bo
+肉体|にくたい|flesh (body)|bo
+身体|しんたい|the body (physical)|bo
+胴|どう|torso|bo
+手足|てあし|limbs|bo
+手のひら|てのひら|palm|bo
+こめかみ||temple (head)|bo
+鼓膜|こまく|eardrum|bo
+脂肪|しぼう|body fat|bo
+胃腸|いちょう|digestive organs|bo
+腎臓|じんぞう|kidney|bo
+歯並び|はならび|row of teeth|bo
+目つき|めつき|look (in one's eyes)|bo
+顔色|かおいろ|complexion|bo
+仕草|しぐさ|gesture|bo
+視線|しせん|gaze|bo
+怪我人|けがにん|injured person|pe
+病人|びょうにん|sick person|pe
+障害者|しょうがいしゃ|disabled person|pe
+高齢者|こうれいしゃ|elderly person|pe
+未成年|みせいねん|minor (underage)|pe
+成人|せいじん|grown-up|pe
+青年|せいねん|youth (young man)|pe
+紳士|しんし|gentleman|pe
+婦人|ふじん|lady|pe
+夫人|ふじん|Mrs. (wife)|pe
+姪|めい|niece|pe
+甥|おい|nephew|pe
+いとこ||cousin|pe
+叔父|おじ|uncle (younger)|pe
+叔母|おば|aunt (younger)|pe
+義理|ぎり|in-law (obligation)|pe
+遺族|いぞく|bereaved family|pe
+一族|いちぞく|clan|pe
+仲人|なこうど|matchmaker|pe
+師匠|ししょう|master (teacher)|pe
+弟子|でし|apprentice|pe
+助手|じょしゅ|assistant|pe
+秘書|ひしょ|secretary|pe
+事務員|じむいん|clerk|pe
+公務員|こうむいん|civil servant|pe
+警備員|けいびいん|security guard|pe
+乗務員|じょうむいん|crew member|pe
+通訳|つうやく|interpreter|pe
+翻訳家|ほんやくか|translator|pe
+編集者|へんしゅうしゃ|editor|pe
+出版社|しゅっぱんしゃ|publisher|pe
+学者|がくしゃ|scholar|pe
+教授|きょうじゅ|professor|pe
+博士|はかせ|doctorate (Dr.)|pe
+研究者|けんきゅうしゃ|researcher|pe
+技術者|ぎじゅつしゃ|engineer|pe
+芸術家|げいじゅつか|artist|pe
+音楽家|おんがくか|musician|pe
+作者|さくしゃ|writer (author)|pe
+筆者|ひっしゃ|the writer|pe
+主役|しゅやく|leading role|pe
+脇役|わきやく|supporting role|pe
+司会|しかい|emcee|pe
+審判|しんぱん|referee|pe
+候補|こうほ|candidate|pe
+議員|ぎいん|legislator|pe
+首相|しゅしょう|prime minister|pe
+知事|ちじ|governor|pe
+市長|しちょう|mayor|pe
+大統領|だいとうりょう|president (state)|pe
+王子|おうじ|prince|pe
+姫|ひめ|princess|pe
+貴族|きぞく|noble|pe
+庶民|しょみん|common people|pe
+大衆|たいしゅう|the masses|pe
+群衆|ぐんしゅう|crowd|pe
+集団|しゅうだん|group (mass)|pe
+先方|せんぽう|the other party|pe
+当事者|とうじしゃ|party concerned|pe
+仲介|ちゅうかい|intermediary|pe
+犯罪者|はんざいしゃ|offender|pe
+容疑者|ようぎしゃ|suspect|pe
+証人|しょうにん|witness|pe
+要素|ようそ|element|th
+要因|よういん|factor|th
+要求|ようきゅう|demand|th
+要点|ようてん|main point|th
+要約|ようやく|summary|th
+概要|がいよう|outline|th
+概念|がいねん|concept|th
+観念|かんねん|notion|th
+理論|りろん|theory|th
+理想|りそう|ideal|th
+現実|げんじつ|reality|th
+本質|ほんしつ|essence|th
+本物|ほんもの|the real thing|th
+偽物|にせもの|fake|th
+価値|かち|value|th
+価格|かかく|price (cost)|th
+品質|ひんしつ|quality|th
+性能|せいのう|performance|th
+規模|きぼ|scale|th
+構造|こうぞう|structure|th
+仕組み|しくみ|mechanism|th
+装置|そうち|device|th
+設備|せつび|equipment|th
+施設|しせつ|facility|th
+器具|きぐ|appliance|th
+用品|ようひん|supplies|th
+部屋着|へやぎ|loungewear|th
+衣類|いるい|clothing|th
+衣服|いふく|garments|th
+制服|せいふく|uniform|th
+背広|せびろ|business suit|th
+上着|うわぎ|jacket|th
+襟|えり|collar|th
+袖|そで|sleeve|th
+裾|すそ|hem|th
+帯|おび|sash (obi)|th
+履物|はきもの|footwear|th
+布|ぬの|cloth|th
+生地|きじ|fabric|th
+綿|めん|cotton|th
+毛糸|けいと|yarn|th
+革|かわ|leather|th
+金属|きんぞく|metal|th
+鉱物|こうぶつ|mineral|th
+宝石|ほうせき|jewel|th
+燃料|ねんりょう|fuel|th
+原料|げんりょう|raw materials|th
+素材|そざい|material|th
+液体|えきたい|liquid|th
+気体|きたい|gas|th
+固体|こたい|solid (matter)|th
+物質|ぶっしつ|substance|th
+成分|せいぶん|ingredient (component)|th
+薬品|やくひん|chemicals|th
+化学|かがく|chemistry|th
+物理|ぶつり|physics|th
+生物学|せいぶつがく|biology|th
+医学|いがく|medicine (science)|th
+医療|いりょう|medical care|th
+治療|ちりょう|treatment|th
+手術|しゅじゅつ|surgery|th
+診察|しんさつ|medical exam|th
+検査|けんさ|inspection|th
+予防|よぼう|prevention|th
+看病|かんびょう|nursing (the sick)|th
+介護|かいご|caregiving|th
+福祉|ふくし|welfare|th
+保険|ほけん|insurance|th
+年金|ねんきん|pension|th
+資本|しほん|capital|th
+資金|しきん|funds|th
+株|かぶ|stock (share)|th
+為替|かわせ|exchange (money)|th
+金融|きんゆう|finance|th
+銀行口座|ぎんこうこうざ|bank account|th
+口座|こうざ|account|th
+残高|ざんだか|balance|th
+赤字|あかじ|deficit|th
+黒字|くろじ|surplus (profit)|th
+負担|ふたん|burden|th
+損害|そんがい|damage (loss)|th
+被害|ひがい|harm|th
+賠償|ばいしょう|compensation|th
+保証|ほしょう|guarantee|th
+保障|ほしょう|security (assurance)|th
+補償|ほしょう|indemnity|th
+需要|じゅよう|demand (market)|th
+供給|きょうきゅう|supply|th
+消費|しょうひ|consumption|th
+生産|せいさん|production|th
+製造|せいぞう|manufacture|th
+開発|かいはつ|development (R&D)|th
+流通|りゅうつう|distribution|th
+販売|はんばい|selling|th
+宣伝|せんでん|publicity|th
+市場調査|しじょうちょうさ|market research|th
+企業|きぎょう|enterprise|th
+業界|ぎょうかい|industry (sector)|th
+業務|ぎょうむ|business duties|th
+職業|しょくぎょう|occupation|th
+職務|しょくむ|duties (post)|th
+地位|ちい|status|th
+立場|たちば|standpoint|th
+役割|やくわり|role|th
+役目|やくめ|duty (role)|th
+任務|にんむ|mission|th
+担当|たんとう|charge (in charge)|th
+方針|ほうしん|policy|th
+対策|たいさく|countermeasure|th
+戦略|せんりゃく|strategy|th
+作戦|さくせん|tactics|th
+提案|ていあん|proposal|th
+企画|きかく|project (planning)|th
+案|あん|plan (idea)|th
+議論|ぎろん|debate|th
+討論|とうろん|discussion|th
+会談|かいだん|talks|th
+交渉|こうしょう|negotiation|th
+協力|きょうりょく|cooperation|th
+協議|きょうぎ|conference|th
+合意|ごうい|consensus|th
+承認|しょうにん|approval|th
+拒否|きょひ|rejection|th
+抗議|こうぎ|protest|th
+批判|ひはん|criticism|th
+評価|ひょうか|evaluation|th
+評判|ひょうばん|reputation|th
+人気|にんき|popularity|th
+信用|しんよう|credit (trust)|th
+名誉|めいよ|honor|th
+恩|おん|debt of gratitude|th
+礼儀|れいぎ|manners|th
+作法|さほう|etiquette|th
+常識|じょうしき|common sense|th
+道徳|どうとく|morality|th
+倫理|りんり|ethics|th
+正義|せいぎ|justice|th
+秩序|ちつじょ|order (orderliness)|th
+自由時間|じゆうじかん|free time|ti
+平等|びょうどう|equality|th
+差別|さべつ|discrimination|th
+人権|じんけん|human rights|th
+憲法|けんぽう|constitution (law)|th
+規制|きせい|regulation|th
+条約|じょうやく|treaty|th
+政策|せいさく|political measure|th
+行政|ぎょうせい|administration|th
+議会|ぎかい|parliament|th
+国会|こっかい|the Diet|th
+政党|せいとう|political party|th
+与党|よとう|ruling party|th
+野党|やとう|opposition party|th
+投票|とうひょう|vote|th
+世論|よろん|public opinion|th
+民主主義|みんしゅしゅぎ|democracy|th
+独立|どくりつ|independence|th
+領域|りょういき|domain|th
+分野|ぶんや|field (area)|th
+範疇|はんちゅう|category|th
+項目|こうもく|item|th
+段階|だんかい|stage (phase)|th
+過程|かてい|process|th
+経過|けいか|progress (lapse)|th
+順序|じゅんじょ|sequence|th
+手順|てじゅん|steps|th
+規律|きりつ|discipline|th
+体制|たいせい|system (setup)|th
+形式|けいしき|form (format)|th
+様式|ようしき|style (mode)|th
+方式|ほうしき|method (formula)|th
+傾向|けいこう|tendency|th
+動向|どうこう|trend|th
+現象|げんしょう|phenomenon|th
+事態|じたい|state of affairs|th
+事情|じじょう|circumstances|th
+実態|じったい|actual state|th
+実情|じつじょう|real situation|th
+背景|はいけい|background|th
+前提|ぜんてい|premise|th
+根拠|こんきょ|grounds (basis)|th
+仮定|かてい|assumption|th
+結論|けつろん|conclusion|th
+解決|かいけつ|solution|th
+解答|かいとう|answer (solution)|th
+正解|せいかい|correct answer|th
+誤解|ごかい|misunderstanding|th
+理解|りかい|comprehension|th
+了解|りょうかい|understood|th
+認識|にんしき|recognition|th
+意図|いと|intention|th
+意志|いし|will|th
+意欲|いよく|motivation|th
+関心|かんしん|concern (interest)|th
+注目|ちゅうもく|attention|th
+目安|めやす|rough guide|th
+見当|けんとう|estimate (guess)|th
+見通し|みとおし|outlook|th
+見込み|みこみ|prospect|th
+可能性|かのうせい|possibility|th
+確率|かくりつ|probability|th
+危機|きき|crisis|th
+緊急|きんきゅう|emergency|th
+非常|ひじょう|emergency (unusual)|th
+混乱|こんらん|confusion|th
+騒ぎ|さわぎ|commotion|th
+騒音|そうおん|noise|th
+汚染|おせん|pollution|th
+公害|こうがい|public nuisance|th
+破壊|はかい|destruction|th
+犯罪|はんざい|crime|th
+逮捕|たいほ|arrest|th
+裁判|さいばん|trial|th
+判決|はんけつ|verdict|th
+罪|つみ|sin (crime)|th
+罰|ばつ|punishment|th
+罰金|ばっきん|fine (penalty)|th
+違反|いはん|violation|th
+詐欺|さぎ|fraud|th

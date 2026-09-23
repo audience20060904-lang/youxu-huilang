@@ -412,6 +412,20 @@ if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
   });
 }
 
+/* ===== 学日语时的章节（2026-09-23）=====
+   词难度 1~5 = JLPT N5 / N4 / N3 / N2 / N1（words-ja.js），五档正好对上英语那一套，章节 / Boss 一个没改，
+   只换标签：前四章 N5~N2，无尽 N3 / N2 / N1 混出。*/
+if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "ja"){
+  CHAPTERS.forEach(function(c){
+    c.level = {1:"N5", 2:"N4", 3:"N3", 4:"N2", 5:"N3–N1"}[c.id] || c.level;
+  });
+  ROUTES.forEach(function(r){
+    var lv = {1:"N5", 2:"N4", 3:"N3", 4:"N2"}[r.ch];
+    if(lv){ r.tag = r.tag.replace(/[AB][12]$/, "JLPT " + lv); r.desc = "JLPT " + lv + " 词 · 50 层"; }
+    if(r.ch === 5){ r.tag = "第五章 · N3–N1"; r.desc = "N3 / N2 / N1 混出 · 走到倒下为止"; }
+  });
+}
+
 /* ===== 难度等级 =====
    **A 级就是原本的全部数值**（用户 2026-09-21 加难度调节之前，游戏只有这一档），
    往下三档只放宽**玩家攻击**这一处，怪物一个数字都不动 ——

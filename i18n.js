@@ -2,9 +2,10 @@
    ---------------------------------------------------------------------------
    两件事分开管：
      · **界面语言 LANG_UI** = 玩家的母语（zh 中文 / en English）—— 所有按钮、日志、遗物文案；
-     · **学习语言 LANG_LEARN** = 背哪一门的词（en 英语 / zh 中文 / es 西班牙语）—— 词库、朗读、拼写题。
+     · **学习语言 LANG_LEARN** = 背哪一门的词（en 英语 / zh 中文 / es 西班牙语 / ja 日语）—— 词库、朗读、拼写题。
    能选的组合在 LANG_PAIRS 里（要有「这门语言的词 + 母语释义」那一份词库才算数）：
-     中文母语 → 学英语（words-a1.js，游戏本来的样子）/ 英语母语 → 学中文（words-zh.js）/ 英语母语 → 学西班牙语（words-es.js）。
+     中文母语 → 学英语（words-a1.js，游戏本来的样子）/ 英语母语 → 学中文（words-zh.js）/ 英语母语 → 学西班牙语（words-es.js）
+     / 英语母语 → 学日语（words-ja.js）。
    **母语只做中英两种，学习语言以后会有很多**（用户 2026-09-23）—— 所以选择分两步：
      先挑母语（veilLang），再弹一个学习语言的列表（veilLearn，按 LANG_PAIRS 现算）。
    选择存在设置 OPT（youxu.opt.v1）的 `lang` 字段上 —— 它是「这台设备怎么显示」，不是进度。
@@ -20,7 +21,8 @@
 var LANG_PAIRS = [
   {ui:"zh", learn:"en"},
   {ui:"en", learn:"zh"},
-  {ui:"en", learn:"es"}
+  {ui:"en", learn:"es"},
+  {ui:"en", learn:"ja"}
 ];
 var LANG_NAME = {zh:"中文", en:"English"};
 /* 学习语言的介绍（第二步那个弹窗的卡片）：name 按母语写、self 是这门语言自己的写法、
@@ -29,7 +31,8 @@ var LANG_NAME = {zh:"中文", en:"English"};
 var LEARN_INFO = {
   en: {name:{zh:"英语", en:"English"}, self:"English", lv:"A1 → C1"},
   zh: {name:{zh:"中文", en:"Chinese"}, self:"中文", lv:"HSK 1 → 6"},
-  es: {name:{zh:"西班牙语", en:"Spanish"}, self:"Español", lv:"A1 → C1"}
+  es: {name:{zh:"西班牙语", en:"Spanish"}, self:"Español", lv:"A1 → C1"},
+  ja: {name:{zh:"日语", en:"Japanese"}, self:"日本語", lv:"JLPT N5 → N1"}
 };
 var LANG_UI = "zh", LANG_LEARN = "en", LANG_SET = false;
 function langPairOk(ui, learn){
@@ -46,8 +49,11 @@ function langPairOk(ui, learn){
 })();
 var UI_EN = LANG_UI === "en";
 var LEARN_ZH = LANG_LEARN === "zh";
+var LEARN_JA = LANG_LEARN === "ja";
+/* 题面 / 字键 / 字格要不要按汉字排版（.zh 那几条 CSS）：中文和日语都是 */
+var LEARN_CJK = LEARN_ZH || LEARN_JA;
 /* util.js 的 speak() 读它 —— 念的是「要学的那门语言」 */
-var SPEAK_LANG = {zh:"zh-CN", es:"es-ES"}[LANG_LEARN] || "en-US";
+var SPEAK_LANG = {zh:"zh-CN", es:"es-ES", ja:"ja-JP"}[LANG_LEARN] || "en-US";
 try{ document.documentElement.lang = UI_EN ? "en" : "zh-CN"; }catch(e){}
 
 var I18N = {};

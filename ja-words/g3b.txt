@@ -1,0 +1,462 @@
+# JLPT N3 第二批
+牧場|ぼくじょう|ranch|an
+尻尾|しっぽ|tail (animal)|an
+翼|つばさ|wing|an
+鱗|うろこ|scale (fish)|an
+牙|きば|fang|an
+蝿|はえ|housefly|an
+蝉|せみ|cicada|an
+鯛|たい|sea bream|an
+雛|ひな|chick|an
+乳製品|にゅうせいひん|dairy products|fo
+果実|かじつ|fruit (botany)|fo
+穀物|こくもつ|grain|fo
+主食|しゅしょく|staple food|fo
+献立|こんだて|menu (meal plan)|fo
+食器|しょっき|tableware|fo
+鍋|なべ|pot|fo
+釜|かま|kettle (iron pot)|fo
+包丁|ほうちょう|kitchen knife|fo
+まな板|まないた|cutting board|fo
+香り|かおり|aroma|fo
+匂い|におい|smell|fo
+甘味|あまみ|sweetness|fo
+塩辛い|しおからい|salty (briny)|fo|adj
+脂|あぶら|fat (grease)|fo
+缶ビール|かんビール|canned beer|fo
+皮|かわ|peel (skin)|fo
+黄身|きみ|egg yolk|fo
+白身|しろみ|egg white|fo
+焦げる|こげる|to get scorched|fo|v
+腐る|くさる|to rot|fo|v
+鳥肌|とりはだ|goosebumps|bo
+歯茎|はぐき|gums|bo
+視力|しりょく|eyesight|bo
+聴力|ちょうりょく|hearing|bo
+体温|たいおん|body temperature|bo
+脈|みゃく|pulse|bo
+血液|けつえき|blood (fluid)|bo
+内臓|ないぞう|internal organs|bo
+全身|ぜんしん|whole body|bo
+素顔|すがお|bare face|bo
+横顔|よこがお|profile (face)|bo
+寝顔|ねがお|sleeping face|bo
+おでこ||brow|bo
+つむじ||hair whorl|bo
+関節|かんせつ|joint|bo
+やけど||burn (injury)|bo
+しわ||wrinkle|bo
+ほくろ||mole|bo
+客様|きゃくさま|valued customer|pe
+主人公|しゅじんこう|protagonist|pe
+先祖|せんぞ|forefather|pe
+双子|ふたご|twins|pe
+一家|いっか|household|pe
+身内|みうち|kin|pe
+独身|どくしん|single (unmarried)|pe
+新人|しんじん|newcomer|pe
+担当者|たんとうしゃ|person in charge|pe
+責任者|せきにんしゃ|manager (responsible)|pe
+経営者|けいえいしゃ|business owner|pe
+労働者|ろうどうしゃ|laborer|pe
+消費者|しょうひしゃ|consumer|pe
+利用者|りようしゃ|user|pe
+関係者|かんけいしゃ|those concerned|pe
+参加者|さんかしゃ|participant|pe
+見物人|けんぶつにん|onlooker|pe
+案内人|あんないにん|guide|pe
+持ち主|もちぬし|owner|pe
+美人|びじん|beautiful woman|pe
+名人|めいじん|master (expert)|pe
+職人|しょくにん|craftsman|pe
+農家|のうか|farmer|pe
+漁師|りょうし|fisherman|pe
+大工|だいく|carpenter|pe
+店主|てんしゅ|shopkeeper|pe
+家主|やぬし|landlord|pe
+道具箱|どうぐばこ|toolbox|th
+家具|かぐ|furniture|th
+電池|でんち|battery|th
+電球|でんきゅう|light bulb|th
+扇風機|せんぷうき|electric fan|th
+掃除機|そうじき|vacuum cleaner|th
+洗濯機|せんたくき|washing machine|th
+炊飯器|すいはんき|rice cooker|th
+電子レンジ|でんしれんじ|microwave oven|th
+携帯|けいたい|mobile phone|th
+画面|がめん|screen|th
+機能|きのう|function|th
+故障|こしょう|breakdown|th
+修理|しゅうり|repair|th
+工事|こうじ|construction work|th
+建築|けんちく|architecture|th
+設計|せっけい|design (plan)|th
+部分|ぶぶん|part (portion)|th
+全て|すべて|everything|th
+一種|いっしゅ|a kind of|th
+見本|みほん|sample|th
+新品|しんぴん|brand-new item|th
+中古|ちゅうこ|secondhand|th
+包み|つつみ|package|th
+荷造り|にづくり|packing|th
+傘立て|かさたて|umbrella stand|th
+名刺|めいし|business card|th
+身分証|みぶんしょう|ID card|th
+旅券|りょけん|passport|th
+定期券|ていきけん|commuter pass|th
+領収書|りょうしゅうしょ|receipt|th
+請求書|せいきゅうしょ|invoice|th
+証明書|しょうめいしょ|certificate|th
+用紙|ようし|form (paper)|th
+表紙|ひょうし|cover (book)|th
+目次|もくじ|table of contents|th
+題名|だいめい|title|th
+作品|さくひん|work (of art)|th
+芸術|げいじゅつ|art|th
+美術|びじゅつ|fine arts|th
+彫刻|ちょうこく|sculpture|th
+劇|げき|drama (play)|th
+物語|ものがたり|tale|th
+童話|どうわ|fairy tale|th
+詩|し|poem|th
+随筆|ずいひつ|essay|th
+日記|にっき|diary|th
+伝言|でんごん|message|th
+合計額|ごうけいがく|total amount|nu
+割引|わりびき|discount|th
+値上げ|ねあげ|price increase|th
+値下げ|ねさげ|price cut|th
+売り上げ|うりあげ|sales (revenue)|th
+収入|しゅうにゅう|income|th
+支出|ししゅつ|expenditure|th
+景気|けいき|economic conditions|th
+不景気|ふけいき|recession|th
+倒産|とうさん|bankruptcy|th
+就職|しゅうしょく|finding a job|th
+退職|たいしょく|retirement (job)|th
+転勤|てんきん|job transfer|th
+出張|しゅっちょう|business trip|th
+残業|ざんぎょう|overtime|th
+休憩|きゅうけい|break (rest)|th
+通勤|つうきん|commuting|th
+通学|つうがく|going to school|th
+遠足|えんそく|excursion|th
+見学|けんがく|field trip|th
+観光|かんこう|sightseeing|th
+行事|ぎょうじ|event|th
+式|しき|ceremony|th
+葬式|そうしき|funeral|th
+結婚式|けっこんしき|wedding|th
+誕生|たんじょう|birth|th
+人生|じんせい|life (human)|th
+命|いのち|life (existence)|th
+生命|せいめい|life (biological)|th
+運|うん|luck|th
+運命|うんめい|fate|th
+宝|たから|treasure|th
+神|かみ|god|th
+宗教|しゅうきょう|religion|th
+伝統|でんとう|tradition|th
+習字|しゅうじ|calligraphy|th
+将棋|しょうぎ|shogi|th
+囲碁|いご|go (game)|th
+手品|てじな|magic trick|th
+趣|おもむき|charm (flavor)|th
+娯楽|ごらく|entertainment|th
+競技|きょうぎ|sporting event|th
+勝負|しょうぶ|contest|th
+勝利|しょうり|victory|th
+敗北|はいぼく|defeat|th
+引き分け|ひきわけ|draw (tie)|th
+応援|おうえん|cheering|th
+練習試合|れんしゅうじあい|practice match|th
+武器|ぶき|weapon|th
+刀|かたな|sword|th
+弓|ゆみ|bow|th
+矢|や|arrow|th
+盾|たて|shield|th
+鎧|よろい|armor|th
+城|しろ|castle|pl
+塔|とう|tower|pl
+門|もん|gate|pl
+柱|はしら|pillar|th
+屋敷|やしき|mansion|pl
+墓|はか|grave|pl
+井戸|いど|well|pl
+畑|はたけ|field (farm)|pl
+田んぼ|たんぼ|rice paddy|pl
+森林|しんりん|woodland|na
+樹木|じゅもく|trees|na
+大木|たいぼく|big tree|na
+落ち葉|おちば|fallen leaves|na
+小石|こいし|pebble|na
+砂浜|すなはま|sandy beach|na
+浜辺|はまべ|beach|na
+岸|きし|bank (shore)|na
+沖|おき|offshore|na
+潮|しお|tide|na
+渦|うず|whirlpool|na
+水滴|すいてき|water drop|na
+雨水|あまみず|rainwater|na
+大雨|おおあめ|heavy rain|na
+大雪|おおゆき|heavy snow|na
+小雨|こさめ|light rain|na
+吹雪|ふぶき|blizzard|na
+突風|とっぷう|gust of wind|na
+晴天|せいてん|clear sky|na
+青空|あおぞら|blue sky|na
+夕焼け|ゆうやけ|sunset glow|na
+日陰|ひかげ|shade|na
+暗闇|くらやみ|darkness|na
+闇|やみ|the dark|na
+酸素|さんそ|oxygen|na
+炎|ほのお|flame|na
+蒸気|じょうき|steam|na
+自然現象|しぜんげんしょう|natural phenomenon|na
+叫ぶ|さけぶ|to shout|ve
+囁く|ささやく|to whisper|ve
+呟く|つぶやく|to mutter|ve
+黙る|だまる|to fall silent|ve
+頷く|うなずく|to nod|ve
+微笑む|ほほえむ|to smile|ve
+睨む|にらむ|to glare|ve
+抱く|だく|to hug|ve
+握る|にぎる|to grip|ve
+掴む|つかむ|to grab|ve
+撫でる|なでる|to stroke|ve
+叩く|たたく|to strike (knock)|ve
+殴る|なぐる|to punch|ve
+刺す|さす|to stab|ve
+縛る|しばる|to bind|ve
+解く|とく|to solve (untie)|ve
+挟む|はさむ|to sandwich|ve
+詰める|つめる|to cram|ve
+詰まる|つまる|to be clogged|ve
+注ぐ|そそぐ|to pour|ve
+こぼす||to spill|ve
+こぼれる||to overflow (spill)|ve
+溢れる|あふれる|to brim over|ve
+浮かぶ|うかぶ|to float|ve
+沈む|しずむ|to sink|ve
+流れる|ながれる|to flow|ve
+流す|ながす|to let flow|ve
+漏れる|もれる|to leak|ve
+溜まる|たまる|to accumulate|ve
+滑る|すべる|to slip|ve
+這う|はう|to crawl|ve
+跳ねる|はねる|to bounce|ve
+飛び出す|とびだす|to rush out|ve
+駆ける|かける|to dash|ve
+潜る|もぐる|to dive|ve
+登る|のぼる|to climb|ve
+昇る|のぼる|to ascend (sun)|ve
+沸騰|ふっとう|boiling|th
+暮れる|くれる|to get dark|ve
+明ける|あける|to dawn|ve
+静まる|しずまる|to calm down|ve
+慌てる|あわてる|to panic|ve
+焦る|あせる|to be in a hurry|ve
+落ち着く|おちつく|to settle down|ve
+緩む|ゆるむ|to loosen|ve
+張る|はる|to stretch (put up)|ve
+貼る|はる|to stick (paste)|ve
+剥がす|はがす|to peel off|ve
+破る|やぶる|to tear|ve
+破れる|やぶれる|to be torn|ve
+裂ける|さける|to split open|ve
+削る|けずる|to shave (whittle)|ve
+掘る|ほる|to dig|ve
+埋める|うめる|to bury|ve
+耕す|たがやす|to plow|ve
+刈る|かる|to mow|ve
+摘む|つむ|to pick (pluck)|ve
+蒔く|まく|to sow|ve
+枯れる|かれる|to wither|ve
+実る|みのる|to bear fruit|ve
+茂る|しげる|to grow thick|ve
+生える|はえる|to sprout|ve
+映る|うつる|to be reflected|ve
+写す|うつす|to copy (photograph)|ve
+移る|うつる|to move (shift)|ve
+移す|うつす|to transfer|ve
+隠す|かくす|to conceal|ve
+表れる|あらわれる|to show (manifest)|ve
+似せる|にせる|to imitate|ve
+真似る|まねる|to mimic|ve
+越す|こす|to move house|ve
+引っ越す|ひっこす|to relocate|ve
+泊まる|とまる|to stay (overnight)|ve
+泊める|とめる|to put up (lodge)|ve
+招く|まねく|to invite (beckon)|ve
+祝う|いわう|to celebrate|ve
+贈る|おくる|to present (gift)|ve
+譲る|ゆずる|to hand over|ve
+奪う|うばう|to snatch|ve
+盗む|ぬすむ|to steal|ve
+騙す|だます|to deceive|ve
+裏切る|うらぎる|to betray|ve
+責める|せめる|to blame|ve
+攻める|せめる|to attack|ve
+襲う|おそう|to assault|ve
+倒す|たおす|to knock down|ve
+滅びる|ほろびる|to perish|ve
+殺す|ころす|to kill|ve
+救う|すくう|to save (rescue)|ve
+癒す|いやす|to heal (soothe)|ve
+養う|やしなう|to nourish|ve
+鍛える|きたえる|to train (forge)|ve
+教わる|おそわる|to be taught|ve
+学ぶ|まなぶ|to study (learn)|ve
+覚え|おぼえ|recollection|th
+問う|とう|to question|ve
+訳す|やくす|to translate|ve
+記す|しるす|to write down|ve
+描く|えがく|to depict|ve
+彫る|ほる|to carve|ve
+編む|あむ|to knit|ve
+縫う|ぬう|to sew|ve
+着替える|きがえる|to change clothes|ve
+履く|はく|to wear (shoes)|ve
+被る|かぶる|to put on (hat)|ve
+締める|しめる|to fasten|ve
+乾かす|かわかす|to dry (sth)|ve
+冷やす|ひやす|to chill|ve
+温める|あたためる|to heat up|ve
+嗅ぐ|かぐ|to sniff|ve
+舐める|なめる|to lick|ve
+吐く|はく|to vomit (exhale)|ve
+震える|ふるえる|to tremble|ve
+酔う|よう|to get drunk|ve
+寄る|よる|to drop by|ve
+寄せる|よせる|to bring near|ve
+近付く|ちかづく|to approach|ve
+遠ざかる|とおざかる|to recede|ve
+立ち止まる|たちどまる|to stop walking|ve
+待ち合わせる|まちあわせる|to meet up|ve
+出会う|であう|to encounter|ve
+出掛ける|でかける|to go out (on an errand)|ve
+乗り換える|のりかえる|to transfer (train)|ve
+乗り遅れる|のりおくれる|to miss (a train)|ve
+見逃す|みのがす|to overlook|ve
+見舞う|みまう|to visit (the sick)|ve
+恐ろしい|おそろしい|terrifying|fe
+気の毒|きのどく|pitiable|fe
+憂鬱|ゆううつ|gloomy|fe
+陽気|ようき|cheerful|fe
+呑気|のんき|carefree|fe
+真剣|しんけん|earnest|fe
+夢中|むちゅう|absorbed|fe
+得意げ|とくいげ|proud (triumphant)|fe
+照れる|てれる|to feel shy|fe|v
+呆れる|あきれる|to be appalled|fe|v
+焦り|あせり|impatience|fe|n
+寂しさ|さびしさ|loneliness|fe|n
+嬉しさ|うれしさ|gladness|fe|n
+楽しみ|たのしみ|anticipation (pleasure)|fe|n
+心細い|こころぼそい|forlorn|fe
+心強い|こころづよい|reassuring|fe
+頼もしい|たのもしい|dependable|ad
+逞しい|たくましい|robust|ad
+若々しい|わかわかしい|youthful|ad
+図々しい|ずうずうしい|impudent|ad
+馬鹿|ばか|foolish|ad
+利口|りこう|clever|ad
+器用|きよう|dexterous|ad
+不器用|ぶきよう|clumsy|ad
+勝手|かって|self-centered|ad
+平凡|へいぼん|ordinary|ad
+安易|あんい|easygoing (facile)|ad
+容易|ようい|easy (not hard)|ad
+困難|こんなん|difficulty|ad
+面倒くさい|めんどうくさい|bothersome|ad
+恐らく|おそらく|perhaps|av
+確実に|かくじつに|surely (reliably)|av
+直ちに|ただちに|at once|av
+間もなく|まもなく|shortly|av
+先ほど|さきほど|a moment ago|av
+後ほど|のちほど|later on|av
+今更|いまさら|now (too late)|av
+改めて|あらためて|anew|av
+一気に|いっきに|in one go|av
+次々|つぎつぎ|one after another|av
+度々|たびたび|repeatedly|av
+常に|つねに|constantly|av
+永遠に|えいえんに|eternally|av
+永遠|えいえん|eternity|ti
+永久|えいきゅう|permanence|ti
+一瞬|いっしゅん|an instant|ti
+長年|ながねん|many years|ti
+長期|ちょうき|long term|ti
+短期|たんき|short term|ti
+当分|とうぶん|for the time being (a while)|ti
+晩年|ばんねん|later years|ti
+青春|せいしゅん|youth (springtime of life)|ti
+学生時代|がくせいじだい|school days|ti
+幼い頃|おさないころ|early childhood|ti
+新学期|しんがっき|new term|ti
+春休み|はるやすみ|spring break|ti
+冬休み|ふゆやすみ|winter break|ti
+大晦日|おおみそか|New Year's Eve|ti
+元日|がんじつ|New Year's Day|ti
+暦|こよみ|calendar|ti
+西暦|せいれき|Western calendar|ti
+四季|しき|four seasons|ti
+真夏|まなつ|midsummer|ti
+真冬|まふゆ|midwinter|ti
+初夏|しょか|early summer|ti
+晩秋|ばんしゅう|late autumn|ti
+朝晩|あさばん|morning and night|ti
+昼間|ひるま|daytime (hours)|ti
+夜間|やかん|nighttime|ti
+日々|ひび|days (daily)|ti
+各地|かくち|various places|pl
+現地|げんち|the locale|pl
+田畑|たはた|farmland|pl
+土地|とち|land (plot)|pl
+敷地|しきち|premises|pl
+領土|りょうど|territory|pl
+国境|こっきょう|border|pl
+県庁|けんちょう|prefectural office|pl
+市役所|しやくしょ|city hall|pl
+本社|ほんしゃ|head office|pl
+支店|してん|branch office|pl
+窓際|まどぎわ|by the window|pl
+座席|ざせき|seating|pl
+客席|きゃくせき|audience seats|pl
+待合室|まちあいしつ|waiting room|pl
+居間|いま|living room|pl
+寝室|しんしつ|bedroom|pl
+浴室|よくしつ|bathroom|pl
+風呂場|ふろば|bath area|pl
+物置|ものおき|storeroom|pl
+屋外|おくがい|outdoors|pl
+屋内|おくない|indoors|pl
+上空|じょうくう|sky above|pl
+頂上|ちょうじょう|summit|pl
+山頂|さんちょう|mountaintop|pl
+ふもと||foot (of a mountain)|pl
+川岸|かわぎし|riverbank|pl
+沿岸|えんがん|coast|pl
+東西|とうざい|east and west|pl
+南北|なんぼく|north and south|pl
+四方|しほう|all directions|pl
+行き先|いきさき|destination|pl
+出発点|しゅっぱつてん|starting point|pl
+一万|いちまん|ten thousand (one)|nu
+数万|すうまん|tens of thousands|nu
+数百|すうひゃく|several hundred|nu
+数十|すうじゅう|dozens|nu
+何百|なんびゃく|hundreds|nu
+一枚|いちまい|one sheet|nu
+一冊|いっさつ|one volume|nu
+一本|いっぽん|one (long thing)|nu
+一匹|いっぴき|one (animal)|nu
+一台|いちだい|one (machine)|nu
+一軒|いっけん|one house|nu
+一足|いっそく|one pair (shoes)|nu
+一組|ひとくみ|one set|nu
+一行|いちぎょう|one line|nu
+一歩|いっぽ|one step|nu
+一口|ひとくち|one bite|nu
+一晩|ひとばん|one night|nu
+一週間|いっしゅうかん|one week|nu

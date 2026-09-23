@@ -1,0 +1,321 @@
+# JLPT N1 · 写法|读音|英文释义|类别|词性
+獅子|しし|lion (mythic)|an
+豹|ひょう|leopard|an
+大蛇|おろち|giant serpent|an
+鷺|さぎ|heron|an
+雉|きじ|pheasant|an
+鶯|うぐいす|bush warbler|an
+百舌|もず|shrike|an
+鮒|ふな|crucian carp|an
+鰻|うなぎ|eel (Japanese)|an
+蛭|ひる|leech|an
+蛆|うじ|maggot|an
+蟋蟀|こおろぎ|cricket|an
+蝗|いなご|locust|an
+貂|てん|marten|an
+獲る|とる|to catch (game)|an|v
+孵る|かえる|to hatch|an|v
+鱗粉|りんぷん|wing scales|an
+猟|りょう|hunting|an
+漁|りょう|fishing (trade)|an
+畜産|ちくさん|animal husbandry|an
+酪農|らくのう|dairy farming|an
+養殖|ようしょく|aquaculture|an
+絶滅|ぜつめつ|extinction|an
+珍味|ちんみ|delicacy|fo
+美食|びしょく|gourmet food|fo
+粗食|そしょく|plain diet|fo
+飽食|ほうしょく|gluttony|fo
+醸造|じょうぞう|brewing|fo
+発酵|はっこう|fermentation|fo
+熟成|じゅくせい|aging (ripening)|fo
+賞味期限|しょうみきげん|best-before date|fo
+嗜好品|しこうひん|luxury item (treat)|fo
+佃煮|つくだに|simmered preserves|fo
+雑炊|ぞうすい|rice porridge|fo
+粥|かゆ|gruel|fo
+吸い物|すいもの|clear soup|fo
+膳|ぜん|meal tray|fo
+献上|けんじょう|presentation (offering)|fo
+頬張る|ほおばる|to stuff one's cheeks|fo|v
+啜る|すする|to sip|fo|v
+齧る|かじる|to gnaw|fo|v
+平らげる|たいらげる|to polish off|fo|v
+紅|べに|rouge (crimson)|co|n
+緋色|ひいろ|scarlet|co|n
+群青|ぐんじょう|ultramarine|co|n
+萌黄|もえぎ|light green|co|n
+山吹色|やまぶきいろ|golden yellow|co|n
+琥珀色|こはくいろ|amber|co|n
+乳白色|にゅうはくしょく|milky white|co|n
+墨色|すみいろ|ink black|co|n
+彩り|いろどり|coloration|co|n
+濃淡|のうたん|shading|co|n
+斑|まだら|spotted (mottled)|co|n
+華やか|はなやか|gorgeous|co
+けばけばしい||gaudy|co
+艶やか|あでやか|charming (bewitching)|co
+渋い|しぶい|tasteful (astringent)|co
+くすんだ||dull (drab)|co
+面影|おもかげ|vestige (image)|bo
+容姿|ようし|appearance (looks)|bo
+容貌|ようぼう|features (face)|bo
+風貌|ふうぼう|look (mien)|bo
+眼差し|まなざし|look (gaze)|bo
+鼻筋|はなすじ|bridge of the nose|bo
+眉間|みけん|between the brows|bo
+うなじ||nape|bo
+脇|わき|armpit (side)|bo
+臓器|ぞうき|internal organ|bo
+血管|けっかん|blood vessel|bo
+脊髄|せきずい|spinal cord|bo
+骨格|こっかく|skeleton|bo
+体躯|たいく|build (frame)|bo
+五感|ごかん|five senses|bo
+痕跡|こんせき|trace (mark)|bo
+傷跡|きずあと|scar|bo
+打撲|だぼく|bruise|bo
+骨折|こっせつ|fracture|bo
+捻挫|ねんざ|sprain|bo
+麻痺|まひ|paralysis|bo
+衰弱|すいじゃく|weakening|bo
+老化|ろうか|aging|bo
+臨終|りんじゅう|deathbed|bo
+遺体|いたい|corpse|bo
+先駆者|せんくしゃ|pioneer|pe
+権威|けんい|authority|pe
+巨匠|きょしょう|maestro|pe
+達人|たつじん|expert (master)|pe
+凡人|ぼんじん|ordinary person|pe
+変人|へんじん|eccentric|pe
+怠け者|なまけもの|lazybones|pe
+働き者|はたらきもの|hard worker|pe
+恩人|おんじん|benefactor|pe
+仇|かたき|foe (enemy)|pe
+宿敵|しゅくてき|archenemy|pe
+配偶者|はいぐうしゃ|spouse|pe
+嫁|よめ|bride|pe
+婿|むこ|son-in-law|pe
+姑|しゅうとめ|mother-in-law|pe
+遺児|いじ|orphan|pe
+乳児|にゅうじ|infant|pe
+幼児|ようじ|toddler|pe
+児童|じどう|children|pe
+生徒会|せいとかい|student council|pe
+旅人|たびびと|traveler|pe
+浪人|ろうにん|ronin|pe
+侍|さむらい|samurai|pe
+武士|ぶし|warrior|pe
+将軍|しょうぐん|shogun|pe
+大名|だいみょう|feudal lord|pe
+家来|けらい|retainer|pe
+僧|そう|monk|pe
+尼|あま|nun|pe
+神主|かんぬし|Shinto priest|pe
+巫女|みこ|shrine maiden|pe
+預言者|よげんしゃ|prophet|pe
+使者|ししゃ|messenger|pe
+刺客|しかく|assassin|pe
+捕虜|ほりょ|prisoner of war|pe
+囚人|しゅうじん|prisoner|pe
+亡命者|ぼうめいしゃ|exile|pe
+移民|いみん|immigrant|pe
+難民|なんみん|refugee|pe
+遊牧民|ゆうぼくみん|nomad|pe
+先住民|せんじゅうみん|indigenous people|pe
+有権者|ゆうけんしゃ|voter|pe
+納税者|のうぜいしゃ|taxpayer|pe
+債務者|さいむしゃ|debtor|pe
+名義人|めいぎにん|nominal holder|pe
+発起人|ほっきにん|founder (promoter)|pe
+黒幕|くろまく|mastermind|pe
+理念|りねん|philosophy (ideal)|th
+信念|しんねん|belief|th
+信条|しんじょう|creed|th
+主義|しゅぎ|principle (-ism)|th
+思想|しそう|thought (ideology)|th
+哲学|てつがく|philosophy|th
+見解|けんかい|view (opinion)|th
+所見|しょけん|findings|th
+趣旨|しゅし|gist|th
+要旨|ようし|summary (main point)|th
+真相|しんそう|the truth (facts)|th
+実質|じっしつ|substance (reality)|th
+名目|めいもく|pretext (nominal)|th
+口実|こうじつ|excuse (pretext)|th
+弁解|べんかい|justification|th
+釈明|しゃくめい|explanation (vindication)|th
+陳述|ちんじゅつ|statement|th
+証言|しょうげん|testimony|th
+供述|きょうじゅつ|deposition|th
+自白|じはく|confession|th
+告白|こくはく|confession (of love)|th
+告発|こくはつ|indictment|th
+訴訟|そしょう|lawsuit|th
+弁護|べんご|defense (legal)|th
+審査|しんさ|screening|th
+査定|さてい|assessment|th
+鑑定|かんてい|appraisal|th
+監査|かんさ|audit|th
+考察|こうさつ|consideration (study)|th
+洞察|どうさつ|insight|th
+推理|すいり|deduction|th
+仮説|かせつ|hypothesis|th
+定義|ていぎ|definition|th
+原理|げんり|principle (law)|th
+法則|ほうそく|rule (law of nature)|th
+公式|こうしき|formula (official)|th
+方程式|ほうていしき|equation|th
+次元|じげん|dimension|th
+体系|たいけい|system (framework)|th
+枠組み|わくぐみ|framework|th
+骨組み|ほねぐみ|skeleton (framework)|th
+土台|どだい|foundation|th
+礎|いしずえ|cornerstone|th
+根底|こんてい|root (bottom)|th
+根本|こんぽん|fundamentals|th
+核心|かくしん|core (crux)|th
+焦点|しょうてん|focus|th
+視点|してん|viewpoint|th
+観点|かんてん|perspective|th
+側面|そくめん|aspect|th
+局面|きょくめん|phase (situation)|th
+情勢|じょうせい|state of things|th
+形勢|けいせい|tide (situation)|th
+趨勢|すうせい|trend (drift)|th
+風潮|ふうちょう|climate (tendency)|th
+潮流|ちょうりゅう|current (tide)|th
+気運|きうん|momentum|th
+兆し|きざし|omen (sign)|th
+兆候|ちょうこう|symptom (indication)|th
+前兆|ぜんちょう|harbinger|th
+余波|よは|aftermath|th
+弊害|へいがい|harmful effect|th
+欠陥|けっかん|defect|th
+欠点|けってん|flaw|th
+弱点|じゃくてん|weakness|th
+難点|なんてん|drawback|th
+利点|りてん|advantage|th
+長短|ちょうたん|merits and demerits|th
+是非|ぜひ|right or wrong|th
+善悪|ぜんあく|good and evil|th
+矛盾|むじゅん|contradiction|th
+葛藤|かっとう|conflict (inner)|th
+摩擦|まさつ|friction|th
+紛争|ふんそう|dispute|th
+抗争|こうそう|feud|th
+内乱|ないらん|civil war|th
+革命|かくめい|revolution|th
+反乱|はんらん|rebellion|th
+侵略|しんりゃく|invasion|th
+占領|せんりょう|occupation (military)|th
+支配権|しはいけん|control (dominion)|th
+覇権|はけん|hegemony|th
+外交|がいこう|diplomacy|th
+同盟|どうめい|alliance|th
+和解|わかい|reconciliation|th
+妥協|だきょう|compromise|th
+譲歩|じょうほ|concession|th
+仲裁|ちゅうさい|arbitration|th
+調停|ちょうてい|mediation|th
+折衷|せっちゅう|blending (compromise)|th
+均衡|きんこう|equilibrium|th
+調和|ちょうわ|harmony|th
+融合|ゆうごう|fusion|th
+統合|とうごう|integration|th
+集約|しゅうやく|consolidation|th
+分散|ぶんさん|dispersion|th
+拡散|かくさん|diffusion|th
+浸透|しんとう|permeation|th
+普及|ふきゅう|spread (diffusion)|th
+流行|りゅうこう|fashion (trend)|th
+廃止|はいし|abolition|th
+撤廃|てっぱい|repeal|th
+撤退|てったい|pullout|th
+撤回|てっかい|retraction|th
+破棄|はき|annulment|th
+解除|かいじょ|cancellation (lifting)|th
+解散|かいさん|dissolution|th
+解雇|かいこ|dismissal|th
+辞任|じにん|resignation|th
+就任|しゅうにん|inauguration|th
+任命|にんめい|appointment|th
+派遣|はけん|dispatch|th
+赴任|ふにん|taking up a post|th
+在籍|ざいせき|enrollment|th
+在庫|ざいこ|stock (inventory)|th
+備蓄|びちく|stockpile|th
+調達|ちょうたつ|procurement|th
+融資|ゆうし|financing (loan)|th
+投資|とうし|investment|th
+出資|しゅっし|capital contribution|th
+配当|はいとう|dividend|th
+利息|りそく|interest (money)|th
+債務|さいむ|liabilities|th
+負債|ふさい|debt (liability)|th
+担保|たんぽ|collateral|th
+抵当|ていとう|mortgage|th
+破産|はさん|insolvency|th
+財政|ざいせい|public finance|th
+歳入|さいにゅう|annual revenue|th
+歳出|さいしゅつ|annual expenditure|th
+関税|かんぜい|customs duty|th
+物価|ぶっか|prices (cost of living)|th
+相場|そうば|market price|th
+暴落|ぼうらく|crash (market)|th
+高騰|こうとう|sharp rise|th
+騰貴|とうき|price hike|th
+恐慌|きょうこう|panic (financial)|th
+好況|こうきょう|boom|th
+不況|ふきょう|slump|th
+繁栄|はんえい|prosperity|th
+衰退|すいたい|decline (decay)|th
+没落|ぼつらく|downfall|th
+興亡|こうぼう|rise and fall|th
+栄光|えいこう|glory|th
+威厳|いげん|dignity|th
+品格|ひんかく|grace (dignity)|th
+風格|ふうかく|character (presence)|th
+気品|きひん|refinement|th
+教養|きょうよう|culture (education)|th
+素養|そよう|grounding (knowledge)|th
+見識|けんしき|discernment|th
+良識|りょうしき|good sense|th
+分別|ふんべつ|prudence|th
+度量|どりょう|magnanimity|th
+器量|きりょう|caliber|th
+力量|りきりょう|capability (competence)|th
+手腕|しゅわん|skill (ability)|th
+手際|てぎわ|skill (dexterity)|th
+腕前|うでまえ|prowess|th
+素質|そしつ|aptitude|th
+資質|ししつ|qualities (nature)|th
+天性|てんせい|innate nature|th
+宿命|しゅくめい|destiny|th
+因縁|いんねん|karma (fate)|th
+縁|えん|bond (connection)|th
+絆|きずな|ties (bond)|th
+恩恵|おんけい|benefit (blessing)|th
+恵み|めぐみ|blessing|th
+報い|むくい|retribution|th
+代償|だいしょう|price (compensation)|th
+犠牲|ぎせい|sacrifice|th
+試練|しれん|ordeal|th
+苦難|くなん|hardship|th
+逆境|ぎゃっきょう|adversity|th
+窮地|きゅうち|predicament|th
+苦境|くきょう|plight|th
+難関|なんかん|barrier (hurdle)|th
+障壁|しょうへき|barrier (wall)|th
+関門|かんもん|gateway (checkpoint)|th
+突破|とっぱ|breakthrough|th
+躍進|やくしん|rapid progress|th
+飛躍|ひやく|leap|th
+進展|しんてん|development (progress)|th
+沿革|えんかく|history (evolution)|th
+由来|ゆらい|origin|th
+起源|きげん|genesis|th
+発祥|はっしょう|birthplace (origin)|th
+端緒|たんしょ|beginning (clue)|th
+契機|けいき|opportunity (trigger)|th
+発端|ほったん|onset|th

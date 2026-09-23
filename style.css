@@ -1043,6 +1043,8 @@ a.place{text-decoration:none}
 .opt.zh{font-size:clamp(17px,2.6vh,21px)}
 .lbtn.zh{font-family:var(--body);font-size:clamp(19px,3.2vh,25px)}
 .spellrow.zh .sbox{font-family:var(--body);width:clamp(34px,6vh,46px)}
+/* 日语拼假名读音：7 个假名以上收一号，一行摆得下（最长 8 个）*/
+.spellrow.zh.long .sbox{width:clamp(26px,4.6vh,34px);font-size:clamp(15px,2.6vh,20px)}
 
 /* 设置页的语言、首次进入的语言选择 */
 .langset{display:flex;flex-direction:column;gap:8px}

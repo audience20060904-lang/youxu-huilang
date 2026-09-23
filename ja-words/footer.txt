@@ -1,0 +1,17 @@
+
+];
+
+/* 学日语：把整套全局换成这一份（words-a1.js 里那几张派生表是按 WORDS 现算的，这里照抄一遍）。
+   EN_WORDS（英语原件）在 words-zh.js 里留过了，存档码第一段永远按它存。*/
+function jaWordObj(w){ return {en:w[0], cn:w[1], cat:w[2], lv:w[3] || 1, pos:w[4] || "n", py:w[5] || "", k:"ja:" + w[0]}; }
+if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "ja"){
+  WORDS = JA_WORDS;
+  WMAP = {}; BYCAT = {}; BYPOS = {}; BYLV = {1:[], 2:[], 3:[], 4:[], 5:[]};
+  WORDS.forEach(function(w){
+    const o = WMAP[w[0]] = jaWordObj(w);
+    (BYCAT[o.cat] = BYCAT[o.cat] || []).push(o);
+    (BYPOS[o.pos] = BYPOS[o.pos] || []).push(o);
+    BYLV[o.lv].push(o);
+  });
+  ALLW = WORDS.map(function(w){ return WMAP[w[0]]; });
+}

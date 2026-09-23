@@ -116,7 +116,14 @@ function pyTag(w){ return w && w.py ? "<span class=\"py\">" + w.py + "</span>" :
 /* 学西班牙语（2026-09-23）：名词带冠词 w.ar（el / la / el/la / los / las）。
    题面在词前面挂一个小小的冠词；拼写题 / 宝箱没有拼音可给，就把「la …」当提示（性别本来就是要背的）。*/
 function arTag(w){ return w && w.ar ? "<span class=\"ar\">" + w.ar + "</span> " : ""; }
-function hintTag(w){ return pyTag(w) || (w && w.ar ? "<span class=\"py\">" + w.ar + " …</span>" : ""); }
+function hintTag(w){
+  /* 学日语：拼的是**读音**（假名），所以提示给的是写法（漢字）；写法本来就是假名的词没有提示 */
+  if(LEARN_JA) return w && w.py ? "<span class=\"py\">" + w.en + "</span>" : "";
+  return pyTag(w) || (w && w.ar ? "<span class=\"py\">" + w.ar + " …</span>" : "");
+}
+/* 拼写题要拼出来的那一串：学日语拼**假名读音**（w.py；本来就是假名的词 py 是空的，就拼它自己），
+   别的语言都是词本身。拼写题 / 宝箱 / 笔顺 / 判对错一律过它，别再直接读 word.en */
+function spellOf(w){ return LEARN_JA ? (w.py || w.en) : w.en; }
 function wordFull(w){ return w ? (w.ar ? w.ar + " " : "") + w.en : ""; }
 function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : wordFull(w); }
 /* 熟练度表 LEX 的键：英语 / 中文就是词本身；**西语是 "es:词"**（pan / pie / once / red 这些跟英语拼写一样，
@@ -124,12 +131,18 @@ function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : wordFull(w);
 function lexKey(w){ return w.k || w.en; }
 function lexWord(k){
   if(LANG_LEARN === "es") return k.slice(0, 3) === "es:" ? WMAP[k.slice(3)] : null;
+  if(LEARN_JA) return k.slice(0, 3) === "ja:" ? WMAP[k.slice(3)] : null;
   return WMAP[k];
 }
 /* 比对用：去掉重音符号、转小写（图鉴搜西语时不用打 á é ñ 也搜得到；汉字不受影响）*/
 function foldMarks(s){ return String(s).normalize("NFD").replace(/[\u0300-\u036f']/g, "").toLowerCase(); }
 /* 词长：英语是字母数；中文按**拼音字母**数（长句 / 累牍 / 长考那三件遗物用，汉字最多 4 个，按字数算它们就废了）*/
 function wordLen(w){
+  /* 日语：按**罗马字母数**估 —— 一个假名大约两个字母，小写的ゃゅょ・長音ー不算一拍（ん也按两个算，差不多）*/
+  if(LEARN_JA){
+    const k = spellOf(w).replace(/[ゃゅょぁぃぅぇぉャュョァィゥェォー]/g, "");
+    return k.length * 2;
+  }
   if(!w.py) return w.en.length;
   return w.py.normalize("NFD").replace(/[^a-z]/gi, "").length;
 }
@@ -143,6 +156,31 @@ function esDecoys(word, n){
   out.length = Math.min(out.length, n);
   const extra = "aeiosrnlcdtmu".split("");
   while(out.length < n) out.push(pick(extra));
+  return out;
+}
+/* 日语拼写题的干扰键：先给这个词里的假名配一个「长得像 / 念得像」的（濁点・半濁点、小っ小ゃ、シツソン），
+   不够再从同一档别的词的读音里挑假名 */
+const JA_LOOK = [
+  "かが","きぎ","くぐ","けげ","こご","さざ","しじ","すず","せぜ","そぞ","ただ","ちぢ","つづっ","てで","とど",
+  "はばぱ","ひびぴ","ふぶぷ","へべぺ","ほぼぽ","やゃ","ゆゅ","よょ","あぁ","いぃ","うぅ","えぇ","おぉを","わゎ",
+  "ぬめ","ねれわ","るろ","さち","きさ","いり","はほ","まも","しつ",
+  "カガ","キギ","クグ","ケゲ","コゴ","サザ","シジツ","スズ","セゼ","ソゾン","タダ","チヂ","ツヅッシ","テデ","トド",
+  "ハバパ","ヒビピ","フブプ","ヘベペ","ホボポ","ヤャ","ユュ","ヨョ","アァ","イィ","ウゥ","エェ","オォ","ンソ","ノメ","ワウ","ルレ","クワ"];
+function jaDecoys(word, n){
+  const own = spellOf(word).split(""), out = [];
+  own.forEach(function(c){
+    JA_LOOK.forEach(function(g){
+      if(g.indexOf(c) < 0) return;
+      g.split("").forEach(function(d){ if(d !== c && own.indexOf(d) < 0 && out.indexOf(d) < 0) out.push(d); });
+    });
+  });
+  out.sort(function(){ return Math.random() - .5; });
+  out.length = Math.min(out.length, Math.ceil(n / 2));
+  const pool = scopeToLevel(ALLW, word.lv || 1);
+  for(let guard = 0; out.length < n && guard < 200; guard++){
+    const t = spellOf(pick(pool)), c = t.charAt(Math.floor(Math.random() * t.length));
+    if(c && c !== "ー" && own.indexOf(c) < 0 && out.indexOf(c) < 0) out.push(c);
+  }
   return out;
 }
 function decoyChars(word, n){
@@ -1851,7 +1889,7 @@ function nextQuestion(){
   if(type === "en2zh"){
     $("qLabel").textContent = T("这个词是什么意思？");
     $("qWord").innerHTML = arTag(word) + word.en + pyTag(word);
-    $("qWord").className = LEARN_ZH ? "qword zh" : "qword";
+    $("qWord").className = LEARN_CJK ? "qword zh" : "qword";
   } else {
     $("qLabel").textContent = T("用英语怎么说？");
     $("qWord").textContent = word.cn;
@@ -1878,7 +1916,7 @@ function nextQuestion(){
   box.innerHTML = "";
   opts.forEach(function(o, i){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "opt" + (LEARN_ZH && type === "zh2en" ? " zh" : "");
+    b.type = "button"; b.className = "opt" + (LEARN_CJK && type === "zh2en" ? " zh" : "");
     b.innerHTML = "<span class=\"n\">" + (i+1) + "</span>" +
                   (type === "zh2en" ? o.en : o.cn);
     b.addEventListener("click", function(){ answer(b, o.en === word.en); });
@@ -1909,9 +1947,10 @@ function renderSpell(word){
      ⚠️ 走 speakQueued：**等上一题那次朗读念完了再念**（用户 2026-09），
         直接 speak() 会把上一段掐断，两个词叠在一起听。*/
   $("btnSpellSpeak").hidden = !CAN_SPEAK;
-  speakQueued(word.en);
+  speakQueued(spellOf(word));   // 日语念读音（假名）：漢字交给 TTS 常念错
   B.spell = "";
-  const letters = word.en.split("");
+  const target = spellOf(word);
+  const letters = target.split("");
   /* 净写：不再给那两个干扰字母，键盘上只剩这个词自己的字母。
      博闻：这个词已经"掌握"（熟练度 ≥3）的话也一样不给干扰项——跟净写共用同一条判断，
      两件同时带着也不会叠出负数个干扰字母。*/
@@ -1919,6 +1958,9 @@ function renderSpell(word){
   if(LEARN_ZH){
     if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
       Array.prototype.push.apply(letters, decoyChars(word, 3));
+  } else if(LEARN_JA){
+    if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
+      Array.prototype.push.apply(letters, jaDecoys(word, 3));
   } else if(LANG_LEARN === "es"){
     if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
       Array.prototype.push.apply(letters, esDecoys(word, 2));
@@ -1934,14 +1976,14 @@ function renderSpell(word){
   letters.sort(function(){ return Math.random() - .5; });
   /* 笔顺：随机挑一格白送。轮到那一格时 giftFill() 自己填上，玩家不用按也退不掉。
      没有这件遗物就是 null。*/
-  B.gift = hasRelic("stroke") ? ri(0, word.en.length - 1) : null;
+  B.gift = hasRelic("stroke") ? ri(0, target.length - 1) : null;
   const box = $("letters");
   box.innerHTML = "";
   letters.forEach(function(ch){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "lbtn" + (LEARN_ZH ? " zh" : ""); b.textContent = ch;
+    b.type = "button"; b.className = "lbtn" + (LEARN_CJK ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
-      if(B.locked || B.spell.length >= word.en.length) return;
+      if(B.locked || B.spell.length >= target.length) return;
       B.spell += ch; b.disabled = true; b.dataset.used = "1";
       spellStep(word, box);
     });
@@ -1965,14 +2007,15 @@ function renderSpell(word){
 function spellStep(word, box){
   giftFill(word, box);
   drawSpell(word);
-  if(B.spell.length && B.spell.length === word.en.length){
-    setTimeout(function(){ answer(null, B.spell === word.en); }, 180);
+  const target = spellOf(word);
+  if(B.spell.length && B.spell.length === target.length){
+    setTimeout(function(){ answer(null, B.spell === target); }, 180);
   }
 }
 /* 笔顺：轮到 B.gift 那一格就自动填上，并把对应的字母键按掉（键盘上的字母数要对得上） */
 function giftFill(word, box){
   if(typeof B.gift !== "number" || B.spell.length !== B.gift) return;
-  const ch = word.en[B.gift];
+  const ch = spellOf(word)[B.gift];
   B.spell += ch;
   Array.prototype.some.call(box.children, function(b){
     if(!b.disabled && b.textContent === ch){ b.disabled = true; b.dataset.used = "1"; return true; }
@@ -1991,9 +2034,10 @@ function spellPop(box){
 function drawSpell(word){
   const row = $("spellRow");
   /* 词长到 9 个字母以上，字格要缩一号，否则一行摆不下会折行、把战斗窗顶高 */
-  row.className = "spellrow" + (word.en.length >= 9 ? " long" : "") + (LEARN_ZH ? " zh" : "");
+  const target = spellOf(word);
+  row.className = "spellrow" + (target.length >= (LEARN_JA ? 7 : 9) ? " long" : "") + (LEARN_CJK ? " zh" : "");
   row.innerHTML = "";
-  for(let i=0;i<word.en.length;i++){
+  for(let i=0;i<target.length;i++){
     const d = document.createElement("div");
     d.className = "sbox";
     d.textContent = B.spell[i] || "";
@@ -2650,7 +2694,7 @@ function answer(btn, ok){
     "<span class=\"mean\"><b>" + wordFull(word) + "</b>" + (word.py ? " " + word.py : "") + T("　") + word.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[word.cat] + "</span></span>";
   if(CAN_SPEAK){
     $("btnSpeak").hidden = false;                  // 答完了，随时能再听一次
-    if(OPT.speak) speak(word.en);                  // 设置里开着就自动念一遍
+    if(OPT.speak) speak(spellOf(word));                  // 设置里开着就自动念一遍
   }
   let spellLog = "";
   /* 拼错不再当场退回成选择题（用户 2026-09）—— 跟别的答错一样进心魔，
@@ -3301,8 +3345,8 @@ function openChest(th){
   $("veilChest").hidden = false;
 }
 function drawChestSpell(){
-  const row = $("chestRow"), en = chestQ.word.en;
-  row.className = "spellrow" + (LEARN_ZH ? " zh" : "");
+  const row = $("chestRow"), en = spellOf(chestQ.word);
+  row.className = "spellrow" + (LEARN_CJK ? " zh" : "") + (LEARN_JA && en.length >= 7 ? " long" : "");
   row.innerHTML = "";
   for(let i=0;i<en.length;i++){
     const d = document.createElement("div");
@@ -3314,9 +3358,11 @@ function drawChestSpell(){
 function buildChestLetters(word){
   const box = $("chestLetters");
   box.innerHTML = "";
-  const pool = word.en.split("");
+  const target = spellOf(word);
+  const pool = target.split("");
   const extra = "abcdefghijklmnopqrstuvwxyz".split("");
   if(LEARN_ZH) Array.prototype.push.apply(pool, decoyChars(word, 4));
+  else if(LEARN_JA) Array.prototype.push.apply(pool, jaDecoys(word, Math.max(3, Math.min(12, target.length + 4) - target.length)));
   else if(LANG_LEARN === "es") Array.prototype.push.apply(pool, esDecoys(word, Math.max(2, Math.min(12, word.en.length + 4) - word.en.length)));
   else while(pool.length < Math.min(12, word.en.length + 4)) {
     const c = pick(extra);
@@ -3325,12 +3371,12 @@ function buildChestLetters(word){
   pool.sort(function(){ return Math.random() - .5; });
   pool.forEach(function(ch){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "lbtn" + (LEARN_ZH ? " zh" : ""); b.textContent = ch;
+    b.type = "button"; b.className = "lbtn" + (LEARN_CJK ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
-      if(!chestQ || chestQ.done || chestQ.spell.length >= word.en.length) return;
+      if(!chestQ || chestQ.done || chestQ.spell.length >= target.length) return;
       chestQ.spell += ch; b.disabled = true;
       drawChestSpell();
-      if(chestQ.spell.length === word.en.length){
+      if(chestQ.spell.length === target.length){
         setTimeout(function(){ judgeChest(); }, 180);
       }
     });
@@ -3351,7 +3397,7 @@ function buildChestLetters(word){
   box.appendChild(back);
 }
 function judgeChest(){
-  const w = chestQ.word, ok = chestQ.spell === w.en;
+  const w = chestQ.word, ok = chestQ.spell === spellOf(w);
   // 钥匙：拼错也照样开箱。⚠️ 熟练度和心魔照常按「拼错」记 —— 撬开的是锁，不是这个词
   const opened = ok || hasRelic("key");
   chestQ.done = true;
@@ -5657,6 +5703,9 @@ function makeCode(){
   /* 西班牙语词库（2026-09-23）：同一个套路再挂一段。键带 "es:" 前缀（见 lexKey()），码里按下标存所以不用管前缀 */
   w.bits(1, 1);
   putLex(w, ES_WORDS, "es:");
+  /* 日语词库（2026-09-23）：再挂一段，键带 "ja:" 前缀（学生 / 大学 这些跟中文词库写法一样）*/
+  w.bits(1, 1);
+  putLex(w, JA_WORDS, "ja:");
 
   const bytes = w.finish();
   const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
@@ -5737,6 +5786,9 @@ function parseCode2(txt){
     let hasEs = 0;
     try{ hasEs = r.bits(1); }catch(e){ hasEs = 0; }
     if(hasEs && !getLex(r, ES_WORDS, out.lex, "es:")) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+    let hasJa = 0;
+    if(hasEs){ try{ hasJa = r.bits(1); }catch(e){ hasJa = 0; } }
+    if(hasJa && !getLex(r, JA_WORDS, out.lex, "ja:")) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
   }
   out.note = notes.join(T("；"));
   return out;
@@ -6025,8 +6077,8 @@ $("map").addEventListener("click", function(ev){
   if(x === P.x && y === P.y && G.stair && x === G.stair.x && y === G.stair.y){ askStair(); return; }
   goTo(x, y);
 });
-$("btnSpeak").addEventListener("click", function(){ if(B && B.q) speak(B.q.word.en); });
-$("btnSpellSpeak").addEventListener("click", function(){ if(B && B.q) speak(B.q.word.en); });
+$("btnSpeak").addEventListener("click", function(){ if(B && B.q) speak(spellOf(B.q.word)); });
+$("btnSpellSpeak").addEventListener("click", function(){ if(B && B.q) speak(spellOf(B.q.word)); });
 $("btnNextQ").addEventListener("click", function(){
   if(!B) return;
   if(B.won) closeBattleWin();
@@ -6909,7 +6961,7 @@ const LEARN_UI = {
 };
 let learnFor = {ui:LANG_UI, mode:"first"};
 function learnWordCount(learn){
-  const list = learn === "zh" ? (window.ZH_WORDS || []) : learn === "es" ? (window.ES_WORDS || []) : learn === "en" ? (window.EN_WORDS || []) : [];
+  const list = learn === "zh" ? (window.ZH_WORDS || []) : learn === "es" ? (window.ES_WORDS || []) : learn === "ja" ? (window.JA_WORDS || []) : learn === "en" ? (window.EN_WORDS || []) : [];
   return list.length;
 }
 function openLearnPick(ui, mode){
@@ -7006,6 +7058,7 @@ const TUT_TEXT = {
           "Monsters give <b>XP and gold</b>. Clear every monster and the stairs appear — one left."],
   spell: ["有时候要你<b>自己把词拼出来</b>：按顺序点下面的字母。拼对了连击 +10、经验翻倍。",
           LEARN_ZH ? "Sometimes you <b>build the word yourself</b>: tap the characters in order (pinyin is the hint). Get it right for combo +10 and double XP."
+          : LEARN_JA ? "Sometimes you <b>spell the reading yourself</b>: tap the kana in order (the kanji is the hint). Get it right for combo +10 and double XP."
                    : "Sometimes you <b>spell the word yourself</b>: tap the letters in order (accents count). Get it right for combo +10 and double XP."],
   clear: ["这一层清空了！清完一层可以<b>挑一件遗物</b> —— 这一趟变强全靠它们。",
           "Floor cleared! Each cleared floor lets you <b>pick a relic</b> — relics are how you grow stronger."],

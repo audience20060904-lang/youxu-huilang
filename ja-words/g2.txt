@@ -1,0 +1,633 @@
+# JLPT N4 · 写法|读音|英文释义|类别|词性
+小鳥|ことり|small bird|an
+金魚|きんぎょ|goldfish|an
+蚊|か|mosquito|an
+蜂|はち|bee|an
+蝶|ちょう|butterfly|an
+鯨|くじら|whale|an
+狐|きつね|fox|an
+狸|たぬき|raccoon dog|an
+蛙|かえる|frog|an
+烏|からす|crow|an
+鳩|はと|pigeon|an
+鹿|しか|deer|an
+蟻|あり|ant|an
+子猫|こねこ|kitten|an
+子犬|こいぬ|puppy|an
+蜘蛛|くも|spider|an
+イルカ||dolphin|an
+ペンギン||penguin|an
+キリン||giraffe|an
+ゴリラ||gorilla|an
+米|こめ|rice (uncooked)|fo
+味|あじ|taste|fo
+油|あぶら|oil|fo
+豆|まめ|bean|fo
+麦|むぎ|wheat (barley)|fo
+食事|しょくじ|meal|fo
+食料品|しょくりょうひん|groceries|fo
+果汁|かじゅう|fruit juice|fo
+おかず||side dish|fo
+味噌|みそ|miso|fo
+豆腐|とうふ|tofu|fo
+ラーメン||ramen|fo
+サラダ||salad|fo
+サンドイッチ||sandwich|fo
+ハンバーガー||hamburger|fo
+チーズ||cheese|fo
+バター||butter|fo
+ステーキ||steak|fo
+アイスクリーム||ice cream|fo
+ビール||beer|fo
+ワイン||wine|fo
+お湯|おゆ|hot water|fo
+氷|こおり|ice|fo
+酢|す|vinegar|fo
+苺|いちご|strawberry|fo
+葡萄|ぶどう|grape|fo
+桃|もも|peach|fo
+西瓜|すいか|watermelon|fo
+人参|にんじん|carrot|fo
+玉ねぎ|たまねぎ|onion|fo
+ジャガイモ||potato|fo
+キャベツ||cabbage|fo
+トマト||tomato|fo
+デザート||dessert|fo
+紫色|むらさきいろ|violet|co|n
+水色|みずいろ|light blue|co|n
+黄緑|きみどり|yellow-green|co|n
+桃色|ももいろ|peach color|co|n
+真っ赤|まっか|bright red|co
+真っ白|まっしろ|pure white|co
+真っ黒|まっくろ|jet black|co
+真っ青|まっさお|deep blue (pale)|co
+オレンジ||orange|co|n
+グレー||grey (color)|co|n
+ベージュ||beige|co|n
+紺|こん|navy blue|co|n
+腕|うで|arm|bo
+胸|むね|chest|bo
+背中|せなか|back (body)|bo
+腰|こし|lower back|bo
+膝|ひざ|knee|bo
+喉|のど|throat|bo
+唇|くちびる|lip|bo
+舌|した|tongue|bo
+心|こころ|heart (mind)|bo
+心臓|しんぞう|heart (organ)|bo
+血|ち|blood|bo
+骨|ほね|bone|bo
+皮膚|ひふ|skin|bo
+爪|つめ|nail|bo
+肘|ひじ|elbow|bo
+頬|ほお|cheek|bo
+額|ひたい|forehead|bo
+眉|まゆ|eyebrow|bo
+汗|あせ|sweat|bo
+涙|なみだ|tear (crying)|bo
+息|いき|breath|bo
+力|ちから|strength|bo
+毛|け|hair (body)|bo
+お尻|おしり|buttocks|bo
+怪我|けが|injury|bo
+熱|ねつ|fever|bo
+赤ちゃん|あかちゃん|baby|pe
+息子|むすこ|son|pe
+娘|むすめ|daughter|pe
+夫|おっと|husband (my)|pe
+妻|つま|wife (my)|pe
+祖父|そふ|grandpa (my)|pe
+祖母|そぼ|grandma (my)|pe
+孫|まご|grandchild|pe
+親|おや|parent|pe
+彼ら|かれら|they|pe
+店員|てんいん|shop clerk|pe
+客|きゃく|customer (guest)|pe
+社長|しゃちょう|company president|pe
+部長|ぶちょう|department head|pe
+課長|かちょう|section chief|pe
+会社員|かいしゃいん|office worker|pe
+看護師|かんごし|nurse|pe
+歯医者|はいしゃ|dentist|pe
+運転手|うんてんしゅ|driver|pe
+小学生|しょうがくせい|elementary student|pe
+中学生|ちゅうがくせい|middle school student|pe
+高校生|こうこうせい|high school student|pe
+大学生|だいがくせい|university student|pe
+先輩|せんぱい|senior (colleague)|pe
+後輩|こうはい|junior (colleague)|pe
+恋人|こいびと|lover|pe
+泥棒|どろぼう|thief|pe
+犯人|はんにん|criminal|pe
+警察|けいさつ|police|pe
+市民|しみん|citizen|pe
+専門家|せんもんか|expert|pe
+歌手|かしゅ|singer|pe
+選手|せんしゅ|athlete (player)|pe
+お嬢さん|おじょうさん|young lady|pe
+相手|あいて|partner (opponent)|pe
+道具|どうぐ|tool|th
+機械|きかい|machine|th
+人形|にんぎょう|doll|th
+玩具|おもちゃ|toy|th
+鏡|かがみ|mirror|th
+布団|ふとん|futon|th
+枕|まくら|pillow|th
+毛布|もうふ|blanket|th
+着物|きもの|kimono|th
+下着|したぎ|underwear|th
+手袋|てぶくろ|gloves|th
+指輪|ゆびわ|ring|th
+財産|ざいさん|property (wealth)|th
+お土産|おみやげ|souvenir|th
+贈り物|おくりもの|gift|th
+地図|ちず|map|th
+絵|え|picture (painting)|th
+漫画|まんが|comics|th
+小説|しょうせつ|novel|th
+教科書|きょうかしょ|textbook|th
+文|ぶん|sentence|th
+文字|もじ|letter (character)|th
+漢字|かんじ|kanji|th
+作文|さくぶん|composition|th
+試験|しけん|exam|th
+予定|よてい|plan (schedule)|th
+予約|よやく|reservation|th
+約束|やくそく|promise|th
+規則|きそく|rule|th
+理由|りゆう|reason|th
+意見|いけん|opinion|th
+経験|けいけん|experience|th
+趣味|しゅみ|hobby|th
+興味|きょうみ|interest|th
+用事|ようじ|errand|th
+準備|じゅんび|preparation|th
+説明|せつめい|explanation|th
+相談|そうだん|consultation|th
+連絡|れんらく|contact|th
+案内|あんない|guidance|th
+紹介|しょうかい|introduction|th
+招待|しょうたい|invitation|th
+会議|かいぎ|meeting|th
+会話|かいわ|conversation|th
+挨拶|あいさつ|greeting|th
+返事|へんじ|reply|th
+番組|ばんぐみ|TV program|th
+ニュース||news|th
+事故|じこ|accident|th
+事件|じけん|incident|th
+火事|かじ|fire (blaze)|th
+地震|じしん|earthquake|th
+台風|たいふう|typhoon|th
+戦争|せんそう|war|th
+文化|ぶんか|culture|th
+文学|ぶんがく|literature|th
+歴史|れきし|history|th
+経済|けいざい|economy|th
+政治|せいじ|politics|th
+法律|ほうりつ|law|th
+科学|かがく|science|th
+数学|すうがく|mathematics|th
+技術|ぎじゅつ|technology|th
+研究|けんきゅう|research|th
+計画|けいかく|plan|th
+関係|かんけい|relationship|th
+生活|せいかつ|daily life|th
+習慣|しゅうかん|habit (custom)|th
+世話|せわ|care|th
+代わり|かわり|substitute|th
+お祝い|おいわい|celebration|th
+お祭り|おまつり|festival|th
+お見舞い|おみまい|visit to the sick|th
+席|せき|seat|th
+窓口|まどぐち|counter (window)|th
+料金|りょうきん|fee|th
+値段|ねだん|price|th
+品物|しなもの|goods|th
+ガソリン||gasoline|th
+エアコン||air conditioner|th
+ストーブ||heater|th
+アルバイト||part-time job|th
+パート||part-time work|th
+ソフト||software|th
+メール||email|th
+アクセサリー||accessory|th
+スーツケース||suitcase|th
+ハンカチ||handkerchief|th
+ステレオ||stereo|th
+タイプ||type|th
+テキスト||course text|th
+レポート||report|th
+カーテン||curtain|th
+ガラス||glass (material)|th
+ボール||ball|th
+オートバイ||motorcycle|th
+トラック||truck|th
+新幹線|しんかんせん|bullet train|th
+特急|とっきゅう|limited express|th
+急行|きゅうこう|express train|th
+信号|しんごう|traffic light|th
+糸|いと|thread|th
+針|はり|needle|th
+釘|くぎ|nail (metal)|th
+袋|ふくろ|bag (sack)|th
+缶|かん|can|th
+瓶|びん|bottle|th
+屋根|やね|roof|th
+壁|かべ|wall|th
+床|ゆか|floor|th
+棚|たな|shelf|th
+引き出し|ひきだし|drawer|th
+押し入れ|おしいれ|closet|th
+畳|たたみ|tatami|th
+石油|せきゆ|petroleum|th
+番|ばん|turn (watch)|th
+下宿|げしゅく|boarding house|pl
+景色|けしき|scenery|na
+田舎|いなか|countryside|na
+林|はやし|woods|na
+枝|えだ|branch|na
+根|ね|root|na
+種|たね|seed|na
+桜|さくら|cherry blossom|na
+紅葉|もみじ|autumn leaves|na
+坂|さか|slope|na
+岩|いわ|rock|na
+波|なみ|wave|na
+光|ひかり|light (ray)|na
+影|かげ|shadow|na
+地球|ちきゅう|earth (planet)|na
+世界|せかい|world|na
+宇宙|うちゅう|space (universe)|na
+雷|かみなり|thunder|na
+嵐|あらし|storm|na
+霧|きり|fog|na
+虹|にじ|rainbow|na
+空港|くうこう|airport|pl
+港|みなと|port|pl
+陸|りく|land|na
+湾|わん|bay|na
+野原|のはら|field|na
+竹|たけ|bamboo|na
+煙|けむり|smoke|na
+金|きん|gold|na
+銀|ぎん|silver|na
+鉄|てつ|iron|na
+泥|どろ|mud|na
+灰|はい|ash|na
+動く|うごく|to move|ve
+止まる|とまる|to stop|ve
+止める|とめる|to stop (sth)|ve
+変わる|かわる|to change|ve
+変える|かえる|to change (sth)|ve
+上がる|あがる|to rise|ve
+下がる|さがる|to fall (drop)|ve
+上げる|あげる|to raise|ve
+下げる|さげる|to lower|ve
+集まる|あつまる|to gather|ve
+集める|あつめる|to collect|ve
+決まる|きまる|to be decided|ve
+決める|きめる|to decide|ve
+続く|つづく|to continue|ve
+続ける|つづける|to keep doing|ve
+調べる|しらべる|to investigate|ve
+探す|さがす|to look for|ve
+見つける|みつける|to find|ve
+見つかる|みつかる|to be found|ve
+比べる|くらべる|to compare|ve
+選ぶ|えらぶ|to choose|ve
+考える|かんがえる|to consider|ve
+信じる|しんじる|to believe|ve
+感じる|かんじる|to feel|ve
+間違える|まちがえる|to make a mistake|ve
+直す|なおす|to fix|ve
+治る|なおる|to heal|ve
+壊す|こわす|to break|ve
+壊れる|こわれる|to be broken|ve
+割れる|われる|to crack|ve
+落ちる|おちる|to fall down|ve
+落とす|おとす|to drop|ve
+拾う|ひろう|to pick up|ve
+捨てる|すてる|to throw away|ve
+運ぶ|はこぶ|to carry|ve
+届ける|とどける|to deliver|ve
+送る|おくる|to send|ve
+受ける|うける|to receive (exam)|ve
+手伝う|てつだう|to help|ve
+助ける|たすける|to rescue|ve
+育てる|そだてる|to raise (child)|ve
+育つ|そだつ|to grow up|ve
+増える|ふえる|to increase|ve
+減る|へる|to decrease|ve
+足りる|たりる|to be enough|ve
+残る|のこる|to remain|ve
+失う|うしなう|to lose|ve
+無くす|なくす|to lose (item)|ve
+負ける|まける|to be defeated|ve
+勝つ|かつ|to win|ve
+戦う|たたかう|to fight|ve
+逃げる|にげる|to run away|ve
+隠れる|かくれる|to hide|ve
+急ぐ|いそぐ|to hurry|ve
+遅れる|おくれる|to be late|ve
+間に合う|まにあう|to be in time|ve
+通う|かよう|to commute|ve
+通る|とおる|to pass through|ve
+過ぎる|すぎる|to pass (exceed)|ve
+戻る|もどる|to go back|ve
+迎える|むかえる|to welcome|ve
+訪ねる|たずねる|to visit|ve
+尋ねる|たずねる|to inquire|ve
+伺う|うかがう|to visit (humble)|ve
+申す|もうす|to say (humble)|ve
+参る|まいる|to go (humble)|ve
+召し上がる|めしあがる|to eat (honorific)|ve
+いらっしゃる||to be (honorific)|ve
+差し上げる|さしあげる|to give (humble)|ve
+いただく||to receive (humble)|ve
+くださる||to give (honorific)|ve
+頑張る|がんばる|to do one's best|ve
+祈る|いのる|to pray|ve
+踊る|おどる|to dance|ve
+騒ぐ|さわぐ|to make noise|ve
+叱る|しかる|to scold|ve
+褒める|ほめる|to praise|ve
+謝る|あやまる|to apologize|ve
+断る|ことわる|to refuse|ve
+頼む|たのむ|to request|ve
+誘う|さそう|to invite|ve
+付き合う|つきあう|to go out with|ve
+別れる|わかれる|to break up|ve
+慣れる|なれる|to get used to|ve
+似る|にる|to resemble|ve
+似合う|にあう|to suit|ve
+眠る|ねむる|to fall asleep|ve
+太る|ふとる|to gain weight|ve
+痩せる|やせる|to lose weight|ve
+焼く|やく|to bake (grill)|ve
+焼ける|やける|to be burned|ve
+沸かす|わかす|to boil|ve
+沸く|わく|to come to a boil|ve
+冷える|ひえる|to get cold|ve
+晴らす|はらす|to dispel|ve
+植える|うえる|to plant|ve
+咲く|さく|to bloom|ve
+散る|ちる|to scatter|ve
+吹く|ふく|to blow|ve
+降る|ふる|to fall (rain)|ve
+光る|ひかる|to shine|ve
+揺れる|ゆれる|to shake|ve
+包む|つつむ|to wrap|ve
+飾る|かざる|to decorate|ve
+片付ける|かたづける|to tidy up|ve
+並べる|ならべる|to arrange|ve
+建てる|たてる|to build|ve
+開く|ひらく|to open (sth)|ve
+閉まる|しまる|to be closed|ve
+付く|つく|to be attached|ve
+取り替える|とりかえる|to exchange|ve
+払う|はらう|to pay|ve
+貯める|ためる|to save up|ve
+計る|はかる|to measure|ve
+打つ|うつ|to hit|ve
+投げる|なげる|to throw|ve
+蹴る|ける|to kick|ve
+触る|さわる|to touch|ve
+噛む|かむ|to bite (chew)|ve
+踏む|ふむ|to step on|ve
+倒れる|たおれる|to collapse|ve
+起こす|おこす|to wake (sb)|ve
+起こる|おこる|to happen|ve
+亡くなる|なくなる|to pass away|ve
+生きる|いきる|to live|ve
+運転|うんてん|driving|th
+留守|るす|absence (away)|th
+復習|ふくしゅう|review|th
+予習|よしゅう|preparation (lesson)|th
+翻訳|ほんやく|translation|th
+入学|にゅうがく|school entrance|th
+卒業|そつぎょう|graduation|th
+出席|しゅっせき|attendance|th
+欠席|けっせき|absence (school)|th
+遠慮|えんりょ|reserve (restraint)|th
+注意|ちゅうい|caution|th
+失敗|しっぱい|failure|th
+成功|せいこう|success|th
+競争|きょうそう|competition|th
+反対|はんたい|opposition|th
+賛成|さんせい|agreement|th
+複雑|ふくざつ|complicated|ad
+特別|とくべつ|special|ad
+普通|ふつう|normal|ad
+必要|ひつよう|necessary|ad
+十分|じゅうぶん|enough|ad
+安全|あんぜん|safe|ad
+危険|きけん|danger|ad
+正しい|ただしい|correct|ad
+珍しい|めずらしい|rare|ad
+素晴らしい|すばらしい|wonderful|ad
+美しい|うつくしい|beautiful|ad
+深い|ふかい|deep|ad
+浅い|あさい|shallow|ad
+硬い|かたい|hard|ad
+柔らかい|やわらかい|soft|ad
+酷い|ひどい|terrible|ad
+細かい|こまかい|detailed (fine)|ad
+苦い|にがい|bitter|ad
+しょっぱい||salty|ad
+酸っぱい|すっぱい|sour|ad
+眩しい|まぶしい|dazzling|ad
+蒸し暑い|むしあつい|humid|ad
+温い|ぬるい|lukewarm|ad
+偉い|えらい|great (important)|ad
+親切|しんせつ|kind (helpful)|ad
+丁寧|ていねい|polite|ad
+真面目|まじめ|serious|ad
+熱心|ねっしん|eager|ad
+正直|しょうじき|honest|ad
+自由|じゆう|free (liberty)|ad
+不便|ふべん|inconvenient|ad
+無理|むり|impossible|ad
+適当|てきとう|suitable (sloppy)|ad
+変|へん|strange|ad
+確か|たしか|certain|ad
+得意|とくい|good at|ad
+苦手|にがて|weak at|ad
+盛ん|さかん|thriving|ad
+残酷|ざんこく|cruel|ad
+清潔|せいけつ|hygienic|ad
+新鮮|しんせん|fresh|ad
+豊か|ゆたか|rich (abundant)|ad
+平和|へいわ|peaceful|ad
+急|きゅう|sudden|ad
+大事|だいじ|precious|ad
+嬉しがる|うれしがる|to be glad|fe|v
+喜ぶ|よろこぶ|to be delighted|fe|v
+驚く|おどろく|to be surprised|fe|v
+悲しむ|かなしむ|to grieve|fe|v
+楽しむ|たのしむ|to enjoy|fe|v
+怖がる|こわがる|to be afraid|fe|v
+安心|あんしん|relief|fe|n
+感動|かんどう|being moved|fe|n
+興奮|こうふん|excitement|fe|n
+不安|ふあん|anxious|fe
+退屈|たいくつ|bored|fe
+幸せ|しあわせ|happiness|fe
+可哀想|かわいそう|pitiful|fe
+羨ましい|うらやましい|envious|fe
+懐かしい|なつかしい|nostalgic|fe
+悔しい|くやしい|frustrated|fe
+恋しい|こいしい|missed (longed for)|fe
+苦しい|くるしい|painful (agonizing)|fe
+気分|きぶん|mood|fe|n
+愛|あい|love|fe|n
+夢|ゆめ|dream|fe|n
+笑顔|えがお|smiling face|fe|n
+我慢|がまん|patience|fe|n
+緊張|きんちょう|nervousness|fe|n
+平気|へいき|unconcerned|fe
+満足|まんぞく|satisfaction|fe|n
+時代|じだい|era|ti
+昔|むかし|long ago|ti
+最近|さいきん|recently|ti
+最初|さいしょ|beginning (first)|ti
+最後|さいご|last (end)|ti
+将来|しょうらい|future|ti
+過去|かこ|past|ti
+現在|げんざい|present (now)|ti
+今度|こんど|next time|ti
+この間|このあいだ|the other day|ti
+間|あいだ|interval (between)|ti
+途中|とちゅう|on the way|ti
+今夜|こんや|this evening|ti
+夜中|よなか|midnight|ti
+明け方|あけがた|dawn|ti
+週末|しゅうまつ|weekend|ti
+年末|ねんまつ|year-end|ti
+正月|しょうがつ|New Year|ti
+平日|へいじつ|weekday|ti
+祝日|しゅくじつ|public holiday|ti
+休日|きゅうじつ|day off|ti
+期間|きかん|period (term)|ti
+時期|じき|season (time)|ti
+季節|きせつ|season|ti
+日時|にちじ|date and time|ti
+日付|ひづけ|date|ti
+締め切り|しめきり|deadline|ti
+一生|いっしょう|whole life|ti
+一日中|いちにちじゅう|all day|ti
+先|さき|ahead|ti
+以前|いぜん|formerly|ti
+以後|いご|thereafter|ti
+翌日|よくじつ|next day|ti
+午前中|ごぜんちゅう|all morning|ti
+来学期|らいがっき|next term|ti
+町内|ちょうない|neighborhood|pl
+近所|きんじょ|neighbors|pl
+市|し|city|pl
+村|むら|village|pl
+県|けん|prefecture|pl
+都会|とかい|big city|pl
+故郷|ふるさと|hometown|pl
+工場|こうじょう|factory|pl
+事務所|じむしょ|office|pl
+美術館|びじゅつかん|art museum|pl
+博物館|はくぶつかん|museum|pl
+動物園|どうぶつえん|zoo|pl
+映画館|えいがかん|movie theater|pl
+神社|じんじゃ|shrine|pl
+寺|てら|temple|pl
+教会|きょうかい|church|pl
+会場|かいじょう|venue|pl
+受付|うけつけ|reception|pl
+売り場|うりば|sales floor|pl
+本屋|ほんや|bookstore|pl
+八百屋|やおや|greengrocer|pl
+床屋|とこや|barbershop|pl
+高校|こうこう|high school|pl
+小学校|しょうがっこう|elementary school|pl
+中学校|ちゅうがっこう|middle school|pl
+大使館|たいしかん|embassy|pl
+病室|びょうしつ|hospital room|pl
+屋上|おくじょう|rooftop|pl
+入口|いりぐち|entrance|pl
+出口|でぐち|exit|pl
+向こう|むこう|over there|pl
+裏|うら|back side|pl
+表|おもて|front side|pl
+奥|おく|interior (back)|pl
+周り|まわり|surroundings|pl
+真ん中|まんなか|middle|pl
+角|かど|corner|pl
+橋|はし|bridge|pl
+通り|とおり|street|pl
+交差点|こうさてん|intersection|pl
+駐車場|ちゅうしゃじょう|parking lot|pl
+会議室|かいぎしつ|conference room|pl
+京都|きょうと|Kyoto|pl
+東京|とうきょう|Tokyo|pl
+アジア||Asia|pl
+アメリカ||America|pl
+億|おく|hundred million|nu
+二十歳|はたち|twenty years old|nu
+一度|いちど|once|nu
+二倍|にばい|double|nu
+倍|ばい|times (fold)|nu
+番目|ばんめ|-th (ordinal)|nu
+第一|だいいち|first (number one)|nu
+数|かず|number (amount)|nu
+数字|すうじ|numeral|nu
+半|はん|half past|nu
+一部|いちぶ|a part|nu
+全体|ぜんたい|whole|nu
+両方|りょうほう|both|nu
+片方|かたほう|one side|nu
+以上|いじょう|or more|nu
+以下|いか|or less|nu
+以内|いない|within|nu
+一杯|いっぱい|a cupful (full)|nu
+六つ|むっつ|six (things)|nu
+七つ|ななつ|seven (things)|nu
+八つ|やっつ|eight (things)|nu
+九つ|ここのつ|nine (things)|nu
+三人|さんにん|three people|nu
+ほとんど||almost|av
+必ず|かならず|without fail|av
+きっと||surely|av
+決して|けっして|never|av
+なかなか||quite (not easily)|av
+やっと||at last|av
+とうとう||finally|av
+ずっと||all along|av
+さっき||a while ago|av
+しばらく||for a while|av
+そろそろ||soon (about time)|av
+もうすぐ||very soon|av
+今にも|いまにも|at any moment|av
+急に|きゅうに|suddenly|av
+特に|とくに|especially|av
+大体|だいたい|roughly|av
+随分|ずいぶん|considerably|av
+かなり||fairly|av
+非常に|ひじょうに|extremely|av
+すっかり||completely|av
+はっきり||clearly|av
+しっかり||firmly|av
+ちゃんと||properly|av
+きちんと||neatly|av
+なるべく||as much as possible|av
+できるだけ||as much as one can|av
+もし||if|av
+例えば|たとえば|for example|av
+実は|じつは|actually|av
+やはり||as expected|av
+それほど||to that extent|av
+まず||first of all|av
+次に|つぎに|next|av
+さらに||furthermore|av
+ぜひ||by all means|av
+もちろん||of course|av
+わざわざ||expressly|av
+偶然|ぐうぜん|by chance|av
+直接|ちょくせつ|directly|av
+自然に|しぜんに|naturally|av
