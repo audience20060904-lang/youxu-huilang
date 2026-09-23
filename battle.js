@@ -402,11 +402,50 @@ var BF_SPECIAL = [
  {id:"sp_magnet",  n:"磁石",  pw:"拾取范围 ×4；每捡一枚金币，下一刀伤害 +3%（挥刀后清零）",
   lore:"钱贴着他走，刀也是。"},
  {id:"sp_feast",   n:"盛宴",  pw:"每次击杀回复 1% 最大生命，并且最大生命 +1（最多 +400）",
-  lore:"他是靠这条廊子里的死人长大的。"}
+  lore:"他是靠这条廊子里的死人长大的。"},
+
+ /* ===== 第二批 12 件（用户 2026-09-23：「加多一批特殊效果的遗物」）=====
+    照旧那条口径：**一件都不许是「伤害 +N%」**，每件要么开一套新机制
+    （持续伤害 / 打回弹丸 / 分身 / 天降 / 瞬移 / 跟塔联动），要么改「一刀能打到多少」。
+    ⚠️ 前 18 件已经把「张角 / 刀程 / 攻速 / 补刀 / 爆炸 / 连锁 / 冲击波 / 绕转 / 践踏 /
+       光环 / 处决 / 牵引 / 减速」占满了，所以这一批走的全是**没人用过的口子**。 */
+ {id:"sp_ember",   n:"余烬",  pw:"命中的敌人燃烧 3 秒，每秒受到 20% 攻击的伤害",
+  lore:"刀口上带着上一场火的温度。"},
+ {id:"sp_deflect", n:"格挡",  pw:"挥刀会把刀锋里的敌方弹丸打回去，每颗造成 120% 攻击的伤害",
+  lore:"飞过来的，原样还回去。"},
+ {id:"sp_rain",    n:"刀雨",  pw:"每 2 秒，随机一个敌人头顶落下一道刀光（130% 伤害，范围 60）",
+  lore:"天上也有人在挥刀。"},
+ {id:"sp_clone",   n:"残影",  pw:"身后跟着一个影子，跟你同时挥刀（50% 伤害）",
+  lore:"他回头看过一次，就再也没敢回第二次。"},
+ {id:"sp_spike",   n:"逆刺",  pw:"受到伤害时，对身边 160 范围内所有敌人造成最大生命 8% 的伤害",
+  lore:"挨一下，还一片。"},
+ {id:"sp_ice",     n:"冰裂",  pw:"对被减速的敌人伤害翻倍；击杀它们时原地炸开（范围 90）",
+  lore:"冻住的东西，碎起来最痛快。"},
+ {id:"sp_quake",   n:"裂地",  pw:"每挥 5 刀，以自己为心裂开一圈（范围 210，90% 伤害）",
+  lore:"第五刀落地的时候，地也跟着裂。"},
+ {id:"sp_flurry",  n:"狂刃",  pw:"连续命中 12 次后，下一刀刀程和张角翻倍，且必定暴击",
+  lore:"攒够了，就一刀全收。"},
+ {id:"sp_blink",   n:"虚影步", pw:"每 6 秒：被贴身时瞬移开，原地留下一次爆炸（范围 110，150% 伤害）",
+  lore:"抓住他的那只手，只抓到一团烟。"},
+ {id:"sp_reso",    n:"共鸣",  pw:"你每挥一刀，离你最近的那座塔立刻也开一次火",
+  lore:"石头也听得懂刀声。"},
+ {id:"sp_leech",   n:"饮刃",  pw:"每次命中回复 0.4% 最大生命（每刀最多 6 次）",
+  lore:"它比你更怕饿。"},
+ {id:"sp_tide",    n:"怒潮",  pw:"每进一波，放出一圈横扫全场的刀气（200% 伤害）",
+  lore:"开场那一下，是替这一波所有人打的。"}
 ];
 var SPECIAL_PICK = 3;      // Boss 掉落时几选一
 var SP_SECOND_MS = 0.15;   // 二段补刀的延时（秒）
 var SP_ORBIT_R = 72;       // 悬刃的绕转半径
+/* 第二批用到的几个数（改平衡先动这里）*/
+var SP_BURN_SEC = 3;       // 余烬：烧几秒
+var SP_BURN_PCT = 0.20;    // 余烬：每秒掉「攻击 × 这个数」
+var SP_RAIN_CD  = 2;       // 刀雨：几秒一道
+var SP_CLONE_D  = 64;      // 残影：跟在身后多远
+var SP_QUAKE_N  = 5;       // 裂地：每几刀一次
+var SP_FLURRY_N = 12;      // 狂刃：连续命中几次
+var SP_BLINK_CD = 6;       // 虚影步：冷却
+var SP_LEECH_N  = 6;       // 饮刃：每刀最多回几次
 
 /* ===== 塔（用户 2026-09-22 的塔防改版）=====
    品质照旧是 普通/稀有/史诗/传奇/神圣（r 0~4），**没有羁绊** ——
@@ -734,6 +773,8 @@ function newRun(){
        bossSeen:0, rampartOn:false, noHitWaves:0, warmthLeft:0, bladeLeft:0, riseLeft:0,
        primeLeft:0, aegisN:0, hauntKills:0, kinds:{}, everBought:false,
        rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0,
+       /* 第二批特殊遗物（2026-09-23）。读处一律 || 0，老存档没有也不会炸。 */
+       flurryN:0, flurryReady:false, rainCd:0, blinkCd:0,
        chestN:0, chestCycle:0, bagAlerted:false,
        /* ---- 塔防（用户 2026-09-22）---- */
        dlvl:1,                            // 部署等级 = 人口 = 场上最多几座塔
@@ -969,6 +1010,52 @@ var swingDepth = 0;
 /* 刀朝哪儿：**优先朝最近的敌人**，附近没人才用移动方向。
    ⚠️ 别改回「只朝移动方向」—— 实测那样绕圈跑 100 秒只砍到 2 只，
       怪永远在你背后，自动挥刀等于没有。幸存者类都是自动瞄准的。 */
+/* 刀气的飞行速度 —— **跟攻速走**（用户 2026-09-23）。
+   基准攻速 BF.base.aspd 对应 SP_WAVE_SPD，攻速翻倍就飞两倍快，封在 2.4 倍
+   （再快就只剩一道残影，看不出是从哪儿飞出去的）。 */
+var SP_WAVE_SPD = 420;
+function waveSpeed(s){
+  return SP_WAVE_SPD * Math.min(2.4, Math.max(0.6, s.aspd / BF.base.aspd));
+}
+/* 这只怪算不算「被减速」（冰裂要用）：塔/弹丸打上的 slowT，或者站在霜环里。 */
+function isSlowed(f){
+  if(f.slowT > 0) return true;
+  if(hasSp("sp_frost") && Math.hypot(f.x - E.me.x, f.y - E.me.y) <= 220) return true;
+  return false;
+}
+/* 格挡：把刀锋扇形里的敌方弹丸打回去 */
+function deflectShots(s, aim, range, halfArc){
+  var me = E.me, dmg = Math.max(1, Math.round(s.atk * 1.2)), n = 0;
+  for(var i = E.shots.length - 1; i >= 0; i--){
+    var sh = E.shots[i];
+    var dx = sh.x - me.x, dy = sh.y - me.y, d = Math.hypot(dx, dy);
+    if(d > range + sh.r) continue;
+    var a = Math.atan2(dy, dx) - aim;
+    while(a >  Math.PI) a -= Math.PI * 2;
+    while(a < -Math.PI) a += Math.PI * 2;
+    if(Math.abs(a) > halfArc) continue;
+    E.shots.splice(i, 1); n++;
+    fxSpark(sh.x, sh.y, "#245E8C", 5);
+    aoe(sh.x, sh.y, 52, dmg);
+  }
+  if(n) fxText("格挡 ×" + n, "#245E8C");
+}
+/* 共鸣：离你最近的那座会开火的塔立刻来一发。
+   ⚠️ 只找**有目标、没被封停、真的会开火**的那几种 kind —— 光环/经济塔按它们自己的节奏走，
+      硬塞一发会把金库的收入算重。 */
+function resoFire(){
+  var me = E.me, best = null, bd = 1e9;
+  for(var i = 0; i < E.builds.length; i++){
+    var t = E.builds[i];
+    if(t.k !== "tower" || !t.ef || t.silT > 0 || !t.tgt || t.tgt.dead) continue;
+    var d = t.def.kind;
+    if(d !== "shot" && d !== "burst" && d !== "lob" && d !== "aoe" && d !== "chain") continue;
+    var dd = Math.hypot(t.x - me.x, t.y - me.y);
+    if(dd < bd){ bd = dd; best = t; }
+  }
+  if(best) fireTower(best, best.ef);
+}
+
 function aimDir(s){
   var me = E.me, best = null, bd = 1e9, i, f, d;
   var reach = s.range * 2.4;
@@ -984,13 +1071,18 @@ function swing(mult){
   var s = bstats(), me = E.me;
   var aim = aimDir(s); me.aim = aim;
   mult = mult || 1;
-  var halfArc = s.arc * Math.PI / 360, inner = s.range * BF.wagerInner;
+  /* 狂刃：攒满 12 次连续命中的那一刀，刀程和张角翻倍、必定暴击。
+     ⚠️ 在这儿改的是**这一刀的局部变量**，不是 s —— 别写进 bstats()，那会变成常驻加成。 */
+  var burst = (hasSp("sp_flurry") && P.flurryReady && mult === 1);
+  var range = burst ? s.range * 2 : s.range;
+  var arcDeg = burst ? Math.min(360, s.arc * 2) : s.arc;
+  var halfArc = arcDeg * Math.PI / 360, inner = range * BF.wagerInner;
   var hits = [], wager = false, i, f, dx, dy, d, a, big = 0, weak = false, hauntHit = false;
 
   for(i = 0; i < E.foes.length; i++){
     f = E.foes[i]; if(f.dead) continue;
     dx = f.x - me.x; dy = f.y - me.y; d = Math.hypot(dx, dy);
-    if(d > s.range + f.r) continue;
+    if(d > range + f.r) continue;
     a = Math.atan2(dy, dx) - aim;
     while(a >  Math.PI) a -= Math.PI * 2;
     while(a < -Math.PI) a += Math.PI * 2;
@@ -1002,13 +1094,27 @@ function swing(mult){
     if(f.haunt) hauntHit = true;
   }
   G.swings++;
-  fxSwing(me.x, me.y, aim, s.range, s.arc);
-  /* 破空：每一刀射出一道穿透冲击波 —— 空刀也射，不然跑图时它就白瞎了 */
-  if(hasSp("sp_wave") && mult === 1)
-    E.pwaves.push({x:me.x, y:me.y, vx:Math.cos(aim) * 420, vy:Math.sin(aim) * 420,
-                   r:24, life:1.1, hit:{}, mult:0.7});
+  fxSwing(me.x, me.y, aim, range, arcDeg, {crit:burst, n:hits.length, aspd:s.aspd});
+  /* 破空：每一刀射出一道穿透冲击波 —— 空刀也射，不然跑图时它就白瞎了。
+     ⚠️ **刀气的速度跟攻速走**（用户 2026-09-23：「攻速越快，刀气飞得越快」）：
+        攻速翻倍它就飞两倍快，封在 2.4 倍免得快到看不见。 */
+  if(hasSp("sp_wave") && mult === 1){
+    var wv = waveSpeed(s);
+    E.pwaves.push({x:me.x, y:me.y, vx:Math.cos(aim) * wv, vy:Math.sin(aim) * wv,
+                   r:24, life:1.1, hit:{}, mult:0.7, dir:aim});
+  }
   if(hasSp("sp_second") && mult === 1) me.second = SP_SECOND_MS;
+  /* 格挡：把刀锋扇形里的敌方弹丸原样打回去 */
+  if(hasSp("sp_deflect") && mult === 1) deflectShots(s, aim, range, halfArc);
+  /* 裂地：每 SP_QUAKE_N 刀，脚下裂开一圈 */
+  if(hasSp("sp_quake") && mult === 1 && G.swings % SP_QUAKE_N === 0){
+    fxBoom(me.x, me.y, 210, "#8A6A3A");
+    aoe(me.x, me.y, 210, Math.max(1, Math.round(s.atk * 0.9)));
+  }
+  /* 共鸣：离你最近的那座塔跟着开一次火 */
+  if(hasSp("sp_reso") && mult === 1) resoFire();
   if(!hits.length){
+    if(hasSp("sp_flurry") && !P.flurryReady) P.flurryN = 0;   // 空刀断掉「连续命中」
     /* 空刀也记一笔出手伤害（只算等级和连击）——「玩家一刀不砍、全靠塔」的打法里，
        不补这一句的话 towerPower() 会永远停在初始值。 */
     var idle = s.atk * (1 + comboPct(s) / 100);
@@ -1077,7 +1183,7 @@ function swing(mult){
   /* ---- 暴击 ---- */
   var cr = s.crit, cm = s.critMult;
   if(cr > 100) cm += 0.1 * Math.floor((cr - 100) / 5);
-  var crit = forceCrit || (Math.random() * 100 < cr);
+  var crit = forceCrit || burst || (Math.random() * 100 < cr);
   if(crit && has("crush")) noArmor = true;
 
   var raw = (s.atk + base + extra) * (1 + pct / 100) + flat;
@@ -1088,18 +1194,45 @@ function swing(mult){
   raw = Math.max(1, Math.round(raw * mult));
 
   /* ---- 落到每一只身上 ---- */
+  var leechN = 0;
   for(i = 0; i < hits.length; i++){
     f = hits[i]; if(f.dead) continue;
     /* 处决：残血直接抹掉（Boss 除外）*/
     if(hasSp("sp_exec") && !f.boss && f.hp / f.maxHp < 0.25){
       fxText("处决", "#8A6A10"); killFoe(f); continue;
     }
+    var slowed = hasSp("sp_ice") && isSlowed(f);
     var d2 = Math.max(1, raw - (noArmor ? 0 : f.armor));
+    if(slowed) d2 *= 2;                                   // 冰裂：对被减速的翻倍
     hurtFoe(f, d2, s, crit);
+    /* 余烬：点燃（刷新时长，伤害取高的那一次）*/
+    if(hasSp("sp_ember")){
+      f.burnT = SP_BURN_SEC;
+      f.burnD = Math.max(f.burnD || 0, Math.max(1, Math.round(s.atk * SP_BURN_PCT)));
+    }
+    /* 饮刃：先数命中几次，出了循环再一次性回。
+       ⚠️ **别在这儿逐次 healUp** —— 单次是 0.4% 最大生命，healUp 里的 Math.round
+          会把每一笔都抹成 0，实测一刀回 0 点。攒起来一次结算才有效。 */
+    if(hasSp("sp_leech") && leechN < SP_LEECH_N) leechN++;
+    /* 冰裂：被减速的怪死在这一刀上 → 原地炸开 */
+    if(slowed && f.dead) aoe(f.x, f.y, 90, Math.max(1, Math.round(f.maxHp * 0.6)), "#266F7B");
     /* 雷链：跳到最近的 3 个 */
     if(hasSp("sp_chain")) zap(f, Math.max(1, Math.round(raw * 0.4)), 3);
     /* 裂颅：暴击时以那只怪为心炸开 */
     if(crit && hasSp("sp_skull")) aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12");
+  }
+  if(leechN > 0) healUp(s.maxHp * 0.004 * leechN);        // 饮刃：攒完一次回
+  /* 残影：身后那个影子跟着来一下（圆形，不再算一次扇形 —— 便宜且够用）*/
+  if(hasSp("sp_clone") && mult === 1){
+    var cx = me.x - Math.cos(aim) * SP_CLONE_D, cy = me.y - Math.sin(aim) * SP_CLONE_D;
+    fxCone(cx, cy, aim, arcDeg, range * 0.7, "#5A5468");
+    aoe(cx, cy, range * 0.62, Math.max(1, Math.round(raw * 0.5)));
+  }
+  /* 狂刃的计数：连续命中才涨，这一刀用掉就清 */
+  if(hasSp("sp_flurry") && mult === 1){
+    if(burst){ P.flurryReady = false; P.flurryN = 0; }
+    else { P.flurryN = (P.flurryN || 0) + 1;
+           if(P.flurryN >= SP_FLURRY_N){ P.flurryReady = true; P.flurryN = 0; } }
   }
 
   /* ---- 连击 ---- */
@@ -1231,6 +1364,11 @@ function takeHit(dmg, foe, o){
   if(out <= 0){ fxText("盾", "#6E86A8"); return; }
 
   P.hp -= out; G.dmgTaken += out;
+  /* 逆刺：挨一下，还一片 */
+  if(hasSp("sp_spike")){
+    fxBoom(E.me.x, E.me.y, 160, "#A93729");
+    aoe(E.me.x, E.me.y, 160, Math.max(1, Math.round(s.maxHp * 0.08)));
+  }
   P.killStreak = 0; P.noHitWaves = 0;
   if(has("recoil")) P.recoil = Math.min(3, P.recoil + 1);
   if(has("chew")) P.chew = 1;
@@ -1291,6 +1429,13 @@ function addGold(n){
    进一波 / 升级 时触发的遗物
    ================================================================ */
 function onWaveRelics(w){
+  /* 怒潮：进波那一下，从自己身上扩出去一圈刀气，一路扫到 600。
+     ⚠️ 它复用 E.pwaves，靠 ring 标记走另一条更新分支（见 updateSpecial）。 */
+  if(hasSp("sp_tide")){
+    var st = bstats();
+    E.pwaves.push({ring:true, x:E.me.x, y:E.me.y, r:24, grow:760, max:600,
+                   life:1.2, hit:{}, mult:2.0, dmg:Math.max(1, Math.round(st.atk * 2))});
+  }
   var s = bstats();
   if(has("lamp"))    healUp(s.maxHp * 0.08);
   if(has("well"))    healUp(s.maxHp * 0.20);
@@ -1688,6 +1833,18 @@ function updateFoes(dt){
   for(i = 0; i < E.foes.length; i++){
     f = E.foes[i]; if(f.dead) continue;
     f.t += dt; if(f.flash > 0) f.flash -= dt;
+    /* 余烬：烧着的每秒掉一次。⚠️ 走 hurtFoe 会触发击退和伤害数字刷屏，
+       所以这儿直接扣血 + 自己判死，跟 aoe() 里那一段是同一个写法。 */
+    if(f.burnT > 0){
+      f.burnT -= dt;
+      f.burnAcc = (f.burnAcc || 0) + dt;
+      if(f.burnAcc >= 1){
+        f.burnAcc -= 1;
+        f.hp -= f.burnD || 1;
+        fxNum(f.x, f.y - f.r - 4, f.burnD || 1, false);
+        if(f.hp <= 0){ killFoe(f); continue; }
+      }
+    }
     dx = me.x - f.x; dy = me.y - f.y; d = Math.hypot(dx, dy) || 1;
     sp = f.spd;
     if(hasSp("sp_frost") && d <= 220 && !f.def.noSlow) sp *= 0.6;   // 霜环
@@ -3194,6 +3351,12 @@ function draw(){
       ctx2.beginPath(); ctx2.arc(px, py, f.def.boom.r, 0, 6.2832); ctx2.fill();
       ctx2.globalAlpha = 1;
     }
+    if(f.burnT > 0){                                  // 余烬：烧着的那一圈橙
+      ctx2.strokeStyle = "#C2510E"; ctx2.globalAlpha = 0.5 + 0.3 * Math.sin(f.t * 14);
+      ctx2.lineWidth = 2;
+      ctx2.beginPath(); ctx2.arc(px, py, f.r + 2, 0, 6.2832); ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
     if(f.haunt){ ctx2.strokeStyle = "#6E1F16"; ctx2.lineWidth = 2;
       ctx2.beginPath(); ctx2.arc(px, py, f.r + 3, 0, 6.2832); ctx2.stroke(); }
     if(f.elite && !f.boss){ ctx2.strokeStyle = "#E3B23C"; ctx2.lineWidth = 2;
@@ -3204,11 +3367,32 @@ function draw(){
     if(f.boss || f.elite || f.hp < f.maxHp) drawBar(px, py - f.r - 7, f.r * 2, f.hp / f.maxHp);
   }
 
-  /* 破空的冲击波 */
+  /* 刀气：飞出去的那一道画成**朝着飞行方向的一段弧**（不再是整圆，看得出朝哪儿走），
+     怒潮那种原地扩散的圈仍然画整圈。 */
   if(fight) for(i = 0; i < E.pwaves.length; i++){ var pw = E.pwaves[i];
-    ctx2.strokeStyle = "#245E8C"; ctx2.globalAlpha = Math.min(1, pw.life * 1.6); ctx2.lineWidth = 5;
-    ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, 0, 6.2832); ctx2.stroke();
+    ctx2.globalAlpha = Math.min(1, pw.life * 1.6);
+    ctx2.lineCap = "round";
+    if(pw.ring){
+      ctx2.strokeStyle = "#245E8C"; ctx2.lineWidth = 6;
+      ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, 0, 6.2832); ctx2.stroke();
+    } else {
+      var pd = pw.dir !== undefined ? pw.dir : Math.atan2(pw.vy, pw.vx);
+      ctx2.strokeStyle = "#245E8C"; ctx2.lineWidth = 6;
+      ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, pd - 1.1, pd + 1.1); ctx2.stroke();
+      ctx2.strokeStyle = "rgba(36,94,140,.4)"; ctx2.lineWidth = 3;
+      ctx2.beginPath(); ctx2.arc(sx(pw.x) - Math.cos(pd) * 12, sy(pw.y) - Math.sin(pd) * 12,
+                                 pw.r * 0.8, pd - 0.9, pd + 0.9); ctx2.stroke();
+    }
     ctx2.globalAlpha = 1; }
+
+  /* 残影：身后那个影子（半透明的主角）*/
+  if(hasSp("sp_clone")){
+    var chim = IMG.hero, ca = me.aim || me.dir;
+    var ccx = sx(me.x - Math.cos(ca) * SP_CLONE_D), ccy = sy(me.y - Math.sin(ca) * SP_CLONE_D);
+    if(chim && chim.complete){
+      ctx2.globalAlpha = 0.38; ctx2.drawImage(chim, ccx - 15, ccy - 17, 30, 30); ctx2.globalAlpha = 1;
+    }
+  }
 
   /* 悬刃：两把绕转的刀 */
   if(hasSp("sp_orbit")){
@@ -3478,9 +3662,18 @@ function drawBar(x, y, w, p){
 }
 
 /* ---- 特效（全部纯装饰，REDUCE_MOTION 开着就整段跳过）---- */
-function fxSwing(x, y, dir, range, arc){
+/* 挥刀特效（用户 2026-09-23 要求优化）。
+   ⚠️ 它是**扫过去**的，不是整条弧一起亮 —— 原来那版只是「画一段弧再淡掉」，
+      看不出挥的方向，快攻速下还会糊成一团。现在按 t 把刀锋从一端扫到另一端，
+      后面拖一小段尾巴，尾巴越靠后越细越淡。
+   ⚠️ **持续时间跟攻速走**：攻速 2 刀/秒时上一道还没消失下一道就来了，会叠成一片白。
+   ⚠️ 照旧只用线和弧（见 12.10 的规矩），不加渐变、不加粒子系统。 */
+function fxSwing(x, y, dir, range, arc, o){
   if(REDUCE_MOTION) return;
-  E.fx.push({k:"sw", x:x, y:y, dir:dir, range:range, arc:arc, t:0, life:0.18});
+  o = o || {};
+  var life = Math.max(0.09, Math.min(0.2, 0.62 / Math.max(0.4, o.aspd || 1.25)));
+  E.fx.push({k:"sw", x:x, y:y, dir:dir, range:range, arc:arc, t:0, life:life,
+             crit:!!o.crit, n:o.n || 0});
 }
 function fxNum(x, y, n, crit){
   if(REDUCE_MOTION) return;
@@ -3545,10 +3738,30 @@ function drawFx(){
     var f = E.fx[i], k = 1 - f.t / f.life;
     ctx2.globalAlpha = Math.max(0, k);
     if(f.k === "sw"){
-      var ha = f.arc * Math.PI / 360;
-      ctx2.strokeStyle = "#FCF8F0"; ctx2.lineWidth = 7; ctx2.lineCap = "round";
-      ctx2.beginPath(); ctx2.arc(sx(f.x), sy(f.y), f.range * 0.82, f.dir - ha, f.dir + ha); ctx2.stroke();
-      ctx2.strokeStyle = "rgba(46,42,35,.35)"; ctx2.lineWidth = 2; ctx2.stroke();
+      /* 刀锋从 dir-ha 扫到 dir+ha，后面拖 40% 弧长的尾巴。
+         命中越多刀身越粗；狂刃那一刀（crit）转成金色并再粗一档。 */
+      var ha = f.arc * Math.PI / 360, span = ha * 2;
+      var p = Math.min(1, f.t / f.life);
+      var head = f.dir - ha + span * p;
+      var tail = Math.max(f.dir - ha, head - span * 0.4);
+      var wid = 6 + Math.min(5, (f.n || 0)) + (f.crit ? 4 : 0);
+      var cx0 = sx(f.x), cy0 = sy(f.y);
+      ctx2.lineCap = "round";
+      /* 外圈那一道淡的（刀气的余势）*/
+      ctx2.strokeStyle = f.crit ? "rgba(240,194,60,.45)" : "rgba(252,248,240,.45)";
+      ctx2.lineWidth = wid * 0.55;
+      ctx2.beginPath(); ctx2.arc(cx0, cy0, f.range * 0.96, tail, head); ctx2.stroke();
+      /* 刀身 */
+      ctx2.strokeStyle = f.crit ? "#F0C23C" : "#FCF8F0";
+      ctx2.lineWidth = wid;
+      ctx2.beginPath(); ctx2.arc(cx0, cy0, f.range * 0.82, tail, head); ctx2.stroke();
+      ctx2.strokeStyle = "rgba(46,42,35,.30)"; ctx2.lineWidth = 1.5; ctx2.stroke();
+      /* 刀尖上那一点白 */
+      ctx2.fillStyle = f.crit ? "#FFF3CB" : "#FFFFFF";
+      ctx2.beginPath();
+      ctx2.arc(cx0 + Math.cos(head) * f.range * 0.82, cy0 + Math.sin(head) * f.range * 0.82,
+               wid * 0.42, 0, 6.2832);
+      ctx2.fill();
     } else if(f.k === "n"){
       /* 暴击的数字要一眼认出来（用户 2026-09-22 要求优化）：
          更大、金色、带深色描边，前 1/3 段还会放大回弹。 */
@@ -3833,6 +4046,33 @@ function step(dt){
 /* 特殊遗物里那几个「一直在跑」的：悬刃 / 践踏 / 荆棘 / 漩涡 / 狂暴的计时 */
 function updateSpecial(dt, s){
   var me = E.me, i, f;
+  /* 刀雨：每 SP_RAIN_CD 秒，随机挑一只，头顶落一道 */
+  if(hasSp("sp_rain")){
+    P.rainCd = (P.rainCd || 0) - dt;
+    if(P.rainCd <= 0){
+      P.rainCd = SP_RAIN_CD;
+      var live = [];
+      for(i = 0; i < E.foes.length; i++) if(!E.foes[i].dead) live.push(E.foes[i]);
+      if(live.length){
+        var tg = pick(live);
+        fxPillar(tg.x, tg.y, "#FCF8F0");
+        aoe(tg.x, tg.y, 60, Math.max(1, Math.round(s.atk * 1.3)), "#FCF8F0");
+      }
+    }
+  }
+  /* 虚影步：被贴身就闪开，原地留一发 */
+  if(hasSp("sp_blink")){
+    P.blinkCd = (P.blinkCd || 0) - dt;
+    if(P.blinkCd <= 0 && nearFoes(44) > 0){
+      P.blinkCd = SP_BLINK_CD;
+      var ox = me.x, oy = me.y;
+      var away = me.moving > 0.05 ? me.dir : Math.random() * Math.PI * 2;
+      me.x += Math.cos(away) * 200; me.y += Math.sin(away) * 200;
+      fxBoom(ox, oy, 110, "#5A5468");
+      aoe(ox, oy, 110, Math.max(1, Math.round(s.atk * 1.5)));
+      fxRing(me.x, me.y, 30, "#5A5468");
+    }
+  }
   if(P.rageT > 0){ P.rageT -= dt; if(P.rageT <= 0) P.rageN = 0; }
 
   /* 悬刃：两把刀绕着你转 */
@@ -3874,6 +4114,22 @@ function updateSpecial(dt, s){
   /* 冲击波（破空）：穿透，同一只只打一次 */
   for(i = E.pwaves.length - 1; i >= 0; i--){
     var w = E.pwaves[i];
+    if(w.ring){                                    // 怒潮：原地扩散的圈
+      w.r += w.grow * dt; w.life -= dt;
+      if(w.r >= w.max || w.life <= 0){ E.pwaves.splice(i, 1); continue; }
+      for(var rj = 0; rj < E.foes.length; rj++){
+        f = E.foes[rj];
+        if(f.dead || w.hit[rj]) continue;
+        var rd = Math.hypot(f.x - w.x, f.y - w.y);
+        if(rd > w.r + f.r || rd < w.r - 46) continue;   // 只打圈经过的那一环
+        w.hit[rj] = 1;
+        var rdm = Math.max(1, w.dmg - f.armor);
+        f.hp -= rdm; f.flash = 0.12;
+        fxNum(f.x, f.y - f.r - 4, rdm, false);
+        if(f.hp <= 0) killFoe(f);
+      }
+      continue;
+    }
     w.x += w.vx * dt; w.y += w.vy * dt; w.life -= dt;
     if(w.life <= 0){ E.pwaves.splice(i, 1); continue; }
     for(var j = 0; j < E.foes.length; j++){
