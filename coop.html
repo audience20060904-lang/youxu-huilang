@@ -180,8 +180,14 @@
       </div>
       <p class="note orbmsg" id="orbMsg" hidden></p>
       <div class="panel grow" id="orbBagPanel">
-        <div class="phead"><span id="orbBagHead">宝珠 0</span> · 只在战场生效</div>
-        <div class="orblist" id="orbList"></div>
+        <!-- 顶上这一行钉住不滚（用户 2026-09-23 要「置顶分解宝珠按钮」），滚的是下面的方格 -->
+        <div class="orbbar">
+          <div class="phead"><span id="orbBagHead">背包 0</span> · 只在战场生效</div>
+          <span class="sp"></span>
+          <button class="btn" id="btnOrbMeltGo" type="button" hidden>分解</button>
+          <button class="btn" id="btnOrbMelt" type="button">分解</button>
+        </div>
+        <div class="orbgrid" id="orbList"></div>
       </div>
       <div class="panel grow" id="orbMePanel" hidden>
         <div class="phead">装备 · 最多 6 颗 · 点一个位置换宝珠</div>
@@ -578,6 +584,21 @@
       <button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button>
       <span class="sp"></span>
       <button class="btn primary" id="btnOrbShopClose" type="button">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 点背包里的一格弹出来：这颗宝珠的全部信息 + 鉴定 / 强化 / 装备（用户 2026-09-23） -->
+<div class="veil" id="veilOrbInfo" hidden>
+  <div class="sheet">
+    <div class="eyebrow">宝珠 · 只在战场生效</div>
+    <h2 id="orbInfoTitle">宝珠</h2>
+    <div class="orbinfo" id="orbInfoBody"></div>
+    <p class="note orbmsg" id="orbInfoMsg" hidden></p>
+    <div class="rowb orbinfoacts">
+      <span id="orbInfoActs" class="orbinfobtns"></span>
+      <span class="sp"></span>
+      <button class="btn ghost" id="btnOrbInfoClose" type="button">返回</button>
     </div>
   </div>
 </div>

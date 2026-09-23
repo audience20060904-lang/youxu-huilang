@@ -4185,6 +4185,9 @@ function blessTake(id){
 let orbSub = "bag";           // 背包页里停在哪个子栏目：bag 背包 / me 人物
 let orbArmed = "";            // 两步确认："buy:0" / "re" / "enh:<uid>"
 let orbMsg = "";              // 上一次操作的结果（鉴定出什么、强化抽到什么），显示在背包顶上
+let orbMeltOn = false;        // 分解的挑选状态（背包顶上那颗「分解」按钮开的）
+let orbMeltSel = [];          // 挑中要分解的 uid
+let orbInfoU = 0;             // 详情弹窗开着的是哪一颗
 
 function orbData(){ return TOWN.orb; }
 /* 商店货架：没有就当场摇一批并**立刻落盘** —— 不存的话刷新页面就是免费换货 */
@@ -4344,6 +4347,7 @@ function orbCardHtml(o, mode){
 function orbRefresh(){
   if($("viewOrb").classList.contains("on")) renderOrbBag();
   if(!$("veilOrbPick").hidden) renderOrbPick();
+  if(!$("veilOrbInfo").hidden) renderOrbInfo();
   if(!$("veilOrbShop").hidden) renderOrbShop();
 }
 function renderOrbBag(){
@@ -4359,10 +4363,28 @@ function renderOrbBag(){
   if(orbSub === "bag"){
     const loose = orbLoose();
     $("orbBagHead").textContent = "背包 " + loose.length;
-    /* 没鉴定的排最前（等着处理），其余按买的顺序 */
-    const list = loose.sort(function(a, b){ return (a.c ? 1 : 0) - (b.c ? 1 : 0) || a.u - b.u; });
-    $("orbList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "bag"); }).join("")
+    /* 背包是**定死大小的方格**（用户 2026-09-23）：格子里只有珠子、名字、强化等级，
+       点一格才弹详情窗（鉴定 / 强化 / 装备都在那儿）。分解状态下点一格 = 勾选。
+       排序：没鉴定的最前（等着处理），其余按颜色，同色强化高的在前。 */
+    orbMeltSel = orbMeltSel.filter(function(u){ return loose.some(function(o){ return o.u === u; }); });
+    const list = loose.sort(orbColorOrder);
+    $("orbList").innerHTML = list.length ? list.map(function(o){
+        const sel = orbMeltSel.indexOf(o.u) >= 0;
+        return "<button class=\"orbtile" + (sel ? " sel" : "") + "\" type=\"button\" data-u=\"" + o.u + "\">" +
+          orbGemHtml(o) + "<b>" + orbColorName(o) + "</b>" +
+          "<em>" + (o.c ? (o.lv ? "+" + o.lv : "未强化") : "点开鉴定") + "</em>" +
+          (o.b ? "<i>" + ORB_BMAP[o.b].n + "</i>" : "") + "</button>";
+      }).join("")
       : "<div class=\"bagempty\">" + (od.bag.length ? "都戴在身上了。" : "还没有宝珠。主城里的「宝珠商店」有卖。") + "</div>";
+    /* 顶上钉住的分解按钮：平时一颗「分解」；进了挑选状态变成「取消」+「分解 N 颗」 */
+    const mb = $("btnOrbMelt"), mg = $("btnOrbMeltGo"), n = orbMeltSel.length, armed = orbArmed === "melt";
+    mb.textContent = orbMeltOn ? "取消" : "分解";
+    mb.classList.toggle("on", orbMeltOn);
+    mg.hidden = !orbMeltOn;
+    mg.disabled = !n;
+    mg.classList.toggle("primary", armed);
+    mg.textContent = !n ? "点宝珠勾选" : armed ? "再点一次 · +" + n * ORB_MELT + " 宝石" : "分解 " + n + " 颗 · +" + n * ORB_MELT;
+    $("orbList").classList.toggle("melting", orbMeltOn);
     return;
   }
   /* 人物：六个位置 + 总效果 */
@@ -4412,13 +4434,80 @@ function renderOrbPick(){
   $("orbPickTitle").textContent = "第 " + (orbPickSlot + 1) + " 个位置" + (cur ? " · " + orbColorName(cur) : " · 空着");
   $("orbPickCur").innerHTML = cur ? orbCardHtml(cur, "cur") : "";
   $("orbPickCur").hidden = !cur;
-  const list = orbLoose().filter(function(o){ return o.c; });
+  /* 按颜色排（用户 2026-09-23），同色强化高的在前 */
+  const list = orbLoose().filter(function(o){ return o.c; }).sort(orbColorOrder);
   const unk = orbLoose().length - list.length;
   $("orbPickList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "pick"); }).join("")
     : "<div class=\"bagempty\">背包里没有鉴定过的宝珠" + (unk ? "（还有 " + unk + " 颗没鉴定）" : "") + "。</div>";
   const m = $("orbPickMsg");
   m.textContent = orbMsg; m.hidden = !orbMsg;
 }
+/* 按颜色排（ORB_COLORS 的顺序），没鉴定的最前；同色强化高的在前、再按买的顺序 */
+function orbColorOrder(a, b){
+  const ia = a.c ? ORB_COLORS.indexOf(ORB_CMAP[a.c]) : -1, ib = b.c ? ORB_COLORS.indexOf(ORB_CMAP[b.c]) : -1;
+  return ia - ib || b.lv - a.lv || a.u - b.u;
+}
+
+/* ---- 分解（用户 2026-09-23）：背包顶上那颗按钮进挑选状态，勾好了两步确认，一颗统一 ORB_MELT 宝石 ----
+   只分得到背包里的（戴着的本来就不在背包里）。spent 不退 —— 它是「投入过多少」，合并存档时按它比。 */
+function orbMeltToggle(){
+  orbMeltOn = !orbMeltOn; orbMeltSel = []; orbArmed = ""; orbMsg = "";
+  renderOrbBag();
+}
+function orbMeltPick(u){
+  const k = orbMeltSel.indexOf(u);
+  if(k >= 0) orbMeltSel.splice(k, 1); else orbMeltSel.push(u);
+  orbArmed = "";
+  renderOrbBag();
+}
+function orbMeltGo(){
+  if(!orbMeltSel.length) return;
+  if(orbArmed !== "melt"){ orbArmed = "melt"; renderOrbBag(); return; }
+  orbArmed = "";
+  const od = orbData(), kill = {};
+  let n = 0;
+  orbMeltSel.forEach(function(u){ if(orbSlotOf(u) < 0 && orbFind(od, u)){ kill[u] = 1; n++; } });
+  od.bag = od.bag.filter(function(o){ return !kill[o.u]; });
+  orbMeltSel = []; orbMeltOn = false;
+  orbMsg = "分解了 " + n + " 颗，宝石 +" + n * ORB_MELT + "。";
+  addGems(n * ORB_MELT);                 // 它自己 commitPerm()，宝珠的删除跟着一起落盘
+  renderOrbBag();
+}
+
+/* ---- 点背包里的一格弹出来的详情窗：全部信息 + 鉴定 / 强化 / 装备 ----
+   ⚠️ 主城弹层，跟祝福一样故意不进 hideAll() / anyVeil()。 */
+function openOrbInfo(u){
+  orbInfoU = u; orbArmed = ""; orbMsg = "";
+  renderOrbInfo();
+  $("veilOrbInfo").hidden = false;
+}
+function closeOrbInfo(){
+  $("veilOrbInfo").hidden = true; orbInfoU = 0; orbArmed = "";
+  orbRefresh();
+}
+function renderOrbInfo(){
+  const o = orbFind(orbData(), orbInfoU);
+  if(!o){ closeOrbInfo(); return; }
+  $("orbInfoTitle").textContent = orbColorName(o) + (o.lv ? " +" + o.lv : "");
+  $("orbInfoBody").innerHTML =
+    "<div class=\"orbinfohead\">" + orbGemHtml(o).replace("orbgem", "orbgem big") +
+      "<span>" + (o.c ? "点数 " + o.pt + " · 强化 " + o.lv + " / " + ORB_ENH_COST.length : "还没鉴定，看不出颜色") + "</span></div>" +
+    "<p class=\"ob\">" + (o.b ? orbBaseText(o.b) : "基础词缀：无") + "</p>" +
+    (o.a.length ? "<p class=\"oa\">" + o.a.map(function(x){ return "<i>" + orbAffixText(x) + "</i>"; }).join("") + "</p>"
+                : (o.c ? "<p class=\"ob dim\">还没有词条 —— 强化点数每满 10 抽一条。</p>" : ""));
+  let h = "";
+  if(!o.c) h += orbBtn("id", o.u, "鉴定", "primary");
+  else {
+    const full = o.lv >= ORB_ENH_COST.length, cost = orbEnhCost(o), armed = orbArmed === "enh:" + o.u;
+    h += orbBtn("enh", o.u, full ? "已满" : armed ? "再点一次 · " + cost + " 宝石" : "强化 · " + cost,
+                armed ? "primary" : "", full || ((TOWN.gem || 0) < cost && !armed));
+    h += orbBtn("eq", o.u, "装备", "");
+  }
+  $("orbInfoActs").innerHTML = h;
+  const m = $("orbInfoMsg");
+  m.textContent = orbMsg; m.hidden = !orbMsg;
+}
+
 /* 两处列表共用一个点击处理 */
 function orbActClick(e){
   const b = e.target.closest ? e.target.closest("button[data-act]") : null;
@@ -4427,7 +4516,7 @@ function orbActClick(e){
   if(act !== "enh"){ orbArmed = ""; orbMsg = ""; }
   if(act === "id") orbIdentify(u);
   else if(act === "enh") orbEnhance(u);
-  else if(act === "eq") orbPut(u);
+  else if(act === "eq"){ orbPut(u); if(!$("veilOrbInfo").hidden && orbSlotOf(u) >= 0) closeOrbInfo(); }
   else if(act === "off"){ orbOff(u); if(!$("veilOrbPick").hidden) closeOrbPick(); }
   else if(act === "put"){ orbPut(u, orbPickSlot); closeOrbPick(); }
 }
@@ -4445,7 +4534,7 @@ function renderOrbShop(){
   $("orbGemS").textContent = gem;
   $("orbShop").innerHTML = shop.map(function(s, i){
     const armed = orbArmed === "buy:" + i;
-    return "<div class=\"orbcard" + (s.sold ? " sold" : "") + "\">" + orbGemHtml(s.sold ? null : {c:""}) +
+    return "<div class=\"orbcard shopcard" + (s.sold ? " sold" : "") + "\">" + orbGemHtml(s.sold ? null : {c:""}) +
       "<div class=\"ocol\"><b>" + (s.sold ? "已售出" : "未鉴定宝珠") + "</b>" +
       (s.sold ? "" : "<span class=\"ob\">" + (s.b ? orbBaseText(s.b) : "基础词缀：无") + "</span>") +
       "</div><div class=\"oacts\">" +
@@ -5779,7 +5868,7 @@ function showView(id){
   // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
   if(id === "viewSet") refreshSaveState();
   // 宝珠的两页：换页就把没点完的两步确认和上一条消息清掉
-  if(id === "viewOrb"){ orbArmed = ""; orbMsg = ""; renderOrbBag(); }
+  if(id === "viewOrb"){ orbArmed = ""; orbMsg = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); }
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
@@ -5787,9 +5876,18 @@ Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
 
 /* ---- 宝珠：背包 / 人物 / 商店（用户 2026-09-23）---- */
 Array.prototype.forEach.call(document.querySelectorAll(".osub"), function(b){
-  b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMsg = ""; renderOrbBag(); });
+  b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMsg = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); });
 });
-$("orbList").addEventListener("click", orbActClick);
+/* 背包的方格：平时点开详情窗，分解状态下点 = 勾选 */
+$("orbList").addEventListener("click", function(e){
+  const b = e.target.closest ? e.target.closest(".orbtile") : null;
+  if(!b) return;
+  if(orbMeltOn) orbMeltPick(+b.dataset.u); else openOrbInfo(+b.dataset.u);
+});
+$("btnOrbMelt").addEventListener("click", orbMeltToggle);
+$("btnOrbMeltGo").addEventListener("click", orbMeltGo);
+$("orbInfoActs").addEventListener("click", orbActClick);
+$("btnOrbInfoClose").addEventListener("click", closeOrbInfo);
 $("orbPickCur").addEventListener("click", orbActClick);
 $("orbPickList").addEventListener("click", orbActClick);
 $("btnOrbPickClose").addEventListener("click", closeOrbPick);

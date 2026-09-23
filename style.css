@@ -860,6 +860,49 @@ a.place{text-decoration:none}
    ⚠️ 类名全带 orb / o 前缀 —— 别再跟 .tab / .opt / .cx 这种短名撞（踩过三次了）。 */
 #viewOrb{overflow:hidden; padding-bottom:4px}
 #viewOrb .panel.grow{flex:1; min-height:0; overflow-y:auto}
+/* 背包那一块：顶上的分解按钮钉住，只有方格自己滚 */
+#orbBagPanel{overflow:hidden}
+.orbbar{flex:none; display:flex; align-items:center; gap:6px}
+.orbbar .sp{flex:1}
+.orbbar .btn{padding:5px 12px; font-size:12.5px}
+.orbbar .btn.on{border-color:var(--torch-deep); color:var(--torch-deep)}
+.orbbar .btn:disabled{opacity:.5; cursor:default}
+/* 背包方格：**定死大小**（用户 2026-09-23）——内容多少都不撑开，详情点开才看 */
+.orbgrid{flex:1; min-height:0; overflow-y:auto; display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(70px, 1fr)); grid-auto-rows:92px; gap:7px;
+  align-content:start; padding:2px}
+.orbgrid .bagempty{grid-column:1 / -1}
+.orbtile{position:relative; width:100%; height:92px; min-width:0; overflow:hidden; padding:8px 3px 5px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  border:1px solid var(--edge); background:var(--stone-2); border-radius:3px; cursor:pointer;
+  font-family:var(--body); color:var(--bone)}
+.orbtile .orbgem{width:30px; height:30px; margin-bottom:2px}
+.orbtile b{font-size:12.5px; font-weight:600; white-space:nowrap}
+.orbtile em{font-style:normal; font-size:10.5px; color:var(--faint); white-space:nowrap}
+.orbtile i{position:absolute; top:3px; right:3px; font-style:normal; font-size:9.5px; line-height:1;
+  padding:2px 3px; border-radius:2px; background:#FDF6E7; color:var(--torch-deep); border:1px solid var(--edge-soft)}
+@media (hover:hover){.orbtile:hover{border-color:var(--torch-deep)}}
+.orbgrid.melting .orbtile{opacity:.7}
+.orbgrid.melting .orbtile.sel{opacity:1; border-color:var(--blood); background:#F6E3DF;
+  box-shadow:inset 0 0 0 1px var(--blood)}
+/* 详情窗 */
+.orbinfo{display:flex; flex-direction:column; gap:8px}
+.orbinfohead{display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--dim)}
+.orbgem.big{width:44px; height:44px}
+.orbgem.big.unk{font-size:20px}
+.orbinfo p{margin:0}
+.orbinfo .ob{font-size:13px; color:var(--dim)}
+.orbinfo .ob.dim{color:var(--faint); font-size:12px}
+.orbinfo .oa{font-size:13px; color:var(--venom); line-height:1.6}
+.orbinfobtns{display:flex; gap:8px}
+.orbinfobtns .btn{min-width:96px}
+.orbinfobtns .btn:disabled{opacity:.45; cursor:default}
+/* 商店卡片：**定死高度和按钮大小**（用户 2026-09-23）—— 有没有词缀、卖没卖掉都一样大 */
+.orbcard.shopcard{height:78px; overflow:hidden}
+.orbcard.shopcard .ob{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.orbcard.shopcard .oacts{width:92px}
+.orbcard.shopcard .oacts .btn{width:92px; height:46px; min-width:0; padding:0 4px}
+#btnOrbReroll{width:190px}
 .orbtabs{display:flex; gap:6px; align-items:center}
 .orbtabs .sp{flex:1}
 .osub{font-family:var(--body); font-size:13px; padding:6px 16px; border-radius:2px; cursor:pointer;
