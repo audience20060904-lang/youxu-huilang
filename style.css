@@ -344,6 +344,9 @@ body{
 /* 窗口里的东西默认不伸缩；只有标了 .sx 的那一块吃剩下的高度、自己滚 */
 .sheet > *{flex:none}
 .sheet > .sx{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+/* ⚠️ 滚动区里的东西**一律不许被压扁**（2026-09-23 用户截图报的：洞窟那几张路线卡底下的「进入」被切掉了）——
+   .routes / .codex / .relics 这些列表自己就是竖排 flex，外面一封高度，浏览器会先把每张卡压矮、而不是让列表去滚。 */
+.sheet > .sx > *, .sheet > .sx .routes > *, .sheet > .sx .codex > *{flex-shrink:0}
 /* 列表会变长变短的窗口（图鉴、祝福、挑宝珠、取舍、熔炉、玩法、结算）**定死高度** ——
    搜一下、换一批、卸一颗，窗口都不跟着缩放 */
 .sheet.tall{height:min(720px, calc(100dvh - 28px))}

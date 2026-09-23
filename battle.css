@@ -109,6 +109,8 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
      background:var(--stone);border:1px solid var(--edge);border-radius:14px;padding:16px}
 .box > *{flex:none}
 .box > .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -2px;padding:0 2px}
+/* ⚠️ 滚动区里的东西一律不许被压扁（主城洞窟那几张路线卡踩过：封了高度的竖排 flex 会先把卡片压矮，而不是去滚）*/
+.box > .scroll > *, .box > .scroll .cards > *{flex-shrink:0}
 /* 列表会变长变短的窗口定死高度（遗物页 / 取舍 / 特殊页 / 游商 / 塔商店 / 结算）—— 卖一件、换一批，窗口不缩放 */
 .box.tall{height:min(700px, calc(100dvh - 28px))}
 /* 兜底：没有 .scroll 的窗口在小屏上装不下时，整个窗口自己滚（仍然在窗口里面） */
