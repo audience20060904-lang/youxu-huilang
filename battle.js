@@ -397,11 +397,11 @@ var BF_SPECIAL = [
   lore:"围上来的越多，他笑得越开。"},
  {id:"sp_rampage", n:"狂暴",  pw:"每次击杀攻速 +5%，持续 4 秒，最多叠 15 层",
   lore:"停下来就凉了，所以别停。"},
- {id:"sp_skull",   n:"裂颅",  pw:"暴击时以那只怪为心炸开：范围 100，130% 伤害",
+ {id:"sp_skull",   n:"裂颅",  pw:"暴击时以被砍中的怪为心炸开：范围 100，130% 伤害（一刀最多炸 3 次）",
   lore:"头盖骨是最好的引信。"},
  {id:"sp_magnet",  n:"磁石",  pw:"拾取范围 ×4；每捡一枚金币，下一刀伤害 +3%（挥刀后清零）",
   lore:"钱贴着他走，刀也是。"},
- {id:"sp_feast",   n:"盛宴",  pw:"每次击杀回复 1% 最大生命，并且最大生命 +1（最多 +400）",
+ {id:"sp_feast",   n:"盛宴",  pw:"拿到之后每次击杀回复 1% 最大生命，并且最大生命 +1（最多 +400）",
   lore:"他是靠这条廊子里的死人长大的。"},
 
  /* ===== 第二批 12 件（用户 2026-09-23：「加多一批特殊效果的遗物」）=====
@@ -413,7 +413,7 @@ var BF_SPECIAL = [
   lore:"刀口上带着上一场火的温度。"},
  {id:"sp_deflect", n:"格挡",  pw:"挥刀会把刀锋里的敌方弹丸打回去，每颗造成 120% 攻击的伤害",
   lore:"飞过来的，原样还回去。"},
- {id:"sp_rain",    n:"刀雨",  pw:"每 2 秒，随机一个敌人头顶落下一道刀光（130% 伤害，范围 60）",
+ {id:"sp_rain",    n:"刀雨",  pw:"每 1.2 秒，随机一个敌人头顶落下一道刀光（150% 伤害，范围 60）",
   lore:"天上也有人在挥刀。"},
  {id:"sp_clone",   n:"残影",  pw:"身后跟着一个影子，跟你同时挥刀（50% 伤害）",
   lore:"他回头看过一次，就再也没敢回第二次。"},
@@ -421,17 +421,17 @@ var BF_SPECIAL = [
   lore:"挨一下，还一片。"},
  {id:"sp_ice",     n:"冰裂",  pw:"对被减速的敌人伤害翻倍；击杀它们时原地炸开（范围 90）",
   lore:"冻住的东西，碎起来最痛快。"},
- {id:"sp_quake",   n:"裂地",  pw:"每挥 5 刀，以自己为心裂开一圈（范围 210，90% 伤害）",
-  lore:"第五刀落地的时候，地也跟着裂。"},
+ {id:"sp_quake",   n:"裂地",  pw:"每挥 4 刀，以自己为心裂开一圈（范围 210，120% 伤害）",
+  lore:"第四刀落地的时候，地也跟着裂。"},
  {id:"sp_flurry",  n:"狂刃",  pw:"连续命中 12 次后，下一刀刀程和张角翻倍，且必定暴击",
   lore:"攒够了，就一刀全收。"},
- {id:"sp_blink",   n:"虚影步", pw:"每 6 秒：被贴身时瞬移开，原地留下一次爆炸（范围 110，150% 伤害）",
+ {id:"sp_blink",   n:"虚影步", pw:"每 4 秒：被贴身时瞬移开，原地留下一次爆炸（范围 110，200% 伤害）",
   lore:"抓住他的那只手，只抓到一团烟。"},
  {id:"sp_reso",    n:"共鸣",  pw:"你每挥一刀，离你最近的那座塔立刻也开一次火",
   lore:"石头也听得懂刀声。"},
  {id:"sp_leech",   n:"饮刃",  pw:"每次命中回复 0.4% 最大生命（每刀最多 6 次）",
   lore:"它比你更怕饿。"},
- {id:"sp_tide",    n:"怒潮",  pw:"每进一波，放出一圈横扫全场的刀气（200% 伤害）",
+ {id:"sp_tide",    n:"怒潮",  pw:"每进一波、之后每 6 秒，放出一圈横扫全场的刀气（200% 伤害）",
   lore:"开场那一下，是替这一波所有人打的。"}
 ];
 var SPECIAL_PICK = 3;      // Boss 掉落时几选一
@@ -440,12 +440,17 @@ var SP_ORBIT_R = 72;       // 悬刃的绕转半径
 /* 第二批用到的几个数（改平衡先动这里）*/
 var SP_BURN_SEC = 3;       // 余烬：烧几秒
 var SP_BURN_PCT = 0.20;    // 余烬：每秒掉「攻击 × 这个数」
-var SP_RAIN_CD  = 2;       // 刀雨：几秒一道
+var SP_RAIN_CD  = 1.2;     // 刀雨：几秒一道（2026-09-23 从 2 秒收紧：原来折合 0.65 倍攻击/秒，全表倒数第二）
 var SP_CLONE_D  = 64;      // 残影：跟在身后多远
-var SP_QUAKE_N  = 5;       // 裂地：每几刀一次
+var SP_QUAKE_N  = 4;       // 裂地：每几刀一次（2026-09-23：5 刀 90% → 4 刀 120%）
+var SP_QUAKE_PCT = 1.2;
 var SP_FLURRY_N = 12;      // 狂刃：连续命中几次
-var SP_BLINK_CD = 6;       // 虚影步：冷却
+var SP_BLINK_CD = 4;       // 虚影步：冷却（2026-09-23：6 秒 150% → 4 秒 200%）
+var SP_BLINK_PCT = 2.0;
 var SP_LEECH_N  = 6;       // 饮刃：每刀最多回几次
+var SP_TIDE_CD  = 6;       // 怒潮：进波放一圈，之后每几秒再放一圈（2026-09-23：原来一波只放一次，折合 0.07 倍攻击/秒）
+var SP_SKULL_MAX = 3;      // 裂颅：一刀最多炸几次
+var GREET_PCT = 100;       // 见面礼（战场改写）：每只敌人挨的第一刀 +100%
 
 /* ===== 塔（用户 2026-09-22 的塔防改版）=====
    品质照旧是 普通/稀有/史诗/传奇/神圣（r 0~4），**没有羁绊** ——
@@ -775,6 +780,7 @@ function newRun(){
        rageN:0, rageT:0, orbA:0, orbCd:0, vortexCd:0, thornCd:0, trampCd:0,
        /* 第二批特殊遗物（2026-09-23）。读处一律 || 0，老存档没有也不会炸。 */
        flurryN:0, flurryReady:false, rainCd:0, blinkCd:0,
+       feastN:0, tideCd:0,                // 盛宴拿到之后杀了几只 / 怒潮的计时（2026-09-23）
        chestN:0, chestCycle:0, bagAlerted:false,
        /* ---- 塔防（用户 2026-09-22）---- */
        dlvl:1,                            // 部署等级 = 人口 = 场上最多几座塔
@@ -803,21 +809,28 @@ function newRun(){
 
 /* 每波清零的那一堆（跟地牢 nextFloor() 是一回事） */
 function newWave(w, quiet){
-  var prevHurt = G ? G.hurt : true;
+  var prevHurt = G ? G.hurt : true, prevBled = G ? G.bled : true;
   G = {w:w, t:0, spawnAcc:0, echoUsed:false, reciteFree:0, holdUsed:0, corrodeArmor:0,
        openLeft:5, glassCut:0, aspdCut:0, dice:0, borrowUsed:false, braceUsed:false,
        burlapUsed:false, warmthUsed:false, nerveN:0, reboundUsed:false,
        tickN:0, longN:0, exorN:0, calmsN:0, stepArmor:0, fastRun:0, instantReady:false,
        wholeUsed:false, needleN:0, ropeN:0, capN:0, critShN:0, songN:0, bladeN:0,
-       glyphArmor:0, healed:0, lastPct:0, greetN:0, shatterN:0, shatterFree:0, whim:0,
+       glyphArmor:0, healed:0, lastPct:0, shatterN:0, shatterFree:0, whim:0,
        swings:0, wrongN:0, hurt:false, kindsSeen:{}, catSeen:{}, hauntN:0, bossAdds:0,
        fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false, magnetN:0, chapelUsed:false,
-       cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0};
+       cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0,
+       chaseN:0, fearN:0, bled:false};
   P.wave = w;
+  /* ⚠️ 仇敌是**跨波**的（波是定时切的，场上的怪不清），所以计数要按场上现数一遍 ——
+     以前直接清零，上一波标记的怪这一波死掉就把它减成负数，养魔跟着变成负的伤害加成。 */
+  if(E) for(var hi = 0; hi < E.foes.length; hi++) if(!E.foes[hi].dead && E.foes[hi].haunt) G.hauntN++;
   /* 泉每一波回一次（用户 2026-09-22）—— 它不再消失，只是每波能喝一口 */
   if(E) for(var bi = 0; bi < E.builds.length; bi++)
     if(E.builds[bi].k === "spring") E.builds[bi].used = false;
   if(quiet) return;
+  /* 「叠甲」：上一整波一点血都没掉才算一波（护盾吃掉的不算掉血）。
+     ⚠️ 以前写在 onWaveRelics 里读 G.hurt —— 那时 G 已经是新一波的了，恒为 false，等于每波白加一次。 */
+  if(!prevBled) P.noHitWaves++;
   /* 「稳步」：上一波没受过伤 */
   if(has("pace") && !prevHurt) healUp(bstats().maxHp * 0.55);
   onWaveRelics(w);
@@ -913,12 +926,14 @@ function bstats(){
   if(has("callus")) s.armor = Math.floor((s.armor + 3) * 1.2);
   if(has("stack")){ s.armor += 5; if(P.noHitWaves >= 2) s.armor *= 2; }
   s.armor = Math.max(0, Math.round(s.armor));
+  /* 甲刃：护甲 → 暴击率（2026-09-23 补：以前只给了护甲 +2，后半句是空的） */
+  if(has("armblade")) s.crit += Math.min(ABLADE_MAX, Math.floor(s.armor / ABLADE_PER) * ABLADE_STEP);
 
   /* --- ⑤ 常驻减伤（cutStatic 的唯一口径，封在 BF.cutMax）--- */
   var c = 0;
   if(has("soft"))  c += 7;
   if(has("hide"))  c += 3;
-  if(has("shed"))  c += 10;
+  if(has("shed"))  c += 14;                                          // 战场改写（撤退那半句在战场里不存在）
   if(has("still")) c += 20;
   if(has("quell")) c += 20;
   if(has("bile"))  c += 5;
@@ -928,9 +943,9 @@ function bstats(){
   if(has("evervow")) c += 6;
   if(has("tough"))  c += Math.min(15, w - 1);
   if(has("deep") && w >= 30) c += 15;
-  if(has("nemesis"))c += Math.min(45, 5 * P.bossSeen);
+  if(has("nemesis"))c += Math.min(40, 10 * P.bossSeen);             // 战场改写：一趟只见得到 4 只 Boss
   if(has("ascetic") && !P.everBought) c += Math.min(25, 5 * (w - 1));
-  if(has("familiar")) c += Math.min(15, 5 * Object.keys(G.kindsSeen).length);
+  if(has("familiar")) c += Math.min(9, 3 * Object.keys(G.kindsSeen).length);  // 战场改写：开波几秒就满档
   if(has("grit"))   c += Math.min(15, 5 * G.wrongN);
   if(has("shieldheart") && sh >= 50) c += 18;
   if(has("scale") && hpPct < 0.50) c += 15;
@@ -939,6 +954,9 @@ function bstats(){
   if(has("confluence")) c += 2 * confTiers(s);
   s.cutStatic = c;
   s.cut = c;
+  /* 恒甲：常驻减伤 → 护甲（2026-09-23 补：以前只有减伤和护盾，这半句是空的）。
+     ⚠️ 排在减伤算完之后，所以铁誓那一档读到的护甲**不含**这一笔 —— 反过来就是死循环。 */
+  if(has("evervow")) s.armor += Math.min(EVERVOW_MAX, Math.floor(c / EVERVOW_PER));
 
   /* --- ⑥ 别的 --- */
   if(has("greed")) s.goldPct += 20;
@@ -954,7 +972,7 @@ function bstats(){
   if(hasSp("sp_reach")){ s.range = Math.round(s.range * 1.6); s.knock *= 2; }
   if(hasSp("sp_haste"))  s.aspd *= 1.6;
   if(hasSp("sp_magnet")) s.pickup *= 4;
-  if(hasSp("sp_feast"))  s.maxHp += Math.min(400, P.kills);
+  if(hasSp("sp_feast"))  s.maxHp += Math.min(400, P.feastN || 0);   // 拿到之后才开始数，别读 P.kills
   if(hasSp("sp_rampage") && P.rageT > 0) s.aspd *= 1 + 0.05 * P.rageN;
 
   /* --- ⑧ 督战旗（塔的光环里唯一作用在**玩家**身上的一项，用户 2026-09-22 的新塔）---
@@ -1109,7 +1127,7 @@ function swing(mult){
   /* 裂地：每 SP_QUAKE_N 刀，脚下裂开一圈 */
   if(hasSp("sp_quake") && mult === 1 && G.swings % SP_QUAKE_N === 0){
     fxBoom(me.x, me.y, 210, "#8A6A3A");
-    aoe(me.x, me.y, 210, Math.max(1, Math.round(s.atk * 0.9)));
+    aoe(me.x, me.y, 210, Math.max(1, Math.round(s.atk * SP_QUAKE_PCT)));
   }
   /* 共鸣：离你最近的那座塔跟着开一次火 */
   if(hasSp("sp_reso") && mult === 1) resoFire();
@@ -1134,7 +1152,7 @@ function swing(mult){
   if(has("quick"))   pct += Math.min(40, 4 * Math.floor(cb / 5));
   if(has("snow"))    extra += 25 * Math.floor(cb / 5);
   if(has("inertia") && cb >= 5) pct += 40;
-  if(has("scent") && weak)  pct += 20;
+  if(has("scent") && weak)  pct += 60;                              // 战场改写（「多出弱点题」在战场里不存在）
   if(has("synes"))   pct += 30;
   if(has("flaw")){   pct += 30; noArmor = true; }
   if(has("ember") && hp1 < 0.33) pct += 95;
@@ -1143,7 +1161,6 @@ function swing(mult){
   if(has("delve"))   pct += Math.min(20, 0.5 * (w - 1));
   if(has("slay")){   pct += 30; if(weak) pct += 100; }
   if(has("opening") && G.openLeft > 0){ pct += 100; G.openLeft--; }
-  if(has("greet")   && G.greetN < 6){   pct += 130; G.greetN++; }
   if(has("bastion")) pct += 3 * s.defGear;
   if(has("recoil"))  pct += 50 * Math.min(3, P.recoil);
   if(has("knock") && isBossWave(w)) pct += 50;
@@ -1161,7 +1178,8 @@ function swing(mult){
   if(has("spellblade") && P.bladeLeft > 0) pct += 80;
   if(has("shedge"))  pct += Math.min(12, 3 * Math.floor(P.shield / 20));
   if(has("towel"))   pct += Math.min(12, 2 * Math.floor(G.healed / Math.max(1, s.maxHp * 0.1)));
-  if(has("janus")){  pct += 15 + 6 * Math.floor(s.cutStatic / 10); }
+  if(has("janus"))   pct += JANUS_PCT + Math.min(JANUS_C_TIERS, Math.floor(s.cutStatic / JANUS_C_PER)) * JANUS_C_STEP;
+  if(has("bile"))    pct += Math.min(BILE_MAX, Math.floor(s.cutStatic / BILE_PER) * BILE_PCT);   // 2026-09-23 补
   if(has("confluence")) pct += 6 * confTiers(s);
   if(has("ironvow"))  pct += 5 * Math.min(5, Math.floor(s.armor / 3));
   if(has("shieldking")) pct += 5 * Math.min(4, Math.floor(P.shield / 30));
@@ -1185,16 +1203,25 @@ function swing(mult){
   if(cr > 100) cm += 0.1 * Math.floor((cr - 100) / 5);
   var crit = forceCrit || burst || (Math.random() * 100 < cr);
   if(crit && has("crush")) noArmor = true;
+  /* 刻字 / 默诵的「暴击时」那半句（2026-09-23 补：以前只给了暴击率）*/
+  if(crit && has("carve"))  pct += 90;
+  if(crit && has("recite")) extra += 35;
 
-  var raw = (s.atk + base + extra) * (1 + pct / 100) + flat;
+  var pre = (s.atk + base + extra) * (1 + pct / 100) + flat;
   /* ⚠️ 塔的伤害跟玩家挂钩（用户 2026-09-22）：把**没吃暴击的那一下**平滑记下来，
      towerPower() 读它。平滑是为了别让连击和暴击把塔的伤害抖成锯齿。 */
-  P.power = P.power ? P.power * 0.7 + raw * 0.3 : raw;
-  if(crit) raw *= cm;
-  raw = Math.max(1, Math.round(raw * mult));
+  P.power = P.power ? P.power * 0.7 + pre * 0.3 : pre;
+  var raw = Math.max(1, Math.round((crit ? pre * cm : pre) * mult));
+  /* 见面礼（战场改写）：**每只敌人第一次被你砍中**的那一下，② 层再 +GREET_PCT。
+     跟别的百分比同一个桶，只是这一下单独算一遍 —— 乘区还是两个。 */
+  var rawGreet = raw;
+  if(has("greet")){
+    var pg = (s.atk + base + extra) * (1 + (pct + GREET_PCT) / 100) + flat;
+    rawGreet = Math.max(1, Math.round((crit ? pg * cm : pg) * mult));
+  }
 
   /* ---- 落到每一只身上 ---- */
-  var leechN = 0;
+  var leechN = 0, skullN = 0;
   for(i = 0; i < hits.length; i++){
     f = hits[i]; if(f.dead) continue;
     /* 处决：残血直接抹掉（Boss 除外）*/
@@ -1202,7 +1229,9 @@ function swing(mult){
       fxText("处决", "#8A6A10"); killFoe(f); continue;
     }
     var slowed = hasSp("sp_ice") && isSlowed(f);
-    var d2 = Math.max(1, raw - (noArmor ? 0 : f.armor));
+    var rr = raw;
+    if(has("greet") && !f.greeted){ f.greeted = true; rr = rawGreet; }
+    var d2 = Math.max(1, rr - (noArmor ? 0 : f.armor));
     if(slowed) d2 *= 2;                                   // 冰裂：对被减速的翻倍
     hurtFoe(f, d2, s, crit);
     /* 余烬：点燃（刷新时长，伤害取高的那一次）*/
@@ -1219,7 +1248,9 @@ function swing(mult){
     /* 雷链：跳到最近的 3 个 */
     if(hasSp("sp_chain")) zap(f, Math.max(1, Math.round(raw * 0.4)), 3);
     /* 裂颅：暴击时以那只怪为心炸开 */
-    if(crit && hasSp("sp_skull")) aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12");
+    /* ⚠️ 一刀最多炸 SP_SKULL_MAX 次：回旋 + 高暴击时一刀扫到十几只，每只都炸就是十几倍的范围伤害 */
+    if(crit && hasSp("sp_skull") && skullN < SP_SKULL_MAX){ skullN++;
+      aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12"); }
   }
   if(leechN > 0) healUp(s.maxHp * 0.004 * leechN);        // 饮刃：攒完一次回
   /* 残影：身后那个影子跟着来一下（圆形，不再算一次扇形 —— 便宜且够用）*/
@@ -1239,21 +1270,25 @@ function swing(mult){
   P.combo += 1;
   if(has("offbeat") && moving) P.combo += 1;
   if(has("boom") && crit) P.combo += 1;                              // 战场改写
-  if(has("chase") && weak){ P.combo += 2; healUp(s.maxHp * 0.10); }
+  if(has("chase") && weak){ P.combo += 2;
+    if(G.chaseN < 3){ G.chaseN++; healUp(s.maxHp * 0.10); } }       // 战场改写：每波三次（带通感就是每刀都触发）
   if(P.combo > P.maxCombo) P.maxCombo = P.combo;
   G.lastPct = pct;
+  /* 反震：攒的层数是「下一刀」的，打出去就清（2026-09-23 补：以前从不清零，挨满 3 下就是常驻 +150%）*/
+  if(has("recoil")) P.recoil = 0;
 
   /* ---- 挥刀触发（= 地牢的「答对」）---- */
   onSwingRelics(s, {crit:crit, moving:moving, wager:wager, big:big, weak:weak});
 
-  /* 回响之厅：立刻再挥一刀（防无限递归） */
-  if(has("hall") && swingDepth < 3 && luck(0.50)){ swingDepth++; swing(); swingDepth--; }
+  /* 回响之厅：立刻再挥一刀。⚠️ 补出来的那一刀**不会再触发它自己**（2026-09-23 从 3 层收到 1 层）——
+     叠 3 层的期望是 ×1.875，而所有「挥刀时」的遗物（搏动、无常、点金…）都跟着翻倍。 */
+  if(has("hall") && swingDepth < 1 && luck(0.50)){ swingDepth++; swing(); swingDepth--; }
 }
 
 function onSwingRelics(s, c){
   if(has("drain") && luck(0.10)) healUp(4);
   if(has("pulse")) healUp(s.maxHp * 0.01);
-  if(has("midas") && luck(0.25)) addGold(10);
+  if(has("midas") && luck(0.25)) addGold(5);                        // 战场改写：10 → 5（一波挥 37 刀）
   if(has("phoenix") && P.hp / s.maxHp < 0.15) healUp(s.maxHp * 0.05);
   if(has("allin") && c.wager && luck(0.10)) healUp(s.maxHp * 0.10);
   if(has("restring") && luck(0.20)){ P.combo = Math.max(P.combo, P.maxCombo); healUp(5); }
@@ -1261,7 +1296,7 @@ function onSwingRelics(s, c){
   if(has("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(10);
   if(has("aegis")){ P.aegisN++; if(P.aegisN % 10 === 0) addShield(10, 300); }
   if(has("corrode")) G.corrodeArmor = Math.min(5, G.corrodeArmor + 1);
-  if(has("dice") && luck(0.50)) G.dice += 25;
+  if(has("dice") && luck(0.50)) G.dice = Math.min(150, G.dice + 25);
   if(has("charge")) P.charge = c.crit ? 0 : P.charge + 1;
   if(has("oldrope") && P.combo % 8 === 0 && G.ropeN < 6){ G.ropeN++; addShield(2); }
   if(has("longsong") && P.combo % 10 === 0 && G.songN < 4){ G.songN++; addShield(15); healUp(s.maxHp * 0.03); }
@@ -1276,7 +1311,8 @@ function onSwingRelics(s, c){
     if(has("spellblade") && G.bladeN < 4){ G.bladeN++; P.bladeLeft = 5; }
   }
   if(has("whim")){ var r = ri(0, 2);
-    if(r === 0) G.whim += 8; else if(r === 1) healUp(s.maxHp * 0.05); else addGold(60); }
+    /* 战场改写：金币 60 → 15、伤害封 +80% —— 一波挥 37 刀，原数值一波白给七百多金 */
+    if(r === 0) G.whim = Math.min(80, G.whim + 8); else if(r === 1) healUp(s.maxHp * 0.05); else addGold(15); }
   if(has("instant") && c.moving){ G.fastRun++; if(G.fastRun >= 5) G.instantReady = true; }
   else if(has("instant")) G.fastRun = 0;
   if(P.riseLeft > 0)  P.riseLeft--;
@@ -1292,7 +1328,7 @@ function onSwingRelics(s, c){
 function mitigate(dmg, s, o){
   o = o || {};
   var cut = s.cutStatic + buildCut();      // 归墟碑：你站在它范围里时受到的伤害 −20%
-  if(has("twice") && o.repeat)  cut += 25;
+  if(has("twice") && o.repeat)  cut += 12;                   // 战场改写：同种怪第二下起几乎每下都算
   if(has("psyche") && o.haunt)  cut += 15;
   if(has("calm")   && !o.ranged)cut += 7;
   if(has("buffer") && o.ranged) cut += 55;
@@ -1300,6 +1336,9 @@ function mitigate(dmg, s, o){
   if(has("grudge") && o.hitByMe)cut += 10;
   if(has("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += 25; }
   if(has("quell")  && o.boss)   cut += 50;
+  if(has("knock") && isBossWave(P.wave)) cut += 20;          // 2026-09-23 补：以前只给了伤害那半句
+  if(has("cushion") && o.touch) cut += 15;                   // 战场改写：贴身受伤不翻倍，所以换成接触伤害 −15%
+  if(has("janus")) cut += Math.min(JANUS_P_TIERS, Math.floor((G.lastPct || 0) / JANUS_P_PER)) * JANUS_P_STEP;
   if(has("rampart") && P.rampartOn) cut += 50;
   cut = Math.min(BF.cutMax, cut);
   var out = Math.floor(dmg * (100 - cut) / 100);            // ⚠️ 先乘后除，别写成 ×(1−cut/100)
@@ -1325,7 +1364,8 @@ function takeHit(dmg, foe, o){
   var s = bstats();
   /* ---- 连击处理（优先级：铁胆 ＞ 断链 ＞ 惯性 ＞ 长链 ＞ 清零，归位兜一次）---- */
   var free = false, cb = P.combo;
-  if(has("nerve") && o.wager && G.nerveN < 2){ G.nerveN++; }
+  G.dice = 0;                                                // 赌骰：受伤清零（2026-09-23 补）
+  if(has("nerve") && G.nerveN < 2){ G.nerveN++; }            // 战场改写：不看贴身
   else if(has("unchain") && cb >= P.wave){ P.combo = cb - P.wave; free = true; }
   else if(has("inertia") && cb >= 5) P.combo = 5;
   else if(has("chain")) P.combo = Math.floor(cb / 2);
@@ -1340,7 +1380,7 @@ function takeHit(dmg, foe, o){
   if(!free && has("echo") && !G.echoUsed){ G.echoUsed = true; healUp(s.maxHp * 0.05); free = true; }
   if(!free && has("recite") && G.reciteFree < 1){ G.reciteFree++; free = true; }
   if(!free && has("caution") && o.ranged && G.cautionN < 2){ G.cautionN++; free = true; }
-  if(!free && has("fearless") && o.haunt) free = true;
+  if(!free && has("fearless") && o.haunt && G.fearN < 3){ G.fearN++; free = true; }   // 战场改写：每波三次
   if(!free && has("glass") && o.ranged){ G.aspdCut += 3; free = true; }
   if(!free && has("shatter") && G.shatterFree > 0){ G.shatterFree--; free = true; }
 
@@ -1349,9 +1389,7 @@ function takeHit(dmg, foe, o){
 
   if(free){ fxText("免伤", "#47702F"); return; }
 
-  var raw = dmg;
-  if(o.wager) raw = Math.round(raw * (has("cushion") ? 1.8 : 2));
-  var out = mitigate(raw, s, o);
+  var out = mitigate(dmg, s, o);
   if(out <= 0){ fxText("0", "#47702F"); return; }
 
   /* ---- 护盾先吃 ---- */
@@ -1369,7 +1407,7 @@ function takeHit(dmg, foe, o){
     fxBoom(E.me.x, E.me.y, 160, "#A93729");
     aoe(E.me.x, E.me.y, 160, Math.max(1, Math.round(s.maxHp * 0.08)));
   }
-  P.killStreak = 0; P.noHitWaves = 0;
+  P.killStreak = 0; P.noHitWaves = 0; G.bled = true;
   if(has("recoil")) P.recoil = Math.min(3, P.recoil + 1);
   if(has("chew")) P.chew = 1;
   if(has("prime")) P.primeLeft = 3;
@@ -1394,6 +1432,7 @@ function onShieldBroken(){
 /* 「打完发现血 ≤ 0」的唯一入口 */
 function deathSave(s){
   if(has("undying") && !G.undyingUsed){ G.undyingUsed = true; P.hp = Math.round(s.maxHp * 0.25);
+    if(has("warmth")) P.warmthLeft = 5;                      // 余温：薪火触发后也算（2026-09-23 补）
     fxText("薪火", "#E3B23C"); return; }
   if(has("revive") && P.revived < 3){ P.revived++; P.hp = Math.round(s.maxHp * 0.50);
     fxText("回魂", "#E3B23C"); return; }
@@ -1428,14 +1467,17 @@ function addGold(n){
 /* ================================================================
    进一波 / 升级 时触发的遗物
    ================================================================ */
+/* 怒潮：从自己身上扩出去一圈刀气，一路扫到 600。
+   ⚠️ 复用 E.pwaves，靠 ring 标记走另一条更新分支（见 updateSpecial）。 */
+function tideRing(s){
+  E.pwaves.push({ring:true, x:E.me.x, y:E.me.y, r:24, grow:760, max:600,
+                 life:1.2, hit:{}, mult:2.0, dmg:Math.max(1, Math.round(s.atk * 2))});
+}
+/* 集齐：普通、稀有、史诗各带着一件才算数（2026-09-23 补：以前只要带着它就给） */
+function fullSet(){ return has("fullset") && nRar(0) > 0 && nRar(1) > 0 && nRar(2) > 0; }
 function onWaveRelics(w){
-  /* 怒潮：进波那一下，从自己身上扩出去一圈刀气，一路扫到 600。
-     ⚠️ 它复用 E.pwaves，靠 ring 标记走另一条更新分支（见 updateSpecial）。 */
-  if(hasSp("sp_tide")){
-    var st = bstats();
-    E.pwaves.push({ring:true, x:E.me.x, y:E.me.y, r:24, grow:760, max:600,
-                   life:1.2, hit:{}, mult:2.0, dmg:Math.max(1, Math.round(st.atk * 2))});
-  }
+  /* 怒潮：进波那一下先放一圈，计时从头走 */
+  if(hasSp("sp_tide")){ tideRing(bstats()); P.tideCd = SP_TIDE_CD; }
   var s = bstats();
   if(has("lamp"))    healUp(s.maxHp * 0.08);
   if(has("well"))    healUp(s.maxHp * 0.20);
@@ -1445,7 +1487,7 @@ function onWaveRelics(w){
   if(has("finale"))  healUp(s.maxHp * 0.30);
   if(has("underarmor")) healUp(s.maxHp * Math.min(0.18, 0.02 * s.armor));
   if(has("clasp"))   healUp(s.maxHp * Math.min(0.06, 0.02 * Math.floor(P.gold / 200)));
-  if(has("foresight")) healUp(s.maxHp * 0.03 * Math.floor(P.gold / 100));
+  if(has("foresight")) healUp(s.maxHp * Math.min(0.30, 0.03 * Math.floor(P.gold / 100)));   // 战场封 30%
   if(has("thick"))   addShield(7);
   if(has("mirror"))  addShield(30);
   if(has("borrow"))  addShield(20);
@@ -1466,7 +1508,6 @@ function onWaveRelics(w){
   if(has("purse"))   P.gold += 30;
   if(has("welfare")) addGold(w * 2);
   if(has("dig"))     dropCoinPile(3);
-  if(!G.hurt) P.noHitWaves++;
 }
 
 function onLevelRelics(){
@@ -1637,7 +1678,8 @@ function killFoe(f){
   var s = bstats(), k = BF.killScale;
   P.kills++; P.killStreak++;
   P.kinds[f.id] = (P.kinds[f.id] || 0) + 1;
-  if(f.haunt){ G.hauntN--; P.hauntKills++;
+  if(f.haunt){ G.hauntN = Math.max(0, G.hauntN - 1); P.hauntKills++;
+    if(has("bind")) healUp(s.maxHp * 0.02);                  // 缚魂：驱散回血（2026-09-23 补）
     if(has("exorcise") && G.exorN < 3){ G.exorN++; healUp(s.maxHp * 0.02); }
     if(has("calmsoul") && G.calmsN < 3){ G.calmsN++; addShield(5); } }
   if(has("salve") && luck(0.40)) healUp(4 * k);
@@ -1649,7 +1691,7 @@ function killFoe(f){
   if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
   G.kindsSeen[f.id] = 1;
   if(hasSp("sp_rampage")){ P.rageN = Math.min(15, P.rageN + 1); P.rageT = 4; }
-  if(hasSp("sp_feast")) healUp(s.maxHp * 0.01);
+  if(hasSp("sp_feast")){ P.feastN = (P.feastN || 0) + 1; healUp(s.maxHp * 0.01); }
   if(hasSp("sp_burst")) aoe(f.x, f.y, 80, Math.max(1, Math.round(f.maxHp * 0.6)), "#C2510E");
   /* 「裂壳虫」倒下时裂成两只小的（小的自己没有 split，所以不会再裂）。
      ⚠️ 这里往 E.foes 里 push，而 aoe() 是对快照迭代的 —— 新裂出来的不会被同一发范围伤害二次命中。 */
@@ -2017,7 +2059,7 @@ function updateFoes(dt){
       if(Math.hypot(me.x - f.x, me.y - f.y) < f.r + 12 && f.touch <= 0){
         f.touch = BF.touchCd;
         takeHit(f.dmg, f, {haunt:f.haunt, hitByMe:(f.hitByMe || 0) >= 1, boss:!!f.boss,
-                           repeat:!!G.catSeen[f.id], wager:false});
+                           repeat:!!G.catSeen[f.id], touch:true});
         G.catSeen[f.id] = 1;
       }
     }
@@ -4056,7 +4098,7 @@ function updateSpecial(dt, s){
       if(live.length){
         var tg = pick(live);
         fxPillar(tg.x, tg.y, "#FCF8F0");
-        aoe(tg.x, tg.y, 60, Math.max(1, Math.round(s.atk * 1.3)), "#FCF8F0");
+        aoe(tg.x, tg.y, 60, Math.max(1, Math.round(s.atk * 1.5)), "#FCF8F0");
       }
     }
   }
@@ -4069,11 +4111,16 @@ function updateSpecial(dt, s){
       var away = me.moving > 0.05 ? me.dir : Math.random() * Math.PI * 2;
       me.x += Math.cos(away) * 200; me.y += Math.sin(away) * 200;
       fxBoom(ox, oy, 110, "#5A5468");
-      aoe(ox, oy, 110, Math.max(1, Math.round(s.atk * 1.5)));
+      aoe(ox, oy, 110, Math.max(1, Math.round(s.atk * SP_BLINK_PCT)));
       fxRing(me.x, me.y, 30, "#5A5468");
     }
   }
   if(P.rageT > 0){ P.rageT -= dt; if(P.rageT <= 0) P.rageN = 0; }
+  /* 怒潮：进波那一圈之外，每 SP_TIDE_CD 秒再放一圈 */
+  if(hasSp("sp_tide")){
+    P.tideCd = (P.tideCd || 0) - dt;
+    if(P.tideCd <= 0){ P.tideCd = SP_TIDE_CD; tideRing(s); }
+  }
 
   /* 悬刃：两把刀绕着你转 */
   if(hasSp("sp_orbit")){
@@ -4164,7 +4211,7 @@ function nextWave(){
   if(isDeployWave(w)) openDeploy();
 }
 function startBoss(w){
-  E.foes.length = 0; E.shots.length = 0;
+  E.foes.length = 0; E.shots.length = 0; G.hauntN = 0;     // 场上的仇敌跟着一起清掉了
   E.boss = makeBoss(w); E.foes.push(E.boss); P.bossSeen++;
   fxText(E.boss.name, "#8A3223");
 }
@@ -4304,7 +4351,7 @@ var pendPicks = 0, pickOffer = [], rerollLeft = 0;
    不是以前那种「每波一次」—— 别改回去。 */
 function openPick(){
   if(pendPicks <= 0){ hide("veilPick"); return; }
-  rerollLeft = BF.rerollN + (has("fullset") ? 1 : 0);
+  rerollLeft = BF.rerollN + (fullSet() ? 1 : 0);
   rollPick();
 }
 function rollPick(){
