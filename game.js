@@ -2044,7 +2044,9 @@ function fxKill(x, y){
 /* 拿遗物：从弹窗（或屏幕中央）飞到底部的「遗物」标签，颜色按品质走 */
 function fxRelic(r){
   // 起点：当前开着的那个弹层（三选一 / 宝箱 / 游商都行），没有就用地图
-  const open = Array.prototype.filter.call(document.querySelectorAll(".sheet"), function(el){ return rectOf(el); });
+  const open = Array.prototype.filter.call(document.querySelectorAll(".sheet"), function(el){
+    return rectOf(el) && !el.closest(".ghost");        // 正在淡出的那份复制品不算（弹窗关闭动画）
+  });
   const from = open[open.length - 1] || $("stageBox");
   const tab = document.querySelector('.nav[data-view="viewRelic"]');
   const color = getComputedStyle(document.documentElement)
@@ -4195,6 +4197,40 @@ function toast(text){
   if(toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ t.classList.remove("show"); toastTimer = null; }, 2400);
 }
+
+/* ================= 弹窗的关闭动画（用户 2026-09-23：「所有弹窗也加入平滑过渡动画」）=================
+   **打开**的动画全在 CSS 里（.veil 从 hidden 变成显示的那一下自己播）。
+   **关闭**不能去动那几十处 `$("veilXxx").hidden = true` —— 好多地方紧接着就读 `.hidden` 判断状态，
+   把隐藏推迟就会串。所以换个做法：窗口被藏掉的那一刻，**把它的样子复制一份（去掉所有 id）盖在原地淡出**，
+   180ms 后删掉。复制品不接点击、不参与任何逻辑，纯画面。
+   ⚠️ 同一批里又打开了另一个窗（关一个开一个）就不放淡出，交给新窗的弹入动画，免得两层叠着闪一下。
+   ⚠️ 节点太多的窗（图鉴一开几千张卡）不复制，直接关 —— 复制一次要卡一下。 */
+(function(){
+  if(REDUCE_MOTION || !window.MutationObserver) return;
+  const veils = Array.prototype.slice.call(document.querySelectorAll(".veil"));
+  function ghostOut(v){
+    if(v.getElementsByTagName("*").length > 2500) return;
+    const g = v.cloneNode(true);
+    g.removeAttribute("hidden");
+    g.removeAttribute("id");
+    Array.prototype.forEach.call(g.querySelectorAll("[id]"), function(e){ e.removeAttribute("id"); });
+    g.classList.add("ghost");
+    g.setAttribute("aria-hidden", "true");
+    document.body.appendChild(g);
+    setTimeout(function(){ if(g.parentNode) g.parentNode.removeChild(g); }, 220);
+  }
+  const mo = new MutationObserver(function(list){
+    const closed = [];
+    list.forEach(function(m){
+      // oldValue === null：改之前没有 hidden 属性，也就是「本来开着、现在被关上」
+      if(m.target.hidden && m.oldValue === null && closed.indexOf(m.target) < 0) closed.push(m.target);
+    });
+    if(!closed.length) return;
+    if(veils.some(function(v){ return !v.hidden; })) return;
+    closed.forEach(ghostOut);
+  });
+  veils.forEach(function(v){ mo.observe(v, {attributes:true, attributeFilter:["hidden"], attributeOldValue:true}); });
+})();
 
 /* ================= 宝珠（局外养成，用户 2026-09-23）=================
    用宝石买、在「背包」里鉴定 / 强化 / 装备，**只在战场生效**（battle.js 开局读一次）。

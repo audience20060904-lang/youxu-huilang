@@ -271,3 +271,21 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .cards.pick .card .cp{grid-column:1 / -1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
   overflow:hidden;margin-top:3px;line-height:1.45}
 .cards.pick .card .cl{display:none}
+
+/* ===== 弹窗的过渡动画（用户 2026-09-23：「所有弹窗也加入平滑过渡动画」，跟主城一套）=====
+   打开：底色淡入 + 窗口浮上来一点、从 97% 放到 100%。关闭：battle.js 复制一份 .veil.ghost 盖在原地淡出。
+   部署面板从底下滑上来。⚠️ 只动 opacity / transform。 */
+.veil.on{animation:veilIn .2s ease-out}
+.veil.on > .box{animation:boxIn .26s cubic-bezier(.2,.8,.3,1)}
+@keyframes veilIn{from{opacity:0}}
+@keyframes boxIn{from{opacity:0;transform:translateY(14px) scale(.97)}}
+.veil.ghost{display:grid;pointer-events:none;z-index:31;animation:veilOut .18s ease-in forwards}
+.veil.ghost > .box{animation:boxOut .18s ease-in forwards}
+@keyframes veilOut{to{opacity:0}}
+@keyframes boxOut{to{opacity:0;transform:translateY(8px) scale(.98)}}
+.deploy:not([hidden]){animation:drawerIn .26s cubic-bezier(.2,.8,.3,1)}
+@keyframes drawerIn{from{transform:translateY(100%)}}
+@media (prefers-reduced-motion:reduce){
+  .veil.on,.veil.on > .box,.deploy:not([hidden]){animation:none}
+  .veil.ghost{display:none}
+}

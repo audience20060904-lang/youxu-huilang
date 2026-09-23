@@ -5217,6 +5217,37 @@ function renderHud(){
    ================================================================ */
 function anyVeil(){ return !!document.querySelector(".veil.on"); }
 function show(id){ $(id).classList.add("on"); PAUSED = true; }
+/* ---- 弹窗的关闭动画（用户 2026-09-23，跟主城同一个做法）----
+   打开的动画在 CSS 里（.veil.on 一出来就播）。关闭时把窗口复制一份（去掉所有 id）盖在原地淡出，
+   180ms 后删掉 —— 不用去改 hide() 的时机，PAUSED / anyVeil() 的判断一点都不受影响。
+   同一批里又开了另一个窗（比如倒下时关掉一切再开结算）就不放淡出，交给新窗的弹入。 */
+(function(){
+  if(REDUCE_MOTION || !window.MutationObserver) return;
+  function hook(){
+    var veils = Array.prototype.slice.call(document.querySelectorAll(".veil"));
+    var mo = new MutationObserver(function(list){
+      var closed = [], i, m;
+      for(i = 0; i < list.length; i++){
+        m = list[i];
+        var was = (" " + (m.oldValue || "") + " ").indexOf(" on ") >= 0;
+        if(was && !m.target.classList.contains("on") && closed.indexOf(m.target) < 0) closed.push(m.target);
+      }
+      if(!closed.length || document.querySelector(".veil.on")) return;
+      closed.forEach(function(v){
+        if(v.getElementsByTagName("*").length > 2500) return;
+        var g = v.cloneNode(true);
+        g.removeAttribute("id");
+        Array.prototype.forEach.call(g.querySelectorAll("[id]"), function(e){ e.removeAttribute("id"); });
+        g.classList.remove("on"); g.classList.add("ghost");
+        g.setAttribute("aria-hidden", "true");
+        v.parentNode.appendChild(g);
+        setTimeout(function(){ if(g.parentNode) g.parentNode.removeChild(g); }, 220);
+      });
+    });
+    veils.forEach(function(v){ mo.observe(v, {attributes:true, attributeFilter:["class"], attributeOldValue:true}); });
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", hook); else hook();
+})();
 function hide(id){
   $(id).classList.remove("on");
   clearSel();                       // ⚠️ 弹层里全是字，关掉时残留的选区会把下一次触摸变成放大镜

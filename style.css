@@ -1008,3 +1008,19 @@ a.place{text-decoration:none}
 .relics.pickset .relic .rp{grid-column:1 / -1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   overflow:hidden;margin-top:3px;font-size:12.5px;line-height:1.5}
 .relics.pickset .relic .rl{display:none}
+
+/* ===== 弹窗的过渡动画（用户 2026-09-23：「所有弹窗也加入平滑过渡动画」）=====
+   打开：底色淡入 + 窗口从下面浮上来一点、从 97% 放到 100%。关闭：game.js 里复制一份 .veil.ghost 盖在原地淡出。
+   ⚠️ 只动 opacity / transform，不许动布局（战斗窗「答题前后一样高」那条照旧成立）。 */
+.veil:not([hidden]){animation:veilIn .2s ease-out}
+.veil:not([hidden]) > .sheet{animation:sheetIn .26s cubic-bezier(.2,.8,.3,1)}
+@keyframes veilIn{from{opacity:0}}
+@keyframes sheetIn{from{opacity:0; transform:translateY(14px) scale(.97)}}
+.veil.ghost{pointer-events:none; z-index:31; animation:veilOut .18s ease-in forwards}
+.veil.ghost > .sheet{animation:sheetOut .18s ease-in forwards}
+@keyframes veilOut{to{opacity:0}}
+@keyframes sheetOut{to{opacity:0; transform:translateY(8px) scale(.98)}}
+@media (prefers-reduced-motion:reduce){
+  .veil:not([hidden]), .veil:not([hidden]) > .sheet{animation:none}
+  .veil.ghost{display:none !important}
+}
