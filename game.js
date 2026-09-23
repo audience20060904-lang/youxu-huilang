@@ -5420,72 +5420,266 @@ function anyVeil(){
    界面上只有两个按钮：**复制存档码** / **粘贴存档码**。没有服务器 ——
    这个站是纯静态的，所以「云」就是那段码本身：数据全装在码里，谁拿着码谁就拿着存档。
 
-   码里**只有永久数据**：词汇熟练度 / 遗物图鉴 / 探索记录 / 宝石 + 祝福。
+   码里**只有永久数据**：四门语言的熟练度 / 遗物图鉴 / 探索记录 / 宝石 + 祝福 + 宝珠 / 教程走过没。
    **局内数据（没走完的那一趟）一个字节都不进去** —— 它是「换设备」用的，不是「续上这一层」用的。
    导入是**合并取优**，不是覆盖 —— 免得从旧设备导一次就把新进度抹了。
 
-   ⚠️ 为什么要自己写一套二进制编码：老的 YX1 是 `JSON → base64`，一份认识两千个词的存档
-   能压出**四万多个字符**，根本没法粘。现在按下面这套位流走，同一份档**两三千字符**：
-     · 熟练度不按「英文单词」存，按**词库下标**存 —— 省掉每个词的英文和 JSON 的引号逗号；
-     · 每个词只占 **7 bit**（熟练度 3 + 错过没 1 + 见过几次 3，见得多的再逃逸一个变长整数）；
-     · 「哪些词有记录」这张稀疏表**两种写法各算一遍取短的**（位图 / 间隔表），开头 1 bit 记用了哪种。
-   ⚠️ 按下标存的代价：**词库的顺序一变，老码就对不上**。所以码里带了
-   `nWords + 词库前 nWords 个英文的 16 位校验`：**往词库末尾追加词不影响老码**（前缀没动），
-   但中间插词/删词/重排会被当场查出来 —— 那时只跳过熟练度这一块，图鉴/记录/宝石照样导进去，
-   并在提示里说清楚。遗物图鉴同理（`nRelics` + 前缀校验）。
-   ⚠️ **加词只往 WORDS 末尾追加**，别往中间插 —— 插了所有老存档码就都废了。 */
-var CODE_TAG = "YX1.";          // 老码（JSON + base64），只读不再生成
-var CODE2_TAG = "YX2";          // 新码（紧凑位流），没有点号，整串都是 base64url
+   现在生成的是**第三版 YX3**（2026-09-23，用户嫌 YX2 太长），同一份档只有 YX2 的五分之一上下。三招：
+     · **自适应区间编码**（LZMA 那一套二进制区间编码器）：每一个 bit 都按「前面同类的 bit 是 0 多还是 1 多」
+       现算概率去压 —— 熟练度大多是「见过一两次、熟练度 1、没错」，「哪些词有记录」一段一段扎堆，
+       这些规律全被它吃掉，不用再手工挑位图还是间隔表。
+     · **一个字装 12 bit**：字节流最后换成 CJK 扩展 A 的字（U+3400 起的 4096 个生僻字），
+       一个字顶 base64 的两个字符。生僻字拼不出敏感词、没有 Unicode 规范化的问题；看着是乱码，本来就是。
+     · **写读共用一份 `codeIO(io)`**：io.enc 为真时读存档往码里写，否则从码里读出来 —— 字段顺序只写一遍。
+   ⚠️ **新数据只许往 `codeIO()` 的 `secs` 末尾追加一段**：码头上记着「有几段」，老版本读完自己认识的就收手，
+      老码到新版本上少几段就少几段（跟 YX2 末尾那几个「1 bit 有没有」一个道理，只是不用再一层层 try）。
+   ⚠️ **概率的上下文只许看「已经读出来的值」**，别去看本地词库（比如按词的难度分上下文）——
+      词库变了（校验对不上）的时候那一段照样得原样读过去，上下文跟写的时候不一样，后面整串就全错位了。
+   ⚠️ 熟练度照旧按**词库下标**存，带 `nWords + 前 nWords 个词的 16 位校验`：往词库末尾追加不影响老码，
+      中间插 / 删 / 重排会被查出来、只跳过那一门的熟练度。**加词只往末尾追加。** 遗物图鉴同理。
+   老码 YX2（紧凑位流）/ YX1（JSON + base64）**只读、不再生成**，下面 parseCode2() 那一套就是为它们留的。 */
+var CODE_TAG = "YX1.";          // 老码（JSON + base64），只读
+var CODE2_TAG = "YX2";          // 老码（紧凑位流），只读
 var CODE2_V = 2;
+var CODE3_TAG = "YX3";          // 现在生成的
+var CODE3_CH0 = 0x3400;         // 一个字 = 12 bit：U+3400 ~ U+43FF
 
-/* ---- base64（老码用的：UTF-8 字符串 <-> base64） ---- */
-function b64enc(str){
-  const b = new TextEncoder().encode(str);
-  let bin = "";
-  for(let i=0;i<b.length;i++) bin += String.fromCharCode(b[i]);
-  return btoa(bin);
+/* ---- 16 位校验：既给「词库有没有变过」用，也给「码有没有被截断」用 ---- */
+function hash16(list){
+  let h = 0x1234;
+  for(let i=0;i<list.length;i++){
+    const s = String(list[i]);
+    for(let j=0;j<s.length;j++) h = ((h * 31 + s.charCodeAt(j)) & 0xFFFF);
+    h = ((h * 31 + 1) & 0xFFFF);
+  }
+  return h;
 }
-function b64dec(s){
+/* ⚠️ 学中文时 WORDS 换成了中文那一份 —— 所以一律显式传词库 */
+function wordsHash(n, list){
+  const a = [];
+  for(let i=0;i<n;i++) a.push(list[i][0]);
+  return hash16(a);
+}
+function relicsHash(n){
+  const a = [];
+  for(let i=0;i<n;i++) a.push(RELICS[i].id);
+  return hash16(a);
+}
+function sumHash(bytes){
+  let h = 0x9E37;
+  for(let i=0;i<bytes.length;i++) h = ((h * 31 + bytes[i]) & 0xFFFF);
+  return h;
+}
+
+/* ---- 区间编码器（YX3）：跟 LZMA 的 rc 一模一样，概率 11 位、每次往实际结果挪 1/32 ----
+   不带 bytes = 写，带 = 读。读过了头一律当 0 —— 写的时候末尾的 0 字节本来就是剪掉的。
+   JS 的数是 double，low 最多 33 位也装得下，所以不用拆高低位。 */
+function RcIO(bytes){
+  this.enc = !bytes;
+  this.range = 0xFFFFFFFF;
+  this.p = {};                                   // 上下文 → 「这一位是 0」的概率（满 2048）
+  if(this.enc){ this.low = 0; this.cache = 0; this.pend = 1; this.out = []; }
+  else { this.b = bytes; this.i = 0; this.code = 0; for(let k=0;k<4;k++) this.code = this.code * 256 + this.byte(); }
+}
+RcIO.prototype.byte = function(){ return this.i < this.b.length ? this.b[this.i++] : 0; };
+RcIO.prototype.shift = function(){               // 写：吐出 low 的最高字节（进位要回头补给前面压着的 0xFF）
+  if(this.low < 0xFF000000 || this.low >= 0x100000000){
+    const carry = this.low >= 0x100000000 ? 1 : 0;
+    let c = this.cache;
+    do{ this.out.push((c + carry) & 255); c = 255; }while(--this.pend);
+    this.cache = (this.low >>> 24) & 255;
+  }
+  this.pend++;
+  this.low = (this.low & 0xFFFFFF) * 256;
+};
+RcIO.prototype.code1 = function(p, b){           // 按概率 p 写 / 读一位
+  const bound = (this.range >>> 11) * p;
+  if(this.enc){
+    if(b){ this.low += bound; this.range -= bound; } else this.range = bound;
+    while(this.range < 0x1000000){ this.range *= 256; this.shift(); }
+  } else {
+    if(this.code < bound){ this.range = bound; b = 0; }
+    else { this.code -= bound; this.range -= bound; b = 1; }
+    while(this.range < 0x1000000){ this.range *= 256; this.code = this.code * 256 + this.byte(); }
+  }
+  return b;
+};
+/* 下面这几个写的时候传值进去、读的时候传什么都行，都返回那个值 */
+RcIO.prototype.bit = function(key, b){           // 带上下文的一位
+  const p = this.p[key] || 1024;
+  b = this.code1(p, b ? 1 : 0);
+  this.p[key] = b ? p - (p >> 5) : p + ((2048 - p) >> 5);
+  return b;
+};
+RcIO.prototype.raw = function(v, k){             // k 位不压的（校验值）
+  let x = 0;
+  for(let i=k-1;i>=0;i--) x = x * 2 + this.code1(1024, (v >> i) & 1);
+  return x;
+};
+RcIO.prototype.sym = function(key, v, k){        // 0 ~ 2^k-1 的小数：按位走一棵二叉树
+  let x = 1;
+  for(let i=k-1;i>=0;i--) x = x * 2 + this.bit(key + x, (v >> i) & 1);
+  return x - (1 << k);
+};
+RcIO.prototype.num = function(key, v){           // 非负整数：先说有几位，再逐位写（Elias-gamma）
+  v = this.enc ? Math.max(0, Math.round(v || 0)) + 1 : 0;
+  let n = 0, x = 1;
+  while(this.bit(key + "~" + n, v >= Math.pow(2, n + 1))) if(++n > 52) throw new Error(T("码坏了"));
+  for(let i=n-1;i>=0;i--) x = x * 2 + this.bit(key + n + "." + i + (i >= n - 2 ? "/" + x : ""), Math.floor(v / Math.pow(2, i)) & 1);
+  return x - 1;
+};
+/* 「n 个里哪几个有」：先写个数，再逐个写有没有，上下文是「前 8 个里有几个」（记录是一段一段扎堆的）。
+   个数凑够了后面就全是没有、剩下的全得有，这两种都不用写。on：写的时候是布尔数组。*/
+RcIO.prototype.set = function(key, n, on){
+  let left = this.num(key + "#", on ? on.filter(Boolean).length : 0), near = 0;
+  if(left > n) throw new Error(T("码里的条数比词库还多"));
+  const out = [], got = new Uint8Array(n);
+  for(let i=0;i<n && left>0;i++){
+    const b = (n - i === left) ? 1 : this.bit(key + near, on && on[i]);
+    if(b){ out.push(i); got[i] = 1; left--; }
+    near += b - (i >= 8 ? got[i - 8] : 0);
+  }
+  return out;
+};
+RcIO.prototype.finish = function(){
+  for(let k=0;k<5;k++) this.shift();
+  const out = this.out.slice(1);                 // 第一个字节永远是 0
+  while(out.length && !out[out.length - 1]) out.pop();
+  return out;
+};
+
+/* ---- 码里有什么，写读共用这一份 ---- 返回 mergeData 吃的 {lex, codex, meta, town}，外加 note（要跟玩家说的话）*/
+function codeIO(io){
+  const E = io.enc, out = {lex:{}, codex:{}, meta:{accF:{}}, town:{}}, notes = [], nR = RELICS.length;
+  let relOk = true;
+  const many = function(n){ if(n > 99999) throw new Error(T("码坏了")); return n; };
+  /* 一门语言的熟练度：词数 + 前缀校验 + 哪些词有记录 + 每个词（见过几次 → 熟练度 → 上次错没错，前一个给后一个当上下文）*/
+  function lex(list, pre){
+    const n = io.num("wn", list.length), h = io.raw(E ? wordsHash(n, list) : 0, 16);
+    const ok = E || (n <= list.length && wordsHash(n, list) === h);
+    io.set("w", n, E ? list.map(function(w){ return !!LEX[pre + w[0]]; }) : null).forEach(function(i){
+      const rec = E ? LEX[pre + list[i][0]] : {};
+      const seen = io.num("ws", rec.seen);
+      const str = Math.min(5, io.sym("wt" + Math.min(seen, 4), Math.max(0, Math.min(5, rec.str || 0)), 3));
+      const wrong = io.bit("wr" + str + (seen > 1 ? "+" : ""), (rec.wrong || 0) > 0);
+      if(!E && ok) out.lex[pre + list[i][0]] = {str:str, seen:seen, wrong:wrong};
+    });
+    if(!ok) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+  }
+  const secs = [
+    function(){ lex(EN_WORDS, ""); },
+    function(){                                            // 遗物图鉴：按 RELICS 下标
+      const n = io.num("rn", nR), h = io.raw(E ? relicsHash(n) : 0, 16);
+      relOk = E || (n <= nR && relicsHash(n) === h);
+      io.set("r", n, E ? RELICS.map(function(r){ return !!CODEX[r.id]; }) : null).forEach(function(i){
+        const c = E ? CODEX[RELICS[i].id] : {};
+        const depth = io.num("rd", c.depth), times = io.num("rt", c.times);
+        if(!E && relOk) out.codex[RELICS[i].id] = {depth:depth, times:times};
+      });
+      if(!relOk) notes.push(T("遗物表变过了，图鉴跳过了"));
+    },
+    function(){                                            // 探索记录 + 每层答题数（层号按间隔存）
+      const M = E ? meta() : {}, acc = M.accF || {};
+      ["best", "runs", "clears", "deaths"].forEach(function(k){ out.meta[k] = io.num("m" + k, M[k]); });
+      const fk = Object.keys(acc).map(Number).filter(function(f){
+        return f >= 0 && acc[f] && (acc[f].r || acc[f].w);
+      }).sort(function(a, b){ return a - b; });
+      let f = -1;
+      for(let k = 0, n = many(io.num("fn", fk.length)); k < n; k++){
+        f += 1 + io.num("ff", fk[k] - f - 1);
+        out.meta.accF[f] = {r:io.num("fr", E && acc[f].r), w:io.num("fw", E && acc[f].w)};
+      }
+    },
+    function(){                                            // 宝石 + 祝福（开没开 1 位，开了的再存钉着哪一件的下标 +1）
+      out.town.gem = io.num("g", TOWN.gem);
+      const B = E ? fixBless(TOWN.bless) : blankBless();
+      ["fav", "ban"].forEach(function(kind){
+        for(let r = 0; r < 5; r++){
+          if(!io.bit("bo", B.open[kind][r])) continue;
+          const at = io.num("bp", E ? RELICS.findIndex(function(x){ return x.id === B.pick[kind][r]; }) + 1 : 0) - 1;
+          if(!E){ B.open[kind][r] = 1; if(relOk && at >= 0 && at < nR) B.pick[kind][r] = RELICS[at].id; }
+        }
+      });
+      out.town.bless = B;
+    },
+    function(){                                            // 宝珠：颜色 / 基础 / 词条都按 orb.js 三张表的下标 +1 存（0 = 不认识）
+      const src = E ? TOWN.orb : {bag:[], eq:[]}, od = {seq:0, spent:io.num("os", src.spent), bag:[], eq:[]};
+      const n = many(io.num("on", src.bag.length));
+      for(let k = 0; k < n; k++){
+        const o = src.bag[k] || {a:[]};
+        const c = io.num("oc", o.c ? ORB_COLORS.indexOf(ORB_CMAP[o.c]) + 1 : 0) - 1;
+        const b = io.num("ob", o.b ? ORB_BASE.indexOf(ORB_BMAP[o.b]) + 1 : 0) - 1;
+        const lv = io.num("ol", o.lv), pt = io.num("op", o.pt), a = [];
+        for(let j = 0, na = many(io.num("oa", o.a.length)); j < na; j++){
+          const x = o.a[j] || {};
+          const ai = io.num("ok", x.k ? ORB_AFFIX.indexOf(ORB_AMAP[x.k]) + 1 : 0) - 1;
+          const v = io.num("ov", x.v), d = io.bit("od", x.d);
+          if(ORB_AFFIX[ai]) a.push({k:ORB_AFFIX[ai].id, v:v, d:d});
+        }
+        od.bag.push({u:k + 1, c:ORB_COLORS[c] ? ORB_COLORS[c].id : "", b:ORB_BASE[b] ? ORB_BASE[b].id : "",
+                     lv:lv, pt:pt, a:a});
+      }
+      od.seq = n;
+      for(let i = 0; i < ORB_SLOTS; i++){                   // 装备位存背包里的第几颗（+1，0 = 空），读回来正好就是 uid
+        let at = 0;
+        for(let k = 0; k < src.bag.length; k++) if(src.eq[i] && src.bag[k].u === src.eq[i]){ at = k + 1; break; }
+        od.eq.push(io.num("oe", at));
+      }
+      out.town.orb = od;
+    },
+    function(){ lex(ZH_WORDS, ""); out.meta.tut = io.bit("tut", MET.tut); },
+    function(){ lex(ES_WORDS, "es:"); },                   // 西语 / 日语的键带前缀（见 lexKey()），码里按下标存所以不用管
+    function(){ lex(JA_WORDS, "ja:"); }
+    /* ⚠️ 新的一段只许加在这儿（最后）*/
+  ];
+  const ns = io.num("n", secs.length);
+  for(let i = 0; i < ns && i < secs.length; i++) secs[i]();
+  out.note = notes.join(T("；"));
+  return out;
+}
+
+/* ---- 生成：字节流 → 两个字节的校验 + 正文，每 3 个字节换成 2 个字 ---- */
+function makeCode(){
+  const io = new RcIO(null);
+  codeIO(io);
+  const body = io.finish();
+  while((body.length + 2) % 3) body.push(0);             // 读过头本来就当 0，补几个 0 不碍事
+  const ck = sumHash(body), all = [ck & 255, ck >> 8].concat(body);
+  let s = CODE3_TAG;
+  for(let i = 0; i < all.length; i += 3){
+    const v = all[i] * 65536 + all[i + 1] * 256 + all[i + 2];
+    s += String.fromCharCode(CODE3_CH0 + (v >> 12), CODE3_CH0 + (v & 4095));
+  }
+  return s;
+}
+function parseCode3(txt){
+  const s = txt.slice(CODE3_TAG.length), bytes = [];
+  if(s.length < 2 || s.length % 2) throw new Error(T("码短了"));
+  for(let i = 0; i < s.length; i += 2){
+    const a = s.charCodeAt(i) - CODE3_CH0, b = s.charCodeAt(i + 1) - CODE3_CH0;
+    if(a < 0 || a > 4095 || b < 0 || b > 4095) throw new Error(T("码里混进了别的字符"));
+    const v = a * 4096 + b;
+    bytes.push(v >> 16, (v >> 8) & 255, v & 255);
+  }
+  const body = bytes.slice(2);
+  if(sumHash(body) !== (bytes[0] | (bytes[1] << 8))) throw new Error(T("校验对不上 —— 复制的时候少了一截或者多带了字符"));
+  return codeIO(new RcIO(body));
+}
+
+/* ================ 老码（只读）================ */
+function b64dec(s){                                        // YX1：UTF-8 字符串的 base64
   const bin = atob(s), b = new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) b[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(b);
 }
-/* ---- base64url（新码用的：裸字节 <-> 无填充的 base64url） ---- */
-function bytesToB64u(arr){
-  let bin = "";
-  for(let i=0;i<arr.length;i++) bin += String.fromCharCode(arr[i] & 255);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function b64uToBytes(s){
+function b64uToBytes(s){                                   // YX2：裸字节的无填充 base64url
   s = s.replace(/-/g, "+").replace(/_/g, "/");
   while(s.length % 4) s += "=";
   const bin = atob(s), out = new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
   return out;
 }
-
-/* ---- 位流 ---- 低位在前。vint = 每次 7 位数据 + 1 位「还有下一段」 */
-function BitW(){ this.bytes = []; this.cur = 0; this.n = 0; }
-BitW.prototype.bits = function(v, k){
-  for(let i=0;i<k;i++){
-    if(v & (1 << i)) this.cur |= (1 << this.n);
-    if(++this.n === 8){ this.bytes.push(this.cur); this.cur = 0; this.n = 0; }
-  }
-};
-BitW.prototype.vint = function(v){
-  v = Math.max(0, Math.round(v || 0));
-  for(;;){
-    const chunk = v % 128;
-    v = Math.floor(v / 128);
-    this.bits(chunk, 7);
-    this.bits(v > 0 ? 1 : 0, 1);
-    if(!v) return;
-  }
-};
-BitW.prototype.finish = function(){
-  if(this.n) this.bytes.push(this.cur);
-  return this.bytes;
-};
+/* YX2 的位流：低位在前。vint = 每次 7 位数据 + 1 位「还有下一段」 */
 function BitR(bytes){ this.bytes = bytes; this.i = 0; }
 BitR.prototype.bits = function(k){
   let v = 0;
@@ -5506,41 +5700,15 @@ BitR.prototype.vint = function(){
     scale *= 128;
   }
 };
-/* 一个 vint 占几 bit —— 选位图还是间隔表时要先算一遍长度 */
-function vintBits(v){
-  let n = 8;
-  v = Math.max(0, Math.round(v || 0));
-  while(v > 127){ v = Math.floor(v / 128); n += 8; }
-  return n;
-}
-
-/* ---- 稀疏下标表：位图 / 间隔表两种写法取短的 ---- */
-function putSet(w, n, idx){
-  w.vint(idx.length);
-  if(!idx.length) return;
-  let gapBits = 0, prev = -1;
-  for(let k=0;k<idx.length;k++){ gapBits += vintBits(idx[k] - prev - 1); prev = idx[k]; }
-  if(n <= gapBits){                       // 位图更短（词学得多的时候）
-    w.bits(0, 1);
-    let at = 0;
-    for(let i=0;i<n;i++){
-      const on = (at < idx.length && idx[at] === i);
-      w.bits(on ? 1 : 0, 1);
-      if(on) at++;
-    }
-  } else {                                // 间隔表更短（学得少、散着的时候）
-    w.bits(1, 1);
-    prev = -1;
-    for(let k=0;k<idx.length;k++){ w.vint(idx[k] - prev - 1); prev = idx[k]; }
-  }
-}
+/* 末尾追加的那几段：前面 1 bit「有没有」，老码读到底就当没有 */
+BitR.prototype.more = function(){ try{ return this.bits(1); }catch(e){ return 0; } };
+/* 稀疏下标表：开头 1 bit 记是位图还是间隔表 */
 function getSet(r, n){
   const count = r.vint(), out = [];
   if(!count) return out;
   if(count > n) throw new Error(T("码里的条数比词库还多"));
   if(r.bits(1) === 0){
-    // ⚠️ n 个 bit 要**全部读完**，不能凑够 count 就提前收手 —— 位流会当场错位
-    for(let i=0;i<n;i++) if(r.bits(1)) out.push(i);
+    for(let i=0;i<n;i++) if(r.bits(1)) out.push(i);       // n 个 bit 要全部读完，不然位流错位
   } else {
     let prev = -1;
     for(let k=0;k<count;k++){ prev += r.vint() + 1; out.push(prev); }
@@ -5549,47 +5717,8 @@ function getSet(r, n){
   if(out.length && out[out.length-1] >= n) throw new Error(T("码里的下标超出范围"));
   return out;
 }
-
-/* ---- 16 位校验：既给「词库有没有变过」用，也给「码有没有被截断」用 ---- */
-function hash16(list){
-  let h = 0x1234;
-  for(let i=0;i<list.length;i++){
-    const s = String(list[i]);
-    for(let j=0;j<s.length;j++) h = ((h * 31 + s.charCodeAt(j)) & 0xFFFF);
-    h = ((h * 31 + 1) & 0xFFFF);
-  }
-  return h;
-}
-/* ⚠️ 存档码按**词库下标**存熟练度，而学中文时 WORDS 换成了中文那一份 ——
-   所以这里一律显式传词库：第一段永远是英语（EN_WORDS），末尾那段才是中文（ZH_WORDS）。*/
-function wordsHash(n, list){
-  const a = [];
-  for(let i=0;i<n;i++) a.push(list[i][0]);
-  return hash16(a);
-}
-/* 一份词库的熟练度段：nWords + 前缀校验 + 稀疏表 + 每词 7 bit（写法见上面那段长注释）*/
-function putLex(w, list, pre){
-  const nW = list.length;
-  w.vint(nW);
-  w.vint(wordsHash(nW, list));
-  const idx = [], rows = [];
-  for(let i=0;i<nW;i++){
-    const rec = LEX[(pre || "") + list[i][0]];
-    if(!rec) continue;
-    idx.push(i);
-    rows.push(rec);
-  }
-  putSet(w, nW, idx);
-  for(let k=0;k<rows.length;k++){
-    const rec = rows[k];
-    w.bits(Math.max(0, Math.min(5, rec.str || 0)), 3);   // 熟练度 0~5
-    w.bits((rec.wrong || 0) > 0 ? 1 : 0, 1);             // 上次答错没（wrong 只当布尔用）
-    const seen = Math.max(0, Math.round(rec.seen || 0));
-    w.bits(seen >= 7 ? 7 : seen, 3);                     // 见过几次，7 = 逃逸
-    if(seen >= 7) w.vint(seen - 7);
-  }
-}
-function getLex(r, list, out, pre){
+/* 一门语言的熟练度：nWords + 前缀校验 + 稀疏表 + 每词 7 bit（熟练度 3 + 错没错 1 + 见过几次 3，7 = 逃逸）*/
+function getLex(r, list, out, pre, notes){
   const nW = r.vint(), wh = r.vint();
   const ok = (nW <= list.length && wordsHash(nW, list) === wh);
   const idx = getSet(r, nW);
@@ -5599,114 +5728,8 @@ function getLex(r, list, out, pre){
     if(seen === 7) seen = 7 + r.vint();
     if(ok) out[(pre || "") + list[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
   }
-  return ok;
+  if(!ok) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
 }
-function relicsHash(n){
-  const a = [];
-  for(let i=0;i<n;i++) a.push(RELICS[i].id);
-  return hash16(a);
-}
-function sumHash(bytes){
-  let h = 0x9E37;
-  for(let i=0;i<bytes.length;i++) h = ((h * 31 + bytes[i]) & 0xFFFF);
-  return h;
-}
-
-/* ---- 生成 ---- */
-function makeCode(){
-  const w = new BitW();
-  w.bits(CODE2_V, 8);
-
-  /* 熟练度：按词库下标存。present 里只放真的有记录的词。第一段永远是**英语词库** */
-  putLex(w, EN_WORDS);
-
-  /* 遗物图鉴：同一套写法，按 RELICS 下标 */
-  const nR = RELICS.length;
-  w.vint(nR);
-  w.vint(relicsHash(nR));
-  const ri = [], rr = [];
-  for(let i=0;i<nR;i++){
-    const c = CODEX[RELICS[i].id];
-    if(!c) continue;
-    ri.push(i);
-    rr.push(c);
-  }
-  putSet(w, nR, ri);
-  for(let k=0;k<rr.length;k++){ w.vint(rr[k].depth || 0); w.vint(rr[k].times || 0); }
-
-  /* 探索记录 */
-  const M = meta();
-  w.vint(M.best || 0); w.vint(M.runs || 0); w.vint(M.clears || 0); w.vint(M.deaths || 0);
-  const fks = Object.keys(M.accF || {}).filter(function(k){
-    const a = M.accF[k];
-    return a && ((a.r || 0) || (a.w || 0));
-  });
-  w.vint(fks.length);
-  fks.forEach(function(k){
-    w.vint(parseInt(k, 10) || 0);
-    w.vint(M.accF[k].r || 0);
-    w.vint(M.accF[k].w || 0);
-  });
-
-  /* 宝石 + 祝福（10 个槽位：开没开 1 bit，开了的再存钉着哪一件的下标+1，0 = 空着） */
-  w.vint(TOWN.gem || 0);
-  const B = fixBless(TOWN.bless);
-  ["fav", "ban"].forEach(function(kind){
-    for(let r=0;r<5;r++) w.bits(B.open[kind][r] ? 1 : 0, 1);
-  });
-  ["fav", "ban"].forEach(function(kind){
-    for(let r=0;r<5;r++){
-      if(!B.open[kind][r]) continue;
-      const id = B.pick[kind][r] || "";
-      let at = -1;
-      for(let i=0;i<nR;i++) if(RELICS[i].id === id){ at = i; break; }
-      w.vint(at + 1);
-    }
-  });
-
-  /* 宝珠（2026-09-23）：挂在最后，前面 1 bit「有没有这一段」。
-     老版本的解析器读完祝福就收手、不管后面剩下的字节，所以**新码拿到老版本上照样能读**；
-     老码到了新版本上，这一位读到的是填充的 0（或者正好读到底），就当没有宝珠 ——
-     所以**不用动 CODE2_V**。商店货架不进码（那是这台设备的事）。
-     ⚠️ 颜色 / 基础词缀 / 词条都按 orb.js 那三张表的**下标**存，那三张表只许往末尾追加。 */
-  const od = TOWN.orb;
-  w.bits(1, 1);
-  w.vint(od.spent || 0);
-  w.vint(od.bag.length);
-  od.bag.forEach(function(o){
-    w.vint(o.c ? ORB_COLORS.indexOf(ORB_CMAP[o.c]) + 1 : 0);
-    w.vint(o.b ? ORB_BASE.indexOf(ORB_BMAP[o.b]) + 1 : 0);
-    w.vint(o.lv); w.vint(o.pt);
-    w.vint(o.a.length);
-    o.a.forEach(function(x){
-      w.vint(ORB_AFFIX.indexOf(ORB_AMAP[x.k])); w.vint(x.v); w.bits(x.d ? 1 : 0, 1);
-    });
-  });
-  for(let i = 0; i < ORB_SLOTS; i++){
-    let at = 0;
-    for(let k = 0; k < od.bag.length; k++) if(od.bag[k].u === od.eq[i]){ at = k + 1; break; }
-    w.vint(at);
-  }
-
-  /* 多语言（2026-09-23）：**中文词库的熟练度 + 新手教程过没过**，同样挂在最后、前面 1 bit「有没有」——
-     跟宝珠那一段一个套路：老版本读完宝珠就收手，老码到新版本上读到填充的 0 就当没有，CODE2_V 不用动。*/
-  w.bits(1, 1);
-  putLex(w, ZH_WORDS);
-  w.bits(MET.tut ? 1 : 0, 1);
-  /* 西班牙语词库（2026-09-23）：同一个套路再挂一段。键带 "es:" 前缀（见 lexKey()），码里按下标存所以不用管前缀 */
-  w.bits(1, 1);
-  putLex(w, ES_WORDS, "es:");
-  /* 日语词库（2026-09-23）：再挂一段，键带 "ja:" 前缀（学生 / 大学 这些跟中文词库写法一样）*/
-  w.bits(1, 1);
-  putLex(w, JA_WORDS, "ja:");
-
-  const bytes = w.finish();
-  const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
-  bytes.push(ck & 255, (ck >> 8) & 255);
-  return CODE2_TAG + bytesToB64u(bytes);
-}
-
-/* ---- 读回来 ---- 返回 mergeData 吃的那个 {lex, codex, meta, town}，外加 note（要跟玩家说的话） */
 function parseCode2(txt){
   const bytes = b64uToBytes(txt.slice(CODE2_TAG.length));
   if(bytes.length < 4) throw new Error(T("码太短了"));
@@ -5717,11 +5740,8 @@ function parseCode2(txt){
   if(r.bits(8) !== CODE2_V) throw new Error(T("这串码是别的版本生成的"));
   const out = {lex:{}, codex:{}, meta:{accF:{}}, town:{}}, notes = [];
 
-  /* 熟练度（英语词库）*/
-  const wordsOk = getLex(r, EN_WORDS, out.lex);
-  if(!wordsOk) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+  getLex(r, EN_WORDS, out.lex, "", notes);
 
-  /* 遗物图鉴 */
   const nR = r.vint(), rh = r.vint();
   const relicsOk = (nR <= RELICS.length && relicsHash(nR) === rh);
   const ri = getSet(r, nR);
@@ -5731,7 +5751,6 @@ function parseCode2(txt){
   }
   if(!relicsOk) notes.push(T("遗物表变过了，图鉴跳过了"));
 
-  /* 探索记录 */
   out.meta.best = r.vint(); out.meta.runs = r.vint();
   out.meta.clears = r.vint(); out.meta.deaths = r.vint();
   const nA = r.vint();
@@ -5740,7 +5759,6 @@ function parseCode2(txt){
     out.meta.accF[String(f)] = {r:rr, w:ww};
   }
 
-  /* 宝石 + 祝福 */
   out.town.gem = r.vint();
   const bl = blankBless(), order = [];
   ["fav", "ban"].forEach(function(kind){
@@ -5752,10 +5770,7 @@ function parseCode2(txt){
   });
   out.town.bless = bl;
 
-  /* 宝珠：老码没有这一段 —— 只有「读这 1 bit」这一下允许读到底，后面照常报错 */
-  let hasOrb = 0;
-  try{ hasOrb = r.bits(1); }catch(e){ hasOrb = 0; }
-  if(hasOrb){
+  if(r.more()){                                            // 宝珠
     const od = {seq:0, spent:r.vint(), bag:[], eq:[]}, n = r.vint();
     for(let k = 0; k < n; k++){
       const c = r.vint(), b = r.vint(), lv = r.vint(), pt = r.vint(), na = r.vint(), a = [];
@@ -5767,43 +5782,39 @@ function parseCode2(txt){
                    b: b && ORB_BASE[b - 1] ? ORB_BASE[b - 1].id : "", lv:lv, pt:pt, a:a});
     }
     od.seq = n;
-    for(let i = 0; i < ORB_SLOTS; i++) od.eq.push(r.vint());   // 下标 +1 正好就是上面给的 uid
+    for(let i = 0; i < ORB_SLOTS; i++) od.eq.push(r.vint());
     out.town.orb = od;
   }
-  /* 中文词库 + 新手教程（老码没有这一段，读这 1 bit 允许读到底）*/
-  let hasZh = 0;
-  try{ hasZh = r.bits(1); }catch(e){ hasZh = 0; }
-  if(hasZh){
-    if(!getLex(r, ZH_WORDS, out.lex)) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+  if(r.more()){                                            // 中文 + 教程 → 西语 → 日语
+    getLex(r, ZH_WORDS, out.lex, "", notes);
     out.meta.tut = r.bits(1);
-    let hasEs = 0;
-    try{ hasEs = r.bits(1); }catch(e){ hasEs = 0; }
-    if(hasEs && !getLex(r, ES_WORDS, out.lex, "es:")) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
-    let hasJa = 0;
-    if(hasEs){ try{ hasJa = r.bits(1); }catch(e){ hasJa = 0; } }
-    if(hasJa && !getLex(r, JA_WORDS, out.lex, "ja:")) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+    if(r.more()){
+      getLex(r, ES_WORDS, out.lex, "es:", notes);
+      if(r.more()) getLex(r, JA_WORDS, out.lex, "ja:", notes);
+    }
   }
   out.note = notes.join(T("；"));
   return out;
 }
-/* 三种都认：新码 YX2、老码 YX1、以及直接粘进来的存档文件 JSON */
+/* 四种都认：新码 YX3、老码 YX2 / YX1、以及直接粘进来的存档文件 JSON */
 function applyCode(txt){
   txt = (txt || "").trim();
   if(!txt) return T("剪贴板里没有存档码。");
   /* 测试口令（用户 2026-09-23 要的）：粘贴「audience2006」直接 +10000 宝石，次数不限 */
   if(txt === "audience2006"){ addGems(10000); return T("测试口令：宝石 +10000（现在 ") + TOWN.gem + T(" 颗）。"); }
   let o;
+  const code = txt.replace(/[\s\u200B-\u200D\uFEFF]+/g, "");   // 聊天软件会插空格 / 换行 / 零宽字符
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
     catch(e){ return T("这段文本读不出来 —— 像是存档文件但缺了一截。"); }
-  } else if(txt.replace(/\s+/g, "").indexOf(CODE2_TAG) === 0){
-    try{ o = parseCode2(txt.replace(/\s+/g, "")); }
+  } else if(code.indexOf(CODE3_TAG) === 0 || code.indexOf(CODE2_TAG) === 0){
+    try{ o = code.indexOf(CODE3_TAG) === 0 ? parseCode3(code) : parseCode2(code); }
     catch(e){ return T("这串码读不出来：") + e.message + T("。"); }
-  } else if(txt.replace(/\s+/g, "").indexOf(CODE_TAG) === 0){
-    try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
+  } else if(code.indexOf(CODE_TAG) === 0){
+    try{ o = JSON.parse(b64dec(code.slice(CODE_TAG.length))); }
     catch(e){ return T("这串老码读不出来，多半是复制时漏了一截。"); }
   } else {
-    return T("这不像存档码 —— 它应该以 ") + CODE2_TAG + T(" 开头。");
+    return T("这不像存档码 —— 它应该以 ") + CODE3_TAG + T(" 开头。");
   }
   if(!o || typeof o !== "object" || !o.lex) return T("这串码里没有存档数据。");
   const note = o.note;

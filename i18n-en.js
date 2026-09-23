@@ -495,6 +495,8 @@ Object.assign(I18N, {
 "<div class=\"cx lost\"><div class=\"cn\">没找到「": "<div class=\"cx lost\"><div class=\"cn\">Nothing found for “",
 "」</div></div>": "”</div></div>",
 "码短了": "Code is too short",
+"码坏了": "The code is corrupted",
+"码里混进了别的字符": "The code contains characters that don't belong to it",
 "码里的条数比词库还多": "Code has more entries than the word bank",
 "码里的条数对不上": "Entry count doesn't match",
 "码里的下标超出范围": "Index out of range",

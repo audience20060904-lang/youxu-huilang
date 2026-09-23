@@ -121,7 +121,7 @@ Object.assign(I18N, {
   "走位躲怪，刀会自己挥。每升一级从四件遗物里挑一件。轮数没有尽头。": "Dodge the horde — your blade swings on its own.",
   "回主城": "Back to town",
   "继续": "Continue",
-  "下场": "Enter",
+  "进入": "Enter",
   "刷新": "Refresh",
   "返回": "Back",
   "升到 2 级": "Level 2",
