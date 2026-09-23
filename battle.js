@@ -730,7 +730,60 @@ var BF_TOWERS = [
   pw:"驻 2 名士兵，冲上去拦住射程内的敌人、每 0.9 秒砍一刀；被拦住的敌人会停下来打士兵。倒下的士兵 10 秒后复活。",
   s2:{t:"驻兵 2 → 3 名", men:3},
   s3:{t:"士兵每一刀横扫身边一圈，每人能同时拦住 2 个敌人", cleave:46, blockN:2},
-  lore:"号角一响，营门里就有人往外走，从来没有人问为什么。"}
+  lore:"号角一响，营门里就有人往外走，从来没有人问为什么。"},
+
+ /* ===== 第六批 9 座（用户 2026-09-23：「加多一些塔的设计」）=====
+    还是那条规矩：**每一座都是别人没有的打法**。新开 8 个 kind：
+      spin 绕着转的刀 / repel 往外震 / intercept 打掉敌人的弹 / xp 经验圈 /
+      fence 跟邻塔拉一道电网 / soul 攒魂越打越痛 / mimic 照抄旁边的塔 / bell 按当前血量敲一截
+    骑士团走兵营那套（kind:"barracks"），只是换了一组数和三星。
+    结算在 updateTowers() 的「第六批」那一段 + fireTower()，画法在 drawTowerShots() / drawTowerAmb()。 */
+ {id:"tw_pendulum", n:"旋刃台", r:0, shape:"pendulum", range:100, cd:1.4, dmg:0.50, kind:"spin",
+  pw:"一把长刃绕着塔一直转（1.4 秒一圈），扫到的敌人受伤害。",
+  s2:{t:"两把刃", blades:2},
+  s3:{t:"被扫到的敌人着火 3 秒，每秒再烧一次", ignite:3},
+  lore:"它从来不瞄准，它只是不停下来。"},
+ {id:"tw_bumper", n:"震退桩", r:0, shape:"bumper", range:95, cd:1.6, dmg:0.25, kind:"repel", push:22,
+  pw:"每 1.6 秒震一下，把范围内的敌人往外推开一大步，顺带一点伤害。",
+  s2:{t:"范围扩大 50%", rangeX:1.5},
+  s3:{t:"被震开的敌人定身 0.5 秒", stun:0.5},
+  lore:"站在它旁边的人，从来不用担心背后。"},
+ {id:"tw_ward", n:"截弹塔", r:1, shape:"ward", range:160, cd:0.5, dmg:1.0, kind:"intercept",
+  pw:"没有伤害。每 0.5 秒打掉射程内离塔最近的一颗敌人弹丸。",
+  s2:{t:"一次打掉两颗", interN:2},
+  s3:{t:"打掉的弹丸原路射回去，打中发射它的那只（Boss 的不算）", reflect:true},
+  lore:"它只看天上，地上的事不归它管。"},
+ {id:"tw_tome", n:"书院", r:1, shape:"tome", range:170, cd:0, kind:"xp", xpPct:0.4,
+  pw:"没有伤害。范围内倒下的敌人多给 40% 经验。",
+  s2:{t:"范围扩大 60%", rangeX:1.6},
+  s3:{t:"覆盖全场，经验加成 40% → 70%", xpAll:true, xpPct:0.7},
+  lore:"每一只倒下的东西，都有人替你记着它是怎么倒下的。"},
+ {id:"tw_fence", n:"电篱桩", r:2, shape:"fence", range:260, cd:0.4, dmg:0.45, kind:"fence", links:1,
+  pw:"跟 260 以内最近的一座塔之间拉一道电网，穿过它的敌人每 0.4 秒受一次伤害。旁边没有塔就不起作用。",
+  s2:{t:"同时连最近的两座塔", links:2},
+  s3:{t:"碰到电网的敌人移速 −50%", slowHit:{pct:0.5, sec:0.6}},
+  lore:"两根桩子之间什么都没有，除了你最好别碰的那一样。"},
+ {id:"tw_soul", n:"噬魂灯", r:2, shape:"soul", range:180, cd:1.6, dmg:0.90, kind:"soul", speed:380, soulMax:30,
+  pw:"范围内每倒下一只敌人就收一个魂（最多 30，每次部署清空），每 1.6 秒射一发魂火，每个魂 +10% 伤害。",
+  s2:{t:"魂火命中炸开 50 范围", splash:50},
+  s3:{t:"每攒 10 个魂，每次多射一发", soulExtra:10},
+  lore:"灯油是什么做的，最好别问。"},
+ {id:"tw_knight", n:"骑士团", r:2, shape:"knight", range:140, cd:1.0, dmg:1.30, kind:"barracks",
+  men:1, menHp:3.5, menR:11, resp:12, blockN:3, cleave:40,
+  pw:"驻 1 名重甲骑士，每人拦 3 个敌人，每 1.0 秒横扫身边一圈。倒下 12 秒后复活。",
+  s2:{t:"驻两名骑士", men:2},
+  s3:{t:"骑士受到的伤害减半，倒下时炸开一圈（3 倍伤害）", menHalf:true, menBoom:3},
+  lore:"他们只守一样东西：身后那条线。"},
+ {id:"tw_mimic", n:"拟形镜", r:3, shape:"mimic", range:200, cd:0, dmg:0, kind:"mimic", mimicPct:0.8,
+  pw:"没有自己的攻击。照抄 200 以内离它最近的一座输出塔，从自己的位置打出同样的攻击（80% 伤害）。",
+  s2:{t:"同时照抄最近的两座", mimicN:2},
+  s3:{t:"抄出来的攻击带着那座塔的三星效果", mimicStar:3},
+  lore:"镜子里那座塔，比外面那座更相信自己。"},
+ {id:"tw_bell", n:"丧钟", r:4, shape:"bell", range:260, cd:6.0, dmg:1.20, kind:"bell", bellPct:0.12, bellBoss:0.04,
+  pw:"每 6 秒敲一响：范围内的敌人各掉当前生命的 12%（Boss 4%），另加一截伤害。",
+  s2:{t:"钟声把敌人定身 0.6 秒", stun:0.6},
+  s3:{t:"钟声覆盖全场；敲到的敌人 3 秒内受到所有塔的伤害 +30%", bellAll:true, bellVuln:30},
+  lore:"它为谁而鸣？为每一个听得见的。"}
 ];
 var TW_MAP = {};
 (function(){ for(var i = 0; i < BF_TOWERS.length; i++) TW_MAP[BF_TOWERS[i].id] = BF_TOWERS[i]; })();
@@ -787,7 +840,17 @@ var TW_FX = {
  tw_lance:  {c:"#2F7FD1"},
  tw_rift:   {c:"#5B2C83"},
  /* 第五批 */
- tw_barracks:{c:"#3E5C9A"}
+ tw_barracks:{c:"#3E5C9A"},
+ /* 第六批 */
+ tw_pendulum:{c:"#5D8AA8"},
+ tw_bumper:  {c:"#7F8C3D"},
+ tw_ward:    {c:"#48C9B0"},
+ tw_tome:    {c:"#6E2C00", amb:"page"},
+ tw_fence:   {c:"#00A8CC"},
+ tw_soul:    {c:"#3FBF9F", proj:"wisp", hit:"spark", amb:"soul"},
+ tw_knight:  {c:"#7F8FA6"},
+ tw_mimic:   {c:"#E59866", amb:"copy"},
+ tw_bell:    {c:"#B9770E"}
 };
 function twFx(d){ return TW_FX[d.id] || {}; }
 function twc(d){ return twFx(d).c || TW_COL[d.r]; }
@@ -1873,7 +1936,9 @@ function killFoe(f){
     fxBoom(f.x, f.y, 90, "#6F3D98");
     towerAoe(f.x, f.y, 90, Math.max(1, Math.round(f.maxHp * 0.4)), null);
   }
-  gainXp(f.xp);
+  /* 书院：倒在它圈里的多给经验（取最强的那一座，不叠加）；噬魂灯：圈里每倒一只收一个魂 */
+  gainXp(Math.max(1, Math.round(f.xp * (1 + xpAuraAt(f.x, f.y)))));
+  soulFeed(f.x, f.y);
   /* 拾荒幡：倒在它范围里就多掉一笔（三星还有概率再掉一份、二星直接入账）*/
   var ga = goldAuraAt(f.x, f.y), gn = f.gold;
   if(ga.pct > 0){
@@ -2020,7 +2085,7 @@ function shoot(f, s){
   for(i = 0; i < n; i++){
     var off = n > 1 ? (i - (n - 1) / 2) * d.spread * Math.PI / 180 : 0;
     E.shots.push({x:f.x, y:f.y, vx:Math.cos(a0 + off) * d.speed, vy:Math.sin(a0 + off) * d.speed,
-                  r:d.r, dmg:f.dmg, col:f.col, life:4, slow:d.slow || null});
+                  r:d.r, dmg:f.dmg, col:f.col, life:4, slow:d.slow || null, src:f});   // src：截弹塔三星往回射
   }
 }
 
@@ -2205,7 +2270,7 @@ function updateFoes(dt){
       if(bl){
         var bx = bl.x - f.x, by = bl.y - f.y, bdd = Math.hypot(bx, by) || 1;
         tx = bx / bdd; ty = by / bdd;
-        if(bdd <= f.r + SOL_R) sp = 0;
+        if(bdd <= f.r + (bl.r || SOL_R)) sp = 0;
       }
       /* 幽魂的飘移 */
       if(def.wob){ var w2 = Math.sin(f.t * 2.4) * 0.5;
@@ -2236,7 +2301,7 @@ function updateFoes(dt){
                            repeat:!!G.catSeen[f.id], touch:true});
         G.catSeen[f.id] = 1;
       } else if(f.blockBy && f.touch <= 0 && !f.blockBy.dead &&
-                Math.hypot(f.blockBy.x - f.x, f.blockBy.y - f.y) < f.r + SOL_R + 4){
+                Math.hypot(f.blockBy.x - f.x, f.blockBy.y - f.y) < f.r + (f.blockBy.r || SOL_R) + 4){
         /* 被拦住的怪砍士兵：同一个接触冷却，砍了士兵这一下就砍不到你 */
         f.touch = BF.touchCd;
         hurtMan(f.blockBy, f.dmg);
@@ -2709,6 +2774,7 @@ function openDeployUI(){
     tb.warn = 0; tb.vortT = 0; tb.beamT = 0; tb.tgt = null; tb.cd = 0; tb.rep = 0; tb.repT = 0;
     tb.drainT = 0; tb.dtgts = null; tb.beamTs = null;
     resetMen(tb);                         // 兵营：满血站回营门口
+    tb.souls = 0; tb.mc = null; tb.hitT = null;   // 噬魂灯的魂每次部署清空；拟形镜 / 旋刃台的计时重来
   }
   for(i = 0; i < E.foes.length; i++) E.foes[i].blockBy = null;
   $("deploy").hidden = false;
@@ -2857,6 +2923,40 @@ function towerPower(){ return Math.max(1, Math.round(P.power || bstats().atk)); 
 function towerRelicPct(){
   return (has("spare") ? 0.10 : 0) + orbAdd("tower") / 100 + (orbOn("blue2") ? 0.25 : 0);   // 宝珠蓝 2 + 词条
 }
+/* 一座塔（def + 升星效果 se）在这一组光环加成 m 下的实际属性。
+   refreshTowerStats() 每帧给每座塔算一次；拟形镜用它把**别人的塔**按自己的加成再算一遍。 */
+function efFrom(d, se, m, x, y){
+  return {
+    range: d.range * (1 + m.rangeUp) * (se.rangeX || 1),
+    cd: Math.max(0.08, d.cd / (1 + m.aspdUp) * (1 - Math.min(0.6, m.cdCut)) * sapMul(x, y)),
+    dmg: Math.round(towerPower() * (d.dmg || 0) * (1 + m.dmgUp)),
+    /* ---- 升星换来的效果（见 starEff）---- */
+    shots:  se.shots || 1,
+    splash: se.splash || d.splash || 0,
+    bounce: se.bounce || 0,
+    /* ⚠️ 穿透 / 扇形枚数 / 地雷上限 / 削甲**底表上也能写**（贯石弩、散花台、铁蒺藜、裂甲桩），
+       所以这四项都是「升星优先、底表兜底」。 */
+    pierce: !!(se.pierce || d.pierce),
+    burstN: se.burstN || d.burstN || 1,
+    mineMax: se.mineMax || d.mineMax || 0,
+    shred:  se.shred || d.shred || 0,
+    chain:  se.chain || d.chain || 0,
+    split:  se.split || d.split || 0,           // 折光棱：命中后裂成几道
+    splitDeep: !!se.splitDeep,
+    markN:  se.markN || d.markN || 0,
+    markPct: se.markPct || d.markPct || 0,
+    markBoom: !!se.markBoom,
+    exec:   se.exec || 0,
+    stun:   se.stun || 0,
+    slowHit: se.slowHit || d.slow || null,
+    ccX:    se.ccX || d.ccX || 0,
+    beamN:  se.beamN || 1,
+    /* 兵营：驻几名 / 每人拦几个 / 三星的横扫半径 */
+    men:    se.men || d.men || 0,
+    blockN: se.blockN || d.blockN || 1,
+    cleave: se.cleave || d.cleave || 0
+  };
+}
 function refreshTowerStats(){
   var i, j, t, o;
   /* ⚠️ 先把每座塔的升星效果都算出来 —— 下面那一圈要读**别人**的 t.se（光环覆盖全场就在里面）。 */
@@ -2878,36 +2978,9 @@ function refreshTowerStats(){
       if(a.cdCut)   cdCut   += a.cdCut;
       if(a.rangeUp) rangeUp += a.rangeUp;
     }
-    t.ef = {
-      range: d.range * (1 + rangeUp) * (se.rangeX || 1),
-      cd: Math.max(0.08, d.cd / (1 + aspdUp) * (1 - Math.min(0.6, cdCut)) * sapMul(t.x, t.y)),
-      dmg: Math.round(towerPower() * (d.dmg || 0) * (1 + dmgUp)),
-      /* ---- 升星换来的效果（见 starEff）---- */
-      shots:  se.shots || 1,
-      splash: se.splash || d.splash || 0,
-      bounce: se.bounce || 0,
-      /* ⚠️ 穿透 / 扇形枚数 / 地雷上限 / 削甲**底表上也能写**（贯石弩、散花台、铁蒺藜、裂甲桩），
-         所以这四项都是「升星优先、底表兜底」。 */
-      pierce: !!(se.pierce || d.pierce),
-      burstN: se.burstN || d.burstN || 1,
-      mineMax: se.mineMax || d.mineMax || 0,
-      shred:  se.shred || d.shred || 0,
-      chain:  se.chain || d.chain || 0,
-      split:  se.split || d.split || 0,           // 折光棱：命中后裂成几道
-      splitDeep: !!se.splitDeep,
-      markN:  se.markN || d.markN || 0,
-      markPct: se.markPct || d.markPct || 0,
-      markBoom: !!se.markBoom,
-      exec:   se.exec || 0,
-      stun:   se.stun || 0,
-      slowHit: se.slowHit || d.slow || null,
-      ccX:    se.ccX || d.ccX || 0,
-      beamN:  se.beamN || 1,
-      /* 兵营：驻几名 / 每人拦几个 / 三星的横扫半径 */
-      men:    se.men || d.men || 0,
-      blockN: se.blockN || 1,
-      cleave: se.cleave || 0
-    };
+    /* 拟形镜要拿**自己身上的光环加成**去套别人的塔，所以四样加成挂在塔上（t.mods）、属性走 efFrom() */
+    t.mods = {aspdUp:aspdUp, dmgUp:dmgUp, cdCut:cdCut, rangeUp:rangeUp};
+    t.ef = efFrom(d, se, t.mods, t.x, t.y);
   }
 }
 /* 「掘垒者」活着的时候，身边 r 内的塔攻击间隔 ×mult（取最狠的那一个，不叠乘）。
@@ -3293,6 +3366,184 @@ function fireTower(t, ef){
     E.tshots.push({kind:"rift", x:f.x, y:f.y, r:d.riftR, life:d.riftLife, max:d.riftLife, tick:0,
                    dmg:ef.dmg, col:col, ef:ef, move:!!se.riftMove, close:se.riftClose || 0,
                    spin:Math.random() * 6.28});
+
+  /* ===================== 第六批（用户 2026-09-23：「加多一些塔的设计」）===================== */
+  } else if(d.kind === "soul"){
+    /* 噬魂灯：每个魂 +10% 伤害；三星每攒 soulExtra 个多射一发 */
+    f = t.tgt; if(!f || f.dead) return;
+    a = Math.atan2(f.y - t.y, f.x - t.x);
+    var sm = 1 + 0.1 * (t.souls || 0), sn = 1 + (se.soulExtra ? Math.floor((t.souls || 0) / se.soulExtra) : 0);
+    for(i = 0; i < sn; i++)
+      towerBolt(t, ef, a + (i - (sn - 1) / 2) * 0.2, {dmg:Math.max(1, Math.round(ef.dmg * sm)), r:6});
+    fxSpark(t.x, t.y - 10, col, 3);
+  } else if(d.kind === "repel"){
+    /* 震退桩：往外推一大步（击退走怪自己的 kx / ky，精英和 Boss 推不动），三星顺手定身 */
+    fxRing(t.x, t.y, ef.range, col); fxDust(t.x, t.y, ef.range * 0.7, col);
+    var rl = E.foes.slice();
+    for(i = 0; i < rl.length; i++){
+      f = rl[i]; if(f.dead) continue;
+      var rx = f.x - t.x, ry = f.y - t.y, rd = Math.hypot(rx, ry) || 1;
+      if(rd > ef.range + f.r) continue;
+      if(!f.boss && !f.noKnock && !f.def.noKnock){ f.kx = rx / rd * d.push; f.ky = ry / rd * d.push; }
+      towerHurt(f, ef.dmg, ef);
+    }
+  } else if(d.kind === "intercept"){
+    /* 截弹塔：打掉离塔最近的敌人弹丸；三星原路射回去打发射它的那只（Boss 的弹没有 src，不算）*/
+    var ni = se.interN || 1;
+    for(var k2 = 0; k2 < ni; k2++){
+      var bi = -1, bd = ef.range;
+      for(i = 0; i < E.shots.length; i++){
+        var dd3 = Math.hypot(E.shots[i].x - t.x, E.shots[i].y - t.y);
+        if(dd3 < bd){ bd = dd3; bi = i; }
+      }
+      if(bi < 0) break;
+      var sh = E.shots[bi]; E.shots.splice(bi, 1);
+      fxLine(t.x, t.y - 8, sh.x, sh.y, col, 2); fxSpark(sh.x, sh.y, col, 4);
+      if(se.reflect && sh.src && !sh.src.dead && !sh.src.boss){
+        fxLine(sh.x, sh.y, sh.src.x, sh.src.y, col, 1.5);
+        towerHurt(sh.src, ef.dmg, ef);
+      }
+    }
+  } else if(d.kind === "fence"){
+    /* 电篱桩：连线上的敌人各吃一下（同一次里连两条线也只算一次）*/
+    var hitE = [], lk = t.links || [];
+    for(i = 0; i < lk.length; i++){
+      var lo = lk[i], la2 = Math.atan2(lo.y - t.y, lo.x - t.x), ll = Math.hypot(lo.x - t.x, lo.y - t.y);
+      var onE = foesOnLine(t.x, t.y, la2, ll, 8);
+      for(var q2 = 0; q2 < onE.length; q2++){
+        if(hitE.indexOf(onE[q2]) >= 0) continue;
+        hitE.push(onE[q2]); fxSpark(onE[q2].x, onE[q2].y, col, 2);
+        towerHurt(onE[q2], ef.dmg, ef);
+      }
+    }
+  } else if(d.kind === "bell"){
+    /* 丧钟：按**当前**生命敲掉一截（Boss 4%），另加一截塔伤害；三星覆盖全场 + 3 秒易伤（借窥影镜的 mark）*/
+    var br = se.bellAll ? Infinity : ef.range;
+    if(br < Infinity) fxDash(t.x, t.y, br, col);
+    fxRing(t.x, t.y, 34, col); fxRing(t.x, t.y, 52, col);
+    var bl2 = E.foes.slice();
+    for(i = 0; i < bl2.length; i++){
+      f = bl2[i]; if(f.dead) continue;
+      if(Math.hypot(f.x - t.x, f.y - t.y) > br + f.r) continue;
+      if(se.bellVuln){
+        if(!(f.mark > 0)) f.markBoom = 0;               // 别把窥影镜三星的「倒下就炸」顺手续上
+        f.mark = Math.max(f.mark || 0, 3); f.markPct = Math.max(f.markPct || 0, se.bellVuln);
+      }
+      towerHurt(f, ef.dmg + f.hp * (f.boss ? d.bellBoss : d.bellPct), ef);
+    }
+  }
+}
+/* ===== 第六批的几个小工具 ===== */
+/* 截弹 / 丧钟 / 电网 / 震退：这一下有没有活可干（没有就不空烧 CD）*/
+function sixReady(t, ef, se){
+  var d = t.def, i;
+  if(d.kind === "intercept"){
+    for(i = 0; i < E.shots.length; i++) if(Math.hypot(E.shots[i].x - t.x, E.shots[i].y - t.y) < ef.range) return true;
+    return false;
+  }
+  if(d.kind === "fence") return !!(t.links && t.links.length) && liveFoes() > 0;
+  if(d.kind === "bell" && se.bellAll) return liveFoes() > 0;
+  return !!towerTarget(t, ef.range);
+}
+/* 电篱桩：range 以内最近的 n 座**别的塔** */
+function fenceLinks(t, n, range){
+  var c = [], i, o;
+  for(i = 0; i < E.builds.length; i++){
+    o = E.builds[i];
+    if(o === t || o.k !== "tower") continue;
+    var dd = Math.hypot(o.x - t.x, o.y - t.y);
+    if(dd <= range) c.push({o:o, d:dd});
+  }
+  c.sort(function(p1, p2){ return p1.d - p2.d; });
+  return c.slice(0, n).map(function(x){ return x.o; });
+}
+/* 书院：这个位置倒下的敌人多给几成经验（取最强的一座，不叠加）*/
+function xpAuraAt(x, y){
+  var best = 0;
+  if(!E || !E.builds) return 0;
+  for(var i = 0; i < E.builds.length; i++){
+    var b = E.builds[i];
+    if(b.k !== "tower" || b.def.kind !== "xp" || b.silT > 0) continue;
+    var se = b.se || starEff(b), r = se.xpAll ? Infinity : (b.ef ? b.ef.range : b.def.range);
+    if(Math.hypot(b.x - x, b.y - y) > r) continue;
+    best = Math.max(best, se.xpPct || b.def.xpPct);
+  }
+  return best;
+}
+/* 噬魂灯：圈里每倒一只收一个魂（封 soulMax，每次部署清空）*/
+function soulFeed(x, y){
+  for(var i = 0; i < E.builds.length; i++){
+    var b = E.builds[i];
+    if(b.k !== "tower" || b.def.kind !== "soul" || b.silT > 0) continue;
+    if(Math.hypot(b.x - x, b.y - y) > (b.ef ? b.ef.range : b.def.range)) continue;
+    b.souls = Math.min(b.def.soulMax, (b.souls || 0) + 1);
+  }
+}
+/* 旋刃台：几把刃绕着塔一直转，扫到的敌人吃一下。
+   同一只敌人被这座塔扫到之后要歇「一圈 ÷ 刃数 × 0.8」才能再被扫（t.hitT，Map：敌人 → 还剩几秒）。 */
+function updateSpin(t, dt, ef, se){
+  var n = se.blades || 1, i, k, f;
+  t.ang = ((t.ang || 0) + 6.2832 * dt / ef.cd) % 6.2832;
+  if(!t.hitT) t.hitT = new Map();
+  t.hitT.forEach(function(v, key){ if(v - dt <= 0 || key.dead) t.hitT.delete(key); else t.hitT.set(key, v - dt); });
+  var list = E.foes.slice();
+  for(i = 0; i < list.length; i++){
+    f = list[i]; if(f.dead || t.hitT.has(f)) continue;
+    var dx = f.x - t.x, dy = f.y - t.y, dd = Math.hypot(dx, dy);
+    if(dd > ef.range + f.r || dd < 4) continue;
+    var fa = Math.atan2(dy, dx), tol = Math.atan2(f.r + 6, dd);
+    for(k = 0; k < n; k++){
+      var da = fa - (t.ang + k * 6.2832 / n);
+      while(da > Math.PI) da -= 6.2832;
+      while(da < -Math.PI) da += 6.2832;
+      if(Math.abs(da) > tol) continue;
+      t.hitT.set(f, ef.cd / n * 0.8);
+      if(se.ignite){ f.burnT = Math.max(f.burnT || 0, se.ignite);
+                     f.burnD = Math.max(f.burnD || 0, Math.max(1, ef.dmg)); }
+      fxSpark(f.x, f.y, twc(t.def), 2);
+      towerHurt(f, ef.dmg, ef);
+      break;
+    }
+  }
+}
+/* 拟形镜：照抄 range 以内最近的 n 座输出塔，从自己的位置打出同样的攻击。
+   ⚠️ 只抄「挑目标 → 开火」那一类（MIMIC_OK）—— 光环 / 回血 / 经济 / 兵营 / 地雷 / 带抬手的（重炮 / 聚能炮）
+      / 光束 / 血藤那些要在塔身上挂状态的不抄，抄了会把状态挂到一个画不出来的替身上。
+   每一座抄的对象占一个槽（t.mc[k]）：自己的冷却、自己的替身（px，一个假的塔对象，fireTower 读它）。
+   属性走 efFrom()：**被抄那座塔的底表 + 升星**，套**拟形镜自己身上**的光环加成，再乘 mimicPct。 */
+var MIMIC_OK = {shot:1, burst:1, lob:1, aoe:1, chain:1, storm:1, flame:1, fissure:1, homing:1,
+                boomer:1, cloud:1, rift:1, soul:1, repel:1, bell:1};
+function updateMimic(t, dt){
+  var d = t.def, se = t.se || {}, n = se.mimicN || 1, c = [], i, o;
+  for(i = 0; i < E.builds.length; i++){
+    o = E.builds[i];
+    if(o === t || o.k !== "tower" || !MIMIC_OK[o.def.kind] || o.def.warn) continue;
+    var dd = Math.hypot(o.x - t.x, o.y - t.y);
+    if(dd <= t.ef.range) c.push({o:o, d:dd});
+  }
+  c.sort(function(p1, p2){ return p1.d - p2.d; });
+  t.copyOf = c.slice(0, n).map(function(x){ return x.o; });
+  if(!t.mc) t.mc = [];
+  t.mc.length = Math.min(t.mc.length, t.copyOf.length);
+  for(i = 0; i < t.copyOf.length; i++){
+    o = t.copyOf[i];
+    var slot = t.mc[i] || (t.mc[i] = {cd:0.3, src:null, px:null, rep:0, repT:0});
+    if(slot.src !== o){ slot.src = o; slot.cd = 0.3; slot.rep = 0;
+                        slot.px = {k:"tower", t:0, cd:0, warn:0, tgt:null, souls:0}; }
+    var ose = se.mimicStar ? starEff({def:o.def, star:se.mimicStar}) : (o.se || starEff(o));
+    var ef2 = efFrom(o.def, ose, t.mods || {aspdUp:0, dmgUp:0, cdCut:0, rangeUp:0}, t.x, t.y);
+    ef2.dmg = Math.max(1, Math.round(ef2.dmg * d.mimicPct));
+    var px = slot.px;
+    px.def = o.def; px.tid = o.tid; px.x = t.x; px.y = t.y; px.se = ose; px.t = t.t;
+    px.star = se.mimicStar || o.star; px.souls = o.souls || 0;      // 抄噬魂灯时连魂一起抄
+    if(slot.rep > 0){ slot.repT -= dt; if(slot.repT <= 0){ slot.repT = 0.12; slot.rep--; fireTower(px, ef2); } }
+    slot.cd -= dt;
+    if(slot.cd > 0) continue;
+    var rr = (o.def.kind === "bell" && ose.bellAll) ? Infinity : ef2.range;
+    px.tgt = towerTarget(px, rr);
+    if(!px.tgt){ slot.cd = 0.1; continue; }
+    slot.cd = ef2.cd; fireTower(px, ef2); slot.rep = ef2.shots - 1; slot.repT = 0.12;
+    fxLine(o.x, o.y - 8, t.x, t.y - 8, twc(d), 1);
   }
 }
 
@@ -3332,10 +3583,16 @@ function updateTowers(dt){
       updateBarracks(t, dt, ef, st);
       continue;
     }
+    /* 第六批里不走「挑目标 → 开火」那一套的两座：旋刃台一直在转、拟形镜自己管自己抄的几座 */
+    if(d.kind === "spin" || d.kind === "mimic"){
+      if(t.silT > 0){ t.silT -= dt; t.copyOf = null; continue; }
+      if(d.kind === "spin") updateSpin(t, dt, ef, se); else updateMimic(t, dt);
+      continue;
+    }
     /* 「缚锁者」封住的塔这几秒完全停手（光环塔也一样失效）—— 见 BF_FOES.warder */
     if(t.silT > 0){ t.silT -= dt; t.warn = 0; t.vortT = 0; t.rep = 0; continue; }
     /* 纯被动：光环 / 拾荒幡 / 金库。霜灯三星的「冻一下」是光环塔里唯一会动的东西。 */
-    if(d.kind === "aura" || d.kind === "gold" || d.kind === "vault"){
+    if(d.kind === "aura" || d.kind === "gold" || d.kind === "vault" || d.kind === "xp"){
       /* ⚠️ 定身**底表上也能写**（停摆钟自带，霜灯是三星才有）—— 升星那一份优先。 */
       var fz = se.freeze || d.freeze;
       if(fz){
@@ -3394,8 +3651,16 @@ function updateTowers(dt){
       if(t.warn <= 0){ fireTower(t, ef); t.rep = ef.shots - 1; t.repT = 0.12; }
       continue;
     }
+    /* 电篱桩的连线每帧现找（画面要跟着走）*/
+    if(d.kind === "fence") t.links = fenceLinks(t, se.links || d.links, ef.range);
     t.cd -= dt;
     if(t.cd > 0) continue;
+    /* 第六批：截弹 / 丧钟 / 电网 / 震退 —— 不要「一个目标」，各自看有没有活可干 */
+    if(d.kind === "intercept" || d.kind === "bell" || d.kind === "fence" || d.kind === "repel"){
+      if(!sixReady(t, ef, se)){ t.cd = 0.1; continue; }
+      t.cd = ef.cd; fireTower(t, ef);
+      continue;
+    }
     /* 铁蒺藜：自己埋的雷到上限就歇着（数的是场上还剩几枚）*/
     if(d.kind === "mine"){
       var mn = 0;
@@ -3471,11 +3736,15 @@ function resetMen(t){
 }
 function hurtMan(m, dmg){
   if(m.dead) return;
+  var tw = m.tw, se = (tw && tw.se) || {};
+  if(se.menHalf) dmg = Math.ceil(dmg / 2);                 // 骑士团三星：挨打减半
   m.hp -= dmg; m.flash = 0.12;
   if(m.hp > 0) return;
   m.hp = 0; m.dead = true; m.resp = m.respMax;
   releaseMan(m);
   fxPop(m.x, m.y, "#A93729"); fxSpark(m.x, m.y, "#8A8378", 5);
+  /* 骑士团三星：倒下时炸开一圈 */
+  if(se.menBoom && tw.ef){ fxBoom(m.x, m.y, 70, twc(tw.def)); towerAoe(m.x, m.y, 70, tw.ef.dmg * se.menBoom, null, 0, tw.ef); }
 }
 function updateBarracks(t, dt, ef, st){
   var d = t.def, n = ef.men, i, j, m, f;
@@ -3486,7 +3755,7 @@ function updateBarracks(t, dt, ef, st){
   while(t.men.length < n){
     var sp0 = manSpot(t, t.men.length, n);
     t.men.push({x:sp0.x, y:sp0.y, hp:maxHp, maxHp:maxHp, dead:false, resp:0, respMax:d.resp,
-                cd:0, foes:[], hunt:null, swT:0, flash:0});
+                cd:0, foes:[], hunt:null, swT:0, flash:0, r:d.menR || SOL_R, tw:t});
   }
   var silent = t.silT > 0, reach = ef.range, worst = 0;
   for(i = 0; i < t.men.length; i++){
@@ -3541,13 +3810,13 @@ function updateBarracks(t, dt, ef, st){
     var tg = m.foes[0] || m.hunt;
     /* 走位：有目标就贴上去，没有就回营门口（回去的路上慢慢回血）*/
     var gx = tg ? tg.x : home.x, gy = tg ? tg.y : home.y;
-    var stop = tg ? tg.r + SOL_R : 2;
+    var mr = m.r || SOL_R, stop = tg ? tg.r + mr : 2;
     var vx = gx - m.x, vy = gy - m.y, vd = Math.hypot(vx, vy);
     if(vd > stop){ var mv = Math.min(vd - stop, SOL_SPD * dt); m.x += vx / vd * mv; m.y += vy / vd * mv; m.dir = Math.atan2(vy, vx); }
     if(!tg && m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * SOL_REGEN * dt);
     /* 出刀 */
     m.cd -= dt;
-    if(tg && !silent && m.cd <= 0 && Math.hypot(tg.x - m.x, tg.y - m.y) <= tg.r + SOL_R + 8){
+    if(tg && !silent && m.cd <= 0 && Math.hypot(tg.x - m.x, tg.y - m.y) <= tg.r + mr + 8){
       m.cd = ef.cd; m.swT = 0.18; m.dir = Math.atan2(tg.y - m.y, tg.x - m.x);
       if(ef.cleave){
         fxArc(m.x, m.y, m.dir, ef.cleave, 360, twc(d));
@@ -4066,6 +4335,7 @@ function draw(){
 
   /* 塔的弹丸 / 光束 / 藤蔓（造型按塔分，见 drawTowerShots）*/
   if(fight) drawTowerShots();
+  if(fight) drawTowerSix();
 
   /* 弹丸 */
   if(fight) for(i = 0; i < E.shots.length; i++){ var s2 = E.shots[i];
@@ -4285,6 +4555,10 @@ function drawTowerShots(){
       ctx2.lineTo(X - ca * 5 + sa * 4, Y - sa * 5 - ca * 4); ctx2.lineTo(X - ca * 5 - sa * 4, Y - sa * 5 + ca * 4);
       ctx2.closePath(); ctx2.fill();
       ctx2.fillStyle = "#FFFFFF"; ctx2.beginPath(); ctx2.arc(X, Y, 1.5, 0, 6.2832); ctx2.fill();
+    } else if(ts.proj === "wisp"){                              // 魂火：一团往后拖的淡绿火苗
+      ctx2.globalAlpha = 0.35; ctx2.beginPath(); ctx2.arc(X - ca * 7, Y - sa * 7, 4, 0, 6.2832); ctx2.fill();
+      ctx2.globalAlpha = 1; ctx2.beginPath(); ctx2.arc(X, Y, 5, 0, 6.2832); ctx2.fill();
+      ctx2.fillStyle = "#E8FFF7"; ctx2.beginPath(); ctx2.arc(X + ca * 1.5, Y + sa * 1.5, 2, 0, 6.2832); ctx2.fill();
     } else {
       ctx2.fillRect(X - 3, Y - 3, 6, 6);
     }
@@ -4336,6 +4610,15 @@ function drawBuilds(){
       var rr = b.ef ? b.ef.range : b.def.range;
       ctx2.strokeStyle = twc(b.def); ctx2.globalAlpha = b.def.aura ? 0.28 : 0.16;
       ctx2.beginPath(); ctx2.arc(sx(b.x), sy(b.y), rr, 0, 6.2832); ctx2.stroke();
+      /* 电篱桩：部署时就把会连上的那几条线画出来 —— 它的全部玩法就是「跟谁连」 */
+      if(b.def.kind === "fence"){
+        var fl = fenceLinks(b, starEff(b).links || b.def.links, b.def.range);
+        ctx2.setLineDash([6, 5]); ctx2.globalAlpha = 0.7; ctx2.lineWidth = 2;
+        for(var fk = 0; fk < fl.length; fk++){
+          ctx2.beginPath(); ctx2.moveTo(sx(b.x), sy(b.y)); ctx2.lineTo(sx(fl[fk].x), sy(fl[fk].y)); ctx2.stroke();
+        }
+        ctx2.setLineDash([]); ctx2.lineWidth = 2;
+      }
     }
     ctx2.globalAlpha = 1;
     /* 拖动中的落点：绿圈能放、红圈放不下（挨太近或者出了摆放范围）*/
@@ -4363,7 +4646,9 @@ function drawBuilds(){
       if(b.k !== "tower") continue;
       /* 焚风口 / 血藤也画：一个射程很短、一个「你站在圈里才回血」；兵营画的是士兵出营拦人的范围 */
       var kd = b.def.kind;
-      if(kd !== "aoe" && kd !== "heal" && kd !== "gold" && kd !== "flame" && kd !== "drain" && kd !== "barracks") continue;
+      if(kd !== "aoe" && kd !== "heal" && kd !== "gold" && kd !== "flame" && kd !== "drain" && kd !== "barracks" &&
+         kd !== "spin" && kd !== "repel" && kd !== "xp" && kd !== "soul") continue;
+      if(kd === "xp" && b.se && b.se.xpAll) continue;          // 书院三星覆盖全场，不画圈
       ctx2.strokeStyle = twc(b.def); ctx2.globalAlpha = 0.13;
       ctx2.beginPath(); ctx2.arc(sx(b.x), sy(b.y), b.ef ? b.ef.range : b.def.range, 0, 6.2832);
       ctx2.stroke();
@@ -4421,22 +4706,23 @@ function drawMen(){
     for(j = 0; j < n; j++){
       m = b.men && b.men[j];
       sp = manSpot(b, j, n);
-      if(DEPLOY || !m){ drawMan(sp.x, sp.y, col, Math.PI / 2, 0, 1, false); continue; }
+      var mr = b.def.menR || SOL_R;
+      if(DEPLOY || !m){ drawMan(sp.x, sp.y, col, Math.PI / 2, 0, 1, false, mr); continue; }
       if(m.dead){
         var px = sx(sp.x), py = sy(sp.y), k = 1 - Math.max(0, m.resp) / (m.respMax || 1);
         ctx2.strokeStyle = col; ctx2.lineWidth = 1.5; ctx2.globalAlpha = 0.45; ctx2.setLineDash([3, 3]);
-        ctx2.beginPath(); ctx2.arc(px, py, SOL_R, 0, 6.2832); ctx2.stroke(); ctx2.setLineDash([]);
+        ctx2.beginPath(); ctx2.arc(px, py, mr, 0, 6.2832); ctx2.stroke(); ctx2.setLineDash([]);
         ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5;
-        ctx2.beginPath(); ctx2.arc(px, py, SOL_R + 3, -Math.PI / 2, -Math.PI / 2 + 6.2832 * k); ctx2.stroke();
+        ctx2.beginPath(); ctx2.arc(px, py, mr + 3, -Math.PI / 2, -Math.PI / 2 + 6.2832 * k); ctx2.stroke();
         ctx2.globalAlpha = 1;
         continue;
       }
-      drawMan(m.x, m.y, col, m.dir === undefined ? Math.PI / 2 : m.dir, m.swT, m.hp / m.maxHp, m.flash > 0);
+      drawMan(m.x, m.y, col, m.dir === undefined ? Math.PI / 2 : m.dir, m.swT, m.hp / m.maxHp, m.flash > 0, mr);
     }
   }
 }
-function drawMan(x, y, col, dir, swT, frac, flash){
-  var px = sx(x), py = sy(y), r = SOL_R - 1;
+function drawMan(x, y, col, dir, swT, frac, flash, rad){
+  var px = sx(x), py = sy(y), r = (rad || SOL_R) - 1;
   ctx2.fillStyle = "rgba(46,42,35,.16)";
   ctx2.beginPath(); ctx2.ellipse(px, py + r, r, 3, 0, 0, 6.2832); ctx2.fill();
   /* 刀：出刀那 0.18 秒从一侧扫到另一侧 */
@@ -4453,6 +4739,47 @@ function drawMan(x, y, col, dir, swT, frac, flash){
   if(frac < 1){
     ctx2.fillStyle = "rgba(46,42,35,.25)"; ctx2.fillRect(px - 9, py - r - 7, 18, 3);
     ctx2.fillStyle = col; ctx2.fillRect(px - 9, py - r - 7, 18 * Math.max(0, frac), 3);
+  }
+}
+/* 第六批留在场上的东西：旋刃台的刃、电篱桩的电网（抖动的双股线）。在弹丸层（怪上面）。 */
+function drawTowerSix(){
+  for(var i = 0; i < E.builds.length; i++){
+    var b = E.builds[i]; if(b.k !== "tower" || b.silT > 0) continue;
+    var kd = b.def.kind, col = twc(b.def), px = sx(b.x), py = sy(b.y), k, j;
+    ctx2.lineCap = "round";
+    if(kd === "spin" && b.ef){
+      var n = (b.se && b.se.blades) || 1, R = b.ef.range;
+      for(k = 0; k < n; k++){
+        var a = (b.ang || 0) + k * 6.2832 / n;
+        /* 刃后面拖一段淡的扇形，看得出往哪边转 */
+        ctx2.fillStyle = col; ctx2.globalAlpha = 0.12;
+        ctx2.beginPath(); ctx2.moveTo(px, py); ctx2.arc(px, py, R, a - 0.45, a); ctx2.closePath(); ctx2.fill();
+        ctx2.globalAlpha = 0.95; ctx2.strokeStyle = col; ctx2.lineWidth = 4;
+        ctx2.beginPath(); ctx2.moveTo(px + Math.cos(a) * 14, py + Math.sin(a) * 14);
+        ctx2.lineTo(px + Math.cos(a) * R, py + Math.sin(a) * R); ctx2.stroke();
+        ctx2.strokeStyle = "#FFFFFF"; ctx2.lineWidth = 1.2; ctx2.stroke();
+        if(b.se && b.se.ignite){                     // 三星：刃尖一点火
+          ctx2.fillStyle = "#E4671B"; ctx2.globalAlpha = 0.9;
+          ctx2.beginPath(); ctx2.arc(px + Math.cos(a) * R, py + Math.sin(a) * R, 3.5, 0, 6.2832); ctx2.fill();
+        }
+      }
+      ctx2.globalAlpha = 1;
+    } else if(kd === "fence" && b.links){
+      for(k = 0; k < b.links.length; k++){
+        var o = b.links[k], ox = sx(o.x), oy = sy(o.y), L = Math.hypot(ox - px, oy - py), seg = Math.max(2, Math.round(L / 18));
+        var nx = -(oy - py) / (L || 1), ny = (ox - px) / (L || 1);
+        for(j = 0; j < 2; j++){
+          ctx2.strokeStyle = col; ctx2.globalAlpha = j ? 0.9 : 0.35; ctx2.lineWidth = j ? 1.6 : 4;
+          ctx2.beginPath(); ctx2.moveTo(px, py - 6);
+          for(var q = 1; q < seg; q++){
+            var w = (Math.random() - 0.5) * 7;
+            ctx2.lineTo(px + (ox - px) * q / seg + nx * w, py - 6 + (oy - py) * q / seg + ny * w);
+          }
+          ctx2.lineTo(ox, oy - 6); ctx2.stroke();
+        }
+      }
+      ctx2.globalAlpha = 1;
+    }
   }
 }
 /* 光环塔 / 拾荒幡常驻的小动画（TW_FX.amb）—— 光环塔从来不「开火」，不画点什么就像摆设。
@@ -4506,6 +4833,27 @@ function drawTowerAmb(b, px, py){
       ctx2.beginPath(); ctx2.moveTo(px, py - 8); ctx2.lineTo(sx(E.me.x), sy(E.me.y)); ctx2.stroke();
       ctx2.setLineDash([]); ctx2.lineDashOffset = 0;
     }
+  } else if(am === "page"){                            // 书院：几页纸慢慢往上翻飞
+    for(i = 0; i < 2; i++){
+      ph = (t * 0.5 + i * 0.5) % 1;
+      var pgx = px + (i ? 8 : -8) + Math.sin(t * 2 + i) * 3, pgy = py - 12 - ph * 20;
+      ctx2.globalAlpha = 0.8 * (1 - ph); ctx2.lineWidth = 1.5;
+      ctx2.beginPath(); ctx2.moveTo(pgx - 3, pgy + 1); ctx2.lineTo(pgx, pgy - 1.5); ctx2.lineTo(pgx + 3, pgy + 1); ctx2.stroke();
+    }
+  } else if(am === "soul"){                            // 噬魂灯：攒了几个魂就绕几点（每 3 个一点，最多 10 点）
+    var sn = Math.min(10, Math.ceil((b.souls || 0) / 3));
+    ctx2.globalAlpha = 0.85;
+    for(i = 0; i < sn; i++){
+      var sa2 = t * 1.4 + i / Math.max(1, sn) * 6.2832;
+      ctx2.beginPath(); ctx2.arc(px + Math.cos(sa2) * 21, py + Math.sin(sa2) * 21 * 0.7, 2.2, 0, 6.2832); ctx2.fill();
+    }
+  } else if(am === "copy"){                            // 拟形镜：一条流动的虚线连到正在抄的那座塔
+    var cp = b.copyOf || [];
+    ctx2.globalAlpha = 0.5; ctx2.lineWidth = 1.5; ctx2.setLineDash([3, 6]); ctx2.lineDashOffset = t * 24;
+    for(i = 0; i < cp.length; i++){
+      ctx2.beginPath(); ctx2.moveTo(sx(cp[i].x), sy(cp[i].y)); ctx2.lineTo(px, py); ctx2.stroke();
+    }
+    ctx2.setLineDash([]); ctx2.lineDashOffset = 0;
   } else if(am === "glint"){                           // 拾荒幡：时不时一闪
     ph = (t * 0.7) % 1;
     if(ph < 0.25){
@@ -4643,6 +4991,40 @@ function drawTower(b, px, py){
       ctx2.beginPath(); ctx2.moveTo(px, py - 6); ctx2.lineTo(px, py - 10); ctx2.stroke();
       ctx2.fillStyle = ic; ctx2.beginPath(); ctx2.moveTo(px, py - 10); ctx2.lineTo(px + 5, py - 8.5);
       ctx2.lineTo(px, py - 7); ctx2.closePath(); ctx2.fill(); }
+  /* ---- 第六批（2026-09-23）---- */
+  else if(k === "pendulum"){ ctx2.arc(px, py, 2.6, 0, 6.2832); ctx2.fill();
+      var pa = (b.ang || 0);
+      ctx2.beginPath(); ctx2.lineWidth = 3; ctx2.moveTo(px - Math.cos(pa) * 9, py - Math.sin(pa) * 9);
+      ctx2.lineTo(px + Math.cos(pa) * 9, py + Math.sin(pa) * 9); ctx2.stroke(); }
+  else if(k === "bumper"){ ctx2.arc(px, py, 4, 0, 6.2832); ctx2.fill();
+      ctx2.beginPath(); for(var ba2 = 0; ba2 < 4; ba2++){ var bn2 = ba2 * 1.5708 + 0.785;
+        ctx2.moveTo(px + Math.cos(bn2) * 6, py + Math.sin(bn2) * 6); ctx2.lineTo(px + Math.cos(bn2) * 10, py + Math.sin(bn2) * 10); }
+      ctx2.stroke(); }
+  else if(k === "ward"){ ctx2.moveTo(px, py - 9); ctx2.lineTo(px + 7, py - 5); ctx2.lineTo(px + 6, py + 3);
+      ctx2.lineTo(px, py + 9); ctx2.lineTo(px - 6, py + 3); ctx2.lineTo(px - 7, py - 5); ctx2.closePath(); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px - 3, py); ctx2.lineTo(px + 3, py); ctx2.stroke(); }
+  else if(k === "tome"){ ctx2.moveTo(px, py - 5); ctx2.lineTo(px - 8, py - 7); ctx2.lineTo(px - 8, py + 6); ctx2.lineTo(px, py + 8);
+      ctx2.lineTo(px + 8, py + 6); ctx2.lineTo(px + 8, py - 7); ctx2.closePath(); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px, py - 5); ctx2.lineTo(px, py + 8); ctx2.stroke(); }
+  else if(k === "fence"){ ctx2.moveTo(px - 5, py + 8); ctx2.lineTo(px - 5, py - 8); ctx2.moveTo(px + 5, py + 8);
+      ctx2.lineTo(px + 5, py - 8); ctx2.stroke();
+      ctx2.beginPath(); ctx2.lineWidth = 1.5; ctx2.moveTo(px - 5, py - 3); ctx2.lineTo(px - 1, py - 5); ctx2.lineTo(px + 1, py - 1);
+      ctx2.lineTo(px + 5, py - 3); ctx2.moveTo(px - 5, py + 3); ctx2.lineTo(px - 1, py + 1); ctx2.lineTo(px + 1, py + 5);
+      ctx2.lineTo(px + 5, py + 3); ctx2.stroke(); }
+  else if(k === "soul"){ ctx2.rect(px - 5, py - 7, 10, 13); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px, py - 4); ctx2.quadraticCurveTo(px + 4, py + 1, px, py + 4);
+      ctx2.quadraticCurveTo(px - 4, py + 1, px, py - 4); ctx2.fill(); }
+  else if(k === "knight"){ ctx2.moveTo(px - 7, py - 7); ctx2.lineTo(px + 7, py - 7); ctx2.lineTo(px + 7, py);
+      ctx2.quadraticCurveTo(px + 6, py + 7, px, py + 9); ctx2.quadraticCurveTo(px - 6, py + 7, px - 7, py);
+      ctx2.closePath(); ctx2.fill();
+      ctx2.strokeStyle = "#FCF8F0"; ctx2.beginPath(); ctx2.moveTo(px, py - 5); ctx2.lineTo(px, py + 6);
+      ctx2.moveTo(px - 4, py - 1); ctx2.lineTo(px + 4, py - 1); ctx2.stroke(); }
+  else if(k === "mimic"){ ctx2.ellipse(px, py, 6, 8.5, 0, 0, 6.2832); ctx2.stroke();
+      ctx2.beginPath(); ctx2.moveTo(px - 2, py - 5); ctx2.lineTo(px + 2.5, py - 1.5);
+      ctx2.moveTo(px - 2.5, py + 0.5); ctx2.lineTo(px + 1.5, py + 4); ctx2.stroke(); }
+  else if(k === "bell"){ ctx2.moveTo(px - 7, py + 5); ctx2.quadraticCurveTo(px - 6, py - 8, px, py - 8);
+      ctx2.quadraticCurveTo(px + 6, py - 8, px + 7, py + 5); ctx2.closePath(); ctx2.fill();
+      ctx2.beginPath(); ctx2.arc(px, py + 7, 2, 0, 6.2832); ctx2.fill(); }
   else if(k === "rift"){ ctx2.ellipse(px, py, 8, 5, -0.5, 0, 6.2832); ctx2.stroke();
       ctx2.beginPath(); ctx2.moveTo(px - 5, py + 3); ctx2.lineTo(px - 1, py - 1); ctx2.lineTo(px + 1, py + 1);
       ctx2.lineTo(px + 5, py - 3); ctx2.stroke(); }
