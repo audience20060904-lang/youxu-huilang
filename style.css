@@ -1032,6 +1032,8 @@ a.place{text-decoration:none}
 /* ===== 多语言 / 学中文 / 新手教程（2026-09-23）===== */
 /* 拼音：跟汉字一起出现的地方都挂一个 .py（题面、答完的释义、图鉴、结算的词） */
 .py{font-family:var(--mono);font-style:normal;font-weight:400;color:var(--frost);letter-spacing:.02em}
+/* 西语名词的冠词（el / la）：挂在词前面，淡一号、小一号（学西班牙语时才有）*/
+.ar{font-weight:400;color:var(--frost);font-size:.62em;letter-spacing:0;vertical-align:.12em}
 .qword .py{display:block;font-size:clamp(11px,1.8vh,14px);line-height:1.1}
 .cx .cn .py{font-size:12px}
 .verdict .mean{font-size:13.5px}

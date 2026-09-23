@@ -113,13 +113,38 @@ function setChapter(id){
    词对象的 en 永远是「要学的那个词」、cn 是母语释义；学中文时多一个 py（拼音）。
    这几个函数在学英语时都退化成原来的样子（没有 py）。*/
 function pyTag(w){ return w && w.py ? "<span class=\"py\">" + w.py + "</span>" : ""; }
-function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : (w ? w.en : ""); }
+/* 学西班牙语（2026-09-23）：名词带冠词 w.ar（el / la / el/la / los / las）。
+   题面在词前面挂一个小小的冠词；拼写题 / 宝箱没有拼音可给，就把「la …」当提示（性别本来就是要背的）。*/
+function arTag(w){ return w && w.ar ? "<span class=\"ar\">" + w.ar + "</span> " : ""; }
+function hintTag(w){ return pyTag(w) || (w && w.ar ? "<span class=\"py\">" + w.ar + " …</span>" : ""); }
+function wordFull(w){ return w ? (w.ar ? w.ar + " " : "") + w.en : ""; }
+function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : wordFull(w); }
+/* 熟练度表 LEX 的键：英语 / 中文就是词本身；**西语是 "es:词"**（pan / pie / once / red 这些跟英语拼写一样，
+   不加前缀两门语言的熟练度就串了）。凡是 LEX[...] 一律过 lexKey()，按键反查词一律过 lexWord()。*/
+function lexKey(w){ return w.k || w.en; }
+function lexWord(k){
+  if(LANG_LEARN === "es") return k.slice(0, 3) === "es:" ? WMAP[k.slice(3)] : null;
+  return WMAP[k];
+}
+/* 比对用：去掉重音符号、转小写（图鉴搜西语时不用打 á é ñ 也搜得到；汉字不受影响）*/
+function foldMarks(s){ return String(s).normalize("NFD").replace(/[\u0300-\u036f']/g, "").toLowerCase(); }
 /* 词长：英语是字母数；中文按**拼音字母**数（长句 / 累牍 / 长考那三件遗物用，汉字最多 4 个，按字数算它们就废了）*/
 function wordLen(w){
   if(!w.py) return w.en.length;
   return w.py.normalize("NFD").replace(/[^a-z]/gi, "").length;
 }
 /* 拼字题的干扰键：英语给字母（原来那一套），中文从同一档的别的词里挑字 */
+/* 西语拼写题的干扰键：先给这个词里带重音 / ñ 的字母配一个「没带的」（á → a、ñ → n —— 重音本来就是要背的），
+   不够再从常见字母里随手补 */
+function esDecoys(word, n){
+  const out = [], base = {"á":"a", "é":"e", "í":"i", "ó":"o", "ú":"u", "ü":"u", "ñ":"n"};
+  word.en.split("").forEach(function(c){ if(base[c] && out.indexOf(base[c]) < 0) out.push(base[c]); });
+  out.sort(function(){ return Math.random() - .5; });
+  out.length = Math.min(out.length, n);
+  const extra = "aeiosrnlcdtmu".split("");
+  while(out.length < n) out.push(pick(extra));
+  return out;
+}
 function decoyChars(word, n){
   const own = word.en.split(""), out = [];
   const pool = scopeToLevel(ALLW, word.lv || 1);
@@ -1189,7 +1214,7 @@ function renderSheets(s){
   $("stats").innerHTML =
     st(T("攻击"), s.atk) + st(T("护甲"), s.def) + st(T("暴击"), s.crit + "%");
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
-  const keys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });
+  const keys = Object.keys(LEX).filter(function(k){ return !!lexWord(k); });
   let mastered = 0;
   keys.forEach(function(k){ if((LEX[k].str || 0) >= 3) mastered++; });
   /* 四项各占一格：掌握过的 / 遇见过的 / 词库一共多少 / **累计学词**。
@@ -1680,11 +1705,11 @@ function pickQuizWord(cat){
   if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
   /* **没学过的新词权重 80%**（用户 2026-09）：LEX 里没有记录 = 这个存档从没遇到过。
      掷中就只在生词里挑；这一章的生词问完了（fresh 空）自然落回下面那个熟练度加权袋。*/
-  const fresh = pool.filter(function(w){ return !LEX[w.en]; });
+  const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
   if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
   const bag = [];
   pool.forEach(function(w){
-    const r = LEX[w.en], s = r ? (r.str || 0) : 0;
+    const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
     let wt = s >= 3 ? 1 : s === 2 ? 2 : s === 1 ? 3 : 4;
     if(r && r.wrong) wt += 3;
     for(let i=0;i<wt;i++) bag.push(w);
@@ -1825,7 +1850,7 @@ function nextQuestion(){
 
   if(type === "en2zh"){
     $("qLabel").textContent = T("这个词是什么意思？");
-    $("qWord").innerHTML = word.en + pyTag(word);
+    $("qWord").innerHTML = arTag(word) + word.en + pyTag(word);
     $("qWord").className = LEARN_ZH ? "qword zh" : "qword";
   } else {
     $("qLabel").textContent = T("用英语怎么说？");
@@ -1874,7 +1899,7 @@ function setWagerLabel(){
 function renderSpell(word){
   $("qLabel").textContent = T("拼出这个词 · 对了双倍经验");
   /* 学中文：给英文释义 + 拼音（拼音就是英语那边「听读音」的等价物），玩家按顺序点汉字 */
-  $("qWord").innerHTML = word.cn + pyTag(word);
+  $("qWord").innerHTML = word.cn + hintTag(word);
   $("qWord").className = "qword cn";
   $("opts").hidden = true;
   $("spellBar").hidden = false;
@@ -1890,10 +1915,13 @@ function renderSpell(word){
   /* 净写：不再给那两个干扰字母，键盘上只剩这个词自己的字母。
      博闻：这个词已经"掌握"（熟练度 ≥3）的话也一样不给干扰项——跟净写共用同一条判断，
      两件同时带着也不会叠出负数个干扰字母。*/
-  const mastered = LEX[word.en] && (LEX[word.en].str || 0) >= 3;
+  const mastered = LEX[lexKey(word)] && (LEX[lexKey(word)].str || 0) >= 3;
   if(LEARN_ZH){
     if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
       Array.prototype.push.apply(letters, decoyChars(word, 3));
+  } else if(LANG_LEARN === "es"){
+    if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
+      Array.prototype.push.apply(letters, esDecoys(word, 2));
   } else if(!hasRelic("clean") && !(hasRelic("wellread") && mastered)){
     const extra = "aeioustrnlm".split("");
     for(let i=0;i<2;i++) letters.push(pick(extra));
@@ -2112,8 +2140,8 @@ function answer(btn, ok){
   $("btnWager").disabled = true;
   G.floorAsked = (G.floorAsked || 0) + 1;    // 破晓甲：这一层已经答过几题，nextFloor() 里清零
   const word = B.q.word, m = B.mob, s = stats();
-  const firstSeen = !LEX[word.en];          // 课业：这个存档从没见过的生词（LEX 里没记录）
-  const rec = LEX[word.en] || {str:0, seen:0, wrong:0};
+  const firstSeen = !LEX[lexKey(word)];          // 课业：这个存档从没见过的生词（LEX 里没记录）
+  const rec = LEX[lexKey(word)] || {str:0, seen:0, wrong:0};
   rec.seen++;
   if(P.seenWords.indexOf(word.en) < 0) P.seenWords.push(word.en);
   // 一趟之内：答对过就不再出（记进 P.used），答错就放回池子里接着找你
@@ -2142,10 +2170,10 @@ function answer(btn, ok){
         sub.className = "sub";
         /* 学中文时顺手把拼音也带上：汉字那一格补「拼音 · 释义」，释义那一格补「汉字 拼音」*/
         sub.textContent = (B.q.type === "zh2en") ? (o.py ? o.py + " · " + o.cn : o.cn)
-                                                 : (o.py ? o.en + " " + o.py : o.en);
+                                                 : (o.py ? o.en + " " + o.py : wordFull(o));
         b.appendChild(sub);
         b.classList.add("two");
-        if(LEARN_ZH) b.classList.add("tight");     // 学中文：英文释义长，摊开两行时收一号字，别撑出方块
+        if(LANG_LEARN !== "en") b.classList.add("tight");     // 学中文 / 西语：英文释义长，摊开两行时收一号字，别撑出方块
       }
     });
     if(!ok && btn) btn.classList.add("wrong");
@@ -2616,10 +2644,10 @@ function answer(btn, ok){
     const saved = deathSave();
     if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
   }
-  LEX[word.en] = rec;          // 只改内存，下一个存档点（下楼 / 回主城）才落盘
+  LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   $("verdict").innerHTML = head +
-    "<span class=\"mean\"><b>" + word.en + "</b>" + (word.py ? " " + word.py : "") + T("　") + word.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[word.cat] + "</span></span>";
+    "<span class=\"mean\"><b>" + wordFull(word) + "</b>" + (word.py ? " " + word.py : "") + T("　") + word.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[word.cat] + "</span></span>";
   if(CAN_SPEAK){
     $("btnSpeak").hidden = false;                  // 答完了，随时能再听一次
     if(OPT.speak) speak(word.en);                  // 设置里开着就自动念一遍
@@ -3263,7 +3291,7 @@ function openChest(th){
   chestQ = {word:word, spell:"", done:false};
   $("chestTitle").textContent = T("锁上刻着一个词");
   $("chestHint").textContent = T("拼出「") + word.cn + T("」");
-  $("chestClue").innerHTML = word.cn + pyTag(word);
+  $("chestClue").innerHTML = word.cn + hintTag(word);
   $("chestVerdict").innerHTML = "";
   $("btnChestDone").hidden = true;
   $("btnChestLeave").hidden = false;
@@ -3289,6 +3317,7 @@ function buildChestLetters(word){
   const pool = word.en.split("");
   const extra = "abcdefghijklmnopqrstuvwxyz".split("");
   if(LEARN_ZH) Array.prototype.push.apply(pool, decoyChars(word, 4));
+  else if(LANG_LEARN === "es") Array.prototype.push.apply(pool, esDecoys(word, Math.max(2, Math.min(12, word.en.length + 4) - word.en.length)));
   else while(pool.length < Math.min(12, word.en.length + 4)) {
     const c = pick(extra);
     if(pool.indexOf(c) < 0 || Math.random() < .3) pool.push(c);
@@ -3326,17 +3355,17 @@ function judgeChest(){
   // 钥匙：拼错也照样开箱。⚠️ 熟练度和心魔照常按「拼错」记 —— 撬开的是锁，不是这个词
   const opened = ok || hasRelic("key");
   chestQ.done = true;
-  const rec = LEX[w.en] || {str:0, seen:0, wrong:0};
+  const rec = LEX[lexKey(w)] || {str:0, seen:0, wrong:0};
   rec.seen++;
   if(ok){ rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0; }
   else { rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1; addHaunt(w.en); }
-  LEX[w.en] = rec;             // 同上，等存档点
+  LEX[lexKey(w)] = rec;        // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
       ? T("<span class=\"big ok\">咔哒 —— 开了</span>")
       : opened
         ? T("<span class=\"big ok\">拼错了 —— 钥匙替你撬开了</span>")
         : T("<span class=\"big no\">锁咬死了</span>")) +
-    "<span class=\"mean\"><b>" + w.en + "</b>" + (w.py ? " " + w.py : "") + T("　") + w.cn + "</span>";
+    "<span class=\"mean\"><b>" + wordFull(w) + "</b>" + (w.py ? " " + w.py : "") + T("　") + w.cn + "</span>";
   $("btnChestLeave").hidden = true;
   $("btnChestDone").hidden = false;
   $("btnChestDone").textContent = opened ? T("拿走") : T("认了");
@@ -4823,7 +4852,7 @@ function chapterSeenPct(chId){
   chapterLvs(ch).forEach(function(l){ pool = pool.concat(BYLV[l] || []); });
   if(!pool.length) return 0;
   let seen = 0;
-  pool.forEach(function(w){ if(LEX[w.en] && WMAP[w.en]) seen++; });
+  pool.forEach(function(w){ if(LEX[lexKey(w)]) seen++; });
   return Math.round(seen / pool.length * 100);
 }
 function openCave(){
@@ -5198,19 +5227,19 @@ function endRun(win, gaveUp){
        ? li(T("难度等级 · ") + diffById(P.diff).name, diffById(P.diff).desc) : "") +
     li(T("丢在洞里"), (P.relics.length || 0) + T(" 件遗物 · ") + P.gold + T(" 金币")) +
     li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
-    li(T("累计掌握"), Object.keys(LEX).filter(function(k){ return WMAP[k] && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
+    li(T("累计掌握"), Object.keys(LEX).filter(function(k){ return lexWord(k) && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
   const box = $("endWords");
   box.innerHTML = "";
   if(!P.seenWords.length){
     box.innerHTML = T("<div class=\"cx lost\"><div class=\"cn\">还没遇到任何词</div></div>");
   } else {
     P.seenWords.forEach(function(en){
-      const w = WMAP[en], r = LEX[en] || {str:0};
+      const w = WMAP[en], r = (w && LEX[lexKey(w)]) || {str:0};
       if(!w) return;
       const s = r.str || 0;
       const d = document.createElement("div");
       d.className = "cx " + (s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
-      d.innerHTML = "<div class=\"cn\"><span>" + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
+      d.innerHTML = "<div class=\"cn\"><span>" + arTag(w) + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
         "<span class=\"meta stars\">" + "★".repeat(s) + "☆".repeat(5-s) + "</span></div>" +
         "<div class=\"cd\">" + w.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[w.cat] + "</span></div>";
       box.appendChild(d);
@@ -5305,7 +5334,7 @@ function openCodex(tab){
     const q = codexFind();
     Object.keys(BYCAT).forEach(function(cat){
       const hit = q ? BYCAT[cat].filter(function(w){
-        return w.en.toLowerCase().indexOf(q) >= 0 || w.cn.toLowerCase().indexOf(q) >= 0 ||
+        return foldMarks(w.en).indexOf(foldMarks(q)) >= 0 || w.cn.toLowerCase().indexOf(q) >= 0 ||
                (w.py && w.py.normalize("NFD").replace(/[\u0300-\u036f']/g, "").toLowerCase()
                      .indexOf(q.normalize("NFD").replace(/[\u0300-\u036f']/g, "")) >= 0) ||
                (CAT_CN[cat] || "").toLowerCase().indexOf(q) >= 0;
@@ -5316,12 +5345,12 @@ function openCodex(tab){
       h.textContent = CAT_CN[cat];
       box.appendChild(h);
       hit.forEach(function(w){
-        const r = LEX[w.en];
+        const r = LEX[lexKey(w)];
         const s = r ? (r.str||0) : 0;
         const d = document.createElement("div");
         d.className = "cx " + (!r ? "lost" : s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
         d.innerHTML =
-          "<div class=\"cn\"><span>" + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
+          "<div class=\"cn\"><span>" + arTag(w) + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
             "<span class=\"meta " + (r ? "stars" : "") + "\">" +
             (r ? ("★".repeat(s) + "☆".repeat(5-s)) : T("还没遇到")) + "</span></div>" +
           "<div class=\"cd\">" + w.cn +
@@ -5500,13 +5529,13 @@ function wordsHash(n, list){
   return hash16(a);
 }
 /* 一份词库的熟练度段：nWords + 前缀校验 + 稀疏表 + 每词 7 bit（写法见上面那段长注释）*/
-function putLex(w, list){
+function putLex(w, list, pre){
   const nW = list.length;
   w.vint(nW);
   w.vint(wordsHash(nW, list));
   const idx = [], rows = [];
   for(let i=0;i<nW;i++){
-    const rec = LEX[list[i][0]];
+    const rec = LEX[(pre || "") + list[i][0]];
     if(!rec) continue;
     idx.push(i);
     rows.push(rec);
@@ -5521,7 +5550,7 @@ function putLex(w, list){
     if(seen >= 7) w.vint(seen - 7);
   }
 }
-function getLex(r, list, out){
+function getLex(r, list, out, pre){
   const nW = r.vint(), wh = r.vint();
   const ok = (nW <= list.length && wordsHash(nW, list) === wh);
   const idx = getSet(r, nW);
@@ -5529,7 +5558,7 @@ function getLex(r, list, out){
     const str = r.bits(3), wrong = r.bits(1);
     let seen = r.bits(3);
     if(seen === 7) seen = 7 + r.vint();
-    if(ok) out[list[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
+    if(ok) out[(pre || "") + list[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
   }
   return ok;
 }
@@ -5625,6 +5654,9 @@ function makeCode(){
   w.bits(1, 1);
   putLex(w, ZH_WORDS);
   w.bits(MET.tut ? 1 : 0, 1);
+  /* 西班牙语词库（2026-09-23）：同一个套路再挂一段。键带 "es:" 前缀（见 lexKey()），码里按下标存所以不用管前缀 */
+  w.bits(1, 1);
+  putLex(w, ES_WORDS, "es:");
 
   const bytes = w.finish();
   const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
@@ -5702,6 +5734,9 @@ function parseCode2(txt){
   if(hasZh){
     if(!getLex(r, ZH_WORDS, out.lex)) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
     out.meta.tut = r.bits(1);
+    let hasEs = 0;
+    try{ hasEs = r.bits(1); }catch(e){ hasEs = 0; }
+    if(hasEs && !getLex(r, ES_WORDS, out.lex, "es:")) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
   }
   out.note = notes.join(T("；"));
   return out;
@@ -6874,7 +6909,7 @@ const LEARN_UI = {
 };
 let learnFor = {ui:LANG_UI, mode:"first"};
 function learnWordCount(learn){
-  const list = learn === "zh" ? (window.ZH_WORDS || []) : learn === "en" ? (window.EN_WORDS || []) : [];
+  const list = learn === "zh" ? (window.ZH_WORDS || []) : learn === "es" ? (window.ES_WORDS || []) : learn === "en" ? (window.EN_WORDS || []) : [];
   return list.length;
 }
 function openLearnPick(ui, mode){
@@ -6970,7 +7005,8 @@ const TUT_TEXT = {
   kill:  ["打倒怪物拿<b>经验和金币</b>。把这一层的怪全清掉，阶梯才会出现 —— 还剩一只。",
           "Monsters give <b>XP and gold</b>. Clear every monster and the stairs appear — one left."],
   spell: ["有时候要你<b>自己把词拼出来</b>：按顺序点下面的字母。拼对了连击 +10、经验翻倍。",
-          "Sometimes you <b>build the word yourself</b>: tap the characters in order (pinyin is the hint). Get it right for combo +10 and double XP."],
+          LEARN_ZH ? "Sometimes you <b>build the word yourself</b>: tap the characters in order (pinyin is the hint). Get it right for combo +10 and double XP."
+                   : "Sometimes you <b>spell the word yourself</b>: tap the letters in order (accents count). Get it right for combo +10 and double XP."],
   clear: ["这一层清空了！清完一层可以<b>挑一件遗物</b> —— 这一趟变强全靠它们。",
           "Floor cleared! Each cleared floor lets you <b>pick a relic</b> — relics are how you grow stronger."],
   relic: ["阶梯 <b>▼</b> 出现在最后一只怪倒下的地方。<b>走上去</b>就完成教程。",

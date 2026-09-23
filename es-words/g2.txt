@@ -1,0 +1,684 @@
+tortuga|turtle|an||f
+gallo|rooster|an||m
+cabra|goat|an||f
+ardilla|squirrel|an||f
+zorro|fox|an||m
+águila|eagle|an||fe
+pingüino|penguin|an||m
+jirafa|giraffe|an||f
+cocodrilo|crocodile|an||m
+delfín|dolphin|an||m
+ballena|whale|an||f
+tiburón|shark|an||m
+araña|spider|an||f
+hormiga|ant|an||f
+mariposa|butterfly|an||f
+rana|frog|an||f
+paloma|dove|an||f
+insecto|insect|an||m
+mascota|pet|an||f
+gatito|kitten|an||m
+cachorro|puppy|an||m
+camello|camel|an||m
+cebra|zebra|an||f
+búho|owl|an||m
+pulpo|octopus|an||m
+mosquito|mosquito|an||m
+carnero|ram|an||m
+ternera|veal|fo||f
+cordero|lamb|fo||m
+jamón|ham|fo||m
+salchicha|sausage|fo||f
+atún|tuna|fo||m
+marisco|seafood|fo||m
+gamba|prawn|fo||f
+pimienta|pepper (spice)|fo||f
+ajo|garlic|fo||m
+lechuga|lettuce|fo||f
+pepino|cucumber|fo||m
+fresa|strawberry|fo||f
+melón|melon|fo||m
+sandía|watermelon|fo||f
+piña|pineapple|fo||f
+pera|pear|fo||f
+cereza|cherry|fo||f
+melocotón|peach|fo||m
+harina|flour|fo||f
+miel|honey|fo||f
+mermelada|jam|fo||f
+yogur|yogurt|fo||m
+nata|cream|fo||f
+tortilla|omelette|fo||f
+postre|dessert|fo||m
+bebida|drink|fo||f
+refresco|soft drink|fo||m
+caramelo|sweet (candy)|fo||m
+tostada|toast|fo||f
+filete|steak|fo||m
+judía|bean|fo||f
+guisante|pea|fo||m
+maíz|corn|fo||m
+pasta|pasta|fo||f
+receta|recipe|fo||f
+dorado|golden|co
+plateado|silver (colour)|co
+oscuro|dark|co
+claro|light (colour)|co
+celeste|sky blue|co
+violeta|violet|co
+moreno|dark-skinned|co
+rubio|blond|co
+pelirrojo|red-haired|co
+ceja|eyebrow|bo||f
+pestaña|eyelash|bo||f
+mejilla|cheek|bo||f
+barbilla|chin|bo||f
+lengua|tongue|bo||f
+garganta|throat|bo||f
+pecho|chest|bo||m
+cintura|waist|bo||f
+tobillo|ankle|bo||m
+codo|elbow|bo||m
+muñeca|wrist|bo||f
+uña|nail|bo||f
+hueso|bone|bo||m
+frente|forehead|bo||f
+dolor|pain|bo||m
+barba|beard|bo||f
+bigote|moustache|bo||m
+pulmón|lung|bo||m
+cerebro|brain|bo||m
+músculo|muscle|bo||m
+sobrino|nephew|pe||m
+sobrina|niece|pe||f
+nieto|grandson|pe||m
+nieta|granddaughter|pe||f
+suegro|father-in-law|pe||m
+jefe|boss|pe||m
+compañero|classmate (partner)|pe||m
+cliente|customer|pe||mf
+enfermero|nurse|pe||m
+cocinero|cook|pe||m
+conductor|driver|pe||m
+abogado|lawyer|pe||m
+ingeniero|engineer|pe||m
+periodista|journalist|pe||mf
+cantante|singer|pe||mf
+actriz|actress|pe||f
+pintor|painter|pe||m
+escritor|writer|pe||m
+dentista|dentist|pe||mf
+bombero|firefighter|pe||m
+cartero|postman|pe||m
+vendedor|seller|pe||m
+turista|tourist|pe||mf
+ladrón|thief|pe||m
+rey|king|pe||m
+reina|queen|pe||f
+príncipe|prince|pe||m
+princesa|princess|pe||f
+jugador|player|pe||m
+adulto|adult|pe||m
+anciano|old man|pe||m
+gemelo|twin|pe||m
+invitado|guest|pe||m
+dueño|owner|pe||m
+campeón|champion|pe||m
+extranjero|foreigner|pe||m
+soldado|soldier|pe||m
+alumno|pupil|pe||m
+director|headteacher (director)|pe||m
+mueble|piece of furniture|th||m
+armario|wardrobe|th||m
+estantería|bookshelf|th||f
+cortina|curtain|th||f
+alfombra|carpet|th||f
+almohada|pillow|th||f
+manta|blanket|th||f
+sábana|sheet|th||f
+nevera|fridge|th||f
+horno|oven|th||m
+lavadora|washing machine|th||f
+microondas|microwave|th||m
+cafetera|coffee maker|th||f
+sartén|frying pan|th||f
+olla|pot|th||f
+botella|bottle|th||f
+lata|can (tin)|th||f
+caja|box|th||f
+bolso|handbag|th||m
+anillo|ring|th||m
+collar|necklace|th||m
+pendiente|earring|th||m
+pulsera|bracelet|th||f
+cinturón|belt|th||m
+corbata|tie|th||f
+chaqueta|jacket|th||f
+jersey|jumper|th||m
+camiseta|T-shirt|th||f
+vaqueros|jeans|th||mp
+bota|boot|th||f
+zapatilla|trainer (sneaker)|th||f
+guante|glove|th||m
+bufanda|scarf|th||f
+gorra|cap|th||f
+bañador|swimsuit|th||m
+pijama|pyjamas|th||m
+moneda|coin|th||f
+tarjeta|card|th||f
+sello|stamp|th||m
+sobre|envelope|th||m
+paquete|parcel|th||m
+postal|postcard|th||f
+diccionario|dictionary|th||m
+novela|novel|th||f
+cuento|short story|th||m
+dibujo|drawing|th||m
+cámara|camera|th||f
+pantalla|screen|th||f
+teclado|keyboard|th||m
+auriculares|headphones|th||mp
+cargador|charger|th||m
+batería|battery|th||f
+guitarra|guitar|th||f
+juguete|toy|th||m
+muñeco|doll|th||m
+globo|balloon|th||m
+vela|candle|th||f
+cepillo|brush|th||m
+peine|comb|th||m
+tijeras|scissors|th||fp
+herramienta|tool|th||f
+martillo|hammer|th||m
+cuerda|rope|th||f
+moto|motorbike|th||f
+camión|lorry (truck)|th||m
+metro|underground (metro)|th||m
+barca|rowing boat|th||f
+rueda|wheel|th||f
+semáforo|traffic light|th||m
+señal|sign|th||f
+entrada|ticket (entry)|th||f
+viaje|trip|th||m
+equipaje|luggage|th||m
+pasaporte|passport|th||m
+reserva|booking|th||f
+factura|bill (invoice)|th||f
+cuenta|bill (check)|th||f
+descuento|discount|th||m
+oferta|offer|th||f
+correo|mail|th||m
+mensaje|message|th||m
+noticia|piece of news|th||f
+programa|programme|th||m
+anuncio|advert|th||m
+dirección|address|th||f
+vida|life|th||f
+salud|health|th||f
+medicina|medicine|th||f
+pastilla|pill|th||f
+fiebre|fever|th||f
+resfriado|cold (illness)|th||m
+tos|cough|th||f
+herida|wound|th||f
+accidente|accident|th||m
+ruido|noise|th||m
+voz|voice|th||f
+idea|idea|th||f
+razón|reason|th||f
+verdad|truth|th||f
+mentira|lie|th||f
+error|mistake|th||m
+suerte|luck|th||f
+consejo|advice|th||m
+permiso|permission|th||m
+ayuda|help|th||f
+favor|favour|th||m
+cita|appointment|th||f
+reunión|meeting|th||f
+boda|wedding|th||f
+paseo|walk (stroll)|th||m
+partido|match (game)|th||m
+equipo|team|th||m
+premio|prize|th||m
+carrera|race|th||f
+tema|topic|th||m
+lección|lesson|th||f
+nota|mark (grade)|th||f
+asignatura|school subject|th||f
+frase|sentence|th||f
+letra|letter (alphabet)|th||f
+página|page|th||f
+dibujos|cartoons|th||mp
+tormenta|storm|na||f
+trueno|thunder|na||m
+rayo|lightning|na||m
+niebla|fog|na||f
+arco|arch (bow)|na||m
+ola|wave|na||f
+costa|coast|na||f
+colina|hill|na||f
+valle|valley|na||m
+cueva|cave|na||f
+desierto|desert|na||m
+selva|jungle|na||f
+volcán|volcano|na||m
+océano|ocean|na||m
+roca|rock|na||f
+barro|mud|na||m
+polvo|dust|na||m
+hierba|grass|na||f
+rama|branch|na||f
+raíz|root|na||f
+semilla|seed|na||f
+tronco|trunk|na||m
+temperatura|temperature|na||f
+clima|climate|na||m
+paisaje|landscape|na||m
+naturaleza|nature|na||f
+oro|gold|na||m
+plata|silver|na||f
+hierro|iron|na||m
+madera|wood|na||f
+humo|smoke|na||m
+sombra|shade|na||f
+ascensor|lift (elevator)|pl||m
+escalera|stairs|pl||f
+salón|living room|pl||m
+comedor|dining room|pl||m
+dormitorio|bedroom|pl||m
+pasillo|corridor|pl||m
+terraza|terrace|pl||f
+balcón|balcony|pl||m
+garaje|garage|pl||m
+suelo|floor|pl||m
+techo|ceiling|pl||m
+pared|wall|pl||f
+edificio|building|pl||m
+barrio|neighbourhood|pl||m
+avenida|avenue|pl||f
+esquina|corner|pl||f
+puente|bridge|pl||m
+carretera|road|pl||f
+camino|path|pl||m
+fábrica|factory|pl||f
+granja|farm|pl||f
+panadería|bakery|pl||f
+carnicería|butcher's|pl||f
+librería|bookshop|pl||f
+peluquería|hairdresser's|pl||f
+gimnasio|gym|pl||m
+piscina|swimming pool|pl||f
+estadio|stadium|pl||m
+teatro|theatre|pl||m
+castillo|castle|pl||m
+catedral|cathedral|pl||f
+palacio|palace|pl||m
+zoo|zoo|pl||m
+consulta|surgery (clinic)|pl||f
+cárcel|prison|pl||f
+frontera|border|pl||f
+capital|capital|pl||f
+sur|south|pl||m
+norte|north|pl||m
+este|east|pl||m
+oeste|west|pl||m
+izquierda|left|pl||f
+derecha|right|pl||f
+lado|side|pl||m
+fondo|bottom|pl||m
+interior|inside|pl||m
+acabar|to end|ve
+almorzar|to have lunch|ve
+cenar|to have dinner|ve
+desayunar|to have breakfast|ve
+despertar|to wake up|ve
+acostar|to put to bed|ve
+vestir|to dress|ve
+peinar|to comb|ve
+afeitar|to shave|ve
+bañar|to bathe|ve
+secar|to dry|ve
+planchar|to iron|ve
+barrer|to sweep|ve
+ordenar|to tidy|ve
+arreglar|to fix|ve
+romper|to break|ve
+construir|to build|ve
+crear|to create|ve
+elegir|to choose|ve
+decidir|to decide|ve
+explicar|to explain|ve
+contar|to count (tell)|ve
+contestar|to answer|ve
+mostrar|to show|ve
+invitar|to invite|ve
+visitar|to visit|ve
+quedar|to stay (meet up)|ve
+reservar|to book|ve
+alquilar|to rent|ve
+gastar|to spend|ve
+ahorrar|to save (money)|ve
+costar|to cost|ve
+devolver|to give back|ve
+prestar|to lend|ve
+cobrar|to charge|ve
+aparcar|to park|ve
+cruzar|to cross|ve
+girar|to turn|ve
+parar|to stop|ve
+caer|to fall|ve
+saltar|to jump|ve
+subirse|to get on|ve
+empujar|to push|ve
+tirar|to throw (pull)|ve
+coger|to catch (take)|ve
+guardar|to keep|ve
+mover|to move|ve
+sacar|to take out|ve
+meter|to put in|ve
+llenar|to fill|ve
+vaciar|to empty|ve
+calentar|to heat|ve
+enfriar|to cool|ve
+freír|to fry|ve
+hervir|to boil|ve
+probar|to try (taste)|ve
+oler|to smell|ve
+doler|to hurt|ve
+curar|to cure|ve
+cuidar|to look after|ve
+descansar|to rest|ve
+soñar|to dream|ve
+reír|to laugh|ve
+llorar|to cry|ve
+sonreír|to smile|ve
+gritar|to shout|ve
+callar|to be quiet|ve
+charlar|to chat|ve
+discutir|to argue|ve
+prometer|to promise|ve
+permitir|to allow|ve
+prohibir|to forbid|ve
+intentar|to try|ve
+conseguir|to get (achieve)|ve
+ofrecer|to offer|ve
+aceptar|to accept|ve
+rechazar|to reject|ve
+preparar|to prepare|ve
+practicar|to practise|ve
+mejorar|to improve|ve
+compartir|to share|ve
+celebrar|to celebrate|ve
+regalar|to give (as a gift)|ve
+casarse|to get married|ve
+nevar|to snow|ve
+brillar|to shine|ve
+crecer|to grow|ve
+plantar|to plant|ve
+pescar|to fish|ve
+cazar|to hunt|ve
+montar|to ride|ve
+esquiar|to ski|ve
+patinar|to skate|ve
+navegar|to sail (browse)|ve
+imprimir|to print|ve
+descargar|to download|ve
+borrar|to delete|ve
+grabar|to record|ve
+marcar|to mark (dial)|ve
+firmar|to sign|ve
+rellenar|to fill in|ve
+apagar|to switch off|ve
+encender|to switch on|ve
+cargar|to load (charge)|ve
+funcionar|to work (function)|ve
+faltar|to be missing|ve
+sobrar|to be left over|ve
+importar|to matter|ve
+ocurrir|to happen|ve
+existir|to exist|ve
+nombrar|to name|ve
+cómodo|comfortable|ad
+incómodo|uncomfortable|ad
+peligroso|dangerous|ad
+famoso|famous|ad
+raro|strange|ad
+normal|normal|ad
+especial|special|ad
+diferente|different|ad
+igual|equal|ad
+parecido|similar|ad
+distinto|distinct|ad
+antiguo|ancient|ad
+actual|current|ad
+necesario|necessary|ad
+posible|possible|ad
+imposible|impossible|ad
+probable|likely|ad
+útil|useful|ad
+inútil|useless|ad
+precioso|lovely|ad
+maravilloso|wonderful|ad
+horrible|horrible|ad
+terrible|terrible|ad
+estupendo|great (terrific)|ad
+perfecto|perfect|ad
+excelente|excellent|ad
+sano|healthy|ad
+ruidoso|noisy|ad
+silencioso|silent|ad
+ancho|wide|ad
+estrecho|narrow|ad
+profundo|deep|ad
+redondo|round|ad
+cuadrado|square (shape)|ad
+plano|flat|ad
+suave|smooth (soft)|ad
+blando|soft|ad
+pesado|heavy|ad
+ligero|light (weight)|ad
+mojado|wet|ad
+seco|dry|ad
+crudo|raw|ad
+maduro|ripe|ad
+picante|spicy|ad
+amargo|bitter|ad
+ácido|sour|ad
+sabroso|tasty|ad
+delicioso|delicious|ad
+educado|polite|ad
+maleducado|rude|ad
+tímido|shy|ad
+valiente|brave|ad
+cobarde|cowardly|ad
+generoso|generous|ad
+tacaño|stingy|ad
+trabajador|hard-working|ad
+vago|lazy|ad
+serio|serious|ad
+gracioso|funny|ad
+tonto|silly|ad
+sencillo|simple|ad
+complicado|complicated|ad
+público|public|ad
+privado|private|ad
+gratis|free (of charge)|ad
+junto|together|ad
+solo|alone|ad
+entero|whole|ad
+medio|half|ad
+nacional|national|ad
+luego|later|ti|adv
+entonces|then|ti|adv
+antes|before|ti|adv
+después|after|ti|adv
+anoche|last night|ti|adv
+anteayer|day before yesterday|ti|adv
+mientras|meanwhile|ti|adv
+enseguida|straight away|ti|adv
+normalmente|normally|av
+realmente|really|av
+solamente|only|av
+bastante|quite|av
+demasiado|too (much)|av
+apenas|hardly|av
+quizás|perhaps|av
+tal|such|ad
+juntos|together (all)|av
+dentro|inside (within)|av
+fuera|outside|av
+arriba|upstairs (up)|av
+abajo|downstairs (down)|av
+delante|in front|av
+detrás|behind|av
+encima|on top|av
+debajo|underneath|av
+alrededor|around|av
+enfrente|opposite|av
+rápidamente|quickly|av
+claramente|clearly|av
+madrugada|early morning|ti||f
+siglo|century|ti||m
+época|era|ti||f
+horario|timetable|ti||m
+calendario|calendar|ti||m
+navidad|Christmas|ti||f
+semestre|semester|ti||m
+temporada|season (period)|ti||f
+década|decade|ti||f
+instante|instant|ti||m
+rato|while (short time)|ti||m
+futuro|future|ti||m
+pasado|past|ti||m
+presente|present|ti||m
+alegría|joy|fe|n|f
+tristeza|sadness|fe|n|f
+enfado|anger|fe|n|m
+vergüenza|shame|fe|n|f
+orgulloso|proud|fe
+celoso|jealous|fe
+emocionado|excited|fe
+sorprendido|surprised|fe
+confundido|confused|fe
+relajado|relaxed|fe
+agradecido|grateful|fe
+enamorado|in love|fe
+solitario|lonely|fe
+aburrirse|to get bored|fe|v
+odiar|to hate|fe|v
+temer|to fear|fe|v
+preocupar|to worry|fe|v
+molestar|to bother|fe|v
+encantar|to delight|fe|v
+esperanza|hope|fe|n|f
+deseo|wish|fe|n|m
+trece|thirteen|nu
+catorce|fourteen|nu
+quince|fifteen|nu
+dieciséis|sixteen|nu
+diecisiete|seventeen|nu
+dieciocho|eighteen|nu
+diecinueve|nineteen|nu
+treinta|thirty|nu
+cuarenta|forty|nu
+cincuenta|fifty|nu
+sesenta|sixty|nu
+setenta|seventy|nu
+ochenta|eighty|nu
+noventa|ninety|nu
+tercero|third|nu
+cuarto|fourth|nu
+quinto|fifth|nu
+mitad|half (portion)|nu|n|f
+doble|double|nu
+cuchilla|blade|th||f
+enfermedad|disease|th||f
+examinar|to test (examine)|ve
+aparato|appliance|th||m
+pañal|nappy|th||m
+biberón|baby bottle|th||m
+chupete|dummy (pacifier)|th||m
+carrito|trolley|th||m
+cesta|basket|th||f
+recibo|receipt|th||m
+ticket|till receipt|th||m
+cajero|cash machine (cashier)|th||m
+monedero|purse|th||m
+llavero|keyring|th||m
+sombrilla|parasol|th||f
+hamaca|hammock|th||f
+tobogán|slide|th||m
+columpio|swing|th||m
+cometa|kite|th||f
+peluche|soft toy|th||m
+disfraz|costume|th||m
+ancla|anchor|th||fe
+remo|oar|th||m
+horóscopo|horoscope|th||m
+diario|diary|th||m
+canal|canal|pl||m
+huerta|orchard|pl||f
+pavo|turkey (bird)|an||m
+foca|seal (animal)|an||f
+pollito|chick|an||m
+cangrejo|crab (animal)|an||m
+lechuza|owl (barn)|an||f
+aprobar|to pass|ve
+cambiarse|to get changed|ve
+maquillarse|to put on make-up|ve
+acampar|to camp|ve
+escalar|to climb (rock)|ve
+bucear|to dive|ve
+broncearse|to tan|ve
+tumbar|to knock over|ve
+pasear|to stroll|ve
+madrugar|to get up early|ve
+merendar|to have a snack|ve
+ducha|shower (bath)|th||f
+torcer|to twist|ve
+sangrar|to bleed|ve
+toser|to cough|ve
+vomitar|to vomit|ve
+engordar|to put on weight|ve
+adelgazar|to lose weight|ve
+enfermar|to fall ill|ve
+mentir|to lie (tell lies)|ve
+chillar|to scream|ve
+silbar|to whistle|ve
+aplaudir|to clap|ve
+llamarse|to be called|ve
+despedirse|to say goodbye|ve
+avergonzar|to embarrass|ve
+fatal|awful|ad
+encantador|charming|ad
+agotado|exhausted|ad
+roto|broken|ad
+perdido|lost|ad
+mayor|elderly|ad
+castaño|brown-haired|ad
+liso|straight (hair)|ad
+rizado|curly|ad
+calvo|bald-headed|ad
+cariñoso|affectionate|ad
+egoísta|selfish|ad
+optimista|upbeat|ad
+responsable|reliable (responsible)|ad
+puntual|on time|ad
+despistado|absent-minded|ad
+ordenado|tidy|ad
+desordenado|untidy|ad
+luminoso|bright (light)|ad
+soleado|sunny|ad
+nublado|cloudy|ad
+lluvioso|rainy|ad
+ventoso|windy|ad
+húmedo|damp|ad
+templado|mild|ad
+caluroso|hot (weather)|ad
+fresquito|chilly|ad
+pequeñito|tiny (little)|ad
+enorme|enormous|ad
+alegremente|cheerfully|av
+aún|still (yet)|av
+jamás|ever (never)|av

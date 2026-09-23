@@ -1,0 +1,1278 @@
+hallazgo|finding (discovery)|th||m
+umbral|threshold|th||m
+brecha|gap (breach)|th||f
+auge|boom (peak)|th||m
+deterioro|deterioration|th||m
+repercusión|repercussion|th||f
+amparo|protection (shelter)|th||m
+índole|nature (kind)|th||f
+complejidad|complexity|th||f
+cosecha|harvest|th||f
+cualidad|quality (trait)|th||f
+densidad|density|th||f
+exigencia|requirement (demand)|th||f
+secuencia|sequence|th||f
+trámite|procedure (paperwork)|th||m
+vínculo|bond (link)|th||m
+convivencia|coexistence|th||f
+hueco|hole (gap)|th||m
+incapacidad|inability|th||f
+precedente|precedent|th||m
+provecho|benefit (advantage)|th||m
+recorte|cut (cutback)|th||m
+tripulación|crew|th||f
+asilo|asylum|th||m
+normalidad|normality|th||f
+parámetro|parameter|th||m
+vocación|vocation|th||f
+bendición|blessing|th||f
+corrección|correction|th||f
+designación|appointment (designation)|th||f
+diámetro|diameter|th||m
+estatuto|statute|th||m
+expulsión|expulsion|th||f
+monopolio|monopoly|th||m
+recaudación|takings (revenue)|th||f
+valoración|appraisal|th||f
+élite|elite|th||f
+brillo|shine (gloss)|th||m
+conformidad|consent (conformity)|th||f
+conversión|conversion|th||f
+despido|dismissal|th||m
+higiene|hygiene|th||f
+ilustración|illustration|th||f
+insulto|insult|th||m
+máscara|mask|th||f
+revelación|revelation|th||f
+segmento|segment|th||m
+tejido|tissue (fabric)|th||m
+veneno|poison|th||m
+admiración|admiration|th||f
+auxilio|aid (help)|th||m
+consuelo|consolation|th||m
+fachada|facade|th||f
+fianza|bail (deposit)|th||f
+molestia|nuisance|th||f
+pesadilla|nightmare|th||f
+plomo|lead (metal)|th||m
+salvación|salvation|th||f
+suceso|event (incident)|th||m
+síntesis|synthesis|th||f
+biografía|biography|th||f
+decepción|disappointment|fe|n|f
+desorden|disorder (mess)|th||m
+furia|fury|fe|n|f
+gastronomía|gastronomy|th||f
+honestidad|honesty|th||f
+humildad|humility|th||f
+juramento|oath|th||m
+porción|portion (share)|th||f
+relieve|relief (terrain)|th||m
+afecto|fondness|fe|n|m
+aduana|customs|pl||f
+arranque|start-up (outburst)|th||m
+asignación|allowance (allocation)|th||f
+celda|cell (prison)|pl||f
+cemento|cement|th||m
+confesión|confession|th||f
+desacuerdo|disagreement|th||m
+matriz|matrix (womb)|th||f
+prejuicio|prejudice|th||m
+rapidez|swiftness|th||f
+sinónimo|synonym|th||m
+verso|verse|th||m
+vicio|vice (bad habit)|th||m
+barrera|barrier|th||f
+comodidad|comfort|th||f
+cortesía|courtesy|th||f
+cúpula|dome (leadership)|th||f
+eternidad|eternity|ti||f
+fundamento|basis (foundation)|th||m
+legitimidad|legitimacy|th||f
+lingüística|linguistics|th||f
+maldad|wickedness|th||f
+maltrato|ill-treatment|th||m
+matanza|slaughter|th||f
+moción|motion (proposal)|th||f
+niñez|childhood (early)|ti||f
+transcurso|course (passage)|ti||m
+urna|ballot box|th||f
+maniobra|manoeuvre|th||f
+enseñanzas|teachings|th||fp
+metodología|methodology|th||f
+partícula|particle|th||f
+sugerencia|suggestion|th||f
+clausura|closing (ceremony)|th||f
+dedicación|dedication|th||f
+filtro|filter|th||m
+hábito|habit|th||m
+noción|notion|th||f
+obstáculo|obstacle|th||m
+prosperidad|prosperity|th||f
+quiebra|bankruptcy|th||f
+subsidio|subsidy|th||m
+validez|validity|th||f
+abundancia|abundance|th||f
+aplauso|applause|th||m
+estafa|scam|th||f
+intimidad|intimacy (privacy)|th||f
+pulso|pulse|bo||m
+seriedad|seriousness|th||f
+táctica|tactic|th||f
+valentía|bravery|th||f
+equidad|equity|th||f
+perjuicio|detriment|th||m
+pretexto|pretext|th||m
+suministro|supply|th||m
+admisión|admission|th||f
+apelación|appeal|th||f
+arsenal|arsenal|th||m
+cabina|cabin (booth)|th||f
+hipocresía|hypocrisy|th||f
+narración|narration|th||f
+nobleza|nobility|th||f
+obsesión|obsession|th||f
+permanencia|permanence|th||f
+reelección|re-election|th||f
+retórica|rhetoric|th||f
+tiroteo|shooting|th||m
+trastorno|disorder (illness)|bo||m
+trayecto|journey (stretch)|th||m
+anexo|annex|th||m
+antena|antenna|th||f
+calibre|calibre|th||m
+colapso|collapse|th||m
+complemento|complement|th||m
+demora|hold-up (delay)|th||f
+instinto|instinct|th||m
+pausa|pause|th||f
+raya|stripe (line)|th||f
+relleno|filling (padding)|th||m
+sendero|trail (footpath)|pl||m
+convicción|conviction|th||f
+divulgación|dissemination|th||f
+grandeza|greatness|th||f
+ortografía|spelling|th||f
+rastro|trace (trail)|th||m
+adicción|addiction|th||f
+autoestima|self-esteem|fe|n|f
+borrador|draft|th||m
+crueldad|cruelty|th||f
+enmienda|amendment|th||f
+gremio|guild|th||m
+mortalidad|mortality|th||f
+prestación|benefit (provision)|th||f
+cláusula|clause|th||f
+acumulación|accumulation|th||f
+alusión|allusion|th||f
+amnistía|amnesty|th||f
+cerámica|pottery|th||f
+descontento|discontent|fe|n|m
+disolución|dissolution|th||f
+guerrilla|guerrilla|th||f
+imprenta|printing press|th||f
+restricción|restriction|th||f
+riego|irrigation|th||m
+simpatía|liking (sympathy)|fe|n|f
+tatuaje|tattoo|th||m
+ambición|ambition|th||f
+aportación|input (contribution)|th||f
+contrabando|smuggling|th||m
+despliegue|deployment|th||m
+flecha|arrow|th||f
+imposición|imposition|th||f
+impotencia|helplessness|fe|n|f
+lazo|tie (bow)|th||m
+malestar|discomfort (unrest)|th||m
+maternidad|motherhood|th||f
+penetración|penetration|th||f
+pilar|pillar|th||m
+puntuación|score (punctuation)|th||f
+rendición|surrender|th||f
+subasta|auction|th||f
+susto|fright|fe|n|m
+bombardeo|bombing|th||m
+caravana|caravan (convoy)|th||f
+decadencia|decadence|th||f
+expectativa|expectation|th||f
+extracto|extract|th||m
+genocidio|genocide|th||m
+inyección|injection|th||f
+jerarquía|hierarchy|th||f
+mansión|mansion|pl||f
+negación|denial|th||f
+pañuelo|handkerchief|th||m
+perla|pearl|th||f
+rigor|rigour|th||m
+ruina|ruin|th||f
+siembra|sowing|th||f
+timbre|doorbell (stamp)|th||m
+afán|eagerness|th||m
+cheque|cheque|th||m
+complicidad|complicity|th||f
+epidemia|epidemic|th||f
+farsa|farce|th||f
+precaución|caution|th||f
+tregua|truce|th||f
+tribuna|stand (tribune)|th||f
+devoción|devotion|th||f
+diabetes|diabetes|bo||f
+graduación|graduation|th||f
+inclinación|inclination|th||f
+incentivo|incentive|th||m
+indicio|sign (indication)|th||m
+llanto|weeping|th||m
+optimismo|optimism|fe|n|m
+parodia|parody|th||f
+plaga|plague (pest)|th||f
+pronóstico|forecast|th||m
+repertorio|repertoire|th||m
+siesta|nap|th||f
+supresión|abolition|th||f
+sustento|livelihood|th||m
+tentación|temptation|th||f
+agresión|aggression|th||f
+aguja|needle|th||f
+anfitrión|host|pe||m
+burbuja|bubble|th||f
+comicios|elections (polls)|th||mp
+contienda|contest (strife)|th||f
+cólera|rage (cholera)|fe|n|f
+dilema|dilemma|th||m
+dimisión|resignation (quitting)|th||f
+infarto|heart attack|bo||m
+ladrillo|brick|th||m
+manuscrito|manuscript|th||m
+mármol|marble|th||m
+nudo|knot|th||m
+procesión|procession|th||f
+tumor|tumour|bo||m
+aroma|aroma|th||m
+aterrizaje|landing|th||m
+burocracia|bureaucracy|th||f
+coherencia|coherence|th||f
+dimensión|dimension|th||f
+hipoteca|mortgage|th||f
+infracción|offence (infringement)|th||f
+triángulo|triangle|th||m
+salamandra|salamander|an||f
+camaleón|chameleon|an||m
+iguana|iguana|an||f
+comadreja|weasel|an||f
+hurón|ferret|an||m
+armiño|stoat (ermine)|an||m
+alce|moose|an||m
+bisonte|bison|an||m
+búfalo|buffalo|an||m
+antílope|antelope|an||m
+gacela|gazelle|an||f
+hiena|hyena|an||f
+chacal|jackal|an||m
+jaguar|jaguar|an||m
+puma|puma|an||m
+pantera|panther|an||f
+orangután|orangutan|an||m
+chimpancé|chimpanzee|an||m
+armadillo|armadillo|an||m
+murena|moray eel|an||f
+anguila|eel|an||f
+morsa|walrus|an||f
+cormorán|cormorant|an||m
+pelícano|pelican|an||m
+flamenco|flamingo|an||m
+colibrí|hummingbird|an||m
+ruiseñor|nightingale|an||m
+jilguero|goldfinch|an||m
+gorrión|sparrow|an||m
+urraca|magpie|an||f
+alacrán|scorpion|an||m
+ciempiés|centipede|an||m
+termita|termite|an||f
+polilla|moth|an||f
+luciérnaga|firefly|an||f
+oruga|caterpillar|an||f
+larva|larva|an||f
+renacuajo|tadpole|an||m
+sapo|toad|an||m
+víbora|viper|an||f
+pitón|python|an||f
+manada|herd (pack)|an||f
+enjambre|swarm|an||m
+cría|young (offspring)|an||f
+camada|litter|an||f
+madriguera|burrow|an||f
+guarida|lair|an||f
+colmillo|fang|an||m
+plumaje|plumage|an||m
+pelaje|fur (coat)|an||m
+caparazón|carapace|an||m
+bramido|roar (bellow)|an||m
+relincho|neigh|an||m
+ladrido|bark (dog)|an||m
+maullido|miaow|an||m
+graznido|squawk|an||m
+zumbido|buzz|an||m
+entrante|first course|fo||m
+guarnición|side dish|fo||f
+aliño|dressing|fo||m
+adobo|marinade|fo||m
+sofrito|sautéed base|fo||m
+escabeche|pickled marinade|fo||m
+estofado|braised stew|fo||m
+cocido|chickpea stew|fo||m
+potaje|pottage|fo||m
+cazuela|casserole|fo||f
+brocheta|skewer|fo||f
+rebanada|slice|fo||f
+loncha|rasher (thin slice)|fo||f
+migaja|crumb|fo||f
+yema|yolk|fo||f
+clara|egg white|fo||f
+cáscara|peel (shell)|fo||f
+pepita|pip|fo||f
+néctar|nectar|fo||m
+cuajada|curd|fo||f
+requesón|cottage cheese|fo||m
+comino|cumin|fo||m
+vainilla|vanilla|fo||f
+regaliz|liquorice|fo||m
+membrillo|quince|fo||m
+chirimoya|custard apple|fo||f
+papaya|papaya|fo||f
+lima|lime|fo||f
+grosella|redcurrant|fo||f
+mora|blackberry|fo||f
+berro|watercress|fo||m
+endibia|endive|fo||f
+nabo|turnip|fo||m
+boniato|sweet potato|fo||m
+yuca|cassava|fo||f
+soja|soya|fo||f
+tofu|tofu|fo||m
+salvado|bran|fo||m
+trigo|wheat|fo||m
+cebada|barley|fo||f
+centeno|rye|fo||m
+banquete|banquet|fo||m
+festín|feast|fo||m
+bocado|mouthful (bite)|fo||m
+sorbo|sip|fo||m
+índigo|indigo blue|co
+magenta|magenta|co
+fucsia|fuchsia|co
+caqui|khaki|co
+cian|cyan|co
+nacarado|pearly|co
+aceitunado|olive-skinned|co
+sonrosado|rosy|co
+cetrino|sallow|co
+purpúreo|purplish|co
+parduzco|brownish|co
+azabache|jet black|co
+níveo|snow-white|co
+opaco|opaque|co
+translúcido|translucent|co
+tornasolado|iridescent|co
+jaspeado|marbled|co
+moteado|speckled|co
+rayado|striped|co
+estampado|patterned|co
+colorido|colourful|co
+descolorido|faded|co
+pigmento|pigment|co|n|m
+tinte|dye (tint)|co|n|m
+esternón|breastbone|bo||m
+clavícula|collarbone|bo||f
+omóplato|shoulder blade|bo||m
+vértebra|vertebra|bo||f
+rótula|kneecap|bo||f
+cartílago|cartilage|bo||m
+médula|marrow|bo||f
+páncreas|pancreas|bo||m
+vesícula|gall bladder|bo||f
+intestino|intestine|bo||m
+esófago|oesophagus|bo||m
+tráquea|windpipe|bo||f
+laringe|larynx|bo||f
+amígdala|tonsil|bo||f
+retina|retina|bo||f
+córnea|cornea|bo||f
+tímpano|eardrum|bo||m
+pómulo|cheekbone|bo||m
+mentón|chin (jaw)|bo||m
+sobaco|underarm|bo||m
+muñón|stump|bo||m
+nudillo|knuckle|bo||m
+empeine|instep|bo||m
+flequillo|fringe (hair)|bo||m
+coleta|ponytail|bo||f
+trenza|plait|bo||f
+calva|bald patch|bo||f
+lunar|mole (on skin)|bo||m
+peca|freckle|bo||f
+verruga|wart|bo||f
+acné|acne|bo||m
+sarpullido|rash|bo||m
+picor|itch|bo||m
+jaqueca|migraine|bo||f
+calambre|cramp|bo||m
+hemorragia|haemorrhage|bo||f
+coágulo|clot|bo||m
+pulmonía|pneumonia|bo||f
+gripe|flu|bo||f
+varicela|chickenpox|bo||f
+sarampión|measles|bo||m
+anemia|anaemia|bo||f
+asma|asthma|bo||fe
+metabolismo|metabolism|bo||m
+digestión|digestion|bo||f
+latido|heartbeat|bo||m
+bostezo|yawn|bo||m
+hipo|hiccup|bo||m
+suspiro|sigh|bo||m
+escalofrío|shiver (chill)|bo||m
+agujetas|muscle stiffness|bo||fp
+tez|complexion|bo||f
+semblante|countenance|bo||m
+talle|figure (waist)|bo||m
+complexión|build (physique)|bo||f
+estatura|stature|bo||f
+anciana|old woman|pe||f
+benefactor|benefactor|pe||m
+bufón|jester|pe||m
+cacique|local boss (chief)|pe||m
+catedrático|professor (chair)|pe||m
+caudillo|strongman (leader)|pe||m
+comerciante|merchant|pe||mf
+compositor|composer|pe||m
+comisario|commissioner|pe||m
+cortesano|courtier|pe||m
+difunto|deceased|pe||m
+discípulo|disciple|pe||m
+erudito|scholar|pe||m
+fugitivo|fugitive|pe||m
+gobernante|ruler|pe||mf
+hereje|heretic|pe||mf
+hidalgo|nobleman|pe||m
+ilustrador|illustrator|pe||m
+impostor|impostor|pe||m
+infiel|infidel|pe||mf
+insurgente|insurgent|pe||mf
+magistrado|magistrate|pe||m
+mandatario|head of state|pe||m
+marinero|sailor|pe||m
+mercenario|mercenary|pe||m
+mecenas|patron (sponsor)|pe||mf
+narrador|narrator|pe||m
+negociante|dealer (trader)|pe||mf
+opositor|opponent (political)|pe||m
+parásito|parasite|pe||m
+peregrino|pilgrim|pe||m
+plebeyo|commoner|pe||m
+predecesor|predecessor|pe||m
+sucesor|successor|pe||m
+presidiario|convict|pe||m
+prófugo|runaway|pe||m
+recluta|recruit|pe||mf
+sargento|sergeant|pe||mf
+siervo|serf (servant)|pe||m
+súbdito|subject (of a king)|pe||m
+transeúnte|passer-by|pe||mf
+traidor|traitor|pe||m
+verdugo|executioner|pe||m
+villano|villain|pe||m
+virrey|viceroy|pe||m
+brujo|sorcerer|pe||m
+charlatán|charlatan|pe||m
+chismoso|gossip|pe||m
+glotón|glutton|pe||m
+holgazán|idler|pe||m
+fanfarrón|braggart|pe||m
+aldeano|villager|pe||m
+lugareño|local (inhabitant)|pe||m
+paisano|fellow countryman|pe||m
+huésped|lodger (guest)|pe||mf
+atalaya|watchtower|pl||f
+alcázar|fortress palace|pl||m
+arrabal|slum (outskirts)|pl||m
+explanada|esplanade|pl||f
+malecón|seafront|pl||m
+embarcadero|jetty|pl||m
+dársena|dock basin|pl||f
+lonja|fish market|pl||f
+mercadillo|street market|pl||m
+bazar|bazaar|pl||m
+hostal|guesthouse|pl||m
+posada|lodge (inn)|pl||f
+merendero|picnic area|pl||m
+chiringuito|beach bar|pl||m
+vivero|nursery (plants)|pl||m
+alameda|tree-lined avenue|pl||f
+bulevar|boulevard|pl||m
+arcén|hard shoulder|pl||m
+cuneta|ditch|pl||f
+atajo|shortcut|pl||m
+encrucijada|crossroads|pl||f
+periferia|periphery|pl||f
+latifundio|large estate|pl||m
+hacienda|ranch (estate)|pl||f
+cortijo|farmhouse|pl||m
+caserío|hamlet|pl||m
+chabola|shack|pl||f
+tugurio|hovel|pl||m
+cobertizo|shed|pl||m
+pocilga|pigsty|pl||f
+gallinero|henhouse|pl||m
+bóveda|vault|pl||f
+cripta|crypt|pl||f
+púlpito|pulpit|pl||m
+sacristía|sacristy|pl||f
+atrio|atrium|pl||m
+zaguán|entrance hall|pl||m
+recoveco|nook (recess)|pl||m
+confín|boundary (edge)|pl||m
+paraje|spot (place)|na||m
+vertiente|slope (side)|na||f
+desfiladero|gorge (pass)|na||m
+hondonada|hollow (dip)|na||f
+altiplano|high plateau|na||m
+páramo|moor|na||m
+estepa|steppe|na||f
+tundra|tundra|na||f
+sabana|savannah|na||f
+marisma|marsh|na||f
+ciénaga|bog|na||f
+estuario|estuary|na||m
+afluente|tributary|na||m
+remolino|whirlpool|na||m
+torrente|torrent|na||m
+catarata|cataract (falls)|na||f
+riachuelo|brook|na||m
+ensenada|cove|na||f
+istmo|isthmus|na||m
+atolón|atoll|na||m
+peñasco|crag|na||m
+risco|cliff (rock)|na||m
+guijarro|pebble|na||m
+grava|gravel|na||f
+arcilla|clay|na||f
+limo|silt|na||m
+cieno|sludge|na||m
+magma|magma|na||m
+azufre|sulphur|na||m
+cuarzo|quartz|na||m
+granito|granite|na||m
+pizarra|slate (blackboard)|na||f
+sílex|flint|na||m
+rubí|ruby|na||m
+zafiro|sapphire|na||m
+ámbar|amber|na||m
+mercurio|mercury|na||m
+estaño|tin|na||m
+bronce|bronze|na||m
+latón|brass|na||m
+ciprés|cypress|na||m
+encina|holm oak|na||f
+alcornoque|cork oak|na||m
+nogal|walnut tree|na||m
+abedul|birch|na||m
+haya|beech|na||fe
+fresno|ash tree|na||m
+olmo|elm|na||m
+arce|maple|na||m
+enredadera|climbing plant|na||f
+hiedra|ivy|na||f
+ortiga|nettle|na||f
+cardo|thistle|na||m
+brezo|heather|na||m
+junco|reed|na||m
+mimbre|wicker|na||m
+lirio|lily|na||m
+azucena|white lily|na||f
+clavel|carnation|na||m
+amapola|poppy|na||f
+jazmín|jasmine|na||m
+lavanda|lavender|na||f
+romero|rosemary|na||m
+tomillo|thyme|na||m
+polen|pollen|na||m
+savia|sap|na||f
+brote|shoot (bud)|na||m
+capullo|bud (cocoon)|na||m
+follaje|foliage|na||m
+hojarasca|fallen leaves|na||f
+bruma|mist|na||f
+calima|haze|na||f
+aguacero|cloudburst|na||m
+vendaval|gale|na||m
+ráfaga|gust|na||f
+deshielo|thaw|na||m
+solsticio|solstice|na||m
+equinoccio|equinox|na||m
+nebulosa|nebula|na||f
+cosmos|cosmos|na||m
+bienio|two-year period|ti||m
+lustro|five years|ti||m
+cuaresma|Lent|ti||f
+madrugón|early rising|ti||m
+trasnoche|late night|ti||m
+anochecer|nightfall|ti||m
+efeméride|anniversary (event)|ti||f
+cronología|chronology|ti||f
+posteridad|posterity|ti||f
+prehistoria|prehistory|ti||f
+medievo|Middle Ages|ti||m
+velada|soirée|ti||f
+tertulia|get-together|ti||f
+otrora|formerly|ti|adv
+acto|act (deed)|th||m
+tardío|belated|ti|adj
+precoz|precocious|ti|adj
+fugazmente|fleetingly|ti|adv
+anualmente|annually|ti|adv
+semanal|weekly|ti|adj
+bianual|biannual|ti|adj
+milésimo|thousandth|nu
+séxtuple|sixfold|nu
+decenas|tens|nu|n|fp
+centena|group of hundred|nu|n|f
+cuarteto|quartet|nu|n|m
+trío|trio|nu|n|m
+dúo|duo|nu|n|m
+quinteto|quintet|nu|n|m
+sexteto|sextet|nu|n|m
+trillón|quintillion|nu|n|m
+enésimo|umpteenth|nu
+ordinal|ordinal|nu
+cardinal|cardinal (number)|nu
+numérico|numerical|nu
+binario|binary|nu
+unitario|unitary|nu
+abordar|to tackle|ve
+acaparar|to hoard|ve
+acechar|to lie in wait|ve
+achacar|to blame (attribute)|ve
+acometer|to undertake|ve
+acontecer|to occur|ve
+acotar|to mark off (limit)|ve
+acuñar|to coin|ve
+adentrarse|to go deep into|ve
+adolecer|to suffer (from a flaw)|ve
+afianzar|to strengthen|ve
+aflorar|to surface|ve
+afrontar|to confront|ve
+agasajar|to lavish attention on|ve
+agilizar|to speed up|ve
+aglutinar|to bring together|ve
+agraciar|to grace|ve
+aguardar|to await|ve
+alardear|to boast|ve
+albergar|to harbour|ve
+alentar|to cheer on|ve
+aliviar|to relieve|ve
+amainar|to die down|ve
+amedrentar|to intimidate|ve
+amoldarse|to adapt oneself|ve
+apaciguar|to appease|ve
+apelar|to appeal|ve
+apostillar|to add (remark)|ve
+apremiar|to press (urge)|ve
+arraigar|to take root|ve
+arrebatar|to snatch|ve
+arremeter|to lash out|ve
+arrojar|to hurl|ve
+asediar|to besiege|ve
+asentir|to nod (agree)|ve
+atañer|to concern|ve
+atenuar|to attenuate|ve
+atestiguar|to testify|ve
+atisbar|to make out (glimpse)|ve
+avalar|to endorse|ve
+avecinarse|to approach (loom)|ve
+avivar|to fan (revive)|ve
+azotar|to lash (whip)|ve
+blindar|to armour-plate|ve
+bordear|to skirt|ve
+bosquejar|to sketch|ve
+cabalgar|to ride (on horseback)|ve
+cautivar|to captivate|ve
+cavilar|to ponder|ve
+cercar|to fence in|ve
+cerciorarse|to make sure|ve
+cimentar|to cement (lay foundations)|ve
+coaccionar|to coerce|ve
+codiciar|to covet|ve
+cohibir|to inhibit|ve
+colmar|to fill to the brim|ve
+concernir|to pertain to|ve
+concertar|to arrange (agree)|ve
+conciliar|to reconcile|ve
+conferir|to confer|ve
+congeniar|to get along|ve
+conjeturar|to conjecture|ve
+conllevar|to entail (involve)|ve
+consolidar|to consolidate|ve
+constatar|to verify (establish)|ve
+contravenir|to contravene|ve
+corroborar|to corroborate|ve
+cotizar|to quote (price)|ve
+cuestionar|to question|ve
+culminar|to culminate|ve
+damnificar|to harm (damage)|ve
+deambular|to wander|ve
+decantarse|to lean towards|ve
+delegar|to delegate|ve
+deliberar|to deliberate|ve
+demorar|to delay|ve
+depurar|to purify|ve
+derrochar|to squander|ve
+desatar|to unleash|ve
+desbordar|to overflow|ve
+descifrar|to decipher|ve
+desempatar|to break a tie|ve
+desenvolver|to unwrap|ve
+desfallecer|to faint (lose heart)|ve
+desistir|to desist|ve
+desmantelar|to dismantle|ve
+desmoronar|to crumble|ve
+despejar|to clear|ve
+desplegar|to deploy|ve
+desprender|to give off (detach)|ve
+destituir|to dismiss (remove)|ve
+desvelar|to unveil|ve
+desviar|to divert|ve
+dictaminar|to rule (pronounce)|ve
+dilucidar|to elucidate|ve
+discrepar|to disagree|ve
+disentir|to dissent|ve
+disipar|to dispel|ve
+disuadir|to dissuade|ve
+divagar|to digress|ve
+eclipsar|to overshadow|ve
+efectuar|to carry out (effect)|ve
+eludir|to evade|ve
+emanar|to emanate|ve
+embestir|to charge (ram)|ve
+emprender|to embark on|ve
+enaltecer|to exalt|ve
+encarar|to face up to|ve
+encauzar|to channel|ve
+enmendar|to amend|ve
+entablar|to strike up|ve
+entorpecer|to impede|ve
+entrañar|to involve (entail)|ve
+envejecer|to grow old|ve
+erigir|to erect|ve
+escatimar|to skimp on|ve
+esgrimir|to wield|ve
+esmerarse|to take pains|ve
+esquivar|to dodge|ve
+estipular|to stipulate|ve
+evocar|to evoke|ve
+exacerbar|to exacerbate|ve
+exaltar|to exalt (praise)|ve
+excavar|to excavate|ve
+exhortar|to exhort|ve
+eximir|to exempt|ve
+expiar|to atone for|ve
+extinguir|to extinguish|ve
+extraviar|to mislay|ve
+fraguar|to forge (plot)|ve
+frenar|to brake (curb)|ve
+frustrar|to thwart|ve
+fustigar|to castigate|ve
+gestar|to gestate (brew)|ve
+glorificar|to glorify|ve
+granjear|to earn (win over)|ve
+hostigar|to pester|ve
+idear|to devise|ve
+imperar|to prevail|ve
+implorar|to implore|ve
+impugnar|to contest (challenge)|ve
+incautar|to seize (impound)|ve
+incitar|to incite|ve
+increpar|to rebuke|ve
+incurrir|to incur|ve
+indultar|to pardon|ve
+infringir|to infringe|ve
+infundir|to instil|ve
+inmiscuirse|to meddle|ve
+inmutarse|to flinch|ve
+instar|to urge|ve
+insinuar|to insinuate|ve
+intuir|to sense (intuit)|ve
+jactarse|to brag|ve
+lidiar|to deal with|ve
+lucrarse|to profit|ve
+malgastar|to waste|ve
+mermar|to diminish|ve
+mitigar|to mitigate|ve
+mofarse|to mock|ve
+merodear|to prowl|ve
+moderar|to moderate|ve
+mortificar|to torment (mortify)|ve
+obrar|to act (work)|ve
+obstruir|to obstruct|ve
+ofuscar|to blind (confuse)|ve
+ostentar|to flaunt|ve
+palpar|to feel (by touch)|ve
+paliar|to alleviate|ve
+patentar|to patent|ve
+pautar|to set guidelines|ve
+percatarse|to realize (notice)|ve
+perdurar|to endure|ve
+perpetrar|to perpetrate|ve
+perpetuar|to perpetuate|ve
+pervivir|to live on|ve
+plasmar|to capture (express)|ve
+ponderar|to weigh up|ve
+postergar|to put off|ve
+potenciar|to boost|ve
+preconizar|to advocate|ve
+prescindir|to do without|ve
+primar|to prioritize|ve
+propiciar|to foster|ve
+proliferar|to proliferate|ve
+pugnar|to strive|ve
+quebrarse|to snap|ve
+radicar|to lie (be rooted)|ve
+rebasar|to exceed|ve
+rebatir|to rebut|ve
+recabar|to gather (obtain)|ve
+recalcar|to stress (emphasize)|ve
+recelar|to be wary of|ve
+recopilar|to compile|ve
+redimir|to redeem|ve
+refutar|to disprove|ve
+regocijarse|to rejoice|ve
+rehabilitar|to rehabilitate|ve
+reincidir|to reoffend|ve
+relegar|to relegate|ve
+remontar|to go back (overcome)|ve
+repercutir|to have repercussions|ve
+replicar|to retort|ve
+reponer|to replenish|ve
+reprender|to reprimand|ve
+resarcir|to compensate (make amends)|ve
+rescindir|to rescind|ve
+resguardar|to safeguard|ve
+restar|to subtract|ve
+retractarse|to retract|ve
+revocar|to revoke|ve
+saciar|to satiate|ve
+saquear|to loot|ve
+sobrellevar|to endure (bear)|ve
+socavar|to undermine|ve
+sofocar|to stifle|ve
+sopesar|to weigh (consider)|ve
+sortear|to get round (draw lots)|ve
+subsanar|to rectify|ve
+subyugar|to subjugate|ve
+sucumbir|to succumb|ve
+suplantar|to supplant|ve
+suscitar|to arouse|ve
+sustraer|to steal (subtract)|ve
+tantear|to feel out|ve
+tergiversar|to distort|ve
+titubear|to falter|ve
+tramar|to scheme|ve
+trastocar|to disrupt|ve
+tutelar|to protect (oversee)|ve
+urdir|to hatch (plot)|ve
+usurpar|to usurp|ve
+vaticinar|to prophesy|ve
+velar|to keep watch|ve
+venerar|to revere|ve
+vilipendiar|to vilify|ve
+zanjar|to settle (resolve)|ve
+zozobrar|to capsize|ve
+abrumador|overwhelming|ad
+acérrimo|staunch|ad
+acogedor|cosy|ad
+acuciante|pressing|ad
+afín|related (akin)|ad
+aislado|isolated|ad
+alentador|encouraging|ad
+altivo|haughty|ad
+ameno|entertaining|ad
+anodino|bland|ad
+apacible|mild (gentle)|ad
+arduo|arduous|ad
+arrogante|arrogant|ad
+atroz|atrocious|ad
+austero|austere|ad
+banal|banal|ad
+benévolo|benevolent|ad
+borroso|blurred|ad
+burdo|crude|ad
+caduco|outdated|ad
+candente|burning (red-hot)|ad
+caprichoso|capricious|ad
+cauteloso|cautious|ad
+certero|accurate (on target)|ad
+colosal|colossal|ad
+conciso|concise|ad
+contundente|forceful|ad
+convincente|convincing|ad
+cotidiano|everyday|ad
+crucial|crucial|ad
+cuantioso|substantial|ad
+decrépito|decrepit|ad
+deficiente|deficient|ad
+deleznable|despicable|ad
+desbordante|overflowing|ad
+desdichado|wretched|ad
+desmesurado|excessive (huge)|ad
+despiadado|ruthless|ad
+diáfano|clear (diaphanous)|ad
+diestro|skilled (right-handed)|ad
+difuso|diffuse|ad
+displicente|indifferent (off-hand)|ad
+dócil|docile|ad
+efímero|ephemeral|ad
+elocuente|eloquent|ad
+embriagador|intoxicating|ad
+emblemático|iconic|ad
+empedernido|hardened (inveterate)|ad
+encomiable|commendable|ad
+enigmático|enigmatic|ad
+entrañable|endearing|ad
+errático|erratic|ad
+escueto|succinct|ad
+esmerado|painstaking|ad
+espléndido|splendid|ad
+estéril|sterile|ad
+estrepitoso|resounding|ad
+exhaustivo|exhaustive|ad
+exiguo|meagre|ad
+exótico|exotic|ad
+explosivo|explosive|ad
+exquisito|exquisite|ad
+fascinante|fascinating|ad
+fatídico|fateful|ad
+fehaciente|reliable (irrefutable)|ad
+fértil|fertile|ad
+fidedigno|trustworthy|ad
+flamante|brand-new|ad
+fortuito|fortuitous|ad
+frívolo|frivolous|ad
+fructífero|fruitful|ad
+furtivo|furtive|ad
+fútil|futile|ad
+gélido|icy|ad
+grotesco|grotesque|ad
+hermético|airtight|ad
+hilarante|hilarious|ad
+holgado|loose (roomy)|ad
+hosco|sullen|ad
+idóneo|ideal (suitable)|ad
+ileso|unhurt|ad
+ilícito|illicit|ad
+ilusorio|illusory|ad
+impasible|impassive|ad
+implacable|relentless|ad
+imponente|imposing|ad
+improvisado|improvised|ad
+incauto|unwary|ad
+incesante|incessant|ad
+incipiente|incipient|ad
+incisivo|incisive|ad
+incólume|unscathed|ad
+indeleble|indelible|ad
+indómito|untamed|ad
+inédito|unpublished|ad
+inefable|ineffable|ad
+inerte|inert|ad
+infame|infamous|ad
+ingente|enormous (vast)|ad
+inhóspito|inhospitable|ad
+inicuo|iniquitous|ad
+inocuo|harmless|ad
+inquietante|disturbing|ad
+insaciable|insatiable|ad
+insensato|foolish|ad
+insigne|distinguished|ad
+insípido|insipid|ad
+insulso|dull (insipid)|ad
+íntegro|upright (whole)|ad
+intrépido|intrepid|ad
+intrínseco|intrinsic|ad
+inverosímil|implausible|ad
+irascible|irascible|ad
+irrisorio|derisory|ad
+jocoso|jocular|ad
+lacónico|laconic|ad
+lánguido|languid|ad
+lícito|lawful|ad
+locuaz|talkative|ad
+lúcido|lucid|ad
+lúgubre|gloomy (dismal)|ad
+malévolo|malevolent|ad
+maltrecho|battered|ad
+manido|hackneyed|ad
+mezquino|petty|ad
+minucioso|thorough|ad
+mordaz|scathing|ad
+mustio|wilted|ad
+nefasto|disastrous|ad
+negligente|negligent|ad
+nimio|trifling|ad
+nítido|sharp (clear)|ad
+nocivo|harmful (noxious)|ad
+obsoleto|obsolete|ad
+obstinado|obstinate|ad
+ocioso|idle (leisurely)|ad
+ominoso|ominous|ad
+opulento|opulent|ad
+osado|daring|ad
+pausado|unhurried|ad
+pedante|pedantic|ad
+perenne|perennial|ad
+perspicaz|shrewd|ad
+pertinaz|persistent (stubborn)|ad
+pintoresco|picturesque|ad
+plácido|placid|ad
+pomposo|pompous|ad
+precavido|cautious (wary)|ad
+prepotente|overbearing|ad
+prístino|pristine|ad
+prolijo|long-winded|ad
+propicio|favourable (auspicious)|ad
+prosaico|prosaic|ad
+pulcro|neat (tidy)|ad
+quimérico|fanciful|ad
+rancio|stale (rancid)|ad
+recóndito|hidden (recondite)|ad
+reacio|reluctant|ad
+recatado|demure|ad
+redundante|redundant|ad
+reiterado|repeated|ad
+reluciente|gleaming|ad
+rencoroso|spiteful|ad
+reticente|reticent|ad
+rotundo|emphatic|ad
+sagaz|astute|ad
+sarcástico|sarcastic|ad
+sedentario|sedentary|ad
+sigiloso|stealthy|ad
+sobrio|sober|ad
+soez|foul-mouthed|ad
+sombrío|sombre|ad
+somero|superficial (brief)|ad
+sórdido|sordid|ad
+suculento|succulent|ad
+suntuoso|sumptuous|ad
+superfluo|superfluous|ad
+taciturno|taciturn|ad
+tajante|categorical|ad
+temerario|reckless|ad
+tenue|faint|ad
+tétrico|grim|ad
+tórrido|torrid|ad
+tosco|coarse|ad
+tozudo|pig-headed|ad
+trémulo|tremulous|ad
+tumultuoso|tumultuous|ad
+ubicuo|ubiquitous|ad
+ufano|smug|ad
+utópico|utopian|ad
+vehemente|vehement|ad
+venerable|venerable|ad
+veraz|truthful|ad
+vertiginoso|dizzying|ad
+vetusto|ancient (age-old)|ad
+voraz|voracious|ad
+zafio|boorish|ad
+antemano|beforehand (in advance)|av
+asiduamente|regularly (often)|av
+cabalmente|fully (exactly)|av
+denodado|dauntless|ad
+enteramente|entirely|av
+fatalmente|fatally|av
+francamente|frankly|av
+indudable|undoubted|ad
+llanamente|plainly|av
+mayormente|mostly|av
+mutuamente|mutually|av
+nítidamente|sharply|av
+propiamente|properly|av
+puramente|purely|av
+recién|newly (just)|av
+someramente|briefly|av
+tácitamente|tacitly|av
+tenazmente|tenaciously|av
+vagamente|vaguely|av
+verbalmente|verbally|av
+viceversa|vice versa|av
+empero|however (yet)|av
+otrosí|furthermore|av
+enhorabuena|congratulations|fe|n|f
+congoja|grief (anguish)|fe|n|f
+desasosiego|restlessness|fe|n|m
+desazón|unease (disquiet)|fe|n|f
+desdén|disdain|fe|n|m
+dicha|bliss|fe|n|f
+ensoñación|daydream|fe|n|f
+estupor|stupor|fe|n|m
+exaltación|elation|fe|n|f
+hastío|weariness|fe|n|m
+júbilo|jubilation|fe|n|m
+melancolía|melancholy|fe|n|f
+pesadumbre|sorrow (heaviness)|fe|n|f
+recelo|misgiving|fe|n|m
+regocijo|delight (rejoicing)|fe|n|m
+sosiego|tranquillity|fe|n|m
+zozobra|anxiety (unease)|fe|n|f
+abatido|dejected|fe
+afligido|afflicted|fe
+consternado|dismayed|fe
+desolado|devastated|fe
+embelesado|spellbound|fe
+exultante|exultant|fe
+compungido|remorseful|fe
+contrariado|annoyed (upset)|fe
+enardecido|fired up|fe
+ofuscado|blinded (by emotion)|fe
+perplejo|perplexed|fe
+sobrecogido|awestruck|fe
+albedrío|free will|th||m
+alegato|plea (argument)|th||m
+altibajos|ups and downs|th||mp
+ambigüedad|ambiguity|th||f
+amenidad|pleasantness|th||f
+apogeo|heyday|th||m
+arbitraje|arbitration|th||m
+ardid|ruse|th||m
+artimaña|trick (ploy)|th||f
+atropello|outrage (running over)|th||m
+avalancha|avalanche|th||f
+baluarte|bastion|th||m
+bagaje|background (baggage)|th||m
+bonanza|prosperity (calm sea)|th||f
+bullicio|hustle and bustle|th||m
+cadencia|cadence|th||f
+calvario|ordeal|th||m
+canon|canon (norm)|th||m
+censura|censorship|th||f
+chantaje|blackmail|th||m
+coartada|alibi|th||f
+cometido|task (assignment)|th||m
+compendio|compendium|th||m
+conato|attempt (beginnings)|th||m
+concordia|harmony (concord)|th||f
+conjetura|conjecture|th||f
+consigna|slogan (instruction)|th||f
+cordura|sanity|th||f
+coyuntura|juncture|th||f
+credo|creed|th||m
+cuantía|amount (sum)|th||f
+debacle|debacle|th||f
+declive|decline|th||m
+delirio|delirium|th||m
+derroche|waste (extravagance)|th||m
+desenlace|outcome (dénouement)|th||m
+desidia|apathy (negligence)|th||f
+desliz|slip (lapse)|th||m
+destreza|dexterity|th||f
+detrimento|damage (detriment)|th||m
+dicotomía|dichotomy|th||f
+disyuntiva|dilemma (choice)|th||f
+divisa|currency|th||f
+ecuanimidad|equanimity|th||f
+embate|onslaught|th||m
+embrollo|mess (muddle)|th||m
+empeño|determination|th||m
+enclave|enclave|th||m
+engranaje|gears (machinery)|th||m
+entereza|fortitude|th||f
+entramado|framework (network)|th||m
+envergadura|scope (magnitude)|th||f
+escarmiento|lesson (punishment)|th||m
+escollo|pitfall (hurdle)|th||m
+esmero|care (diligence)|th||m
+estela|wake (trail)|th||f
+estigma|stigma|th||m
+estrago|havoc|th||m
+exabrupto|outburst|th||m
+exilio|exile|th||m
+fatiga|fatigue|th||f
+fervor|fervour|th||m
+fiasco|fiasco|th||m
+fisura|crack (fissure)|th||f
+fomento|promotion (encouragement)|th||m
+franqueza|frankness|th||f
+fulgor|brilliance (glow)|th||m
+gama|range (gamut)|th||f
+gancho|hook|th||m
+garbo|grace (poise)|th||m
+halago|flattery|th||m
+hazaña|feat (exploit)|th||f
+hegemonía|hegemony|th||f
+hito|milestone|th||m
+holgura|leeway|th||f
+ímpetu|impetus|th||m
+indolencia|indolence|th||f
+injerencia|interference|th||f
+inercia|inertia|th||f
+ingenio|ingenuity (wit)|th||m
+iniquidad|iniquity|th||f
+intriga|intrigue|th||f
+jactancia|boastfulness|th||f
+jerga|jargon (slang)|th||f
+lacra|scourge|th||f
+lastre|burden (ballast)|th||m
+letargo|lethargy|th||m
+litigio|lawsuit|th||m
+lucidez|lucidity|th||f
+mesura|restraint|th||f
+meollo|crux|th||m
+merma|decrease (shrinkage)|th||f
+minucia|trifle (detail)|th||f
+mordaza|gag|th||f
+nexo|nexus (link)|th||m
+ocio|leisure|th||m
+omisión|omission|th||f
+oprobio|disgrace (shame)|th||m
+paradigma|paradigm|th||m
+paradoja|paradox|th||f
+pauta|guideline|th||f
+penuria|hardship (scarcity)|th||f
+peripecia|vicissitude (adventure)|th||f
+perjurio|perjury|th||m
+pesquisa|inquiry|th||f
+pormenor|particular (detail)|th||m
+preámbulo|preamble|th||m
+premisa|premise|th||f
+presagio|omen|th||m
+primicia|scoop (first)|th||f
+pudor|modesty (shame)|th||m
+quimera|chimera (pipe dream)|th||f
+recato|decorum|th||m
+reclamo|lure (claim)|th||m
+regazo|lap|bo||m
+rencilla|quarrel (feud)|th||f
+repudio|repudiation|th||m
+resquicio|chink (loophole)|th||m
+revuelo|stir (commotion)|th||m
+salvedad|proviso|th||f
+secuela|aftermath (sequel)|th||f
+sesgo|bias|th||m
+sigilo|stealth|th||m
+soborno|bribe|th||m
+sobresalto|start (jolt)|th||m
+solvencia|solvency|th||f
+subterfugio|subterfuge|th||m
+suplicio|torture (ordeal)|th||m
+talante|disposition (mood)|th||m
+tesón|perseverance|th||m
+tiranía|tyranny|th||f
+trasfondo|background (backdrop)|th||m
+tropiezo|stumble (setback)|th||m
+ultraje|outrage (insult)|th||m
+vaivén|swaying (ups and downs)|th||m
+vanguardia|vanguard|th||f
+vericueto|rough track|th||m
+vestigio|vestige|th||m
+vorágine|maelstrom|th||f
+yugo|yoke|th||m
+zancadilla|trip (foot)|th||f

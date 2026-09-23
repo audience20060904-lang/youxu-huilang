@@ -1764,6 +1764,23 @@ var RELIC_EN = {
 };
 
 /* 数据表：按 id 换掉名字和说明（content.js 本身一个字不动 —— 战场那边还要读中文）。*/
+/* ===== 英语母语学西班牙语（2026-09-23）=====
+   上面那几份是照「英语母语学中文」写的（那时候英文界面只有这一种组合）。学西班牙语时把跟中文绑死的几条换掉：
+   题面那句「用什么语言说」、图鉴搜索框、玩法说明里的题型和分档、三件按词长算的遗物（中文按拼音字母数，西语就是字母数）。*/
+if(LANG_LEARN === "es"){
+  I18N["用英语怎么说？"] = "How do you say it in Spanish?";
+  I18N["搜索：英文 / 中文 / 遗物名"] = "Search: Spanish / English / relic";
+  I18N_BLOCKS["#veilHelp .rules"] = I18N_BLOCKS["#veilHelp .rules"]
+    .replace("Chapters 1–5 have <b>50 floors</b> each", "Chapters 1–4 have <b>50 floors</b> each")
+    .replace(/<li><b>Question types<\/b>:.*?<\/li>/,
+      "<li><b>Question types</b>: pick the English meaning of a Spanish word, pick the Spanish word for an English meaning, or (sometimes) <b>spell the word from letter tiles</b> — accents count. Nouns show their article (<i>el / la</i>); tap 🔊 to hear the word.</li>")
+    .replace(/<li><b>Words<\/b>:.*?<\/li>/,
+      "<li><b>Words</b>: <b>each chapter uses one level</b> — Chapter 1 <b>A1</b>, Chapter 2 <b>A2</b>, Chapter 3 <b>B1</b>, Chapter 4 <b>B2</b>; Chapter 5 \"Endless\" <b>mixes B1, B2 and C1</b>. Words you miss come back <b>more often</b> until you've got them.</li>");
+  ["longword", "volume", "ponder"].forEach(function(id){
+    if(RELIC_EN[id]) RELIC_EN[id][1] = RELIC_EN[id][1].replace(" (pinyin)", "");
+  });
+}
+
 var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spider", bone:"Bone Soldier",
   statue:"Gate Statue", ghost:"Whispering Ghost", clock:"Rusty Bell", warden2:"Wandering Shade",
   dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade",

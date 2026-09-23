@@ -2,9 +2,9 @@
    ---------------------------------------------------------------------------
    两件事分开管：
      · **界面语言 LANG_UI** = 玩家的母语（zh 中文 / en English）—— 所有按钮、日志、遗物文案；
-     · **学习语言 LANG_LEARN** = 背哪一门的词（en 英语 / zh 中文）—— 词库、朗读、拼写题。
+     · **学习语言 LANG_LEARN** = 背哪一门的词（en 英语 / zh 中文 / es 西班牙语）—— 词库、朗读、拼写题。
    能选的组合在 LANG_PAIRS 里（要有「这门语言的词 + 母语释义」那一份词库才算数）：
-     中文母语 → 学英语（words-a1.js，游戏本来的样子）/ 英语母语 → 学中文（words-zh.js）。
+     中文母语 → 学英语（words-a1.js，游戏本来的样子）/ 英语母语 → 学中文（words-zh.js）/ 英语母语 → 学西班牙语（words-es.js）。
    **母语只做中英两种，学习语言以后会有很多**（用户 2026-09-23）—— 所以选择分两步：
      先挑母语（veilLang），再弹一个学习语言的列表（veilLearn，按 LANG_PAIRS 现算）。
    选择存在设置 OPT（youxu.opt.v1）的 `lang` 字段上 —— 它是「这台设备怎么显示」，不是进度。
@@ -19,7 +19,8 @@
 
 var LANG_PAIRS = [
   {ui:"zh", learn:"en"},
-  {ui:"en", learn:"zh"}
+  {ui:"en", learn:"zh"},
+  {ui:"en", learn:"es"}
 ];
 var LANG_NAME = {zh:"中文", en:"English"};
 /* 学习语言的介绍（第二步那个弹窗的卡片）：name 按母语写、self 是这门语言自己的写法、
@@ -27,7 +28,8 @@ var LANG_NAME = {zh:"中文", en:"English"};
    词数不写死，game.js 现数（learnWordCount）。*/
 var LEARN_INFO = {
   en: {name:{zh:"英语", en:"English"}, self:"English", lv:"A1 → C1"},
-  zh: {name:{zh:"中文", en:"Chinese"}, self:"中文", lv:"HSK 1 → 6"}
+  zh: {name:{zh:"中文", en:"Chinese"}, self:"中文", lv:"HSK 1 → 6"},
+  es: {name:{zh:"西班牙语", en:"Spanish"}, self:"Español", lv:"A1 → C1"}
 };
 var LANG_UI = "zh", LANG_LEARN = "en", LANG_SET = false;
 function langPairOk(ui, learn){
@@ -45,7 +47,7 @@ function langPairOk(ui, learn){
 var UI_EN = LANG_UI === "en";
 var LEARN_ZH = LANG_LEARN === "zh";
 /* util.js 的 speak() 读它 —— 念的是「要学的那门语言」 */
-var SPEAK_LANG = LEARN_ZH ? "zh-CN" : "en-US";
+var SPEAK_LANG = {zh:"zh-CN", es:"es-ES"}[LANG_LEARN] || "en-US";
 try{ document.documentElement.lang = UI_EN ? "en" : "zh-CN"; }catch(e){}
 
 var I18N = {};

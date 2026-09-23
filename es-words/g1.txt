@@ -1,0 +1,514 @@
+perro|dog|an||m
+gato|cat|an||m
+caballo|horse|an||m
+pájaro|bird|an||m
+pez|fish (animal)|an||m
+vaca|cow|an||f
+cerdo|pig|an||m
+pollo|chicken|fo||m
+ratón|mouse|an||m
+oveja|sheep|an||f
+conejo|rabbit|an||m
+oso|bear|an||m
+león|lion|an||m
+mono|monkey|an||m
+elefante|elephant|an||m
+pato|duck|an||m
+gallina|hen|an||f
+toro|bull|an||m
+lobo|wolf|an||m
+serpiente|snake|an||f
+mosca|fly|an||f
+abeja|bee|an||f
+tigre|tiger|an||m
+burro|donkey|an||m
+agua|water|fo||fe
+pan|bread|fo||m
+leche|milk|fo||f
+carne|meat|fo||f
+huevo|egg|fo||m
+arroz|rice|fo||m
+fruta|fruit|fo||f
+manzana|apple|fo||f
+naranja|orange (fruit)|fo||f
+café|coffee|fo||m
+té|tea|fo||m
+queso|cheese|fo||m
+sopa|soup|fo||f
+pescado|fish (food)|fo||m
+azúcar|sugar|fo||m
+sal|salt|fo||f
+vino|wine|fo||m
+cerveza|beer|fo||f
+comida|food|fo||f
+desayuno|breakfast|fo||m
+almuerzo|lunch|fo||m
+cena|dinner|fo||f
+patata|potato|fo||f
+tomate|tomato|fo||m
+plátano|banana|fo||m
+helado|ice cream|fo||m
+pastel|cake|fo||m
+ensalada|salad|fo||f
+jugo|juice|fo||m
+verdura|vegetable|fo||f
+aceite|oil|fo||m
+galleta|cookie|fo||f
+rojo|red|co
+azul|blue|co
+verde|green|co
+amarillo|yellow|co
+blanco|white|co
+negro|black|co
+gris|grey|co
+marrón|brown|co
+rosa|pink|co
+morado|purple|co
+color|colour|co|n|m
+cabeza|head|bo||f
+mano|hand|bo||f
+pie|foot|bo||m
+ojo|eye|bo||m
+boca|mouth|bo||f
+nariz|nose|bo||f
+oreja|ear|bo||f
+pelo|hair|bo||m
+brazo|arm|bo||m
+pierna|leg|bo||f
+dedo|finger|bo||m
+diente|tooth|bo||m
+cara|face|bo||f
+cuerpo|body|bo||m
+corazón|heart|bo||m
+espalda|back (body)|bo||f
+estómago|stomach|bo||m
+cuello|neck|bo||m
+rodilla|knee|bo||f
+hombre|man|pe||m
+mujer|woman|pe||f
+niño|boy|pe||m
+niña|girl|pe||f
+padre|father|pe||m
+madre|mother|pe||f
+hijo|son|pe||m
+hija|daughter|pe||f
+hermano|brother|pe||m
+hermana|sister|pe||f
+amigo|friend|pe||m
+abuelo|grandfather|pe||m
+abuela|grandmother|pe||f
+familia|family|pe||f
+bebé|baby|pe||mf
+profesor|teacher|pe||m
+médico|doctor|pe||m
+estudiante|student|pe||mf
+señor|sir (Mr.)|pe||m
+señora|madam (Mrs.)|pe||f
+gente|people|pe||f
+persona|person|pe||f
+esposo|husband|pe||m
+esposa|wife|pe||f
+novio|boyfriend|pe||m
+novia|girlfriend|pe||f
+tío|uncle|pe||m
+tía|aunt|pe||f
+primo|cousin|pe||m
+vecino|neighbour|pe||m
+policía|police officer|pe||mf
+casa|house|th||f
+mesa|table|th||f
+silla|chair|th||f
+cama|bed|th||f
+puerta|door|th||f
+ventana|window|th||f
+libro|book|th||m
+coche|car|th||m
+teléfono|telephone|th||m
+dinero|money|th||m
+ropa|clothes|th||f
+zapato|shoe|th||m
+camisa|shirt|th||f
+llave|key|th||f
+reloj|clock (watch)|th||m
+bolsa|bag|th||f
+cosa|thing|th||f
+nombre|name|th||m
+palabra|word|th||f
+carta|letter (mail)|th||f
+papel|paper|th||m
+bolígrafo|pen|th||m
+lápiz|pencil|th||m
+foto|photo|th||f
+película|film (movie)|th||f
+música|music|th||f
+juego|game|th||m
+pelota|ball|th||f
+regalo|gift|th||m
+vaso|glass (cup)|th||m
+plato|plate|th||m
+taza|cup|th||f
+cuchillo|knife|th||m
+tenedor|fork|th||m
+cuchara|spoon|th||f
+autobús|bus|th||m
+tren|train|th||m
+avión|plane|th||m
+bicicleta|bicycle|th||f
+barco|boat|th||m
+ordenador|computer|th||m
+televisión|television|th||f
+trabajo|job (work)|th||m
+clase|class|th||f
+pregunta|question|th||f
+respuesta|answer|th||f
+idioma|language|th||m
+número|number|th||m
+precio|price|th||m
+problema|problem|th||m
+historia|story|th||f
+vestido|dress|th||m
+falda|skirt|th||f
+sombrero|hat|th||m
+sol|sun|na||m
+luna|moon|na||f
+estrella|star|na||f
+cielo|sky|na||m
+mar|sea|na||m
+río|river|na||m
+árbol|tree|na||m
+flor|flower|na||f
+lluvia|rain|na||f
+nieve|snow|na||f
+viento|wind|na||m
+fuego|fire|na||m
+tierra|earth (land)|na||f
+montaña|mountain|na||f
+playa|beach|na||f
+aire|air|na||m
+planta|plant|na||f
+piedra|stone|na||f
+lago|lake|na||m
+calor|heat|na||m
+frío|cold|ad
+ser|to be (permanent)|ve
+estar|to be (state)|ve
+tener|to have|ve
+hacer|to do (make)|ve
+ir|to go|ve
+venir|to come|ve
+ver|to see|ve
+decir|to say|ve
+dar|to give|ve
+saber|to know (a fact)|ve
+querer|to want|ve
+poder|can (be able)|ve
+comer|to eat|ve
+beber|to drink|ve
+vivir|to live|ve
+hablar|to speak|ve
+escribir|to write|ve
+leer|to read|ve
+trabajar|to work|ve
+estudiar|to study|ve
+dormir|to sleep|ve
+jugar|to play|ve
+comprar|to buy|ve
+abrir|to open|ve
+cerrar|to close|ve
+llamar|to call|ve
+mirar|to look at|ve
+escuchar|to listen|ve
+aprender|to learn|ve
+entender|to understand|ve
+pensar|to think|ve
+conocer|to know (a person)|ve
+salir|to go out|ve
+entrar|to enter|ve
+llegar|to arrive|ve
+volver|to return|ve
+correr|to run|ve
+caminar|to walk|ve
+nadar|to swim|ve
+cantar|to sing|ve
+bailar|to dance|ve
+cocinar|to cook|ve
+lavar|to wash|ve
+tomar|to take|ve
+poner|to put|ve
+buscar|to look for|ve
+encontrar|to find|ve
+necesitar|to need|ve
+pagar|to pay|ve
+viajar|to travel|ve
+esperar|to wait|ve
+ayudar|to help|ve
+usar|to use|ve
+preguntar|to ask|ve
+responder|to reply|ve
+empezar|to begin|ve
+terminar|to finish|ve
+vender|to sell|ve
+llevar|to carry|ve
+traer|to bring|ve
+sentar|to seat|ve
+levantar|to lift|ve
+dibujar|to draw|ve
+pintar|to paint|ve
+enseñar|to teach|ve
+ganar|to win|ve
+perder|to lose|ve
+grande|big|ad
+pequeño|small|ad
+bueno|good|ad
+malo|bad|ad
+nuevo|new|ad
+viejo|old|ad
+joven|young|ad
+alto|tall|ad
+bajo|short (height)|ad
+largo|long|ad
+corto|short (length)|ad
+bonito|pretty|ad
+feo|ugly|ad
+caliente|hot|ad
+fácil|easy|ad
+difícil|difficult|ad
+rápido|fast|ad
+lento|slow|ad
+barato|cheap|ad
+caro|expensive|ad
+limpio|clean|ad
+sucio|dirty|ad
+lleno|full|ad
+vacío|empty|ad
+abierto|open|ad
+cerrado|closed|ad
+gordo|fat|ad
+delgado|thin|ad
+fuerte|strong|ad
+débil|weak|ad
+rico|rich|ad
+pobre|poor|ad
+mucho|a lot of|ad
+poco|little (few)|ad
+primero|first|nu
+último|last|ad
+mejor|better|ad
+peor|worse|ad
+importante|important|ad
+fácilmente|easily|av
+bien|well|av
+mal|badly|av
+muy|very|av
+siempre|always|av
+nunca|never|av
+aquí|here|av
+allí|there|av
+ahora|now|ti|adv
+hoy|today|ti|adv
+mañana|tomorrow|ti|adv
+ayer|yesterday|ti|adv
+también|also|av
+tampoco|neither|av
+ya|already|av
+todavía|still|av
+más|more|av
+menos|less|av
+tarde|late|ti|adv
+temprano|early|ti|adv
+cerca|near|av
+lejos|far|av
+despacio|slowly|av
+pronto|soon|ti|adv
+casi|almost|av
+día|day|ti||m
+noche|night|ti||f
+semana|week|ti||f
+mes|month|ti||m
+año|year|ti||m
+hora|hour|ti||f
+minuto|minute|ti||m
+tiempo|time|ti||m
+lunes|Monday|ti||m
+martes|Tuesday|ti||m
+miércoles|Wednesday|ti||m
+jueves|Thursday|ti||m
+viernes|Friday|ti||m
+sábado|Saturday|ti||m
+domingo|Sunday|ti||m
+verano|summer|ti||m
+invierno|winter|ti||m
+primavera|spring (season)|ti||f
+otoño|autumn|ti||m
+enero|January|ti||m
+cumpleaños|birthday|ti||m
+fin|end|ti||m
+hogar|home|pl||m
+escuela|school|pl||f
+ciudad|city|pl||f
+país|country|pl||m
+calle|street|pl||f
+tienda|shop|pl||f
+restaurante|restaurant|pl||m
+parque|park|pl||m
+banco|bank|pl||m
+cocina|kitchen|pl||f
+baño|bathroom|pl||m
+habitación|room|pl||f
+oficina|office|pl||f
+mercado|market|pl||m
+iglesia|church|pl||f
+biblioteca|library|pl||f
+museo|museum|pl||m
+cine|cinema|pl||m
+aeropuerto|airport|pl||m
+estación|station|pl||f
+pueblo|village|pl||m
+campo|countryside|pl||m
+jardín|garden|pl||m
+mundo|world|pl||m
+lugar|place|pl||m
+feliz|happy|fe
+triste|sad|fe
+contento|glad|fe
+cansado|tired|fe
+enfadado|angry|fe
+nervioso|nervous|fe
+amor|love|fe|n|m
+miedo|fear|fe|n|m
+gustar|to like|fe|v
+amar|to love|fe|v
+aburrido|bored|fe
+tranquilo|calm|fe
+sorpresa|surprise|fe|n|f
+enfermo|sick|fe
+preocupado|worried|fe
+uno|one|nu
+dos|two|nu
+tres|three|nu
+cuatro|four|nu
+cinco|five|nu
+seis|six|nu
+siete|seven|nu
+ocho|eight|nu
+nueve|nine|nu
+diez|ten|nu
+cien|hundred|nu
+mil|thousand|nu
+mantequilla|butter|fo||f
+uva|grape|fo||f
+limón|lemon|fo||m
+zanahoria|carrot|fo||f
+bocadillo|sandwich|fo||m
+cebolla|onion|fo||f
+camarero|waiter|pe||m
+chico|boy (lad)|pe||m
+chica|girl (lass)|pe||f
+mochila|backpack|th||f
+cuaderno|notebook|th||m
+mapa|map|th||m
+billete|ticket|th||m
+maleta|suitcase|th||f
+gafas|glasses|th||fp
+paraguas|umbrella|th||m
+abrigo|coat|th||m
+pantalón|trousers|th||m
+calcetín|sock|th||m
+cartera|wallet|th||f
+móvil|mobile phone|th||m
+revista|magazine|th||f
+periódico|newspaper|th||m
+lámpara|lamp|th||f
+sofá|sofa|th||m
+espejo|mirror|th||m
+jabón|soap|th||m
+toalla|towel|th||f
+luz|light|th||f
+fiesta|party|th||f
+vacaciones|holidays|th||fp
+deporte|sport|th||m
+fútbol|football|th||m
+examen|exam|th||m
+tarea|homework|th||f
+ejemplo|example|th||m
+canción|song|th||f
+subir|to go up|ve
+bajar|to go down|ve
+cambiar|to change|ve
+recibir|to receive|ve
+enviar|to send|ve
+olvidar|to forget|ve
+recordar|to remember|ve
+creer|to believe|ve
+parecer|to seem|ve
+dejar|to leave (let)|ve
+seguir|to follow|ve
+repetir|to repeat|ve
+limpiar|to clean|ve
+cortar|to cut|ve
+sentir|to feel|ve
+oír|to hear|ve
+conducir|to drive|ve
+llover|to rain|ve
+nacer|to be born|ve
+morir|to die|ve
+tocar|to touch|ve
+ducharse|to shower|ve
+simpático|nice (friendly)|ad
+guapo|good-looking|ad
+listo|ready|ad
+inteligente|intelligent|ad
+divertido|fun|ad
+interesante|interesting|ad
+moderno|modern|ad
+mismo|same|ad
+otro|other|ad
+próximo|next|ad
+libre|free|ad
+ocupado|busy|ad
+seguro|safe|ad
+duro|hard|ad
+fresco|fresh|ad
+dulce|sweet|ad
+salado|salty|ad
+amable|kind|ad
+verdadero|true|ad
+falso|false|ad
+plaza|square|pl||f
+piso|flat (apartment)|pl||m
+universidad|university|pl||f
+farmacia|pharmacy|pl||f
+puerto|port|pl||m
+centro|centre|pl||m
+segundo|second (of time)|ti||m
+mediodía|noon|ti||m
+medianoche|midnight|ti||f
+fecha|date|ti||f
+momento|moment|ti||m
+febrero|February|ti||m
+marzo|March|ti||m
+abril|April|ti||m
+mayo|May|ti||m
+junio|June|ti||m
+julio|July|ti||m
+agosto|August|ti||m
+septiembre|September|ti||m
+octubre|October|ti||m
+noviembre|November|ti||m
+diciembre|December|ti||m
+alegre|cheerful|fe
+asustado|scared|fe
+nube|cloud|na||f
+bosque|forest|na||m
+hielo|ice|na||m
+arena|sand|na||f
+hoja|leaf|na||f
+isla|island|na||f
+hombro|shoulder|bo||m
+labio|lip|bo||m
+piel|skin|bo||f
+sangre|blood|bo||f
+once|eleven|nu
+doce|twelve|nu
+veinte|twenty|nu
+cero|zero|nu
