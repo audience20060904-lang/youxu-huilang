@@ -1,0 +1,611 @@
+担心|to worry|fe|v
+之后|after|ti
+了解|to find out|ve
+选择|to choose (select)|ve
+甚至|even|av
+之前|prior to|ti
+无法|unable|av
+政府|government|th
+系统|system|th
+研究|to research|ve
+考虑|to consider|ve
+提供|to provide|ve
+治疗|to treat (medical)|ve
+根据|based on|av
+获得|to acquire|ve
+未来|future|ti
+看来|it seems|av
+严重|serious (grave)|ad
+包括|to include|ve
+法律|law|th
+解释|to explain|ve
+历史|history|th
+项目|project|th
+梦|dream|th
+总统|president|pe
+似乎|seemingly|av
+几乎|almost|av
+宝贝|darling (treasure)|pe
+位置|position|pl
+附近|nearby|pl
+参与|to participate|ve
+手术|surgery|th
+加入|to join|ve
+兄弟|brothers|pe
+遇到|to encounter|ve
+地址|address|pl
+投|to throw|ve
+资料|data (materials)|th
+心理|psychology|th
+妻子|wife|pe||qīzi
+亲爱|dear|ad
+引起|to give rise to|ve
+或许|maybe (perhaps)|av
+投资|to invest|ve
+抱|to hug|ve
+律师|lawyer|pe
+导致|to lead to|ve
+战争|war|th
+伤害|to harm|ve
+空间|space|pl
+冲|to rush|ve
+期待|to look forward to|fe|v
+政治|politics|th
+承认|to admit|ve
+怪|to blame|ve
+传统|tradition|th
+丈夫|husband|pe
+翻|to turn over|ve
+竟然|unexpectedly|av
+的确|really (indeed)|av
+倍|times (fold)|nu
+醒|to wake up|ve
+身份|identity|th
+免费|free (of charge)|ad
+产品|product|th
+测试|test|th|n
+寻找|to seek|ve
+梦想|dream (aspiration)|th
+网络|network (Internet)|th||wǎngluò
+烧|to burn|ve
+数据|data|th
+申请|to apply|ve
+稳定|stable|ad
+巨大|huge|ad
+土地|land|na
+挑战|challenge|th|n
+秘密|secret|th
+失败|to fail|ve
+抽|to draw out|ve
+想象|to imagine|ve
+教授|professor|pe
+吸引|to attract|ve
+顶|top|pl
+货|goods (cargo)|th
+特殊|special|ad
+提醒|to remind|ve
+风格|style|th
+角色|role|th
+彻底|thorough|ad
+优秀|excellent|ad
+儿童|children|pe
+权利|right (entitlement)|th
+期间|period (time)|ti
+距离|distance|th
+轻松|relaxed|fe
+敌人|enemy|pe
+程序|program (procedure)|th
+医疗|medical care|th
+毕业|to graduate|ve
+切|to cut|ve
+怀疑|to doubt|ve
+合同|contract|th
+垃圾|garbage|th
+究竟|exactly (after all)|av
+赢得|to gain (win)|ve
+战斗|battle|th|n
+替|to take the place of|ve
+兴奋|excited|fe
+兴趣|interest|fe|n
+摆|to put (arrange)|ve
+立即|instantly|av
+色|color (hue)|co|n
+内部|internal|pl
+发挥|to bring into play|ve
+符合|to conform to|ve
+编|to compile|ve
+独立|independent|ad
+表情|facial expression|th
+躺|to lie down|ve
+采访|to interview|ve
+即将|about to|av
+答案|answer (solution)|th
+规则|regulation|th
+激动|thrilled|fe
+依然|as before|av
+阶段|stage (phase)|ti
+擦|to wipe|ve
+无聊|bored|fe
+一致|unanimous|ad
+刺激|to stimulate|ve
+贴|to stick|ve
+美女|beautiful woman|pe
+尽快|as soon as possible|av
+药物|drugs (medication)|th
+移动|to move (shift)|ve
+销售|sales|th
+呼吸|to breathe|ve
+确认|to verify|ve
+出色|outstanding|ad
+冰|ice|na
+材料|material|th
+转移|to transfer|ve
+烦|annoyed|fe
+付出|to pay (effort)|ve
+透|to penetrate|ve
+措施|measure (step)|th
+失望|disappointed|fe
+号码|number (phone)|th
+利益|interest (benefit)|th
+方案|plan (scheme)|th
+主题|theme|th
+避免|to avoid|ve
+女士|lady|pe
+原则|principle|th
+奖|prize|th
+微笑|smile|th|n
+良好|good (fine)|ad
+思考|to ponder|ve
+夫人|madam|pe
+严格|strict|ad
+企业|enterprise|pl
+追求|to pursue|ve
+脱|to take off|ve
+挑|to pick (choose)|ve
+放松|to relax|fe|v
+阻止|to stop (block)|ve
+资源|resources|na||zīyuán
+主席|chairman|pe
+苦|bitter|ad
+吸|to inhale|ve
+行业|industry (trade)|th
+士兵|soldier|pe
+承担|to undertake|ve
+面临|to be faced with|ve
+神秘|mysterious|ad
+登记|to register|ve
+下降|to decline|ve
+来源|source|th
+充分|full (ample)|ad
+经典|classic|ad
+法院|court (of law)|pl
+背景|background|th
+减少|to reduce|ve
+回复|to reply|ve
+居民|resident|pe
+限制|to limit|ve
+万一|just in case|av
+如今|nowadays|ti
+分手|to break up|ve
+牙|tooth|bo
+细节|detail|th
+维持|to keep up|ve
+迅速|swift|ad
+有趣|interesting|ad
+出席|to attend|ve
+婚礼|wedding|th
+财产|property|th
+工程|engineering project|th
+肥|fat (fertile)|ad
+镜头|camera lens (shot)|th
+实施|to implement|ve
+类型|type|th
+自信|self-confident|fe
+守|to guard|ve
+操作|to operate|ve
+新鲜|fresh|ad
+标志|sign (mark)|th
+黄金|gold|na
+指挥|to command|ve
+伙伴|partner|pe
+摸|to touch|ve
+法官|judge|pe
+脑袋|head (noggin)|bo
+祝福|blessing|th|n
+承受|to bear (endure)|ve
+肚子|belly|bo
+地位|status|th
+登|to climb (ascend)|ve
+结构|structure|th
+质量|quality|th
+在乎|to care|fe|v
+寄|to mail|ve
+降|to fall (drop)|ve
+禁止|to forbid|ve
+圆|round|ad
+睡着|to fall asleep|ve
+地下|underground|pl
+冷静|calm|fe
+袋|bag|th
+购物|shopping|ve
+勇敢|brave|fe
+依靠|to depend on|ve
+弱|weak|ad
+购买|to purchase|ve
+战士|warrior|pe
+针|needle|th
+划|to row|ve
+巧克力|chocolate|fo
+临时|temporary|ad
+单独|alone|ad
+医学|medicine (science)|th
+大型|large-scale|ad
+降低|to lower|ve
+刷|to brush|ve
+酒吧|bar (pub)|pl
+激烈|fierce|ad
+想念|to miss (someone)|fe|v
+预测|to predict|ve
+固定|fixed|ad
+勇气|courage|fe|n
+密码|password|th
+培养|to cultivate|ve
+平静|tranquil|fe
+维护|to safeguard|ve
+无数|countless|nu
+对付|to cope with|ve
+关闭|to shut|ve
+运动员|athlete|pe
+姐妹|sisters|pe
+外套|coat|th
+聚会|party (gathering)|th
+交换|to swap|ve
+描述|to describe|ve
+黑暗|dark|co
+运气|luck|th
+含|to contain|ve
+典型|typical|ad
+夫妇|married couple|pe
+教训|lesson (moral)|th
+结论|conclusion|th
+清醒|sober (awake)|ad
+地面|ground (surface)|pl
+纯|pure|ad
+稳|steady|ad
+统一|to unify|ve
+玉米|corn|fo
+身材|figure (build)|bo
+设施|facilities|th
+腰|waist|bo
+义务|duty|th
+运用|to apply (use)|ve
+逐渐|gradually|av
+酸|sour|ad
+沉默|silent|ad
+独特|unique|ad
+遇见|to come across|ve
+摆脱|to get rid of|ve
+夫妻|husband and wife|pe
+财富|wealth|th
+眼泪|tears|bo
+模型|model|th
+精力|energy (vigor)|th
+隔|to separate (partition)|ve
+统计|statistics|th
+特征|trait|th
+叔叔|uncle|pe
+平均|average|ad
+县|county|pl
+供应|to supply|ve
+相反|opposite (contrary)|ad
+演讲|speech|th|n
+帽子|hat|th
+负担|burden|th|n
+战胜|to defeat|ve
+过分|excessive|ad
+反而|instead|av
+街道|streets|pl
+培训|to train (staff)|ve
+独自|by oneself|av
+扩大|to expand|ve
+大哥|eldest brother|pe
+奖金|bonus|th
+盐|salt|fo
+迟到|to be late|ve
+怀念|to cherish the memory of|fe|v
+改善|to improve|ve
+减|to subtract|ve
+官方|official|ad
+引导|to guide|ve
+航班|flight|th
+约会|date (appointment)|th
+形势|situation (circumstances)|th
+细|thin (fine)|ad
+出售|to offer for sale|ve
+厚|thick|ad
+锻炼|to exercise|ve
+堵|to block up|ve
+护士|nurse|pe
+拍照|to take pictures|ve
+笨|stupid|ad
+轻易|easily (lightly)|av
+大楼|tall building|pl
+技巧|technique|th
+名人|celebrity|pe
+电梯|elevator|th
+抓紧|to hold tight|ve
+相处|to get along|ve
+反映|to reflect|ve
+植物|plant|na
+转身|to turn around|ve
+从此|from then on|av
+矮|short (height)|ad
+投诉|to complain|ve
+减肥|to lose weight|ve
+眼镜|glasses|th
+体重|body weight|bo
+面试|job interview|th|n
+无所谓|to not matter|ve
+居住|to reside|ve
+移民|to immigrate|ve
+担任|to hold a post|ve
+风景|landscape|na
+沉|to sink|ve
+善良|kind-hearted|ad
+规模|scale|th
+最初|initially|ti
+窗户|window|th
+装修|to renovate|ve
+填|to fill in|ve
+召开|to convene|ve
+有限|limited|ad
+代替|to replace|ve
+冰箱|refrigerator|th
+汇报|to report back|ve
+论文|thesis|th
+粗|thick (coarse)|ad
+综合|comprehensive (overall)|ad
+形容|to describe (depict)|ve
+青春|youth (prime)|ti
+列车|train (railway)|th
+喜爱|to be fond of|fe|v
+吸收|to absorb|ve
+败|to be defeated|ve
+小伙子|young fellow|pe
+舒适|cozy|fe
+会计|accountant|pe
+好友|close friend|pe
+胖子|fat person|pe
+阅读|to read (reading)|ve
+阿姨|auntie|pe
+穷|poor|ad
+奋斗|to struggle|ve
+乐趣|pleasure|fe|n
+渐渐|little by little|av
+亲密|intimate|ad
+着急|to feel anxious|fe
+具备|to possess|ve
+尽力|to do one's best|ve
+新娘|bride|pe
+下载|to download|ve
+维修|to repair (maintain)|ve
+构成|to constitute|ve
+口袋|pocket|th
+无限|unlimited|ad
+吃惊|to be startled|fe
+嘴巴|mouth (jaw)|bo
+扫|to sweep|ve
+秘书|secretary|pe
+燃烧|to combust|ve
+极其|extremely (utterly)|av
+日记|diary|th
+同情|to sympathize|fe|v
+破产|to go bankrupt|ve
+说不定|perhaps (who knows)|av
+挑选|to select|ve
+逛|to stroll|ve
+单纯|innocent (simple)|ad
+季节|season|ti
+布置|to decorate|ve
+灯光|lighting|th
+色彩|tint|co|n
+健身|to work out|ve
+事先|beforehand|av
+失业|to be unemployed|ve
+规律|pattern (law)|th
+淡|light (bland)|ad
+塑料|plastic|th
+做梦|to dream|ve
+误会|misunderstanding|th|n
+说服|to persuade|ve
+保守|conservative|ad
+暗示|to hint|ve
+成人|grown-up|pe
+汽油|gasoline|th
+浓|thick (strong)|ad
+弯|bent|ad
+镜子|mirror|th
+忽视|to ignore|ve
+密切|close (intimate)|ad
+招呼|to greet (call)|ve
+小型|small-scale|ad
+胸部|chest|bo
+录取|to admit (enroll)|ve
+浅|shallow|ad||qiǎn
+力气|physical strength|th
+楼梯|stairs|pl
+老实|honest|ad
+效率|efficiency|th
+遗产|heritage|th
+业余|amateur|ad
+没错|that's right|ad
+身高|body height|bo
+对比|to contrast|ve
+争论|to argue|ve
+保密|to keep secret|ve
+玉|jade|na
+打败|to beat|ve
+缩小|to shrink|ve
+抽烟|to smoke|ve
+赞成|to approve of|ve
+复制|to copy|ve
+消化|to digest|ve
+疑问|query (doubt)|th
+包裹|parcel|th
+诚实|truthful|ad
+毛衣|sweater|th
+男士|gentleman|pe
+总理|premier|pe
+骨头|bone|bo
+集合|to gather|ve
+宝贵|precious|ad
+童年|childhood|ti
+进口|to import|ve
+沉重|heavy (weighty)|ad
+市区|urban area|pl
+孙子|grandson|pe||sūnzi
+参考|to consult (refer)|ve
+重量|weight|nu|n
+缓解|to relieve|ve
+测量|to measure|ve
+来不及|there's not enough time|ve
+天真|naive|ad
+发烧|to have a fever|ve
+箱子|box (suitcase)|th
+了不起|amazing|ad
+修理|to fix|ve
+尺寸|size|th
+幼儿园|kindergarten|pl
+影子|shadow|na
+加班|to work overtime|ve
+征服|to conquer|ve
+神话|myth|th
+热闹|lively|ad
+伞|umbrella|th
+营业|to do business|ve
+问候|to send regards|ve
+诗人|poet|pe
+顺序|order (sequence)|th
+瓜|melon|fo
+图案|pattern (design)|th
+准时|punctual|ad
+纪律|discipline|th
+闪电|lightning|na
+打扫|to clean|ve
+上个月|last month|ti
+童话|fairy tale|th
+得意|pleased with oneself|fe
+手套|gloves|th
+总共|in total|av
+粮食|grain (food)|fo
+豆腐|tofu|fo
+推迟|to postpone|ve
+老家|home town|pl
+促进|to promote (boost)|ve
+字母|letter (alphabet)|th
+袜子|socks|th
+毛巾|towel|th
+趋势|trend|th
+透明|transparent|ad
+抄|to copy (by hand)|ve
+寒冷|freezing|ad
+鲜花|fresh flowers|na
+名片|business card|th
+智力|intelligence|th
+降落|to land|ve
+尾巴|tail|an
+智能|smart (intelligent)|ad
+研究生|graduate student|pe
+围巾|scarf|th
+宁静|serene|ad
+树林|woods|na||shùlín
+快递|express delivery|th
+酸奶|yogurt|fo
+优美|graceful|ad
+耳机|headphones|th
+暑假|summer vacation|ti
+梦见|to dream of|ve
+高尚|noble|ad
+种植|to plant|ve
+台阶|steps|pl
+辩论|debate|th|n
+种类|variety|th
+默默|silently|av
+未必|not necessarily|av
+大方|generous|ad
+奖学金|scholarship|th
+英勇|heroic|ad
+加油站|gas station|pl
+步行|to go on foot|ve
+热心|warm (eager)|fe
+纷纷|one after another|av
+简历|resume (CV)|th
+专心|to concentrate (focus)|ad
+使劲|to exert effort|ve
+看望|to visit (call on)|ve
+实用|practical|ad
+巴士|bus|th
+充电|to charge (battery)|ve
+用途|use (purpose)|th
+称赞|to praise|ve
+宝石|gem|na
+新郎|bridegroom|pe
+积累|to accumulate|ve
+常识|common sense|th
+食堂|canteen|pl
+讲座|lecture|th
+海水|seawater|na
+体操|gymnastics|th
+零食|snacks|fo
+盘子|plate|th
+表扬|to commend|ve
+西瓜|watermelon|fo
+痛快|delighted|fe
+家务|housework|th
+海鲜|seafood|fo
+相片|photograph|th
+闹钟|alarm clock|th
+气球|balloon|th
+长途|long-distance|ad
+熟练|skilled|ad
+及格|to pass (a test)|ve
+虫子|insect|an
+刷牙|to brush teeth|ve
+导游|tour guide|pe
+轮椅|wheelchair|th
+小吃|snack (street food)|fo
+叶子|leaf|na
+打折|to give a discount|ve
+黄瓜|cucumber|fo
+堵车|traffic jam|ve
+暖气|heating|th
+转弯|to turn (a corner)|ve
+动画片|cartoon|th
+操场|playground|pl
+邮局|post office|pl
+开花|to bloom|ve
+潮湿|damp|ad
+孙女|granddaughter|pe
+树叶|tree leaf|na
+塑料袋|plastic bag|th
+套餐|set meal|fo
+牙刷|toothbrush|th
+矿泉水|mineral water|fo
+打针|to get an injection|ve
+语法|grammar|th
+日历|calendar|th
+红包|red envelope|th
+轮船|steamship|th
+寒假|winter vacation|ti
+粗心|careless|ad
+尺子|ruler|th
+狮子|lion|an
+大象|elephant|an
+蝴蝶|butterfly|an
+蚂蚁|ant|an
+乌龟|turtle|an
+鸭子|duck|an
+金色|golden|co|n
+深色|dark-colored|co|n
+浅色|light-colored|co|n
+银色|silver-colored|co|n

@@ -1,0 +1,19 @@
+
+];
+
+/* 英语词库的原件留一份：存档码的第一段永远按它存（不管现在在学哪一门）*/
+var EN_WORDS = WORDS;
+
+/* 学中文：把整套全局换成中文词库。words-a1.js 里那几张派生表是按 WORDS 现算的，这里照抄一遍。*/
+function zhWordObj(w){ return {en:w[0], cn:w[1], cat:w[2], lv:w[3] || 1, pos:w[4] || "n", py:w[5] || ""}; }
+if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
+  WORDS = ZH_WORDS;
+  WMAP = {}; BYCAT = {}; BYPOS = {}; BYLV = {1:[], 2:[], 3:[], 4:[], 5:[]};
+  WORDS.forEach(function(w){
+    const o = WMAP[w[0]] = zhWordObj(w);
+    (BYCAT[o.cat] = BYCAT[o.cat] || []).push(o);
+    (BYPOS[o.pos] = BYPOS[o.pos] || []).push(o);
+    BYLV[o.lv].push(o);
+  });
+  ALLW = WORDS.map(function(w){ return WMAP[w[0]]; });
+}

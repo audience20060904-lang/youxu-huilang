@@ -23,7 +23,8 @@ function speak(w){
   if(_spkWait){ clearInterval(_spkWait); _spkWait = null; }   // 有人手动点了，就别再补那一段
   try{
     const u = new SpeechSynthesisUtterance(w);
-    u.lang = "en-US"; u.rate = .85;
+    /* 念「要学的那门语言」：i18n.js 定的 SPEAK_LANG（学中文是 zh-CN）。战场页不加载 i18n.js，兜成英语 */
+    u.lang = (typeof SPEAK_LANG === "string" && SPEAK_LANG) || "en-US"; u.rate = .85;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   }catch(e){}
 }

@@ -208,6 +208,16 @@
         <div class="ledger" id="coopInfo"></div>
         <p class="note" id="coopState">—</p>
       </div>
+      <!-- 语言（2026-09-23）：母语 = 界面语言，学习 = 背哪门的词。换了就重载页面（game.js 的 setLang）-->
+      <div class="panel" id="panelLang">
+        <div class="phead">语言 Language</div>
+        <div class="langset" id="langPanel">
+          <div class="langrow"><span class="lk">母语</span>
+            <button class="lchip" data-ui="zh" type="button">中文</button><button class="lchip" data-ui="en" type="button">English</button></div>
+          <div class="langrow"><span class="lk">学习</span>
+            <button class="lchip" data-learn="en" type="button">English</button><button class="lchip" data-learn="zh" type="button">中文</button></div>
+        </div>
+      </div>
       <div class="panel">
         <div class="phead">存档 Save</div>
         <div class="ledger" id="saveInfo"></div>
@@ -256,6 +266,7 @@
       <div class="panel">
         <div class="phead">别的</div>
         <button class="btn" id="btnHelp" type="button">玩法说明</button>
+        <button class="btn" id="btnTutorial" type="button">新手教程</button>
       </div>
     </section>
 
@@ -629,6 +640,22 @@
   </div>
 </div>
 
+<!-- 首次进入：挑母语和学习语言（2026-09-23）。那时候还不知道用哪种语言，所以双语写死 -->
+<div class="veil" id="veilLang" hidden>
+  <div class="sheet">
+    <div class="eyebrow">幽墟回廊 · Youxu Corridors</div>
+    <h2>语言 · Languages</h2>
+    <div class="langset">
+      <div class="lk2">你的母语 · Your native language</div>
+      <div class="langrow"><button class="lchip" data-ui="zh" type="button">中文</button><button class="lchip" data-ui="en" type="button">English</button></div>
+      <div class="lk2">想学的语言 · I want to learn</div>
+      <div class="langrow"><button class="lchip" data-learn="en" type="button">English</button><button class="lchip" data-learn="zh" type="button">中文</button></div>
+    </div>
+    <p class="note">之后可以在「设置」里换 · You can change this later in Settings.</p>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnLangGo" type="button">开始 · Start</button></div>
+  </div>
+</div>
+
 <div class="veil" id="veilHelp" hidden>
   <div class="sheet tall">
     <div class="eyebrow">幽墟回廊 · 玩法</div>
@@ -651,13 +678,15 @@
 </div>
 
 <!-- 加载顺序不能乱：util 提供全局函数，data 依赖 util，net 提供联机通道，game 依赖全部。
-     window.__COOP 必须在 game.js 之前设好。 -->
+     window.__COOP 必须在 i18n.js 之前设好（联机固定中文界面 + 学英语）。 -->
+<script>window.__COOP = true;</script>
 <script src="util.js"></script>
+<script src="i18n.js"></script>
 <script src="words-a1.js"></script>
+<script src="words-zh.js"></script>
 <script src="content.js"></script>
 <script src="orb.js"></script>
 <script src="art.js"></script>
 <script src="net.js"></script>
-<script>window.__COOP = true;</script>
 <script src="game.js"></script>
 </body></html>

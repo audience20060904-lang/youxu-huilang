@@ -52,7 +52,7 @@ function coopNoteLocked(){
   const now = Date.now();
   if(now - coopLockNoteAt < 1500) return;
   coopLockNoteAt = now;
-  say("这一层的怪还没清完 —— 两人先一起点「寻路」走。", "sys");
+  say(T("这一层的怪还没清完 —— 两人先一起点「寻路」走。"), "sys");
 }
 const LEX_KEY = "youxu.a1lex.v1", CODEX_KEY = "youxu.codex.v1", META_KEY = "youxu.meta2.v1";
 /* 战场模式的记录键（battle.js 拥有它，只有 battle.js 写）。
@@ -69,7 +69,7 @@ function put(k, v){
   if(!saveWarned){
     saveWarned = true;
     if(window.showErr) window.showErr(
-      "存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了，换个普通窗口再来。");
+      T("存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了，换个普通窗口再来。"));
   }
   return false;
 }
@@ -104,6 +104,27 @@ function setChapter(id){
   return CH;
 }
 
+/* ===== 学中文时的几个小口子（2026-09-23，见 i18n.js / words-zh.js）=====
+   词对象的 en 永远是「要学的那个词」、cn 是母语释义；学中文时多一个 py（拼音）。
+   这几个函数在学英语时都退化成原来的样子（没有 py）。*/
+function pyTag(w){ return w && w.py ? "<span class=\"py\">" + w.py + "</span>" : ""; }
+function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : (w ? w.en : ""); }
+/* 词长：英语是字母数；中文按**拼音字母**数（长句 / 累牍 / 长考那三件遗物用，汉字最多 4 个，按字数算它们就废了）*/
+function wordLen(w){
+  if(!w.py) return w.en.length;
+  return w.py.normalize("NFD").replace(/[^a-z]/gi, "").length;
+}
+/* 拼字题的干扰键：英语给字母（原来那一套），中文从同一档的别的词里挑字 */
+function decoyChars(word, n){
+  const own = word.en.split(""), out = [];
+  const pool = scopeToLevel(ALLW, word.lv || 1);
+  for(let guard = 0; out.length < n && guard < 200; guard++){
+    const w = pick(pool), c = w.en.charAt(Math.floor(Math.random() * w.en.length));
+    if(c && own.indexOf(c) < 0 && out.indexOf(c) < 0) out.push(c);
+  }
+  return out;
+}
+
 function gate(rep){
   const now = Date.now();
   if(now < lockUntil) return false;
@@ -133,7 +154,10 @@ function newRun(){
         blessGot:[],
         /* 深渊（用户 2026-09-22）：cleared = 走过章末 Boss 那一层了（通关照记），
            abyss = 在深渊里打穿了无终之影几层（结算按层给宝石）。两个都跟着续玩档。*/
-        cleared:false, abyss:0 };
+        cleared:false, abyss:0,
+        /* 新手教程（2026-09-23）：这一趟是教程关 —— 只有一层、不写续玩档、不结算（见「新手教程」一节）*/
+        tut: !!tutPending };
+  tutPending = false;
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -142,12 +166,14 @@ function newRun(){
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
-  say("石门在身后合上。走廊里只有火把的回声。", "sys");
-  say("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。", "sys");
-  if(P.practice) say("<b>练习模式</b>：护甲 +50，攻击减半。", "sys");
+  if(!P.tut){
+    say(T("石门在身后合上。走廊里只有火把的回声。"), "sys");
+    say(T("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。"), "sys");
+  }
+  if(P.practice) say(T("<b>练习模式</b>：护甲 +50，攻击减半。"), "sys");
   if(P.diff !== DIFF_DEFAULT){
     const dd = diffById(P.diff);
-    if(dd) say("<b>" + dd.name + "</b>：" + dd.desc + "。", "sys");
+    if(dd) say("<b>" + dd.name + T("</b>：") + dd.desc + T("。"), "sys");
   }
   nextFloor();
 }
@@ -357,7 +383,7 @@ function nextFloor(){
     const wrongNow = G.floorWrong || 0;
     if(from > 0 && typeof G.prevFloorWrong === "number" && wrongNow < G.prevFloorWrong){
       P.shield = (P.shield || 0) + TRACK_SHIELD;
-      say("循迹 —— 这一层打错得比上一层少，多了 <b>" + TRACK_SHIELD + "</b> 点护盾。", "good");
+      say(T("循迹 —— 这一层打错得比上一层少，多了 <b>") + TRACK_SHIELD + T("</b> 点护盾。"), "good");
     }
     if(from > 0) G.prevFloorWrong = wrongNow;
   }
@@ -372,7 +398,7 @@ function nextFloor(){
       P.roomFreeStreak = 0;
       const back = Math.max(1, Math.ceil(stats().maxHp * PACE_PCT));
       healUp(back);
-      say("稳步 —— 上一层没沾泉／坛／箱／商，回了 <b>" + back + "</b> 点生命。", "good");
+      say(T("稳步 —— 上一层没沾泉／坛／箱／商，回了 <b>") + back + T("</b> 点生命。"), "good");
     }
   }
   G.usedRoom = false;
@@ -381,13 +407,13 @@ function nextFloor(){
   if(hasRelic("cherish") && from > 0 && (P.shield || 0) > 0){
     const bonus = Math.max(1, Math.ceil(stats().maxHp * CHERISH_PCT));
     P.shield = (P.shield || 0) + bonus;
-    say("惜盾 —— 护盾没破，多给你 <b>" + bonus + "</b> 点。", "good");
+    say(T("惜盾 —— 护盾没破，多给你 <b>") + bonus + T("</b> 点。"), "good");
   }
   /* 盾誓：每进一层把护盾**补到**上限的 SHIELD_FLOOR_PCT —— 取大值而不是直接赋值，
      免得把「凝盾」辛苦攒下的一大堆盾按回去。*/
   if(hasRelic("vow")){
     const want = Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT));
-    if((P.shield || 0) < want){ P.shield = want; say("盾誓在身前合拢 —— 护盾 <b>" + want + "</b>。", "good"); }
+    if((P.shield || 0) < want){ P.shield = want; say(T("盾誓在身前合拢 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
   /* 2026-09-21：这五件原来「独立价值恒为 0」——它们要么按护甲算（自己不产护甲），
@@ -403,8 +429,8 @@ function nextFloor(){
   if(hasRelic("gatewait") && isBossFloor(G.floor)){
     P.shield = (P.shield || 0) + GATE_SHIELD;
     const gh = healUp(Math.max(1, Math.ceil(stats().maxHp * GATE_HEAL)));
-    say("候门 —— 门后有东西在等你，护盾 <b>" + GATE_SHIELD + "</b>" +
-        (gh.hp ? "，回 <b>" + gh.hp + "</b> 点生命" : "") + "。", "good");
+    say(T("候门 —— 门后有东西在等你，护盾 <b>") + GATE_SHIELD + "</b>" +
+        (gh.hp ? T("，回 <b>") + gh.hp + T("</b> 点生命") : "") + T("。"), "good");
   }
   /* ===== 第九批「跨流派组合」的每层种子（2026-09-21）=====
      ⚠️ **种子别删** —— 这七件的另一半挂在护盾上，没有种子它们在不带护盾流时就是白板
@@ -449,14 +475,14 @@ function nextFloor(){
   if(G.floor > floorMax()){
     if(!P.cleared){
       P.cleared = true;
-      say("章末的门在身后合上 —— <b>第" + CH.id + "章通关</b>。这一趟的通关已经记下了。", "crit");
+      say(T("章末的门在身后合上 —— <b>第") + CH.id + T("章通关</b>。这一趟的通关已经记下了。"), "crit");
     }
     if(!isAbyssFloor(G.floor)){ chapterClear(); return; }
   }
   // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
   // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
   // （包括最后的 commit —— 这儿 G.map 还是上一层的，先不存档，免得存进去一份错配的层）。
-  if(COOP && !coopIsHost()){ coopPendingFloor = true; say("等待房主生成这一层的地图…", "sys"); return; }
+  if(COOP && !coopIsHost()){ coopPendingFloor = true; say(T("等待房主生成这一层的地图…"), "sys"); return; }
   genFloor();
   coopPrepMobs();     // 联机第二期：给每只怪挂上 cid + 两条血条的字段（单人版里是空函数）
   if(COOP) coopBroadcastWorld();
@@ -465,6 +491,7 @@ function nextFloor(){
   buildGrid();
   render();
   lockInput(320);
+  if(P.tut){ tutBegin(); commitPerm(); return; }   // 教程关不写续玩档：半路关掉页面，下次重新走一遍
   sayFloorIntro();
   commit(true);          // 存档点之二：下一层
 }
@@ -508,7 +535,7 @@ function applyCoopWorld(msg){
     SCENE = "run"; showScene();
     $("log").innerHTML = "";
     hideAll();
-    say("石门在身后合上。走廊里只有火把的回声。", "sys");
+    say(T("石门在身后合上。走廊里只有火把的回声。"), "sys");
   }
   setChapter(pack.ch);
   G.floor = msg.floor;
@@ -564,11 +591,11 @@ function sayFloorIntro(){
   const last = G.floor === floorMax();
   const bossRoom = isBossFloor(G.floor);
   const abyss = inAbyss();
-  say("—— " + CH.name + " 第 " + G.floor + " 层" + (abyss ? " · 深渊" : bossRoom ? " · BOSS" : "") + " ——", "crit");
-  say(abyss ? "门在身后合上，这一层没有阶梯。<b>无终之影</b>站在屋子中间 —— 它的血没有底，打穿一层还有一层。想把这一趟的宝石带走，撤退之后「放弃」就行。"
-     : last ? "空气冷得发硬。这一层尽头有东西在等。"
-     : bossRoom ? ("门在身后落下。一间屋子，一只 " + G.mobs[0].name + "。")
-     : ("这一层有 " + G.mobs.length + " 只敌人。清干净才能下去。"), (last || bossRoom || abyss) ? "hurt" : "sys");
+  say("—— " + CH.name + T(" 第 ") + G.floor + T(" 层") + (abyss ? T(" · 深渊") : bossRoom ? " · BOSS" : "") + " ——", "crit");
+  say(abyss ? T("门在身后合上，这一层没有阶梯。<b>无终之影</b>站在屋子中间 —— 它的血没有底，打穿一层还有一层。想把这一趟的宝石带走，撤退之后「放弃」就行。")
+     : last ? T("空气冷得发硬。这一层尽头有东西在等。")
+     : bossRoom ? (T("门在身后落下。一间屋子，一只 ") + G.mobs[0].name + T("。"))
+     : (T("这一层有 ") + G.mobs.length + T(" 只敌人。清干净才能下去。")), (last || bossRoom || abyss) ? "hurt" : "sys");
 }
 /* ===== Boss 房 =====
    下了楼梯只有**一间屋子**，屋里**只有一只 Boss** —— 没有别的怪，也没有金币/泉/箱/坛/商。
@@ -599,6 +626,7 @@ function genBossRoom(){
   G.mobs.push(makeBossFoe(def, bx, by));
 }
 function genFloor(){
+  if(P.tut){ genTutorialFloor(); return; }
   if(isBossFloor(G.floor)){ genBossRoom(); return; }
   const map = [], seen = [], vis = [];
   for(let y=0;y<H;y++){
@@ -867,8 +895,8 @@ function abyssAbsorb(m, n){
   m.hp -= left;
   if(broke){
     P.abyss = (P.abyss || 0) + broke;
-    say("无终之影碎了 <b>" + broke + "</b> 层（累计 " + P.abyss + " 层）—— 底下那层 <b>" +
-        m.max + "</b> 血，一口 <b>" + m.dmg + "</b> 点。", "crit");
+    say(T("无终之影碎了 <b>") + broke + T("</b> 层（累计 ") + P.abyss + T(" 层）—— 底下那层 <b>") +
+        m.max + T("</b> 血，一口 <b>") + m.dmg + T("</b> 点。"), "crit");
   }
   return broke;
 }
@@ -1068,7 +1096,7 @@ function renderHud(){
   $("hLevel").textContent = P.lvl;
   $("hGold").textContent = P.gold;
   const left = G.mobs.length;
-  $("hLeft").textContent = left === 0 ? "已清" : left;
+  $("hLeft").textContent = left === 0 ? T("已清") : left;
   $("hLeft").parentNode.className = "hi " + (left === 0 ? "done" : "left");
   paintHp($("hpBar"), $("hpFill"), $("hpTxt"), P.hp, s.maxHp, $("hpShield"));
   const need = xpNeed(P.lvl);
@@ -1083,8 +1111,8 @@ function renderMate(){
   if(!row) return;
   if(!COOP || !coopMateInfo){ row.hidden = true; return; }
   row.hidden = false;
-  $("mateName").textContent = coopMateInfo.name || "队友";
-  $("mateHp").textContent = coopMateInfo.down ? "倒地"
+  $("mateName").textContent = coopMateInfo.name || T("队友");
+  $("mateHp").textContent = coopMateInfo.down ? T("倒地")
     : (coopMateInfo.hp != null) ? (coopMateInfo.hp + "/" + coopMateInfo.maxHp) : "—";
   $("mateCombo").textContent = "×" + (coopMateInfo.combo || 0);
   $("mateRelics").textContent = coopMateInfo.relics || 0;
@@ -1094,7 +1122,7 @@ function renderMate(){
 function coopSendMe(){
   if(!COOP || !window.NET || SCENE !== "run" || !P || !G) return;
   const s = stats();
-  NET.send({t:"me", name: coopMyName || "队友", hp: Math.max(0, P.hp), maxHp: s.maxHp,
+  NET.send({t:"me", name: coopMyName || T("队友"), hp: Math.max(0, P.hp), maxHp: s.maxHp,
             combo: P.combo || 0, relics: (P.relics || []).length,
             busy: !!G.paused, clear: G.mobs ? G.mobs.length === 0 : true,
             down: !!P.down,
@@ -1130,7 +1158,7 @@ function paintHp(bar, fill, txt, hp, max, sh){
   // 护盾：条子上压一段冷色 + 文字后面缀一个数。没有盾就什么都不显示
   if(sh) sh.style.width = (shield > 0 && max > 0 ? Math.min(100, shield / max * 100) : 0) + "%";
   txt.innerHTML = v + " / " + max +
-    (shield > 0 ? " <span class=\"shn\">盾 " + shield + "</span>" : "");
+    (shield > 0 ? T(" <span class=\"shn\">盾 ") + shield + "</span>" : "");
   if(bar){
     /* ⚠️ className 是整块重写的，动效那个类必须**写在它后面**再挂上去 */
     const prev = bar.dataset.hp === undefined ? null : +bar.dataset.hp;
@@ -1154,7 +1182,7 @@ function paintMateHp(fill, txt, hp, max){
 }
 function renderSheets(s){
   $("stats").innerHTML =
-    st("攻击", s.atk) + st("护甲", s.def) + st("暴击", s.crit + "%");
+    st(T("攻击"), s.atk) + st(T("护甲"), s.def) + st(T("暴击"), s.crit + "%");
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
   const keys = Object.keys(LEX).filter(function(k){ return !!WMAP[k]; });
   let mastered = 0;
@@ -1164,15 +1192,15 @@ function renderSheets(s){
      跨存档一直累加，是这块面板从「本章词汇」改叫「词汇记录」之后加的那一项（用户 2026-09）。*/
   let studied = 0;
   keys.forEach(function(k){ studied += (LEX[k].seen || 0); });
-  $("vocab").innerHTML = st("已掌握", mastered) + st("已遇见", keys.length) +
-                         st("总数", WORDS.length) + st("累计学词", studied + " 次");
+  $("vocab").innerHTML = st(T("已掌握"), mastered) + st(T("已遇见"), keys.length) +
+                         st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
   $("panelRun").hidden = !inRun;
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
-  $("runStats").innerHTML = st("答对", P.right) + st("答错", P.wrong) +
-    st("正确率", acc) + st("击杀", P.kills) +
-    st("等级", "Lv." + P.lvl) + st("经验", P.xp + " / " + xpNeed(P.lvl));
+  $("runStats").innerHTML = st(T("答对"), P.right) + st(T("答错"), P.wrong) +
+    st(T("正确率"), acc) + st(T("击杀"), P.kills) +
+    st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl));
   renderRelics();
   renderMate();
 }
@@ -1241,7 +1269,7 @@ function goTo(tx, ty, blind){
   // 先按「绕开互动物件」找一条；真绕不过去（被堵死）再退回不绕的老办法
   const path = findPath(tx, ty, false, blind) || findPath(tx, ty, true, blind);
   if(!path){
-    if(G.seen[ty][tx] && G.map[ty][tx] === 1) say("那边过不去 —— 有东西挡着路。", "sys");
+    if(G.seen[ty][tx] && G.map[ty][tx] === 1) say(T("那边过不去 —— 有东西挡着路。"), "sys");
     return false;
   }
   cancelWalk();
@@ -1395,13 +1423,14 @@ function onEnter(){
       if(hasRelic("greed")) amt = Math.round(amt * 1.2);                    // 拾荒者 +20%
       if(hasRelic("rust")) amt = Math.round(amt * 1.1);                     // 铜锈 +10%
       P.gold += amt;
-      say("你拾起 <b>" + amt + "</b> 金币。", "sys");
+      say(T("你拾起 <b>") + amt + T("</b> 金币。"), "sys");
+      if(P.tut) tutEvent("gold");
       G.things.splice(G.things.indexOf(th),1);
       fxGold(P.x, P.y);                     // 碎屑飞向顶上的「金」
-    } else if(th.kind === "feat"){ noteRoomUsed(); coopNoteUsed("泉"); openSpring(th); return; }
-    else if(th.kind === "altar"){ noteRoomUsed(); coopNoteUsed("坛"); openAltar(th); return; }
-    else if(th.kind === "chest"){ noteRoomUsed(); coopNoteUsed("箱"); openChest(th); return; }
-    else if(th.kind === "shop"){ noteRoomUsed(); coopNoteUsed("商"); openShop(th); return; }
+    } else if(th.kind === "feat"){ noteRoomUsed(); coopNoteUsed(T("泉")); openSpring(th); return; }
+    else if(th.kind === "altar"){ noteRoomUsed(); coopNoteUsed(T("坛")); openAltar(th); return; }
+    else if(th.kind === "chest"){ noteRoomUsed(); coopNoteUsed(T("箱")); openChest(th); return; }
+    else if(th.kind === "shop"){ noteRoomUsed(); coopNoteUsed(T("商")); openShop(th); return; }
   }
   // 清空之后阶梯才存在，踩上去才问。清空前那一格看着就是普通地面，别弹莫名其妙的提示。
   if(G.mobs.length === 0 && P.x === G.stair.x && P.y === G.stair.y){
@@ -1413,21 +1442,22 @@ function onEnter(){
    选「再待一会儿」就留在阶梯上，想走的时候**再点一下脚下那格 ▼** 就是这个窗。 */
 function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
+  if(P.tut){ tutFinish(false); return; }          // 教程关：踩上阶梯就是走完了
   G.paused = true;
   const last = G.floor === floorMax();
   const to = G.floor + 1;
-  $("stairEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 已清空";
-  $("stairTitle").textContent = last ? "最后一道石门" : "阶梯通向第 " + to + " 层";
+  $("stairEyebrow").textContent = CH.name + T(" 第 ") + G.floor + T(" 层 · 已清空");
+  $("stairTitle").textContent = last ? T("最后一道石门") : T("阶梯通向第 ") + to + T(" 层");
   /* 第 50 层这一下现在通向**深渊**（用户 2026-09-22）：下去就算通关（宝石照给），
      但下面那只东西打不完，只能走到倒下 —— 这句必须写清楚，不然玩家会以为自己亏了一次通关。*/
   $("stairNote").innerHTML = last
-    ? "下去就算<b>通关</b>，宝石照给。<br>再往下是<b>深渊</b>：里面那只东西血量没有底，打穿一层还有一层，没有阶梯也没有下一层 —— 走到倒下为止。"
-    : (isBossFloor(to) ? "下面是一间屋子，里面<b>只有一只 BOSS</b>。" : "") +
-      "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。";
+    ? T("下去就算<b>通关</b>，宝石照给。<br>再往下是<b>深渊</b>：里面那只东西血量没有底，打穿一层还有一层，没有阶梯也没有下一层 —— 走到倒下为止。")
+    : (isBossFloor(to) ? T("下面是一间屋子，里面<b>只有一只 BOSS</b>。") : "") +
+      T("下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。");
   hideAll();
   $("veilStair").hidden = false;
   $("btnStairGo").disabled = false;
-  $("btnStairGo").textContent = "下去 ▼";
+  $("btnStairGo").textContent = T("下去 ▼");
   $("btnStairGo").focus();
 }
 /* 「再待一会儿」之后自己从阶梯上退开一格（用户 2026-09）——
@@ -1457,8 +1487,8 @@ function closeStair(go){
      玩家刚说了「再待一会儿」，这儿顺手关掉它。*/
   autoOff();
   const moved = stepOffStair();
-  say(moved ? "你从阶梯上退开一步。想走的时候，再点一下那个 ▼。"
-            : "你在阶梯口停住了。想走的时候，再点一下脚下那格。", "sys");
+  say(moved ? T("你从阶梯上退开一步。想走的时候，再点一下那个 ▼。")
+            : T("你在阶梯口停住了。想走的时候，再点一下脚下那格。"), "sys");
   lockInput(200);
   render();
 }
@@ -1486,14 +1516,15 @@ function startBattle(m){
   $("foeArt").innerHTML = ART[m.art];
   $("meArt").innerHTML = HERO;
   $("foeName").textContent = m.name;
-  $("foeTag").textContent = (m.def && m.def.abyss) ? "深渊 · 血量无限，打穿一层还有一层"
-                          : m.boss ? "章节首领 · 全部词类" : ("遭遇 · " + CAT_CN[m.cat] + "类词");
+  $("foeTag").textContent = (m.def && m.def.abyss) ? T("深渊 · 血量无限，打穿一层还有一层")
+                          : m.boss ? T("章节首领 · 全部词类") : (T("遭遇 · ") + CAT_CN[m.cat] + T("类词"));
   showWeak(m);
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("veilBattle").hidden = false;
-  say("你撞上了 " + m.name + "。", "hurt");
-  if(P.combo > 0) say("上一场的连击 <b>×" + P.combo + "</b> 还留着 —— 别断。", "crit");
+  say(T("你撞上了 ") + m.name + T("。"), "hurt");
+  if(P.combo > 0) say(T("上一场的连击 <b>×") + P.combo + T("</b> 还留着 —— 别断。"), "crit");
   renderBattleBars();
+  if(P.tut) tutEvent("battle");
   nextQuestion();
 }
 /* Boss 的弱点是**词性**（POS_CN），普通怪的弱点是**类别**（CAT_CN）—— 看 m.weakPos */
@@ -1502,13 +1533,13 @@ function showWeak(m){
   const cn = m.weak && (m.weakPos ? POS_CN[m.weak] : CAT_CN[m.weak]);
   if(!cn){ el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = "弱点 · <b>" + cn + "</b>类词伤害更高";
+  el.innerHTML = T("弱点 · <b>") + cn + T("</b>类词伤害更高");
 }
 function renderBattleBars(){
   const m = B.mob, s = stats();
   const abyss = !!(m.def && m.def.abyss);
   /* 无终之影的血条画的是**当前这一层**（血量无限，画不出总条），第几层写在名字后面。*/
-  if(abyss) $("foeName").textContent = m.name + " · 第 " + (m.layer || 1) + " 层";
+  if(abyss) $("foeName").textContent = m.name + T(" · 第 ") + (m.layer || 1) + T(" 层");
   $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
   $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
   /* 联机第二期：怪有两条独立满血，这条画在怪血条下面，显示队友那边剩多少（半透明 50%，
@@ -1520,7 +1551,7 @@ function renderBattleBars(){
       mateBar.hidden = false;
       const mv = Math.max(0, m.hpMate);
       $("foeMateFill").style.width = (m.max > 0 ? mv / m.max * 100 : 0) + "%";
-      $("foeMateTxt").textContent = "队友 " + mv + " / " + m.max;
+      $("foeMateTxt").textContent = T("队友 ") + mv + " / " + m.max;
     } else mateBar.hidden = true;
   }
   paintHp($("bHpBar"), $("bHpFill"), $("bHpTxt"), P.hp, s.maxHp, $("bHpShield"));
@@ -1564,9 +1595,9 @@ function renderCombo(){
   const need = step - (n % step);
   c.className = "combo" + (pct ? "" : " none");
   c.innerHTML =
-    "<span class=\"cmb-n\">连击 <b>×" + n + "</b></span>" +
-    "<span class=\"cmb-p" + (pct ? "" : " off") + "\">伤害 +" + pct + "%</span>" +
-    "<span class=\"cmb-next\">再对 " + need + " 个 +" + CHAPTER.comboPct + "%</span>";
+    T("<span class=\"cmb-n\">连击 <b>×") + n + "</b></span>" +
+    "<span class=\"cmb-p" + (pct ? "" : " off") + T("\">伤害 +") + pct + "%</span>" +
+    T("<span class=\"cmb-next\">再对 ") + need + T(" 个 +") + CHAPTER.comboPct + "%</span>";
   const was = comboShown;
   comboShown = n;
   if(was === null || was === n || REDUCE_MOTION) return;
@@ -1692,6 +1723,7 @@ function qSeconds(){
 function startQTimer(){
   clearQTimer();
   if(!B || !B.q || B.q.type === "spell") return;
+  if(P && P.tut) return;          // 教程关不限时 —— 先把规矩看明白
   const t = $("qTimer"), fill = $("qTimerFill");
   if(!t || !fill) return;
   let secs = qSeconds();
@@ -1724,7 +1756,7 @@ function timeUp(){
      ⚠️ 要在减伤链之前就返回 —— 不然会白白吃掉屏息的次数、白掷一次错身。*/
   if(hasRelic("glass")){
     G.glassCut = (G.glassCut || 0) + GLASS_CUT;
-    say("沙漏替你咽下了这一下 —— 这一层的读条只剩 <b>" + qSeconds() + "</b> 秒了。", "hurt");
+    say(T("沙漏替你咽下了这一下 —— 这一层的读条只剩 <b>") + qSeconds() + T("</b> 秒了。"), "hurt");
     startQTimer();
     return;
   }
@@ -1732,16 +1764,16 @@ function timeUp(){
      不然护盾刚好破在超时那一下反而占不到便宜。*/
   if(B.shatterFree){
     B.shatterFree = false;
-    say("时间到，但破盾余威替你接住了这一口。题还在，接着答。", "good");
+    say(T("时间到，但破盾余威替你接住了这一口。题还在，接着答。"), "good");
     startQTimer();
     return;
   }
   const mit = mitigate(Math.max(1, m.dmg - s.def), s);
   if(mit.dodged){
-    say("时间到 —— 你侧了半步躲开。题还在，接着答。", "hurt");
+    say(T("时间到 —— 你侧了半步躲开。题还在，接着答。"), "hurt");
   } else {
     takeHit(mit.dmg, m, false);
-    say("时间到，" + m.name + " 咬了你 <b>" + mit.dmg + "</b> 点。题还在，接着答。", "hurt");
+    say(T("时间到，") + m.name + T(" 咬了你 <b>") + mit.dmg + T("</b> 点。题还在，接着答。"), "hurt");
   }
   const saved0 = deathSave();
   if(saved0) say(saved0, "crit");
@@ -1756,7 +1788,8 @@ function nextQuestion(){
   const word = pickQuizWord(m.cat);
   B.asked++;
   let type;
-  if(Math.random() < spellChance()) type = "spell";           // 每题独立掷一次
+  if(P.tut) type = tutQuestionType(B.asked);                  // 教程关：题型是排好的
+  else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
   B.q = {word:word, type:type, done:false, haunted: hauntReady(word.en)};
@@ -1775,7 +1808,7 @@ function nextQuestion(){
   setWagerLabel();
   $("verdict").innerHTML = "";
   $("btnNextQ").hidden = true;
-  $("btnNextQ").textContent = "继续";
+  $("btnNextQ").textContent = T("继续");
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("spellBar").hidden = true;
   $("letters").hidden = true;
@@ -1786,11 +1819,11 @@ function nextQuestion(){
   if(type === "spell"){ renderSpell(word); return; }
 
   if(type === "en2zh"){
-    $("qLabel").textContent = "这个词是什么意思？";
-    $("qWord").textContent = word.en;
-    $("qWord").className = "qword";
+    $("qLabel").textContent = T("这个词是什么意思？");
+    $("qWord").innerHTML = word.en + pyTag(word);
+    $("qWord").className = LEARN_ZH ? "qword zh" : "qword";
   } else {
-    $("qLabel").textContent = "用英语怎么说？";
+    $("qLabel").textContent = T("用英语怎么说？");
     $("qWord").textContent = word.cn;
     $("qWord").className = "qword cn";
   }
@@ -1815,7 +1848,7 @@ function nextQuestion(){
   box.innerHTML = "";
   opts.forEach(function(o, i){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "opt";
+    b.type = "button"; b.className = "opt" + (LEARN_ZH && type === "zh2en" ? " zh" : "");
     b.innerHTML = "<span class=\"n\">" + (i+1) + "</span>" +
                   (type === "zh2en" ? o.en : o.cn);
     b.addEventListener("click", function(){ answer(b, o.en === word.en); });
@@ -1828,14 +1861,15 @@ function nextQuestion(){
 function setWagerLabel(){
   const b = $("btnWager"), on = !!(B && B.wager);
   if(b.firstChild && b.firstChild.nodeType === 3){
-    b.firstChild.textContent = on ? "冒险中 · 双倍赌注" : "冒险 · 我确定";
+    b.firstChild.textContent = on ? T("冒险中 · 双倍赌注") : T("冒险 · 我确定");
   }
   const em = b.querySelector("em");
-  if(em) em.textContent = OPT.lock ? "已锁定：每题自动冒险" : "对了伤害翻倍，错了受伤翻倍";
+  if(em) em.textContent = OPT.lock ? T("已锁定：每题自动冒险") : T("对了伤害翻倍，错了受伤翻倍");
 }
 function renderSpell(word){
-  $("qLabel").textContent = "拼出这个词 · 对了双倍经验";
-  $("qWord").textContent = word.cn;
+  $("qLabel").textContent = T("拼出这个词 · 对了双倍经验");
+  /* 学中文：给英文释义 + 拼音（拼音就是英语那边「听读音」的等价物），玩家按顺序点汉字 */
+  $("qWord").innerHTML = word.cn + pyTag(word);
   $("qWord").className = "qword cn";
   $("opts").hidden = true;
   $("spellBar").hidden = false;
@@ -1852,7 +1886,10 @@ function renderSpell(word){
      博闻：这个词已经"掌握"（熟练度 ≥3）的话也一样不给干扰项——跟净写共用同一条判断，
      两件同时带着也不会叠出负数个干扰字母。*/
   const mastered = LEX[word.en] && (LEX[word.en].str || 0) >= 3;
-  if(!hasRelic("clean") && !(hasRelic("wellread") && mastered)){
+  if(LEARN_ZH){
+    if(!hasRelic("clean") && !(hasRelic("wellread") && mastered))
+      Array.prototype.push.apply(letters, decoyChars(word, 3));
+  } else if(!hasRelic("clean") && !(hasRelic("wellread") && mastered)){
     const extra = "aeioustrnlm".split("");
     for(let i=0;i<2;i++) letters.push(pick(extra));
     /* 星期/月份这类专有名词首字母大写，干扰项里也得有一个大写的 ——
@@ -1869,7 +1906,7 @@ function renderSpell(word){
   box.innerHTML = "";
   letters.forEach(function(ch){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "lbtn"; b.textContent = ch;
+    b.type = "button"; b.className = "lbtn" + (LEARN_ZH ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
       if(B.locked || B.spell.length >= word.en.length) return;
       B.spell += ch; b.disabled = true; b.dataset.used = "1";
@@ -1921,7 +1958,7 @@ function spellPop(box){
 function drawSpell(word){
   const row = $("spellRow");
   /* 词长到 9 个字母以上，字格要缩一号，否则一行摆不下会折行、把战斗窗顶高 */
-  row.className = "spellrow" + (word.en.length >= 9 ? " long" : "");
+  row.className = "spellrow" + (word.en.length >= 9 ? " long" : "") + (LEARN_ZH ? " zh" : "");
   row.innerHTML = "";
   for(let i=0;i<word.en.length;i++){
     const d = document.createElement("div");
@@ -2098,7 +2135,9 @@ function answer(btn, ok){
       if(!ok){
         const sub = document.createElement("span");
         sub.className = "sub";
-        sub.textContent = (B.q.type === "zh2en") ? o.cn : o.en;
+        /* 学中文时顺手把拼音也带上：汉字那一格补「拼音 · 释义」，释义那一格补「汉字 拼音」*/
+        sub.textContent = (B.q.type === "zh2en") ? (o.py ? o.py + " · " + o.cn : o.cn)
+                                                 : (o.py ? o.en + " " + o.py : o.en);
         b.appendChild(sub);
         b.classList.add("two");
       }
@@ -2130,7 +2169,7 @@ function answer(btn, ok){
   if(hasRelic("rend") && (P.rend || 0) < REND_CAP){
     P.rend = (P.rend || 0) + 1;
     P.hp = Math.max(1, P.hp - 1);
-    if(P.rend >= REND_CAP) relicLog += " <span class=\"sys\">(割裂割满 " + REND_CAP + " 点，从此不再割)</span>";
+    if(P.rend >= REND_CAP) relicLog += T(" <span class=\"sys\">(割裂割满 ") + REND_CAP + T(" 点，从此不再割)</span>");
   }
   if(ok){
     P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
@@ -2147,15 +2186,15 @@ function answer(btn, ok){
     if(hitWeak && hasRelic("chase")){                       // 追猎：打中弱点多攒两下 + 回血
       P.combo += 2;
       const ch = healUp(Math.max(1, Math.ceil(stats().maxHp * CHASE_HEAL)));
-      if(ch.hp) relicLog += " <span class=\"sys\">(追猎 · 回 " + ch.hp + " 点)</span>";
+      if(ch.hp) relicLog += T(" <span class=\"sys\">(追猎 · 回 ") + ch.hp + T(" 点)</span>");
     }
     /* 续弦：5% 把连击接回这一趟最长的那一串。**必须在下面更新 maxCombo 之前判**，
        不然 P.combo 刚好就是 maxCombo，接回来等于没接。*/
     if(hasRelic("restring") && luck(RESTRING_RATE)){
       if(P.combo < (P.maxCombo || 0)) P.combo = P.maxCombo;
       const rs = healUp(RESTRING_HEAL);
-      relicLog += " <span class=\"sys\">(续弦 · 连击 ×" + P.combo +
-        (rs.hp ? "，回 " + rs.hp + " 点" : "") + ")</span>";
+      relicLog += T(" <span class=\"sys\">(续弦 · 连击 ×") + P.combo +
+        (rs.hp ? T("，回 ") + rs.hp + T(" 点") : "") + ")</span>";
     }
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
     if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(COUNTER_HEAL, s);   // 计数器
@@ -2170,13 +2209,13 @@ function answer(btn, ok){
     let whim = "";
     if(hasRelic("whim")){
       const roll = ri(1, 3);
-      if(roll === 1){ B.whim = (B.whim || 0) + 8; whim = "伤害 +8%（本场累计 " + B.whim + "%）"; }
+      if(roll === 1){ B.whim = (B.whim || 0) + 8; whim = T("伤害 +8%（本场累计 ") + B.whim + T("%）"); }
       else if(roll === 2){
         const back = Math.max(1, Math.ceil(s.maxHp * 0.05));
         healUp(back, s);
-        whim = "回 " + back + " 点生命";
-      } else { P.gold += 60; whim = "+60 金"; }
-      relicLog += " <span class=\"sys\">(无常 · " + whim + ")</span>";
+        whim = T("回 ") + back + T(" 点生命");
+      } else { P.gold += 60; whim = T("+60 金"); }
+      relicLog += T(" <span class=\"sys\">(无常 · ") + whim + ")</span>";
     }
 
     // 第一层 · 基础点伤（会被百分比放大）
@@ -2244,7 +2283,7 @@ function answer(btn, ok){
        照旧全部摊进这**同一个**百分比桶，没有新乘区。*/
     if(fast && hasRelic("swift")) pct += SWIFT_PCT;                         // 疾思：答得快
     if(hasRelic("poise")) pct += Math.min(POISE_MAX, leftSec * POISE_PCT);  // 从容：读条每剩 1 秒
-    if(hasRelic("longword") && word.en.length >= LONGW_AT) pct += LONGW_PCT;   // 长句：长词
+    if(hasRelic("longword") && wordLen(word) >= LONGW_AT) pct += LONGW_PCT;   // 长句：长词
     if(hasRelic("feeddemon")) pct += Math.min(FEED_MAX, readyHaunts().length * FEED_PCT);  // 养魔：身上的心魔
     if(B.q.haunted && hasRelic("fearless")) pct += FEARLESS_PCT;            // 无惧：答对心魔词
     if(hasRelic("full") && P.hp > s.maxHp * FULL_AT) pct += FULL_PCT;       // 饱满：血还满着
@@ -2285,7 +2324,7 @@ function answer(btn, ok){
     if(hasRelic("snow")) extra += Math.floor(P.combo / SNOW_PER) * SNOW_EXTRA;  // 滚雪球：连击每满 10 一档，不封顶
     /* 第十批落在④层的三件 */
     if(fast && hasRelic("snap")) extra += SNAP_EXTRA;                       // 抢答：答得快
-    if(hasRelic("volume")) extra += Math.max(0, word.en.length - VOLUME_FROM) * VOLUME_EXTRA;  // 累牍：每超一个字母
+    if(hasRelic("volume")) extra += Math.max(0, wordLen(word) - VOLUME_FROM) * VOLUME_EXTRA;  // 累牍：每超一个字母
     if(hasRelic("keenfull") && P.hp > s.maxHp * KEENF_AT) extra += KEENF_EXTRA;   // 锋满：血过半
 
     // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
@@ -2328,9 +2367,9 @@ function answer(btn, ok){
       hall = dmg;
       coopDealDamage(m, hall);
       setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
-      relicLog += " <span class=\"sys\">(回响之厅又补了 " + hall + " 点)</span>";
+      relicLog += T(" <span class=\"sys\">(回响之厅又补了 ") + hall + T(" 点)</span>");
     }
-    if(recoil){ P.recoil = 0; relicLog += " <span class=\"sys\">(反震 +" + recoil + "% 打了出去)</span>"; }
+    if(recoil){ P.recoil = 0; relicLog += T(" <span class=\"sys\">(反震 +") + recoil + T("% 打了出去)</span>"); }
     if(hasRelic("drain") && luck(DRAIN_RATE)) healUp(DRAIN_HEAL, s);  // 吞噬
     // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
     if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
@@ -2338,7 +2377,7 @@ function answer(btn, ok){
        ⚠️ 判断放在饮血/吞噬**之后** —— 那两件先垫一口，还在线下才轮到它 */
     if(hasRelic("phoenix") && P.hp <= s.maxHp * PHOENIX_AT){
       const r = healUp(Math.max(1, Math.ceil(s.maxHp * PHOENIX_HEAL)), s);
-      if(r.hp) relicLog += " <span class=\"sys\">(不死鸟回了 " + r.hp + " 点)</span>";
+      if(r.hp) relicLog += T(" <span class=\"sys\">(不死鸟回了 ") + r.hp + T(" 点)</span>");
     }
     if(hasRelic("dice") && luck(DICE_RATE)) G.dice = (G.dice || 0) + 1;  // 赌骰：答对 50% 叠一层（本层内）
     if(B.wager && hasRelic("allin") && luck(.10)){                // 孤注
@@ -2356,7 +2395,7 @@ function answer(btn, ok){
       if(hasRelic("cap") && (G.capN || 0) < CAP_N){                        // 学徒帽：拼写→回血
         G.capN = (G.capN || 0) + 1;
         const ch2 = healUp(Math.max(1, Math.ceil(s.maxHp * CAP_HEAL)), s);
-        if(ch2.hp) relicLog += " <span class=\"sys\">(学徒帽 · 回 " + ch2.hp + " 点)</span>";
+        if(ch2.hp) relicLog += T(" <span class=\"sys\">(学徒帽 · 回 ") + ch2.hp + T(" 点)</span>");
       }
       if(hasRelic("glyph")) G.glyphArmor = Math.min(GLYPH_MAX, (G.glyphArmor || 0) + GLYPH_ARMOR);  // 咒文：拼写→本层护甲
       if(hasRelic("spellblade") && (G.bladeN || 0) < SBLADE_N){            // 拼刃：开一扇 5 题的窗口
@@ -2372,8 +2411,8 @@ function answer(btn, ok){
       G.songN = (G.songN || 0) + 1;
       P.shield = (P.shield || 0) + SONG_SHIELD;
       const sg = healUp(Math.max(1, Math.ceil(s.maxHp * SONG_HEAL)), s);
-      relicLog += " <span class=\"sys\">(长歌 · 护盾 +" + SONG_SHIELD +
-        (sg.hp ? "，回 " + sg.hp + " 点" : "") + ")</span>";
+      relicLog += T(" <span class=\"sys\">(长歌 · 护盾 +") + SONG_SHIELD +
+        (sg.hp ? T("，回 ") + sg.hp + T(" 点") : "") + ")</span>";
     }
     /* ===== 第十批「答对就给盾／给血」的五件（2026-09-21）=====
        跟第九批一个规矩：**每件都封每层次数**，计数挂 G 上、nextFloor() 里清零。
@@ -2382,7 +2421,7 @@ function answer(btn, ok){
       G.tickN = (G.tickN || 0) + 1;
       P.shield = (P.shield || 0) + TICK_SHIELD;
     }
-    if(word.en.length >= LONGW_AT && hasRelic("ponder") && (G.longN || 0) < PONDER_N){   // 长考：长词→护盾
+    if(wordLen(word) >= LONGW_AT && hasRelic("ponder") && (G.longN || 0) < PONDER_N){   // 长考：长词→护盾
       G.longN = (G.longN || 0) + 1;
       P.shield = (P.shield || 0) + PONDER_SHIELD;
     }
@@ -2390,7 +2429,7 @@ function answer(btn, ok){
       if(hasRelic("exorcise") && (G.exorN || 0) < EXOR_N){                  // 驱邪：答对心魔词→回血
         G.exorN = (G.exorN || 0) + 1;
         const ex = healUp(Math.max(1, Math.ceil(s.maxHp * EXOR_HEAL)), s);
-        if(ex.hp) relicLog += " <span class=\"sys\">(驱邪 · 回 " + ex.hp + " 点)</span>";
+        if(ex.hp) relicLog += T(" <span class=\"sys\">(驱邪 · 回 ") + ex.hp + T(" 点)</span>");
       }
       if(hasRelic("calmsoul") && (G.calmsN || 0) < CALMS_N){                // 镇魂：答对心魔词→护盾
         G.calmsN = (G.calmsN || 0) + 1;
@@ -2404,7 +2443,7 @@ function answer(btn, ok){
         G.fastRun = (G.fastRun || 0) + 1;
         if(G.fastRun >= INSTANT_RUN){
           G.fastRun = 0; G.instantReady = true;
-          relicLog += " <span class=\"sys\">(刹那攒满了 —— 下一刀 +" + INSTANT_PCT + "%)</span>";
+          relicLog += T(" <span class=\"sys\">(刹那攒满了 —— 下一刀 +") + INSTANT_PCT + "%)</span>";
         }
       } else G.fastRun = 0;
     }
@@ -2419,7 +2458,7 @@ function answer(btn, ok){
         P.aegisN = 0;
         const before = P.shield || 0;
         P.shield = Math.min(AEGIS_MAX, before + AEGIS_GAIN);
-        if(P.shield > before) relicLog += " <span class=\"sys\">(凝盾 · 护盾 " + P.shield + ")</span>";
+        if(P.shield > before) relicLog += T(" <span class=\"sys\">(凝盾 · 护盾 ") + P.shield + ")</span>";
       }
     }
     if(wasStrong && hasRelic("tome")) P.gold += 8;                          // 典藏：答对掌握过的词
@@ -2427,24 +2466,24 @@ function answer(btn, ok){
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
     head = "<span class=\"big ok\">" +
-           (B.wager ? "冒对了！" : crit ? "暴击！" : isSpell ? "拼对了！" : "命中！") + "</span>";
-    note = "你砍中 " + m.name + "，造成 <b>" + dmg + "</b> 点伤害" +
-           (hitWeak ? "（正中弱点）" : "") +
-           (surge ? "，浪涌炸开" : "") +
-           (extra ? "（额外伤害 +" + extra + "）" : "") +
-           (pct ? "（+" + pct + "%" + (cbo ? "，其中连击 +" + cbo + "%" : "") + "）" : "") + "。";
+           (B.wager ? T("冒对了！") : crit ? T("暴击！") : isSpell ? T("拼对了！") : T("命中！")) + "</span>";
+    note = T("你砍中 ") + m.name + T("，造成 <b>") + dmg + T("</b> 点伤害") +
+           (hitWeak ? T("（正中弱点）") : "") +
+           (surge ? T("，浪涌炸开") : "") +
+           (extra ? T("（额外伤害 +") + extra + T("）") : "") +
+           (pct ? T("（+") + pct + "%" + (cbo ? T("，其中连击 +") + cbo + "%" : "") + T("）") : "") + T("。");
     /* 反刍：上一题答错了，这一题答对就回一口血 */
     if(P.chew && hasRelic("chew")){
       P.chew = false;
       const back = Math.max(1, Math.ceil(s.maxHp * CHEW_PCT));
       healUp(back, s);
-      relicLog += " <span class=\"sys\">(反刍回了 " + back + " 点生命)</span>";
+      relicLog += T(" <span class=\"sys\">(反刍回了 ") + back + T(" 点生命)</span>");
     }
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
     if(B.q.haunted && hauntGone){
       const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * BIND_HEAL)) : 2;
       healUp(back, s);
-      note += " <span style=\"color:var(--venom)\">心魔散了，回 " + back + " 点生命。</span>";
+      note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
   } else {
     P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
@@ -2472,8 +2511,8 @@ function answer(btn, ok){
     const nerveOk = B.wager && hasRelic("nerve") && (G.nerveN || 0) < NERVE_N;
     if(nerveOk){
       G.nerveN = (G.nerveN || 0) + 1;                                  // 连击保住
-      relicLog += " <span class=\"sys\">(铁胆 · 连击留住 ×" + P.combo +
-        "，本层还剩 " + (NERVE_N - G.nerveN) + " 次)</span>";
+      relicLog += T(" <span class=\"sys\">(铁胆 · 连击留住 ×") + P.combo +
+        T("，本层还剩 ") + (NERVE_N - G.nerveN) + T(" 次)</span>");
     }
     else if(unchain) P.combo = Math.max(0, P.combo - unchainAt());   // 代价也是「当前层数」
     else if(inertia) P.combo = INERTIA_AT;
@@ -2485,8 +2524,8 @@ function answer(btn, ok){
         G.reboundUsed = true;
         P.combo = Math.round(beforeCombo * REBOUND_KEEP);
         const rb = healUp(Math.max(1, Math.ceil(stats().maxHp * REBOUND_HEAL)));
-        relicLog += " <span class=\"sys\">(归位 · 连击缓冲回 ×" + P.combo +
-          (rb.hp ? "，回 " + rb.hp + " 点" : "") + ")</span>";
+        relicLog += T(" <span class=\"sys\">(归位 · 连击缓冲回 ×") + P.combo +
+          (rb.hp ? T("，回 ") + rb.hp + T(" 点") : "") + ")</span>";
       }
     }
     if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0) P.bladeLeft--;   // 拼刃：窗口是「接下来 5 题」，答错也算一题
@@ -2496,7 +2535,7 @@ function answer(btn, ok){
     if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
     if(hasRelic("build")){                  // 筑盾：错了也不白错
       P.shield = (P.shield || 0) + BUILD_SHIELD;
-      relicLog += " <span class=\"sys\">(筑盾 · 护盾 " + P.shield + ")</span>";
+      relicLog += T(" <span class=\"sys\">(筑盾 · 护盾 ") + P.shield + ")</span>";
     }
     const wasHaunted = B.q.haunted;
     /* 无惧（传奇，第十批）：心魔词答错**不再加重心魔** —— 这个词不会重新排到队尾去，
@@ -2517,54 +2556,54 @@ function answer(btn, ok){
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
         dmg = 0;
-        head = "<span class=\"big no\">断链 —— 链子替你挨了</span>";
-        note = "连击 −" + unchainAt() + "，血一点没掉。";
+        head = T("<span class=\"big no\">断链 —— 链子替你挨了</span>");
+        note = T("连击 −") + unchainAt() + T("，血一点没掉。");
       }
       if(dmg > 0 && fearless){
         dmg = 0;
-        head = "<span class=\"big no\">无惧 —— 旧账咬不动你</span>";
-        note = "心魔答错不掉血，这个词也没再加重。";
+        head = T("<span class=\"big no\">无惧 —— 旧账咬不动你</span>");
+        note = T("心魔答错不掉血，这个词也没再加重。");
       }
       // 默诵：拼写题答错不掉血，但**每层只有 RECITE_FREE 次**（老续玩档没这个字段，所以 || 0）
       if(dmg > 0 && isSpell && hasRelic("recite") && (G.reciteFree || 0) < RECITE_FREE){
         G.reciteFree = (G.reciteFree || 0) + 1;
         dmg = 0;
-        head = "<span class=\"big no\">默诵替你挡下了</span>";
-        note = "这一层的免伤还剩 " + (RECITE_FREE - G.reciteFree) + " 次。";
+        head = T("<span class=\"big no\">默诵替你挡下了</span>");
+        note = T("这一层的免伤还剩 ") + (RECITE_FREE - G.reciteFree) + T(" 次。");
       }
       /* 慎笔 2026-09-21：从「拼写答错 −15%」改成「拼写答错不掉血」+ 拼写出现率 +5% ——
          拼写题只占 5% 的题，−15% 摊下来只有 0.4 价值，是全表最低的一件。*/
       if(dmg > 0 && isSpell && hasRelic("caution")){
         dmg = 0;
-        head = "<span class=\"big no\">慎笔 —— 笔尖悬住了</span>";
-        note = "拼错了，但这一下没落到身上。";
+        head = T("<span class=\"big no\">慎笔 —— 笔尖悬住了</span>");
+        note = T("拼错了，但这一下没落到身上。");
       }
       if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血 + 回一口
         G.echoUsed = true;
         dmg = 0;
         const eh = healUp(Math.max(1, Math.ceil(stats().maxHp * ECHO_HEAL)));
-        head = "<span class=\"big no\">回声替你挡下了</span>";
-        note = "这一层的第一次失手，不掉血" + (eh.hp ? "，还回了 " + eh.hp + " 点" : "") + "。";
+        head = T("<span class=\"big no\">回声替你挡下了</span>");
+        note = T("这一层的第一次失手，不掉血") + (eh.hp ? T("，还回了 ") + eh.hp + T(" 点") : "") + T("。");
       }
       /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。*/
       if(dmg > 0){
         const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted});
         dmg = mit.dmg;
         if(mit.dodged){
-          head = "<span class=\"big no\">错身 —— 没碰到你</span>";
-          note = "你侧了半步，这一下落空了（连击照断）。";
+          head = T("<span class=\"big no\">错身 —— 没碰到你</span>");
+          note = T("你侧了半步，这一下落空了（连击照断）。");
         } else {
-          head = "<span class=\"big no\">" + (B.wager ? "冒险失手" : "失手") + "</span>";
+          head = "<span class=\"big no\">" + (B.wager ? T("冒险失手") : T("失手")) + "</span>";
           note = takeHit(dmg, m, wasHaunted);
           relicLog += mit.why;
         }
       } else if(!head){
-        head = "<span class=\"big no\">失手</span>";
-        note = "这一下没让你掉血。";
+        head = T("<span class=\"big no\">失手</span>");
+        note = T("这一下没让你掉血。");
       }
       if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
         coopDealDamage(m, THORNS_EXTRA);
-        note += " 赤鳞反弹了 <b>" + THORNS_EXTRA + "</b> 点。";
+        note += T(" 赤鳞反弹了 <b>") + THORNS_EXTRA + T("</b> 点。");
         floatNum("foe", "-" + THORNS_EXTRA, "dmg");
       }
     }
@@ -2574,7 +2613,7 @@ function answer(btn, ok){
   LEX[word.en] = rec;          // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   $("verdict").innerHTML = head +
-    "<span class=\"mean\"><b>" + word.en + "</b>　" + word.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[word.cat] + "</span></span>";
+    "<span class=\"mean\"><b>" + word.en + "</b>" + (word.py ? " " + word.py : "") + T("　") + word.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[word.cat] + "</span></span>";
   if(CAN_SPEAK){
     $("btnSpeak").hidden = false;                  // 答完了，随时能再听一次
     if(OPT.speak) speak(word.en);                  // 设置里开着就自动念一遍
@@ -2583,8 +2622,9 @@ function answer(btn, ok){
   /* 拼错不再当场退回成选择题（用户 2026-09）—— 跟别的答错一样进心魔，
      熬满 HAUNT_DELAY 题才回来找你。*/
   if(isSpell && ok) spellLog =
-    " <span class=\"sys\">(拼对 · 连击 +" + SPELL_COMBO + "，本场经验 ×" + SPELL_XPX + ")</span>";
-  say((ok ? "答对 " : "答错 ") + word.en + " = " + word.cn + spellLog + relicLog, ok ? "good" : "hurt");
+    T(" <span class=\"sys\">(拼对 · 连击 +") + SPELL_COMBO + T("，本场经验 ×") + SPELL_XPX + ")</span>";
+  say((ok ? T("答对 ") : T("答错 ")) + wordShow(word) + " = " + word.cn + spellLog + relicLog, ok ? "good" : "hurt");
+  if(P.tut) tutEvent(ok ? "right" : "wrong");
   renderBattleBars();
   renderHud();
   $("btnFlee").hidden = true;
@@ -2597,7 +2637,7 @@ function answer(btn, ok){
       /* 两条血条这边看着都空了：怪死是共识事件，等服务器广播的 dead 才真的收（联机方案.md 第 3/6 节）。
          B.locked 已经是 true 了（函数最上面挡的），这里只是把「下一题」按钮也收起来，别让人干等着点它。*/
       $("btnNextQ").hidden = true;
-      say(m.name + "晃了一下，血条空了 —— 等确认最后一下。", "sys");
+      say(m.name + T("晃了一下，血条空了 —— 等确认最后一下。"), "sys");
       return;
     } else {
       setTimeout(function(){ finishBattle(true); }, 760);
@@ -2621,14 +2661,14 @@ function deathSave(){
        一件神圣只值「多挨一下」。现在直接回 UNDYING_HEAL 的上限。*/
     P.hp = Math.max(1, Math.ceil(stats().maxHp * UNDYING_HEAL));
     if(hasRelic("warmth")) P.warmthLeft = WARMTH_HITS;   // 余温：薪火之后接下来几次答错单独再减半
-    return "薪火在胸口炸开 —— 你带着 " + P.hp + " 点生命站住了。";
+    return T("薪火在胸口炸开 —— 你带着 ") + P.hp + T(" 点生命站住了。");
   }
   // 回魂：本局 REVIVE_N 次（P.revived 从布尔改成计数，老续玩档存的 true/false 会被 JS 当 1/0 比）
   if(hasRelic("revive") && (P.revived || 0) < REVIVE_N){
     P.revived = (P.revived || 0) + 1;
     P.hp = Math.max(1, Math.ceil(stats().maxHp * REVIVE_PCT));
-    return "回魂 —— 你数到第二次心跳，又站了起来（" + P.hp + " 点生命，本局还剩 " +
-           (REVIVE_N - P.revived) + " 次）。";
+    return T("回魂 —— 你数到第二次心跳，又站了起来（") + P.hp + T(" 点生命，本局还剩 ") +
+           (REVIVE_N - P.revived) + T(" 次）。");
   }
   return "";
 }
@@ -2794,7 +2834,7 @@ function mitigate(dmg, s0, opt){
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
     out = Math.max(1, Math.ceil(out / 2));
-    why += " <span class=\"sys\">(屏息卸掉一半，这一层还剩 " + (HOLD_FREE - G.holdUsed) + " 次)</span>";
+    why += T(" <span class=\"sys\">(屏息卸掉一半，这一层还剩 ") + (HOLD_FREE - G.holdUsed) + T(" 次)</span>");
   }
   /* 余温：不灭薪火触发之后才有 P.warmthLeft（在 deathSave() 里发），接下来这几次答错单独再减半，
      不占粗布/屏息的名额——放在它们后面，是"薪火给的额外缓冲"，不是替代它们。*/
@@ -2807,7 +2847,7 @@ function mitigate(dmg, s0, opt){
   if(wrong && hasRelic("warmth") && (P.warmthLeft || 0) > 0){
     P.warmthLeft--;
     out = Math.max(1, Math.ceil(out / 2));
-    why += " <span class=\"sys\">(余温还护着你，减半，剩 " + P.warmthLeft + " 次)</span>";
+    why += T(" <span class=\"sys\">(余温还护着你，减半，剩 ") + P.warmthLeft + T(" 次)</span>");
   }
   /* 钝痛 10% / 石胎 5%：两件都是「单次封顶」，一起带就按**低的那个**算，不叠乘 */
   let capPct = 0;
@@ -2817,7 +2857,7 @@ function mitigate(dmg, s0, opt){
     const cap = Math.max(1, Math.ceil(s.maxHp * capPct));
     if(out > cap){
       out = cap;
-      why += " <span class=\"sys\">(" + (capPct === WOMB_PCT ? "石胎" : "钝痛") + "把这一下压到 " + cap + " 点)</span>";
+      why += " <span class=\"sys\">(" + (capPct === WOMB_PCT ? T("石胎") : T("钝痛")) + T("把这一下压到 ") + cap + T(" 点)</span>");
     }
   }
   /* 尚存：单次伤害超过生命上限 ENDURE_PCT 就砍半，放在所有其它减伤算完之后判 ——
@@ -2825,7 +2865,7 @@ function mitigate(dmg, s0, opt){
      ⚠️ 2026-09 用户把「整趟一次」的限制去掉了，现在每一记重击都吃得到。*/
   if(hasRelic("endure") && out > s.maxHp * ENDURE_PCT){
     out = Math.max(1, Math.floor(out * (100 - ENDURE_CUT) / 100));
-    why += " <span class=\"sys\">(尚存削掉了这记重击的 " + ENDURE_CUT + "%)</span>";
+    why += T(" <span class=\"sys\">(尚存削掉了这记重击的 ") + ENDURE_CUT + "%)</span>";
   }
   out = Math.max(1, out);
   if(hasRelic("slip") && luck(SLIP_RATE)) return {dmg:0, dodged:true, why:""};   // 错身
@@ -2861,12 +2901,12 @@ function takeHit(dmg, m, haunted){
       G.borrowUsed = true;
       // 2026-09-21：加了 BORROW_SHIELD 保底 —— 裸装护甲是 0，原来这一笔恒为 0
       const gain = Math.max(BORROW_SHIELD, Math.round((stats().defGear || 0) * BORROW_MULT));
-      if(gain > 0){ P.shield = gain; say("借甲趁护盾破的那一下，立刻又撑起 <b>" + gain + "</b> 点。", "good"); }
+      if(gain > 0){ P.shield = gain; say(T("借甲趁护盾破的那一下，立刻又撑起 <b>") + gain + T("</b> 点。"), "good"); }
     }
     if(hasRelic("shatter") && B && !B.shatterUsed){          // 破盾余威：这场一次，免下一下答错伤害
       B.shatterUsed = true;
       B.shatterFree = true;
-      say("破盾余威 —— 下一次失手会被它接住。", "sys");
+      say(T("破盾余威 —— 下一次失手会被它接住。"), "sys");
     }
   }
   /* 圆满（神圣，第十批）：每层一次 —— 血被打到 WHOLE_AT 以下就立刻拉回 WHOLE_TO。
@@ -2878,14 +2918,14 @@ function takeHit(dmg, m, haunted){
       G.wholeUsed = true;
       const back = Math.max(1, Math.ceil(sw.maxHp * WHOLE_TO) - P.hp);
       const rw = healUp(back, sw);
-      say("圆满 —— 裂口自己合上了，回 <b>" + rw.hp + "</b> 点生命（这一层就这一次）。", "good");
+      say(T("圆满 —— 裂口自己合上了，回 <b>") + rw.hp + T("</b> 点生命（这一层就这一次）。"), "good");
     }
   }
   floatNum("me", "-" + dmg, "ouch");
-  return m.name + " 咬中你，" +
-    (ate ? ("护盾吃掉 <b>" + ate + "</b> 点" + (left ? "，你失去 <b>" + left + "</b> 点生命" : "，血一点没掉") + "")
-         : ("你失去 <b>" + left + "</b> 点生命")) +
-    (haunted ? "（心魔加重）" : "") + "。";
+  return m.name + T(" 咬中你，") +
+    (ate ? (T("护盾吃掉 <b>") + ate + T("</b> 点") + (left ? T("，你失去 <b>") + left + T("</b> 点生命") : T("，血一点没掉")) + "")
+         : (T("你失去 <b>") + left + T("</b> 点生命"))) +
+    (haunted ? T("（心魔加重）") : "") + T("。");
 }
 function finishBattle(win){
   const m = B.mob;
@@ -2931,26 +2971,26 @@ function closeBattleWin(){
   if(hasRelic("reapfull")) heal += Math.max(1, Math.ceil(s0.maxHp * REAPF_PCT)); // 收势：收割的百分比版（第十批）
   const got = healUp(heal, s0);                                           // 泉涌要收溢出，所以走 healUp
   const gained = got.hp;
-  say(m.name + " 化成了灰。<span class=\"sys\">(+" + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
-      "，+" + g + " 金" +
-      (gained > 0 ? "，回复 " + gained + " 生命" : "") + ")</span>", "good");
+  say(m.name + T(" 化成了灰。<span class=\"sys\">(+") + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
+      T("，+") + g + T(" 金") +
+      (gained > 0 ? T("，回复 ") + gained + T(" 生命") : "") + ")</span>", "good");
   if(G.mobs.length === 0){
     /* 阶梯直接开在最后一只怪倒下的地方 —— 不用再满地图找那个 ▼。
        怪站的一定是地板，所以这个位置永远合法。 */
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
-    say("这一层清空了。" + m.name + " 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。", "crit");
+    say(T("这一层清空了。") + m.name + T(" 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。"), "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     if(hasRelic("finale")){                       // 收尾：清完一层回 FINALE_PCT 的上限
       const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
-      if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
-        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
+      if(r.hp || r.sh) say(T("这一层干净了 —— 收尾替你补了 <b>") + r.hp + T("</b> 点生命") +
+        (r.sh ? T("，溢出的化成 <b>") + r.sh + T("</b> 点护盾") : "") + T("。"), "good");
     }
     if(hasRelic("welfare")){                       // 均富：清空这一层再单独发一笔
       const wg = G.floor * 2;
       P.gold += wg;
-      say("均富 —— 这一层清空了，回廊分给你 <b>" + wg + "</b> 金。", "good");
+      say(T("均富 —— 这一层清空了，回廊分给你 <b>") + wg + T("</b> 金。"), "good");
     }
   }
   fov();
@@ -2958,6 +2998,7 @@ function closeBattleWin(){
   G.paused = false;
   lockInput(260);        // 战斗窗是自动关的，挡一下手里还没停的那一点
   render();
+  if(P.tut) tutEvent(G.mobs.length ? "kill" : "clear");
   maybeRelic();
 }
 /* 撤退**要付一半的最大生命**（用户 2026-09，以前是白撤）：转身那一下露空门。
@@ -2979,9 +3020,9 @@ function flee(){
   $("veilBattle").hidden = true;
   G.paused = false;
   say(free
-      ? ("你把壳留在原地，人退了出来 —— 这一层的第一次撤退不掉血。" + m.name + " 伤口还在。")
-      : ("你转身退开 —— 空门露了一下，失去 <b>" + lost + "</b> 点生命。" +
-         m.name + " 留在原地，伤口还在。"), "hurt");
+      ? (T("你把壳留在原地，人退了出来 —— 这一层的第一次撤退不掉血。") + m.name + T(" 伤口还在。"))
+      : (T("你转身退开 —— 空门露了一下，失去 <b>") + lost + T("</b> 点生命。") +
+         m.name + T(" 留在原地，伤口还在。")), "hurt");
   lockInput(260);
   renderHud();
   render();
@@ -3009,7 +3050,7 @@ function gainXp(n){
       healUp(Math.max(1, Math.ceil(s.maxHp * ASCEND_HEAL)), s);
     }
     fxLevelUp();
-    say("<b>等级提升！</b>你现在是 " + P.lvl + " 级 —— 攻击 " + s.atk + "，生命上限 " + s.maxHp + "。", "good");
+    say(T("<b>等级提升！</b>你现在是 ") + P.lvl + T(" 级 —— 攻击 ") + s.atk + T("，生命上限 ") + s.maxHp + T("。"), "good");
   }
   return n;
 }
@@ -3045,8 +3086,8 @@ function drinkAll(){
     hp += r.hp; sh += r.sh;
     removeThing(th);
   });
-  say("你把这一层的泉水全喝了 —— 回复 <b>" + hp + "</b> 点生命" +
-      (sh ? "，溢出的化成 <b>" + sh + "</b> 点护盾" : "") + "。", "good");
+  say(T("你把这一层的泉水全喝了 —— 回复 <b>") + hp + T("</b> 点生命") +
+      (sh ? T("，溢出的化成 <b>") + sh + T("</b> 点护盾") : "") + T("。"), "good");
 }
 function openSpring(th){
   G.paused = true;
@@ -3056,14 +3097,14 @@ function openSpring(th){
   /* 「泉涌」把喝不下的那部分变成护盾 —— 所以满血时它也值得喝，按钮不能再禁掉 */
   const spill = hasRelic("well") ? Math.floor(Math.max(0, full - room) / SPILL_RATE) : 0;
   $("springLedger").innerHTML =
-    li("你现在", P.hp + " / " + s.maxHp + ((P.shield || 0) ? "　盾 " + P.shield : "")) +
-    li("喝下去", (heal > 0 ? "回复 " + heal + " 点（上限的 " + Math.round(CHAPTER.springPct * 100) + "%）" : "你已经是满的了") +
-                (spill > 0 ? "，溢出的化成 " + spill + " 点护盾" : ""));
+    li(T("你现在"), P.hp + " / " + s.maxHp + ((P.shield || 0) ? T("　盾 ") + P.shield : "")) +
+    li(T("喝下去"), (heal > 0 ? T("回复 ") + heal + T(" 点（上限的 ") + Math.round(CHAPTER.springPct * 100) + T("%）") : T("你已经是满的了")) +
+                (spill > 0 ? T("，溢出的化成 ") + spill + T(" 点护盾") : ""));
   $("btnSpringDrink").disabled = room <= 0 && spill <= 0;
-  $("btnSpringDrink").textContent = (room > 0 || spill > 0) ? "掬一捧喝下" : "喝不下了";
+  $("btnSpringDrink").textContent = (room > 0 || spill > 0) ? T("掬一捧喝下") : T("喝不下了");
   $("springNote").textContent = (room > 0 || spill > 0)
-    ? "这口泉只够喝一次 —— 喝完它就干了。不想现在喝，它会留在原地等你。"
-    : "满血的时候喝它是浪费。留着，等真需要的时候回来。";
+    ? T("这口泉只够喝一次 —— 喝完它就干了。不想现在喝，它会留在原地等你。")
+    : T("满血的时候喝它是浪费。留着，等真需要的时候回来。");
   hideAll();
   $("veilSpring").hidden = false;
   ($("btnSpringDrink").disabled ? $("btnSpringSkip") : $("btnSpringDrink")).focus();
@@ -3077,11 +3118,11 @@ function resolveSpring(drink){
     const s = stats(), r = healUp(springHeal(s), s);       // 泉涌：喝不下的那部分变护盾
     const got = r.hp;
     if(got) floatNum("me", "+" + got, "heal");
-    say("你掬起一捧泉水 —— 回复了 <b>" + got + "</b> 点生命（" + P.hp + " / " + s.maxHp + "）" +
-        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
+    say(T("你掬起一捧泉水 —— 回复了 <b>") + got + T("</b> 点生命（") + P.hp + " / " + s.maxHp + T("）") +
+        (r.sh ? T("，溢出的化成 <b>") + r.sh + T("</b> 点护盾") : "") + T("。"), "good");
     removeThing(th);
   } else {
-    say("泉水留在原地，还冒着气泡。", "sys");
+    say(T("泉水留在原地，还冒着气泡。"), "sys");
   }
   lockInput(200);
   renderHud(); render();
@@ -3105,10 +3146,10 @@ function openAltar(th){
   const s = stats();
   const cost = altarCost(), enough = altarAfford();
   $("altarCost").innerHTML =
-    li("代价", cost + " 点生命（你现在 " + P.hp + " / " + s.maxHp + "）") +
-    li("回报", "一件遗物");
+    li(T("代价"), cost + T(" 点生命（你现在 ") + P.hp + " / " + s.maxHp + T("）")) +
+    li(T("回报"), T("一件遗物"));
   $("btnAltarPay").disabled = !enough;
-  $("btnAltarPay").textContent = enough ? "割一刀" : "血不够";
+  $("btnAltarPay").textContent = enough ? T("割一刀") : T("血不够");
   hideAll();
   $("veilAltar").hidden = false;
 }
@@ -3123,19 +3164,19 @@ function resolveAltar(pay){
       P.shield -= fromShield;
       const fromHp = cost - fromShield;
       if(fromHp > 0){ P.hp -= fromHp; floatNum("me", "-" + fromHp, "ouch"); }
-      if(fromShield > 0) say("还愿先耗掉了 <b>" + fromShield + "</b> 点护盾抵代价。", "sys");
+      if(fromShield > 0) say(T("还愿先耗掉了 <b>") + fromShield + T("</b> 点护盾抵代价。"), "sys");
     } else {
       P.hp -= cost;
       floatNum("me", "-" + cost, "ouch");
     }
     removeThing(th);
-    say("你把手按在浅槽上。石台吸干了那一点血。", "hurt");
-    grantRelic(rollRelic(), "石台吐出了");
+    say(T("你把手按在浅槽上。石台吸干了那一点血。"), "hurt");
+    grantRelic(rollRelic(), T("石台吐出了"));
     lockInput(200);
     renderHud(); render();
     return;
   }
-  say("你收回手，绕开了石台。", "sys");
+  say(T("你收回手，绕开了石台。"), "sys");
   lockInput(200);
   renderHud(); render();
 }
@@ -3154,7 +3195,7 @@ function openForge(th){
     d.innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
                   "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span>" +
                   "<span class=\"rp\">" + r.pw + "</span>" +
-                  "<span class=\"rl\">点它 → 扔进炉子</span>";
+                  T("<span class=\"rl\">点它 → 扔进炉子</span>");
     box.appendChild(d);
   });
   hideAll();
@@ -3184,17 +3225,17 @@ function forgePick(id){
     const g = sellRelicGold(old);
     withMaxHp(function(){ P.relics.splice(P.relics.indexOf(id), 1); });
     P.gold += g;
-    say("炉火吞了 " + rc(old) + "，什么也没吐出来 —— 只剩 <b>" + g + "</b> 金币。", "sys");
+    say(T("炉火吞了 ") + rc(old) + T("，什么也没吐出来 —— 只剩 <b>") + g + T("</b> 金币。"), "sys");
   } else {
     withMaxHp(function(){
       P.relics.splice(P.relics.indexOf(id), 1);
       P.relics.push(got.id);
     });
-    noteRelicFound(got, "炉子吐出了");
+    noteRelicFound(got, T("炉子吐出了"));
     const up = (got.r || 0) - (old.r || 0);
-    say("你把 " + rc(old) + " 扔进炉子 —— " +
-        (up > 0 ? "火苗窜起来，它<b>升了一档</b>" : up < 0 ? "火舌卷下去，它<b>降了一档</b>" : "形状变了，还是同一档") +
-        "：" + rc(got) + " —— " + got.pw + "。", up < 0 ? "hurt" : "crit");
+    say(T("你把 ") + rc(old) + T(" 扔进炉子 —— ") +
+        (up > 0 ? T("火苗窜起来，它<b>升了一档</b>") : up < 0 ? T("火舌卷下去，它<b>降了一档</b>") : T("形状变了，还是同一档")) +
+        T("：") + rc(got) + " —— " + got.pw + T("。"), up < 0 ? "hurt" : "crit");
   }
   lockInput(200);
   renderHud(); render();
@@ -3203,7 +3244,7 @@ function closeForge(){
   const th = pendingRoom; pendingRoom = null;
   $("veilForge").hidden = true;
   G.paused = false;
-  say("炉膛里的火还亮着。你什么也没扔进去。", "sys");
+  say(T("炉膛里的火还亮着。你什么也没扔进去。"), "sys");
   lockInput(200);
   renderHud(); render();
 }
@@ -3214,9 +3255,9 @@ function openChest(th){
   pendingRoom = th;
   const word = pickQuizWord("all");
   chestQ = {word:word, spell:"", done:false};
-  $("chestTitle").textContent = "锁上刻着一个词";
-  $("chestHint").textContent = "拼出「" + word.cn + "」";
-  $("chestClue").textContent = word.cn;
+  $("chestTitle").textContent = T("锁上刻着一个词");
+  $("chestHint").textContent = T("拼出「") + word.cn + T("」");
+  $("chestClue").innerHTML = word.cn + pyTag(word);
   $("chestVerdict").innerHTML = "";
   $("btnChestDone").hidden = true;
   $("btnChestLeave").hidden = false;
@@ -3227,6 +3268,7 @@ function openChest(th){
 }
 function drawChestSpell(){
   const row = $("chestRow"), en = chestQ.word.en;
+  row.className = "spellrow" + (LEARN_ZH ? " zh" : "");
   row.innerHTML = "";
   for(let i=0;i<en.length;i++){
     const d = document.createElement("div");
@@ -3240,14 +3282,15 @@ function buildChestLetters(word){
   box.innerHTML = "";
   const pool = word.en.split("");
   const extra = "abcdefghijklmnopqrstuvwxyz".split("");
-  while(pool.length < Math.min(12, word.en.length + 4)) {
+  if(LEARN_ZH) Array.prototype.push.apply(pool, decoyChars(word, 4));
+  else while(pool.length < Math.min(12, word.en.length + 4)) {
     const c = pick(extra);
     if(pool.indexOf(c) < 0 || Math.random() < .3) pool.push(c);
   }
   pool.sort(function(){ return Math.random() - .5; });
   pool.forEach(function(ch){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "lbtn"; b.textContent = ch;
+    b.type = "button"; b.className = "lbtn" + (LEARN_ZH ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
       if(!chestQ || chestQ.done || chestQ.spell.length >= word.en.length) return;
       chestQ.spell += ch; b.disabled = true;
@@ -3283,14 +3326,14 @@ function judgeChest(){
   else { rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1; addHaunt(w.en); }
   LEX[w.en] = rec;             // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
-      ? "<span class=\"big ok\">咔哒 —— 开了</span>"
+      ? T("<span class=\"big ok\">咔哒 —— 开了</span>")
       : opened
-        ? "<span class=\"big ok\">拼错了 —— 钥匙替你撬开了</span>"
-        : "<span class=\"big no\">锁咬死了</span>") +
-    "<span class=\"mean\"><b>" + w.en + "</b>　" + w.cn + "</span>";
+        ? T("<span class=\"big ok\">拼错了 —— 钥匙替你撬开了</span>")
+        : T("<span class=\"big no\">锁咬死了</span>")) +
+    "<span class=\"mean\"><b>" + w.en + "</b>" + (w.py ? " " + w.py : "") + T("　") + w.cn + "</span>";
   $("btnChestLeave").hidden = true;
   $("btnChestDone").hidden = false;
-  $("btnChestDone").textContent = opened ? "拿走" : "认了";
+  $("btnChestDone").textContent = opened ? T("拿走") : T("认了");
   chestQ.ok = opened;
   chestQ.spelled = ok;          // 钥匙的二选一只认真的拼对了的那一次
 }
@@ -3305,7 +3348,7 @@ function closeChest(){
   if(ok){
     const g = 4 + G.floor * 2;
     P.gold += g;
-    say("木箱开了，里面有 <b>" + g + "</b> 金币。", "good");
+    say(T("木箱开了，里面有 <b>") + g + T("</b> 金币。"), "good");
     /* 钥匙的第二个机制（用户 2026-09）：**拼对**的话箱底那件遗物二选一。
        ⚠️ 只给真的拼对了的（chestQ.spelled）—— 钥匙撬开的那一次不算，撬的是锁，不是那个词。*/
     if(spelled && hasRelic("key")){
@@ -3317,21 +3360,21 @@ function closeChest(){
       if(picks.length > 1){
         G.paused = true;                      // 挑完（fuseTake）才放开
         openFusePick(picks, picks[0].r || 0,
-          {via:"grant", how:"箱底压着", eyebrow:"钥匙 · 箱底有两件", title:"挑一件带走"});
+          {via:"grant", how:T("箱底压着"), eyebrow:T("钥匙 · 箱底有两件"), title:T("挑一件带走")});
         renderHud(); render();
         return;
       }
-      grantRelic(picks[0] || null, "箱底压着");
+      grantRelic(picks[0] || null, T("箱底压着"));
       lockInput(200);
       renderHud(); render();
       return;
     }
-    grantRelic(rollRelic(), "箱底压着");
+    grantRelic(rollRelic(), T("箱底压着"));
     lockInput(200);
     renderHud(); render();
     return;
   }
-  say("锁彻底咬死了。这箱子谁也打不开了。", "hurt");
+  say(T("锁彻底咬死了。这箱子谁也打不开了。"), "hurt");
   lockInput(200);
   renderHud(); render();
 }
@@ -3376,7 +3419,7 @@ function shopReroll(){
   if(!th || !(th.rerollsLeft > 0)) return;
   th.stock = rollShopStock();
   th.rerollsLeft--;
-  say("游商把布收了收，换了一批货。", "sys");
+  say(T("游商把布收了收，换了一批货。"), "sys");
   renderShop();
 }
 /* 游商的实际标价：货是进店那一刻定下的（存在 th.stock 上），
@@ -3393,13 +3436,13 @@ function shopPrice(row){
 function renderShop(){
   const th = pendingRoom;
   if(!th) return;
-  $("shopGold").innerHTML = "你身上有 <b style=\"color:var(--torch)\">" + P.gold + "</b> 金币。";
+  $("shopGold").innerHTML = T("你身上有 <b style=\"color:var(--torch)\">") + P.gold + T("</b> 金币。");
   const rb = $("btnShopReroll");
   if(rb) rb.hidden = !((th.rerollsLeft || 0) > 0);
   const box = $("shopList");
   box.innerHTML = "";
   if(!th.stock.length){
-    box.innerHTML = "<div class=\"bagempty\">他的布上空空如也 —— 你已经什么都有了。</div>";
+    box.innerHTML = T("<div class=\"bagempty\">他的布上空空如也 —— 你已经什么都有了。</div>");
     return;
   }
   /* 货架照**三选一那种遗物卡**摆（用户 2026-09）：品质、名字、效果、传说各一行，
@@ -3410,13 +3453,13 @@ function renderShop(){
     const d = document.createElement("div");
     d.className = "shopit" + (row.sold ? " sold" : "");
     d.innerHTML =
-      "<span class=\"rt q" + q + "\">" + RAR_CN[q] + " · 遗物</span>" +
+      "<span class=\"rt q" + q + "\">" + RAR_CN[q] + T(" · 遗物</span>") +
       "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
       "<span class=\"rp\">" + r.pw + "</span>" +
       "<span class=\"rl\">" + r.lore + "</span>" +
       "<button type=\"button\" class=\"buy\" data-i=\"" + i + "\"" +
         (row.sold || P.gold < price ? " disabled" : "") + ">" +
-        (row.sold ? "已售" : price + " 金") + "</button>";
+        (row.sold ? T("已售") : price + T(" 金")) + "</button>";
     box.appendChild(d);
   });
 }
@@ -3432,8 +3475,8 @@ function buyFrom(i){
   P.spent = (P.spent || 0) + price;           // 散财：这一趟花出去多少
   P.bought = (P.bought || 0) + 1;             // 囤货：这一趟买过几件（第十批，跟散财是一对）
   row.sold = true;
-  say("你付了 <b>" + price + "</b> 金币。", "sys");
-  grantRelic(row.relic, "游商递给你");
+  say(T("你付了 <b>") + price + T("</b> 金币。"), "sys");
+  grantRelic(row.relic, T("游商递给你"));
   pendingRoom = th;             // 货架还开着，接着选
   renderShop();
   renderHud();
@@ -3488,7 +3531,7 @@ function withMaxHp(fn){
   if(after > before){
     const up = after - before;
     P.hp += up;
-    say("生命上限 <b>+" + up + "</b> —— 当前生命跟着补上了（" + P.hp + " / " + after + "）。", "good");
+    say(T("生命上限 <b>+") + up + T("</b> —— 当前生命跟着补上了（") + P.hp + " / " + after + T("）。"), "good");
   }
   if(P.hp > after) P.hp = after;
   if(P.hp < 1) P.hp = 1;
@@ -3552,7 +3595,7 @@ function sellRelicGold(r){
     const sh = Math.floor(g * DEPOSIT_PCT);
     if(sh > 0){
       P.shield = (P.shield || 0) + sh;
-      say("寄存把这份钱的一角存成了 <b>" + sh + "</b> 点护盾。", "sys");
+      say(T("寄存把这份钱的一角存成了 <b>") + sh + T("</b> 点护盾。"), "sys");
     }
   }
   return g;
@@ -3565,7 +3608,7 @@ function sellRelic(id){
   clearNewRelic(id);
   withMaxHp(function(){ P.relics.splice(i, 1); });
   P.gold += g;
-  say("你拆了 " + rc(r) + "，换成 <b>" + g + "</b> 金币。", "sys");
+  say(T("你拆了 ") + rc(r) + T("，换成 <b>") + g + T("</b> 金币。"), "sys");
   renderHud();
 }
 /* ---- 合成：玩家自己挑 3 件同品质的，换一件高一档的（换到哪一件仍是随机） ----
@@ -3588,12 +3631,12 @@ function fusePick(id){
   const i = fuseSel.indexOf(id);
   if(i >= 0){ fuseSel.splice(i, 1); renderRelics(); return; }
   const q = relicRar(id);
-  if(q >= 4){ say("神圣已经是顶了，它没法当材料。", "sys"); return; }
+  if(q >= 4){ say(T("神圣已经是顶了，它没法当材料。"), "sys"); return; }
   if(fuseSel.length && q !== fuseRar()){
-    say("得是<b>同一个品质</b>的三件 —— 现在挑的是" + RAR_CN[fuseRar()] + "。", "sys");
+    say(T("得是<b>同一个品质</b>的三件 —— 现在挑的是") + RAR_CN[fuseRar()] + T("。"), "sys");
     return;
   }
-  if(fuseSel.length >= fuseN()){ say("已经挑满 " + fuseN() + " 件了。", "sys"); return; }
+  if(fuseSel.length >= fuseN()){ say(T("已经挑满 ") + fuseN() + T(" 件了。"), "sys"); return; }
   fuseSel.push(id);
   renderRelics();
 }
@@ -3603,15 +3646,15 @@ function askFuse(){
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
   const gold = (P && P.gold) || 0;
-  const names = fuseSel.map(function(id){ const r = relicById(id); return r ? r.n : "?"; }).join("、");
-  $("fuseTitle").textContent = fuseN() + " 件" + RAR_CN[rar] + " → 1 件" + RAR_CN[rar + 1];
+  const names = fuseSel.map(function(id){ const r = relicById(id); return r ? r.n : "?"; }).join(T("、"));
+  $("fuseTitle").textContent = fuseN() + T(" 件") + RAR_CN[rar] + T(" → 1 件") + RAR_CN[rar + 1];
   $("fuseLedger").innerHTML =
-    li("砸掉", names) +
-    li("花费", fuseCost() + " 金（你有 " + gold + "）") +
-    li("换回", RAR_CN[rar + 1] + " · 两件里挑一件");
+    li(T("砸掉"), names) +
+    li(T("花费"), fuseCost() + T(" 金（你有 ") + gold + T("）")) +
+    li(T("换回"), RAR_CN[rar + 1] + T(" · 两件里挑一件"));
   const yes = $("btnFuseYes");
   yes.disabled = gold < fuseCost();
-  yes.textContent = yes.disabled ? "金币不够" : "花 " + fuseCost() + " 金合成";
+  yes.textContent = yes.disabled ? T("金币不够") : T("花 ") + fuseCost() + T(" 金合成");
   $("veilFuse").hidden = false;
   (yes.disabled ? $("btnFuseNo") : yes).focus();
 }
@@ -3619,18 +3662,18 @@ function closeFuseAsk(){ $("veilFuse").hidden = true; }
 /* 砸下去之后**在两件里挑一件**（用户 2026-09，以前是随机塞一件）：
    材料和金币先结清，再弹 veilFuseGot 让玩家挑。
    更高一档只剩一件没拿过时就直接给，不弹那个窗。*/
-let fusePicks = [], fuseVia = null, fuseHow = "合成出";
+let fusePicks = [], fuseVia = null, fuseHow = T("合成出");
 function fuseGo(){
   closeFuseAsk();
   if(fuseSel.length !== fuseN()) return;
   const rar = fuseRar();
   if(rar < 0 || rar >= 4) return;
-  if(!P || P.gold < fuseCost()){ say("合成要 <b>" + fuseCost() + "</b> 金，你还不够。", "sys"); return; }
+  if(!P || P.gold < fuseCost()){ say(T("合成要 <b>") + fuseCost() + T("</b> 金，你还不够。"), "sys"); return; }
   // 挑的这几件必须都还在手上（分解过就作废）
   const eat = fuseSel.filter(function(id){ return P.relics.indexOf(id) >= 0; });
   if(eat.length !== fuseN()){ fuseSel = []; renderRelics(); return; }
   const up = relicPool().filter(function(x){ return (x.r || 0) === rar + 1; });
-  if(!up.length){ say("更高一档的遗物你已经拿齐了。", "sys"); return; }
+  if(!up.length){ say(T("更高一档的遗物你已经拿齐了。"), "sys"); return; }
   const cost = fuseCost();
   P.gold -= cost;
   P.spent = (P.spent || 0) + cost;        // 散财：合成的钱也算花出去了
@@ -3638,7 +3681,7 @@ function fuseGo(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
   });
   fuseOn = false; fuseSel = [];
-  say("你付了 <b>" + cost + "</b> 金，把 " + fuseN() + " 件" + RAR_CN[rar] + "遗物砸在一起。", "sys");
+  say(T("你付了 <b>") + cost + T("</b> 金，把 ") + fuseN() + T(" 件") + RAR_CN[rar] + T("遗物砸在一起。"), "sys");
   const picks = blessPickN(up, FUSE_PICK);    // 祝福·偏爱在候选里加权（神圣那个偏爱槽主要吃这条）
   renderHud();
   if(picks.length <= 1){ fuseTake(picks[0] ? picks[0].id : null); return; }
@@ -3649,10 +3692,10 @@ function fuseGo(){
 function openFusePick(picks, rar, opt){
   const o = opt || {};
   fuseVia = o.via || null;
-  fuseHow = o.how || "合成出";
+  fuseHow = o.how || T("合成出");
   fusePicks = picks.map(function(r){ return r.id; });
-  $("fuseGotEyebrow").textContent = o.eyebrow || "合成";
-  $("fuseGotTitle").textContent = o.title || (picks.length + "件" + RAR_CN[rar] + "，挑一件");
+  $("fuseGotEyebrow").textContent = o.eyebrow || T("合成");
+  $("fuseGotTitle").textContent = o.title || (picks.length + T("件") + RAR_CN[rar] + T("，挑一件"));
   const box = $("fuseGotList");
   box.innerHTML = "";
   picks.forEach(function(r){
@@ -3672,7 +3715,7 @@ function openFusePick(picks, rar, opt){
 function fuseTake(id){
   $("veilFuseGot").hidden = true;
   const via = fuseVia, how = fuseHow;
-  fuseVia = null; fuseHow = "合成出";
+  fuseVia = null; fuseHow = T("合成出");
   const ok = fusePicks.indexOf(id) >= 0 || (fusePicks.length === 0 && id);
   fusePicks = [];
   const got = ok ? relicById(id) : null;
@@ -3686,7 +3729,7 @@ function fuseTake(id){
   if(!got){ renderHud(); return; }
   withMaxHp(function(){ P.relics.push(got.id); });
   noteRelicFound(got, how);
-  say("—— " + rc(got) + " 成了：" + got.pw + "。", "crit");
+  say("—— " + rc(got) + T(" 成了：") + got.pw + T("。"), "crit");
   renderHud();
 }
 /* 遗物名字上色 */
@@ -3708,13 +3751,13 @@ function grantRelic(r, how){
   if(!r){
     const g = 8 + G.floor * 2;
     P.gold += g;
-    say("遗物已经被你撑满了，折成 <b>" + g + "</b> 金币。", "sys");
+    say(T("遗物已经被你撑满了，折成 <b>") + g + T("</b> 金币。"), "sys");
     return;
   }
 
   withMaxHp(function(){ P.relics.push(r.id); });
   noteRelicFound(r, how);
-  say((how || "你得到了") + " " + rc(r) + " —— " + r.pw + "。", "crit");
+  say((how || T("你得到了")) + " " + rc(r) + " —— " + r.pw + T("。"), "crit");
 }
 /* 带满了的取舍弹窗 */
 function offerSwap(r, how){
@@ -3725,7 +3768,7 @@ function offerSwap(r, how){
      跟底下那个「不要了，折成金币」是同一条路（doSwap(null)），少走一趟视线。*/
   $("swapNew").innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
     "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>" +
-    "<span class=\"rl\">点它 → 直接卖掉，换 " + sellPrice(r) + " 金</span>";
+    T("<span class=\"rl\">点它 → 直接卖掉，换 ") + sellPrice(r) + T(" 金</span>");
   const box = $("swapList");
   box.innerHTML = "";
   P.relics.forEach(function(id){
@@ -3736,7 +3779,7 @@ function offerSwap(r, how){
     d.innerHTML = "<span class=\"rt q" + (old.r||0) + "\">" + RAR_CN[old.r||0] + "</span>" +
                   "<span class=\"rn q" + (old.r||0) + "\">" + old.n + "</span>" +
                   "<span class=\"rp\">" + old.pw + "</span>" +
-                  "<span class=\"rl\">点它 → 换成「" + r.n + "」</span>";
+                  T("<span class=\"rl\">点它 → 换成「") + r.n + T("」</span>");
     box.appendChild(d);
   });
   hideAll();
@@ -3758,13 +3801,13 @@ function doSwap(dropId){
     });
     if(back) P.gold += back;
     noteRelicFound(ps.relic, ps.how);
-    say("你放下 " + (old ? old.n : "旧遗物") +
-        "，换上了 " + rc(ps.relic) + "。" +
-        (back ? " 旧的那件碎成了 <b>" + back + "</b> 金币。" : ""), "crit");
+    say(T("你放下 ") + (old ? old.n : T("旧遗物")) +
+        T("，换上了 ") + rc(ps.relic) + T("。") +
+        (back ? T(" 旧的那件碎成了 <b>") + back + T("</b> 金币。") : ""), "crit");
   } else {
     const g = sellRelicGold(ps.relic);      // 不换就当场分解，跟分解价一样
     P.gold += g;
-    say("你没动手上的东西，" + ps.relic.n + " 折成了 <b>" + g + "</b> 金币。", "sys");
+    say(T("你没动手上的东西，") + ps.relic.n + T(" 折成了 <b>") + g + T("</b> 金币。"), "sys");
   }
   renderHud(); render();
   maybeRelic();
@@ -3777,7 +3820,7 @@ function noteRelicFound(r, how){
   const first = !CODEX[r.id];
   CODEX[r.id] = {depth: first ? G.floor : CODEX[r.id].depth, times: (first ? 0 : CODEX[r.id].times) + 1};
   fxRelic(r);                        // 碎屑飞向底部的「遗物」标签
-  if(first) say("—— 初次发现：" + r.n + " ——", "crit");
+  if(first) say(T("—— 初次发现：") + r.n + " ——", "crit");
 }
 
 /* 这一层能重掷几次：现在只有「集齐」给 —— 身上凑齐普通/稀有/史诗三个品质就是 1 次。
@@ -3806,8 +3849,8 @@ function offerRelics(){
   }
 
   G.paused = true;
-  $("relicEyebrow").textContent = CH.name + " 第 " + G.floor + " 层 · 清干净了";
-  $("relicTitle").textContent = CH.name + "给了你一样东西";   // 四章各叫各的名字
+  $("relicEyebrow").textContent = CH.name + T(" 第 ") + G.floor + T(" 层 · 清干净了");
+  $("relicTitle").textContent = CH.name + T("给了你一样东西");   // 四章各叫各的名字
   const box = $("relicList");
   box.innerHTML = "";
   picks.forEach(function(r){
@@ -3831,12 +3874,13 @@ function takeRelic(id){
   if(!r) return;
   G.relicDone = true;
   $("veilRelic").hidden = true;
-  if(P.relics.length >= relicCap()){ offerSwap(r, "你拿起了"); return; }
+  if(P.relics.length >= relicCap()){ offerSwap(r, T("你拿起了")); return; }
   G.paused = false;
   withMaxHp(function(){ P.relics.push(id); });
-  noteRelicFound(r, "你拿起了");
-  say("你拿起了 " + rc(r) + " —— " + r.pw + "。", "crit");
+  noteRelicFound(r, T("你拿起了"));
+  say(T("你拿起了 ") + rc(r) + " —— " + r.pw + T("。"), "crit");
   renderHud(); render();
+  if(P.tut) tutEvent("relic");
 }
 /* 清完一层就给一次；掉落弹窗结束后再触发，免得两个窗打架 */
 function maybeRelic(){
@@ -3847,7 +3891,7 @@ function maybeRelic(){
 }
 function renderRelics(){
   const own = (P && P.relics) || [];
-  $("relicHead").textContent = "遗物 " + own.length + " / " + relicCap();
+  $("relicHead").textContent = T("遗物 ") + own.length + " / " + relicCap();
   const dot = $("bagDot");
   dot.textContent = own.length;
   dot.hidden = own.length === 0;
@@ -3857,7 +3901,7 @@ function renderRelics(){
   fuseSel = fuseSel.filter(function(id){ return own.indexOf(id) >= 0; });
   newRelics = newRelics.filter(function(id){ return own.indexOf(id) >= 0; });
   if(!own.length){
-    box.innerHTML = "<div class=\"bagempty\">还没有。每清完一层会让你五选一。</div>";
+    box.innerHTML = T("<div class=\"bagempty\">还没有。每清完一层会让你五选一。</div>");
     fuseOn = false; fuseSel = [];
     renderFuse();
     return;
@@ -3878,14 +3922,14 @@ function renderRelics(){
     d.innerHTML =
       (isNew ? "<span class=\"newdot\">new</span>" : "") +
       "<div class=\"col\">" +
-        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? " · 已选" : "") + "</span>" +
+        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? T(" · 已选") : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
         "<span class=\"rp\">" + r.pw + "</span>" +
       "</div>" +
       (fuseOn
         ? "<span class=\"tick\">" + (picked ? "✓" : "") + "</span>"
-        : "<button type=\"button\" class=\"melt\" data-sell=\"" + id + "\">分解<em>" +
-          sellPrice(r) + " 金</em></button>");
+        : "<button type=\"button\" class=\"melt\" data-sell=\"" + id + T("\">分解<em>") +
+          sellPrice(r) + T(" 金</em></button>"));
     box.appendChild(d);
   });
   renderFuse();
@@ -3903,20 +3947,20 @@ function renderFuse(){
   }
   // 标题也跟着「配方」变（2 件 + 150 金）
   const fh = $("fuseHead");
-  if(fh) fh.textContent = "合成 · " + fuseN() + " 件同品质 + " + fuseCost() + " 金 → " + FUSE_PICK + " 选 1";
-  pickBtn.textContent = fuseOn ? "取消选择" : "选择";
+  if(fh) fh.textContent = T("合成 · ") + fuseN() + T(" 件同品质 + ") + fuseCost() + T(" 金 → ") + FUSE_PICK + T(" 选 1");
+  pickBtn.textContent = fuseOn ? T("取消选择") : T("选择");
   pickBtn.disabled = !fuseOn && ready < 0;
   goBtn.disabled = fuseSel.length !== fuseN();
-  goBtn.textContent = fuseOn && fuseSel.length ? ("合成（" + fuseSel.length + "/" + fuseN() + "）") : "合成";
+  goBtn.textContent = fuseOn && fuseSel.length ? (T("合成（") + fuseSel.length + "/" + fuseN() + T("）")) : T("合成");
   if(!note) return;
   if(fuseOn){
     note.innerHTML = fuseSel.length
-      ? ("已挑 <b>" + fuseSel.length + " / " + fuseN() + "</b> 件" + RAR_CN[fuseRar()] +
-         "，合成后在 " + FUSE_PICK + " 件<b>" + RAR_CN[fuseRar() + 1] + "</b>里挑一件，另付 <b>" + fuseCost() + "</b> 金。")
-      : "在上面点 <b>" + fuseN() + " 件同品质</b>的遗物。神圣已经是顶了，不能当材料。";
+      ? (T("已挑 <b>") + fuseSel.length + " / " + fuseN() + T("</b> 件") + RAR_CN[fuseRar()] +
+         T("，合成后在 ") + FUSE_PICK + T(" 件<b>") + RAR_CN[fuseRar() + 1] + T("</b>里挑一件，另付 <b>") + fuseCost() + T("</b> 金。"))
+      : T("在上面点 <b>") + fuseN() + T(" 件同品质</b>的遗物。神圣已经是顶了，不能当材料。");
   } else {
     note.innerHTML = ready >= 0
-      ? ("点「选择」，挑 " + fuseN() + " 件同品质的砸成一件更高的（另付 <b>" + fuseCost() + "</b> 金）。你的<b>" + RAR_CN[ready] + "</b>已经够了。")
+      ? (T("点「选择」，挑 ") + fuseN() + T(" 件同品质的砸成一件更高的（另付 <b>") + fuseCost() + T("</b> 金）。你的<b>") + RAR_CN[ready] + T("</b>已经够了。"))
       : "";                 // 材料还不够时这一行整条不写（用户 2026-09-21：标题上已经写着配方了）
   }
   note.hidden = !note.innerHTML;   // 空着就连位置都别占
@@ -4081,7 +4125,7 @@ function blessSet(kind, rar, id){
 }
 
 /* ---- 界面 ---- */
-var BLESS_CN = {fav:"偏爱", ban:"封印"};
+var BLESS_CN = {fav:T("偏爱"), ban:T("封印")};
 let blessPickSlot = null;      // 正在挑的那个槽位 {kind, rar}
 let blessArmed = "";           // 开槽位的两步确认（"kind:rar"），跟「放弃」一个套路
 function openBless(){
@@ -4100,8 +4144,8 @@ function renderBless(){
     const h = document.createElement("div");
     h.className = "eyebrow bhead";
     h.textContent = kind === "fav"
-      ? ("偏爱 · 同品质里出现概率 " + (BLESS_FAV_X * 100) + "%，拿到一次失效")
-      : "封印 · 本局永不出现";
+      ? (T("偏爱 · 同品质里出现概率 ") + (BLESS_FAV_X * 100) + T("%，拿到一次失效"))
+      : T("封印 · 本局永不出现");
     box.appendChild(h);
     for(let rar = 0; rar < 5; rar++){
       const open = blessOpen(kind, rar), id = blessId(kind, rar), R = id ? relicById(id) : null;
@@ -4112,15 +4156,15 @@ function renderBless(){
       d.className = "bslot" + (open ? "" : " locked") + (R ? " set" : "") + (armed ? " armed" : "");
       d.dataset.kind = kind; d.dataset.rar = rar;
       if(!open && !afford && !armed) d.disabled = true;
-      const title = open ? (R ? R.n : "空着") : "未开启";
-      const sub = open ? (R ? R.pw : "点这里挑一件" + RAR_CN[rar] + "遗物")
-                       : (armed ? "再点一次 = 花 " + BLESS_SLOT_COST + " 宝石开它"
-                                : (afford ? BLESS_SLOT_COST + " 宝石开启" : "宝石还差 " + (BLESS_SLOT_COST - (TOWN.gem || 0))));
+      const title = open ? (R ? R.n : T("空着")) : T("未开启");
+      const sub = open ? (R ? R.pw : L("点这里挑一件" + RAR_CN[rar] + "遗物", "Tap to pick a " + RAR_CN[rar] + " relic"))
+                       : (armed ? T("再点一次 = 花 ") + BLESS_SLOT_COST + T(" 宝石开它")
+                                : (afford ? BLESS_SLOT_COST + T(" 宝石开启") : T("宝石还差 ") + (BLESS_SLOT_COST - (TOWN.gem || 0))));
       d.innerHTML =
         "<span class=\"bq q" + rar + "\">" + RAR_CN[rar] + "</span>" +
         "<span class=\"bcol\"><b class=\"bn" + (R ? " q" + rar : "") + "\">" + title + "</b>" +
         "<em>" + sub + "</em></span>" +
-        "<span class=\"bgo\">" + (open ? "▸" : (armed ? "确认" : (afford ? "开启" : "锁"))) + "</span>";
+        "<span class=\"bgo\">" + (open ? "▸" : (armed ? T("确认") : (afford ? T("开启") : T("锁")))) + "</span>";
       box.appendChild(d);
     }
   });
@@ -4130,7 +4174,7 @@ function renderBless(){
 function openBlessPick(kind, rar){
   blessPickSlot = {kind:kind, rar:rar};
   $("blessPickEyebrow").textContent = BLESS_CN[kind] + " · " + RAR_CN[rar];
-  $("blessPickTitle").textContent = kind === "fav" ? "什么是你的最爱" : "不想再见到哪一件？";
+  $("blessPickTitle").textContent = kind === "fav" ? T("什么是你的最爱") : T("不想再见到哪一件？");
   const f = $("blessFind");
   if(f) f.value = "";
   renderBlessPick();
@@ -4153,14 +4197,14 @@ function renderBlessPick(){
       d.className = "relic" + (R.id === cur ? " cur" : "");
       d.dataset.id = R.id;
       d.innerHTML = "<span class=\"rt q" + rar + "\">" + RAR_CN[rar] +
-          (R.id === cur ? " · 现在钉着它" : (R.id && R.id === other ? " · 现在" + BLESS_CN[kind === "fav" ? "ban" : "fav"] + "着，选了就换过来" : "")) + "</span>" +
+          (R.id === cur ? T(" · 现在钉着它") : (R.id && R.id === other ? T(" · 现在") + BLESS_CN[kind === "fav" ? "ban" : "fav"] + T("着，选了就换过来") : "")) + "</span>" +
         "<span class=\"rn q" + rar + "\">" + R.n + "</span>" +
         "<span class=\"rp\">" + R.pw + "</span>" +
         "<span class=\"rl\">" + R.lore + "</span>";
       box.appendChild(d);
     });
   if(!box.children.length){
-    box.innerHTML = "<div class=\"relic hot\"><span class=\"rn\">没找到</span></div>";
+    box.innerHTML = T("<div class=\"relic hot\"><span class=\"rn\">没找到</span></div>");
   }
   const c = $("btnBlessClear");
   if(c) c.hidden = !cur;
@@ -4276,7 +4320,7 @@ function orbBuy(i){
   od.bag.push({u: ++od.seq, c:"", b:s.b, lv:0, pt:0, a:[]});
   s.sold = true;
   commitPerm();
-  toast("买下了一颗未鉴定的宝珠，放进背包了。");
+  toast(T("买下了一颗未鉴定的宝珠，放进背包了。"));
   renderOrbShop();
 }
 function orbReroll(){
@@ -4300,7 +4344,7 @@ function orbIdentify(u){
   if(!orbPay(ORB_IDENT_COST)) return;
   o.c = orbRollColor();
   commitPerm();
-  toast("鉴定出来了：" + orbColorName(o) + "。");
+  toast(T("鉴定出来了：") + orbColorName(o) + T("。"));
   orbRefresh();
 }
 function orbEnhCost(o){
@@ -4334,9 +4378,9 @@ function orbEnhance(u){
     if(pool.length){ const x = pick(pool); x.d = 1; dbl = orbAffixText(x); }
   }
   commitPerm();
-  toast(orbColorName(o) + " 第 " + o.lv + " 次强化 +" + roll + " 点（共 " + o.pt + "）" +
-           (got.length ? "　新词条：" + got.join("、") : "") +
-           (dbl ? "　翻倍：" + dbl : ""));
+  toast(orbColorName(o) + L(" 第 " + o.lv + " 次强化 +", " · enhancement #" + o.lv + ": +") + roll + T(" 点（共 ") + o.pt + T("）") +
+           (got.length ? T("　新词条：") + got.join(T("、")) : "") +
+           (dbl ? T("　翻倍：") + dbl : ""));
   orbRefresh();
 }
 function orbSlotOf(u){ return orbData().eq.indexOf(u); }
@@ -4349,12 +4393,12 @@ function orbPut(u, slot){
   const od = orbData(), o = orbFind(od, u);
   if(!o || !o.c) return;
   if(slot === undefined || slot < 0) slot = od.eq.indexOf(0);
-  if(slot < 0){ toast("六个位置都满了，先在「人物」里卸下一颗。"); orbRefresh(); return; }
+  if(slot < 0){ toast(T("六个位置都满了，先在「人物」里卸下一颗。")); orbRefresh(); return; }
   const was = orbSlotOf(u);
   if(was >= 0) od.eq[was] = 0;
   od.eq[slot] = u;
   commitPerm();
-  toast(orbColorName(o) + " 装备上了。");
+  toast(orbColorName(o) + T(" 装备上了。"));
   orbRefresh();
 }
 function orbOff(u){
@@ -4382,20 +4426,20 @@ function orbCardHtml(o, mode){
   const full = o.lv >= ORB_ENH_COST.length;
   let h = "<div class=\"orbcard" + (mode === "cur" ? " eq" : "") + "\">" + orbGemHtml(o) +
     "<div class=\"ocol\"><b>" + orbColorName(o) + (o.lv ? " +" + o.lv : "") + "</b>" +
-    (o.c ? "<em>点数 " + o.pt + "</em>" : "") +
-    "<span class=\"ob\">" + (o.b ? orbBaseText(o.b) : "基础词缀：无") + "</span>";
+    (o.c ? T("<em>点数 ") + o.pt + "</em>" : "") +
+    "<span class=\"ob\">" + (o.b ? orbBaseText(o.b) : T("基础词缀：无")) + "</span>";
   /* 一条词条一个 <i>（inline-block）—— 折行只在两条之间折，别把「生命上限」拦腰切开 */
   if(o.a.length) h += "<span class=\"oa\">" + o.a.map(function(x){ return "<i>" + orbAffixText(x) + "</i>"; }).join("") + "</span>";
   h += "</div><div class=\"oacts\">";
   if(!o.c){
-    h += orbBtn("id", o.u, "鉴定", "primary");
+    h += orbBtn("id", o.u, T("鉴定"), "primary");
   } else if(mode === "pick"){
-    h += orbBtn("put", o.u, orbPickSlot >= 0 && orbData().eq[orbPickSlot] ? "换上" : "装备", "primary");
+    h += orbBtn("put", o.u, orbPickSlot >= 0 && orbData().eq[orbPickSlot] ? T("换上") : T("装备"), "primary");
   } else {
     const cost = orbEnhCost(o), armed = orbArmed === "enh:" + o.u, poor = (TOWN.gem || 0) < cost;
-    h += orbBtn("enh", o.u, full ? "已满" : armed ? "再点一次<br>" + cost + " 宝石" : "强化<br>" + cost,
+    h += orbBtn("enh", o.u, full ? T("已满") : armed ? T("再点一次<br>") + cost + T(" 宝石") : T("强化<br>") + cost,
                 armed ? "primary" : "", full || (poor && !armed));
-    h += mode === "cur" ? orbBtn("off", o.u, "卸下", "ghost") : orbBtn("eq", o.u, "装备", "ghost");
+    h += mode === "cur" ? orbBtn("off", o.u, T("卸下"), "ghost") : orbBtn("eq", o.u, T("装备"), "ghost");
   }
   return h + "</div></div>";
 }
@@ -4416,7 +4460,7 @@ function renderOrbBag(){
   $("orbMePanel").hidden = orbSub !== "me";
   if(orbSub === "bag"){
     const loose = orbLoose();
-    $("orbBagHead").textContent = "背包 " + loose.length;   // 只写这一句 —— 右边要给两颗定宽的按钮留位置
+    $("orbBagHead").textContent = T("背包 ") + loose.length;   // 只写这一句 —— 右边要给两颗定宽的按钮留位置
     /* 背包是**定死大小的方格**（用户 2026-09-23）：格子里只有珠子、名字、强化等级，
        点一格才弹详情窗（鉴定 / 强化 / 装备都在那儿）。分解状态下点一格 = 勾选。
        排序：没鉴定的最前（等着处理），其余按颜色，同色强化高的在前。 */
@@ -4426,19 +4470,19 @@ function renderOrbBag(){
         const sel = orbMeltSel.indexOf(o.u) >= 0;
         return "<button class=\"orbtile" + (sel ? " sel" : "") + "\" type=\"button\" data-u=\"" + o.u + "\">" +
           orbGemHtml(o) + "<b>" + orbColorName(o) + "</b>" +
-          "<em>" + (o.c ? (o.lv ? "+" + o.lv : "未强化") : "点开鉴定") + "</em>" +
+          "<em>" + (o.c ? (o.lv ? "+" + o.lv : T("未强化")) : T("点开鉴定")) + "</em>" +
           (o.b ? "<i>" + ORB_BMAP[o.b].n + "</i>" : "") + "</button>";
       }).join("")
-      : "<div class=\"bagempty\">" + (od.bag.length ? "都戴在身上了。" : "还没有宝珠。主城里的「宝珠商店」有卖。") + "</div>";
+      : "<div class=\"bagempty\">" + (od.bag.length ? T("都戴在身上了。") : T("还没有宝珠。主城里的「宝珠商店」有卖。")) + "</div>";
     /* 顶上钉住的分解按钮：平时一颗「分解」；进了挑选状态变成「取消」+「分解 N 颗」 */
     const mb = $("btnOrbMelt"), mg = $("btnOrbMeltGo"), n = orbMeltSel.length, armed = orbArmed === "melt";
-    mb.textContent = orbMeltOn ? "取消" : "分解";
+    mb.textContent = orbMeltOn ? T("取消") : T("分解");
     mb.classList.toggle("on", orbMeltOn);
     /* ⚠️ 用 visibility 不用 hidden：那一格位置永远留着，进出分解状态时顶上这一行不变形 */
     mg.style.visibility = orbMeltOn ? "visible" : "hidden";
     mg.disabled = !n;
     mg.classList.toggle("primary", armed);
-    mg.textContent = !n ? "点宝珠勾选" : armed ? "再点一次 · +" + n * ORB_MELT + " 宝石" : "分解 " + n + " 颗 · +" + n * ORB_MELT;
+    mg.textContent = !n ? T("点宝珠勾选") : armed ? T("再点一次 · +") + n * ORB_MELT + T(" 宝石") : T("分解 ") + n + T(" 颗 · +") + n * ORB_MELT;
     $("orbList").classList.toggle("melting", orbMeltOn);
     return;
   }
@@ -4447,7 +4491,7 @@ function renderOrbBag(){
   for(let i = 0; i < ORB_SLOTS; i++){
     const o = od.eq[i] ? orbFind(od, od.eq[i]) : null;
     h += "<button class=\"orbslot" + (o ? "" : " empty") + "\" type=\"button\" data-slot=\"" + i + "\">" +
-         orbGemHtml(o) + "<span>" + (o ? orbColorName(o) + (o.lv ? " +" + o.lv : "") : "空") + "</span></button>";
+         orbGemHtml(o) + "<span>" + (o ? orbColorName(o) + (o.lv ? " +" + o.lv : "") : T("空")) + "</span></button>";
   }
   $("orbSlots").innerHTML = h;
   const b = orbBuild(od), on = orbOnLines(b), base = orbBaseLines(b), add = orbAddLines(b);
@@ -4455,16 +4499,16 @@ function renderOrbBag(){
   on.forEach(function(x){
     s += "<div class=\"orbfx\">" + orbGemHtml({c:x.c}) + "<b>" + ORB_CMAP[x.c].n + " " + x.t + "</b><span>" + x.s + "</span></div>";
   });
-  base.forEach(function(t){ s += "<div class=\"orbfx\"><b>词缀</b><span>" + t + "</span></div>"; });
-  if(add.length) s += "<div class=\"orbfx\"><b>词条</b><span class=\"oa\">" + add.map(function(t){ return "<i>" + t + "</i>"; }).join("") + "</span></div>";
-  $("orbSets").innerHTML = s || "<div class=\"bagempty\">还没有效果。同色 2 颗起生效。</div>";
+  base.forEach(function(t){ s += T("<div class=\"orbfx\"><b>词缀</b><span>") + t + "</span></div>"; });
+  if(add.length) s += T("<div class=\"orbfx\"><b>词条</b><span class=\"oa\">") + add.map(function(t){ return "<i>" + t + "</i>"; }).join("") + "</span></div>";
+  $("orbSets").innerHTML = s || T("<div class=\"bagempty\">还没有效果。同色 2 颗起生效。</div>");
   /* 全部颜色的效果表，收在 details 里（别堆提示文字） */
   let ref = "";
   ORB_COLORS.forEach(function(c){
     const st = ORB_SETS[c.id], cnt = b.cnt[c.id] || 0;
     ref += "<div class=\"orbfx ref\">" + orbGemHtml({c:c.id}) + "<b>" + c.n + " ×" + cnt + "</b><span>" +
       ORB_TIERS.filter(function(t){ return st[t]; }).map(function(t){
-        return "<i" + (b.on[c.id + t] ? " class=\"lit\"" : "") + ">" + t + "：" + st[t] + "</i>";
+        return "<i" + (b.on[c.id + t] ? " class=\"lit\"" : "") + ">" + t + T("：") + st[t] + "</i>";
       }).join("") + "</span></div>";
   });
   $("orbRef").innerHTML = ref;
@@ -4486,14 +4530,14 @@ function closeOrbPick(){
 }
 function renderOrbPick(){
   const od = orbData(), cur = od.eq[orbPickSlot] ? orbFind(od, od.eq[orbPickSlot]) : null;
-  $("orbPickTitle").textContent = "第 " + (orbPickSlot + 1) + " 个位置" + (cur ? " · " + orbColorName(cur) : " · 空着");
+  $("orbPickTitle").textContent = L("第 " + (orbPickSlot + 1) + " 个位置", "Slot " + (orbPickSlot + 1)) + (cur ? " · " + orbColorName(cur) : T(" · 空着"));
   $("orbPickCur").innerHTML = cur ? orbCardHtml(cur, "cur") : "";
   $("orbPickCur").hidden = !cur;
   /* 按颜色排（用户 2026-09-23），同色强化高的在前 */
   const list = orbLoose().filter(function(o){ return o.c; }).sort(orbColorOrder);
   const unk = orbLoose().length - list.length;
   $("orbPickList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "pick"); }).join("")
-    : "<div class=\"bagempty\">背包里没有鉴定过的宝珠" + (unk ? "（还有 " + unk + " 颗没鉴定）" : "") + "。</div>";
+    : T("<div class=\"bagempty\">背包里没有鉴定过的宝珠") + (unk ? T("（还有 ") + unk + T(" 颗没鉴定）") : "") + T("。</div>");
 }
 /* 按颜色排（ORB_COLORS 的顺序），没鉴定的最前；同色强化高的在前、再按买的顺序 */
 function orbColorOrder(a, b){
@@ -4522,7 +4566,7 @@ function orbMeltGo(){
   orbMeltSel.forEach(function(u){ if(orbSlotOf(u) < 0 && orbFind(od, u)){ kill[u] = 1; n++; } });
   od.bag = od.bag.filter(function(o){ return !kill[o.u]; });
   orbMeltSel = []; orbMeltOn = false;
-  toast("分解了 " + n + " 颗，宝石 +" + n * ORB_MELT + "。");
+  toast(T("分解了 ") + n + T(" 颗，宝石 +") + n * ORB_MELT + T("。"));
   addGems(n * ORB_MELT);                 // 它自己 commitPerm()，宝珠的删除跟着一起落盘
   renderOrbBag();
 }
@@ -4544,17 +4588,17 @@ function renderOrbInfo(){
   $("orbInfoTitle").textContent = orbColorName(o) + (o.lv ? " +" + o.lv : "");
   $("orbInfoBody").innerHTML =
     "<div class=\"orbinfohead\">" + orbGemHtml(o).replace("orbgem", "orbgem big") +
-      "<span>" + (o.c ? "点数 " + o.pt + " · 强化 " + o.lv + " / " + ORB_ENH_COST.length : "还没鉴定，看不出颜色") + "</span></div>" +
-    "<p class=\"ob\">" + (o.b ? orbBaseText(o.b) : "基础词缀：无") + "</p>" +
+      "<span>" + (o.c ? T("点数 ") + o.pt + T(" · 强化 ") + o.lv + " / " + ORB_ENH_COST.length : T("还没鉴定，看不出颜色")) + "</span></div>" +
+    "<p class=\"ob\">" + (o.b ? orbBaseText(o.b) : T("基础词缀：无")) + "</p>" +
     (o.a.length ? "<p class=\"oa\">" + o.a.map(function(x){ return "<i>" + orbAffixText(x) + "</i>"; }).join("") + "</p>"
-                : (o.c ? "<p class=\"ob dim\">还没有词条 —— 强化点数每满 10 抽一条。</p>" : ""));
+                : (o.c ? T("<p class=\"ob dim\">还没有词条 —— 强化点数每满 10 抽一条。</p>") : ""));
   let h = "";
-  if(!o.c) h += orbBtn("id", o.u, "鉴定", "primary");
+  if(!o.c) h += orbBtn("id", o.u, T("鉴定"), "primary");
   else {
     const full = o.lv >= ORB_ENH_COST.length, cost = orbEnhCost(o), armed = orbArmed === "enh:" + o.u;
-    h += orbBtn("enh", o.u, full ? "已满" : armed ? "再点一次 · " + cost + " 宝石" : "强化 · " + cost,
+    h += orbBtn("enh", o.u, full ? T("已满") : armed ? T("再点一次 · ") + cost + T(" 宝石") : T("强化 · ") + cost,
                 armed ? "primary" : "", full || ((TOWN.gem || 0) < cost && !armed));
-    h += orbBtn("eq", o.u, "装备", "");
+    h += orbBtn("eq", o.u, T("装备"), "");
   }
   $("orbInfoActs").innerHTML = h;
 }
@@ -4586,16 +4630,16 @@ function renderOrbShop(){
   $("orbShop").innerHTML = shop.map(function(s, i){
     const armed = orbArmed === "buy:" + i;
     return "<div class=\"orbcard shopcard" + (s.sold ? " sold" : "") + "\">" + orbGemHtml(s.sold ? null : {c:""}) +
-      "<div class=\"ocol\"><b>" + (s.sold ? "已售出" : "未鉴定宝珠") + "</b>" +
-      (s.sold ? "" : "<span class=\"ob\">" + (s.b ? orbBaseText(s.b) : "基础词缀：无") + "</span>") +
+      "<div class=\"ocol\"><b>" + (s.sold ? T("已售出") : T("未鉴定宝珠")) + "</b>" +
+      (s.sold ? "" : "<span class=\"ob\">" + (s.b ? orbBaseText(s.b) : T("基础词缀：无")) + "</span>") +
       "</div><div class=\"oacts\">" +
       (s.sold ? "" : "<button class=\"btn" + (armed ? " primary" : "") + "\" type=\"button\" data-i=\"" + i + "\"" +
         (gem < ORB_PRICE && !armed ? " disabled" : "") + ">" +
-        (armed ? "再点一次<br>" : "购买<br>") + ORB_PRICE + " 宝石</button>") +
+        (armed ? T("再点一次<br>") : T("购买<br>")) + ORB_PRICE + T(" 宝石</button>")) +
       "</div></div>";
   }).join("");
   const re = $("btnOrbReroll"), armed = orbArmed === "re";
-  re.textContent = armed ? "再点一次 · " + ORB_REROLL + " 宝石" : "刷新 · " + ORB_REROLL + " 宝石";
+  re.textContent = armed ? T("再点一次 · ") + ORB_REROLL + T(" 宝石") : T("刷新 · ") + ORB_REROLL + T(" 宝石");
   re.classList.toggle("primary", armed);
   re.disabled = gem < ORB_REROLL && !armed;
 }
@@ -4617,11 +4661,13 @@ function showScene(){
     const want = inRun ? "viewRelic" : "viewOrb", gone = inRun ? "viewOrb" : "viewRelic";
     nb.dataset.view = want;
     nb.querySelector("i").textContent = inRun ? "✦" : "◎";
-    nb.querySelector("span").textContent = inRun ? "遗物" : "背包";
+    nb.querySelector("span").textContent = inRun ? T("遗物") : T("背包");
+    /* 英文界面：宝珠只在战场生效，而战场还没有英文版 —— 主城里这个标签连同入口一起藏起来 */
+    nb.hidden = UI_EN && !inRun;
     if($(gone).classList.contains("on")) showView(want);
   }
   $("hChap").textContent = CH.name;
-  $("chapterTag").textContent = "主城 · 灰岩镇";
+  $("chapterTag").textContent = T("主城 · 灰岩镇");
   if(inRun) sizeMap();
 }
 function renderTown(){
@@ -4630,14 +4676,19 @@ function renderTown(){
   // 祝福那一格的小字：开了几个槽位（没开过就写价钱）
   const bs = $("blessSub");
   if(bs) bs.textContent = blessSlots()
-    ? ("已开 " + blessSlots() + " / 10 个槽位")
-    : ("用宝石换永久的好处 · " + BLESS_SLOT_COST + " 宝石一个槽位");
+    ? (T("已开 ") + blessSlots() + T(" / 10 个槽位"))
+    : (T("用宝石换永久的好处 · ") + BLESS_SLOT_COST + T(" 宝石一个槽位"));
+  if(UI_EN){ $("btnBattle").hidden = true; $("btnOrbShop").hidden = true; }
   const os = $("orbShopSub");
-  if(os) os.textContent = "宝珠 · " + ORB_PRICE + " 宝石一颗，只在战场生效";
-  $("tBest").textContent = M.best ? ("第 " + M.best + " 层") : "—";
+  if(os) os.textContent = T("宝珠 · ") + ORB_PRICE + T(" 宝石一颗，只在战场生效");
+  $("tBest").textContent = M.best ? (T("第 ") + M.best + T(" 层")) : "—";
   $("tClears").textContent = M.clears || 0;
   $("tDeaths").textContent = M.deaths || 0;
-  $("townFlavor").textContent = M.runs === 0
+  $("townFlavor").textContent = UI_EN
+    ? (M.runs === 0 ? "You stand here for the first time. The cave mouth lies north of town; wind blows up from inside."
+       : M.deaths ? "You're back again. Your pockets are empty, but your purse still has some weight."
+                  : "Wind rises from the Stone Hall's mouth, smelling of rust.")
+    : M.runs === 0
     ? "\u4f60\u7b2c\u4e00\u6b21\u7ad9\u5728\u8fd9\u513f\u3002\u6d1e\u53e3\u5728\u9547\u5b50\u5317\u8fb9\uff0c\u98ce\u4ece\u91cc\u9762\u5f80\u4e0a\u5439\u3002"
     : (M.deaths ? "\u4f60\u53c8\u56de\u6765\u4e86\u3002\u8eab\u4e0a\u7a7a\u4e86\uff0c\u53e3\u888b\u8fd8\u6709\u70b9\u91cd\u91cf\u3002"
                 : "\u77f3\u5eca\u7684\u98ce\u4ece\u6d1e\u53e3\u5439\u4e0a\u6765\uff0c\u5e26\u7740\u94c1\u9508\u5473\u3002");
@@ -4691,7 +4742,7 @@ function diffLine(id){
   if(!practiceOn) return d.desc + (d.note ? " · " + d.note : "");
   // 练习模式开着：那两个倍率是乘起来的，直接把**实际**攻击倍率写出来，省得玩家自己算
   const mul = Math.round(d.atkMult * CHAPTER.practiceAtkMult * 100) / 100;
-  return d.desc + " · 练习后实际 ×" + mul;
+  return d.desc + T(" · 练习后实际 ×") + mul;
 }
 /* 选完路线弹出来的那个窗。联机里只有房主进得来（队友的路线卡片本来就点不动）。*/
 function askDiff(routeId){
@@ -4719,7 +4770,7 @@ function renderDiffList(){
     b.innerHTML = "<span class=\"rt\">" + d.tag + "</span>" +
       "<span class=\"rn\">" + d.name + "</span>" +
       "<span class=\"rd\">" + diffLine(d.id) + "</span>" +
-      "<span class=\"rgo\">" + (COOP ? "选这档 ▸" : "进入 ▸") + "</span>";
+      "<span class=\"rgo\">" + (COOP ? T("选这档 ▸") : T("进入 ▸")) + "</span>";
     box.appendChild(b);
   });
 }
@@ -4747,7 +4798,7 @@ function renderPractice(){
   b.classList.toggle("on", practiceOn);
   b.setAttribute("aria-pressed", practiceOn ? "true" : "false");
   if(b.firstChild && b.firstChild.nodeType === 3){
-    b.firstChild.textContent = practiceOn ? "练习模式 · 开" : "练习模式 · 关";
+    b.firstChild.textContent = practiceOn ? T("练习模式 · 开") : T("练习模式 · 关");
   }
   /* 难度卡上那行字要写「练习后实际 ×几」，所以练习模式一变、开着的难度窗也得跟着重画
      （联机里房主的练习开关是从网络上来的，可能正好赶上难度窗开着）。*/
@@ -4783,11 +4834,11 @@ function openCave(){
        .rfill 是第一个子元素、压在文字底下（z-index 在 style.css 里）。*/
     const pct = chapterSeenPct(r.ch || 1);
     d.innerHTML = "<span class=\"rfill\" style=\"width:" + pct + "%\"></span>" +
-      "<span class=\"rpct\">遇见 " + pct + "%</span>" +
+      T("<span class=\"rpct\">遇见 ") + pct + "%</span>" +
       "<span class=\"rt\">" + r.tag + "</span>" +
       "<span class=\"rn\">" + r.name + "</span>" +
       "<span class=\"rd\">" + r.desc + "</span>" +
-      (r.open ? "<span class=\"rgo\">进入 ▸</span>" : "<span class=\"rgo\">还没挖通</span>");
+      (r.open ? T("<span class=\"rgo\">进入 ▸</span>") : T("<span class=\"rgo\">还没挖通</span>"));
     box.appendChild(d);
   });
   /* 联机：选哪条路由房主定，队友只能看、点了会走 coopConfirmEnter() 那条路。
@@ -4801,20 +4852,20 @@ function openCave(){
     note.hidden = true; confirmBtn.hidden = true;
     if(!connected){
       disableAll();
-      if(title) title.textContent = "还没组队";
-      note.hidden = false; note.textContent = "先回镇上点「组队」，创建或加入一个房间。";
+      if(title) title.textContent = T("还没组队");
+      note.hidden = false; note.textContent = T("先回镇上点「组队」，创建或加入一个房间。");
     } else if(!hasMate){
       disableAll();
-      if(title) title.textContent = "等待队友连接…";
+      if(title) title.textContent = T("等待队友连接…");
     } else if(host){
-      if(title) title.textContent = coopProposedRoute ? "已经选好了" : "下去哪里？";
+      if(title) title.textContent = coopProposedRoute ? T("已经选好了") : T("下去哪里？");
       if(coopProposedRoute){
         Array.prototype.forEach.call(box.children, function(d){
           d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
         });
         note.hidden = false;
-        note.textContent = "难度 " + (diffById(diffId()) || {}).name +
-          " · 等队友确认…（还能重新选，选别的会覆盖掉这次）";
+        note.textContent = T("难度 ") + (diffById(diffId()) || {}).name +
+          T(" · 等队友确认…（还能重新选，选别的会覆盖掉这次）");
       }
     } else {
       // 队友：路线列表只看不点，靠下面这个按钮确认
@@ -4823,12 +4874,12 @@ function openCave(){
         Array.prototype.forEach.call(box.children, function(d){
           d.classList.toggle("picked", d.dataset.id === coopProposedRoute);
         });
-        if(title) title.textContent = "房主选了这条路";
+        if(title) title.textContent = T("房主选了这条路");
         // 难度也是房主定的，队友只能看 —— 写在确认钮上面那行字里
         note.hidden = false;
-        note.textContent = "难度 " + (diffById(diffId()) || {}).name + " · " + diffLine(diffId());
+        note.textContent = T("难度 ") + (diffById(diffId()) || {}).name + " · " + diffLine(diffId());
         confirmBtn.hidden = false;
-      } else if(title) title.textContent = "等待房主选路线…";
+      } else if(title) title.textContent = T("等待房主选路线…");
     }
     const pb = $("btnPractice");
     if(pb) pb.disabled = !host;
@@ -5027,17 +5078,22 @@ function resumeRun(s){
   $("log").innerHTML = "";
   hideAll();
   fov(); buildGrid(); render(); renderHud();
-  say("—— " + CH.name + " 第 " + G.floor + " 层" + (inAbyss() ? " · 深渊" : "") + " ——", "crit");
-  say("你回到了踏进这一层时的样子 —— 存档存在每层的入口。", "sys");
+  say("—— " + CH.name + T(" 第 ") + G.floor + T(" 层") + (inAbyss() ? T(" · 深渊") : "") + " ——", "crit");
+  say(T("你回到了踏进这一层时的样子 —— 存档存在每层的入口。"), "sys");
   lockInput(320);
 }
 /* ================= 结算 ================= */
 /* 返回的就是内存里那一份，改完等 commit() 落盘，别单独写 localStorage */
 function meta(){ return MET; }
-function gameOver(){ endRun(false); }
+function gameOver(){ if(P && P.tut){ tutFinish(true); return; } endRun(false); }
 /* 主动放弃：跟倒下一样走结算（用户 2026-09 改的，以前是一颗宝石都不给），
    但不算一次死亡 —— 统计里只加一次探索。 */
-function giveUpRun(){ if(SCENE === "run" && G && !G.over) endRun(false, true); }
+function giveUpRun(){
+  if(SCENE === "run" && G && !G.over){
+    if(P.tut){ tutFinish(true); return; }        // 教程关里点「放弃」= 跳过教程
+    endRun(false, true);
+  }
+}
 function chapterClear(){ endRun(true); }
 /* 一趟的结算：局内表现算成分，再乘这一章的难度倍率 = 带回镇上的宝石。
    每一条都摆在结算界面上，玩家能自己把这笔账对一遍。数值在 content.js 的 SCORE 里。 */
@@ -5049,14 +5105,14 @@ function runScore(win){
   /* 到达的层数**不再是一项加分，它是主倍率**（用户 2026-09）：
      宝石 =（下面这几项相加）× 层数倍率 × 这一章的难度系数。两个乘区，没有第三个。*/
   const rows = [
-    {k:"最大连击 " + (P.maxCombo || 0),  v: (P.maxCombo || 0) * SCORE.perCombo},
-    {k:"击败 " + P.kills + " 只",        v: P.kills * SCORE.perKill},
-    {k:"正确率 " + acc + "%",            v: Math.floor(acc / SCORE.accDiv)},
-    {k:"没花完的 " + P.gold + " 金币",   v: Math.floor((P.gold || 0) / SCORE.goldDiv)}
+    {k:T("最大连击 ") + (P.maxCombo || 0),  v: (P.maxCombo || 0) * SCORE.perCombo},
+    {k:T("击败 ") + P.kills + T(" 只"),        v: P.kills * SCORE.perKill},
+    {k:T("正确率 ") + acc + "%",            v: Math.floor(acc / SCORE.accDiv)},
+    {k:T("没花完的 ") + P.gold + T(" 金币"),   v: Math.floor((P.gold || 0) / SCORE.goldDiv)}
   ];
-  if(win) rows.push({k:"通关", v: SCORE.clear});
+  if(win) rows.push({k:T("通关"), v: SCORE.clear});
   // 深渊：打穿无终之影一层给一份（用户 2026-09-22 加的那只，见 content.js 的 ABYSS）
-  if(P.abyss) rows.push({k:"深渊 · 打穿 " + P.abyss + " 层", v: P.abyss * SCORE.perAbyss});
+  if(P.abyss) rows.push({k:T("深渊 · 打穿 ") + P.abyss + T(" 层"), v: P.abyss * SCORE.perAbyss});
   const sum = rows.reduce(function(a, r){ return a + r.v; }, 0);
   const fmul = Math.max(SCORE.floorMin, floor / SCORE.floorDiv);
   return {rows:rows, sum:sum, acc:acc, floor:floor, fmul:fmul,
@@ -5099,64 +5155,65 @@ function endRun(win, gaveUp){
   foldAcc();
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
-  $("endTitle").textContent = win ? ((CH.boss ? CH.boss.name : "这一章") + "倒下了")
-                                  : abyssEnd ? (gaveUp ? "你从深渊里退了出来" : "无终之影把你压了下去")
-                                  : gaveUp ? ("你从第 " + G.floor + " 层退了出来")
-                                           : ("你倒在第 " + G.floor + " 层");
+  $("endTitle").textContent = win ? ((CH.boss ? CH.boss.name : T("这一章")) + T("倒下了"))
+                                  : abyssEnd ? (gaveUp ? T("你从深渊里退了出来") : T("无终之影把你压了下去"))
+                                  : gaveUp ? (T("你从第 ") + G.floor + T(" 层退了出来"))
+                                           : (T("你倒在第 ") + G.floor + T(" 层"));
   $("endEyebrow").textContent = cleared
-    ? ("第" + CH.id + "章 · 通关" + (P.abyss ? " · 深渊 " + P.abyss + " 层" : ""))
-    : gaveUp ? "主动撤离" : "你被抬回了镇上";
+    ? (T("第") + CH.id + T("章 · 通关") + (P.abyss ? T(" · 深渊 ") + P.abyss + T(" 层") : ""))
+    : gaveUp ? T("主动撤离") : T("你被抬回了镇上");
   /* 强调这一块（用户 2026-09）：本局正确率 vs 这一层历史上的平均正确率。
      高了标绿、低了标红，没有历史记录就写「—」。 */
   const dv = hAcc == null ? null : sc.acc - hAcc;
   $("endAcc").innerHTML =
     "<div class=\"accbox\">" +
-      "<div class=\"accone\"><i>本局正确率</i><b>" + sc.acc + "%</b></div>" +
+      T("<div class=\"accone\"><i>本局正确率</i><b>") + sc.acc + "%</b></div>" +
       "<div class=\"accvs\">vs</div>" +
-      "<div class=\"accone\"><i>历史平均 · 第 " + sc.floor + " 层</i><b>" +
+      T("<div class=\"accone\"><i>历史平均 · 第 ") + sc.floor + T(" 层</i><b>") +
         (hAcc == null ? "—" : hAcc + "%") + "</b></div>" +
     "</div>" +
-    (dv == null ? "<div class=\"accdiff\">这一层还没有历史记录，这一趟就是第一笔。</div>"
+    (dv == null ? T("<div class=\"accdiff\">这一层还没有历史记录，这一趟就是第一笔。</div>")
                 : "<div class=\"accdiff " + (dv > 0 ? "up" : dv < 0 ? "down" : "") + "\">" +
-                  (dv > 0 ? "比你在这一层的平均高 " + dv + " 个百分点"
-                          : dv < 0 ? "比你在这一层的平均低 " + (-dv) + " 个百分点"
-                                   : "跟你在这一层的平均持平") + "</div>");
+                  (dv > 0 ? T("比你在这一层的平均高 ") + dv + T(" 个百分点")
+                          : dv < 0 ? T("比你在这一层的平均低 ") + (-dv) + T(" 个百分点")
+                                   : T("跟你在这一层的平均持平")) + "</div>");
   $("endStats").innerHTML =
     sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
-    li("<b>小计</b>", "<b>" + sc.sum + "</b>") +
-    li("到达第 " + sc.floor + " 层", "×" + sc.fmul.toFixed(1)) +
-    li("难度 · 第" + CH.id + "章 " + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
-    li("<b>获得宝石</b>", "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
-    li("宝石合计", TOWN.gem) +
-    (P.practice ? li("练习模式", "护甲 +50 · 攻击 −50%") : "") +
+    li(T("<b>小计</b>"), "<b>" + sc.sum + "</b>") +
+    li(T("到达第 ") + sc.floor + T(" 层"), "×" + sc.fmul.toFixed(1)) +
+    li(T("难度 · 第") + CH.id + T("章 ") + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
+    li(T("<b>获得宝石</b>"), "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
+    li(T("宝石合计"), TOWN.gem) +
+    (P.practice ? li(T("练习模式"), T("护甲 +50 · 攻击 −50%")) : "") +
     /* ⚠️ 这一行写「难度等级」不写「难度」—— 上面那行「难度 · 第N章」已经占了「难度」两个字
        （那是宝石的章节倍率），两行都叫难度会以为是同一件事。*/
     (P.diff !== DIFF_DEFAULT && diffById(P.diff)
-       ? li("难度等级 · " + diffById(P.diff).name, diffById(P.diff).desc) : "") +
-    li("丢在洞里", (P.relics.length || 0) + " 件遗物 · " + P.gold + " 金币") +
-    li("这趟遇到的词", P.seenWords.length + " 个") +
-    li("累计掌握", Object.keys(LEX).filter(function(k){ return (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
+       ? li(T("难度等级 · ") + diffById(P.diff).name, diffById(P.diff).desc) : "") +
+    li(T("丢在洞里"), (P.relics.length || 0) + T(" 件遗物 · ") + P.gold + T(" 金币")) +
+    li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
+    li(T("累计掌握"), Object.keys(LEX).filter(function(k){ return WMAP[k] && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
   const box = $("endWords");
   box.innerHTML = "";
   if(!P.seenWords.length){
-    box.innerHTML = "<div class=\"cx lost\"><div class=\"cn\">还没遇到任何词</div></div>";
+    box.innerHTML = T("<div class=\"cx lost\"><div class=\"cn\">还没遇到任何词</div></div>");
   } else {
     P.seenWords.forEach(function(en){
       const w = WMAP[en], r = LEX[en] || {str:0};
+      if(!w) return;
       const s = r.str || 0;
       const d = document.createElement("div");
       d.className = "cx " + (s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
-      d.innerHTML = "<div class=\"cn\">" + w.en +
+      d.innerHTML = "<div class=\"cn\"><span>" + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
         "<span class=\"meta stars\">" + "★".repeat(s) + "☆".repeat(5-s) + "</span></div>" +
-        "<div class=\"cd\">" + w.cn + "　<span style=\"color:var(--faint)\">" + CAT_CN[w.cat] + "</span></div>";
+        "<div class=\"cd\">" + w.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[w.cat] + "</span></div>";
       box.appendChild(d);
     });
   }
-  $("btnAgain").textContent = "回到镇上";
+  $("btnAgain").textContent = T("回到镇上");
   hideAll();
   $("veilEnd").hidden = false;
   $("btnAgain").focus();
-  if(win && CH.boss) say(CH.boss.name + "碎成了石块。第" + CH.id + "章结束。", "crit");
+  if(win && CH.boss) say(CH.boss.name + T("碎成了石块。第") + CH.id + T("章结束。"), "crit");
 }
 function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
 
@@ -5170,23 +5227,27 @@ function codexFind(){
 }
 function openCodex(tab){
   cTab = tab || cTab;
+  if(UI_EN && cTab === "bf") cTab = "word";         // 战场没有英文版，那一页也藏起来
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
+    if(b.dataset.tab === "bf") b.hidden = UI_EN;
+  });
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
     b.classList.toggle("on", b.dataset.tab === cTab);
   });
   const M = meta();
   if(cTab === "bf"){
     const BM = load(BF_KEY, {best:0, kills:0, runs:0});
-    $("codexTally").innerHTML = "最深 <b>第 " + (BM.best||0) + " 波</b>　击杀 <b>" + (BM.kills||0) +
-      "</b>　下场 <b>" + (BM.runs||0) + "</b> 次";
+    $("codexTally").innerHTML = T("最深 <b>第 ") + (BM.best||0) + T(" 波</b>　击杀 <b>") + (BM.kills||0) +
+      T("</b>　下场 <b>") + (BM.runs||0) + T("</b> 次");
   } else {
-    $("codexTally").innerHTML = "最深 <b>第 " + M.best + " 层</b>　通关 <b>" + M.clears + "</b> 次　探索 <b>" + M.runs + "</b> 次";
+    $("codexTally").innerHTML = T("最深 <b>第 ") + M.best + T(" 层</b>　通关 <b>") + M.clears + T("</b> 次　探索 <b>") + M.runs + T("</b> 次");
   }
   const box = $("codexList");
   box.innerHTML = "";
   if(cTab === "bf"){
     /* 战场遗物：**同一批 209 件**，只是把词条换成战场里的说法（content.js 的 bfWord）。
        战场模式不写 CODEX，所以这一页没有「拿过几次」—— 别去蹭地牢那份计数，会看混。*/
-    $("codexTitle").textContent = "战场遗物";
+    $("codexTitle").textContent = T("战场遗物");
     const q = codexFind();
     RELICS.map(function(R, i){ return {r:R, i:i}; })
       .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
@@ -5206,7 +5267,7 @@ function openCodex(tab){
       });
   } else if(cTab === "leg"){
     const book = CODEX;
-    $("codexTitle").textContent = "遗物 " + Object.keys(book).length + " / " + RELICS.length;
+    $("codexTitle").textContent = T("遗物 ") + Object.keys(book).length + " / " + RELICS.length;
     /* 图鉴**默认全解锁**：名字、效果、铭文一律直接给，没拿过的只是没有计数。
        （用户定的，别再把没拿过的遮成 ▨▨。）
        顺序按品质**普通 → 神圣**排（content.js 里是按搭配线分组的，看图鉴时对不上）。
@@ -5224,7 +5285,7 @@ function openCodex(tab){
       d.className = "cx " + (rec ? "found" : "lost");
       d.innerHTML =
         "<div class=\"cn\">" + R.n + "<span class=\"meta\">" +
-          (rec ? ("初见第 " + rec.depth + " 层 · 拿过 " + rec.times + " 次") : "还没拿到过") +
+          (rec ? (T("初见第 ") + rec.depth + T(" 层 · 拿过 ") + rec.times + T(" 次")) : T("还没拿到过")) +
         "</span></div>" +
         "<div class=\"cd\" style=\"color:var(--q" + (R.r||0) + ")\">" + RAR_CN[R.r||0] + " · " + R.pw + "</div>" +
         "<div class=\"cd\" style=\"font-family:var(--flavor);font-style:italic\">" + R.lore + "</div>";
@@ -5233,12 +5294,14 @@ function openCodex(tab){
   } else {
     /* 标题只剩「词库」两个字（用户 2026-09）——
        掌握 / 遇见 / 总数三个数搬到了信息页那块「本章词汇」上，别在这儿再摆一遍。*/
-    $("codexTitle").textContent = "词库";
+    $("codexTitle").textContent = T("词库");
     const q = codexFind();
     Object.keys(BYCAT).forEach(function(cat){
       const hit = q ? BYCAT[cat].filter(function(w){
-        return w.en.toLowerCase().indexOf(q) >= 0 || w.cn.indexOf(q) >= 0 ||
-               (CAT_CN[cat] || "").indexOf(q) >= 0;
+        return w.en.toLowerCase().indexOf(q) >= 0 || w.cn.toLowerCase().indexOf(q) >= 0 ||
+               (w.py && w.py.normalize("NFD").replace(/[\u0300-\u036f']/g, "").toLowerCase()
+                     .indexOf(q.normalize("NFD").replace(/[\u0300-\u036f']/g, "")) >= 0) ||
+               (CAT_CN[cat] || "").toLowerCase().indexOf(q) >= 0;
       }) : BYCAT[cat];
       if(!hit.length) return;               // 这一类一个都没命中，连类名都别画
       const h = document.createElement("div");
@@ -5251,17 +5314,18 @@ function openCodex(tab){
         const d = document.createElement("div");
         d.className = "cx " + (!r ? "lost" : s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
         d.innerHTML =
-          "<div class=\"cn\">" + w.en + "<span class=\"meta " + (r ? "stars" : "") + "\">" +
-            (r ? ("★".repeat(s) + "☆".repeat(5-s)) : "还没遇到") + "</span></div>" +
+          "<div class=\"cn\"><span>" + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
+            "<span class=\"meta " + (r ? "stars" : "") + "\">" +
+            (r ? ("★".repeat(s) + "☆".repeat(5-s)) : T("还没遇到")) + "</span></div>" +
           "<div class=\"cd\">" + w.cn +
-            (r && r.wrong ? "　<span style=\"color:var(--blood)\">上次答错</span>" : "") + "</div>";
+            (r && r.wrong ? T("　<span style=\"color:var(--blood)\">上次答错</span>") : "") + "</div>";
         box.appendChild(d);
       });
     });
   }
   if(!box.children.length){
-    box.innerHTML = "<div class=\"cx lost\"><div class=\"cn\">没找到「" +
-      ($("codexFind") ? $("codexFind").value.trim() : "") + "」</div></div>";
+    box.innerHTML = T("<div class=\"cx lost\"><div class=\"cn\">没找到「") +
+      ($("codexFind") ? $("codexFind").value.trim() : "") + T("」</div></div>");
   }
   $("veilCodex").hidden = false;
 }
@@ -5352,7 +5416,7 @@ BitR.prototype.bits = function(k){
   let v = 0;
   for(let j=0;j<k;j++){
     const byteAt = this.i >> 3;
-    if(byteAt >= this.bytes.length) throw new Error("码短了");
+    if(byteAt >= this.bytes.length) throw new Error(T("码短了"));
     if(this.bytes[byteAt] & (1 << (this.i & 7))) v |= (1 << j);
     this.i++;
   }
@@ -5398,7 +5462,7 @@ function putSet(w, n, idx){
 function getSet(r, n){
   const count = r.vint(), out = [];
   if(!count) return out;
-  if(count > n) throw new Error("码里的条数比词库还多");
+  if(count > n) throw new Error(T("码里的条数比词库还多"));
   if(r.bits(1) === 0){
     // ⚠️ n 个 bit 要**全部读完**，不能凑够 count 就提前收手 —— 位流会当场错位
     for(let i=0;i<n;i++) if(r.bits(1)) out.push(i);
@@ -5406,8 +5470,8 @@ function getSet(r, n){
     let prev = -1;
     for(let k=0;k<count;k++){ prev += r.vint() + 1; out.push(prev); }
   }
-  if(out.length !== count) throw new Error("码里的条数对不上");
-  if(out.length && out[out.length-1] >= n) throw new Error("码里的下标超出范围");
+  if(out.length !== count) throw new Error(T("码里的条数对不上"));
+  if(out.length && out[out.length-1] >= n) throw new Error(T("码里的下标超出范围"));
   return out;
 }
 
@@ -5421,10 +5485,46 @@ function hash16(list){
   }
   return h;
 }
-function wordsHash(n){
+/* ⚠️ 存档码按**词库下标**存熟练度，而学中文时 WORDS 换成了中文那一份 ——
+   所以这里一律显式传词库：第一段永远是英语（EN_WORDS），末尾那段才是中文（ZH_WORDS）。*/
+function wordsHash(n, list){
   const a = [];
-  for(let i=0;i<n;i++) a.push(WORDS[i][0]);
+  for(let i=0;i<n;i++) a.push(list[i][0]);
   return hash16(a);
+}
+/* 一份词库的熟练度段：nWords + 前缀校验 + 稀疏表 + 每词 7 bit（写法见上面那段长注释）*/
+function putLex(w, list){
+  const nW = list.length;
+  w.vint(nW);
+  w.vint(wordsHash(nW, list));
+  const idx = [], rows = [];
+  for(let i=0;i<nW;i++){
+    const rec = LEX[list[i][0]];
+    if(!rec) continue;
+    idx.push(i);
+    rows.push(rec);
+  }
+  putSet(w, nW, idx);
+  for(let k=0;k<rows.length;k++){
+    const rec = rows[k];
+    w.bits(Math.max(0, Math.min(5, rec.str || 0)), 3);   // 熟练度 0~5
+    w.bits((rec.wrong || 0) > 0 ? 1 : 0, 1);             // 上次答错没（wrong 只当布尔用）
+    const seen = Math.max(0, Math.round(rec.seen || 0));
+    w.bits(seen >= 7 ? 7 : seen, 3);                     // 见过几次，7 = 逃逸
+    if(seen >= 7) w.vint(seen - 7);
+  }
+}
+function getLex(r, list, out){
+  const nW = r.vint(), wh = r.vint();
+  const ok = (nW <= list.length && wordsHash(nW, list) === wh);
+  const idx = getSet(r, nW);
+  for(let k=0;k<idx.length;k++){
+    const str = r.bits(3), wrong = r.bits(1);
+    let seen = r.bits(3);
+    if(seen === 7) seen = 7 + r.vint();
+    if(ok) out[list[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
+  }
+  return ok;
 }
 function relicsHash(n){
   const a = [];
@@ -5442,26 +5542,8 @@ function makeCode(){
   const w = new BitW();
   w.bits(CODE2_V, 8);
 
-  /* 熟练度：按词库下标存。present 里只放真的有记录的词 */
-  const nW = WORDS.length;
-  w.vint(nW);
-  w.vint(wordsHash(nW));
-  const idx = [], rows = [];
-  for(let i=0;i<nW;i++){
-    const rec = LEX[WORDS[i][0]];
-    if(!rec) continue;
-    idx.push(i);
-    rows.push(rec);
-  }
-  putSet(w, nW, idx);
-  for(let k=0;k<rows.length;k++){
-    const rec = rows[k];
-    w.bits(Math.max(0, Math.min(5, rec.str || 0)), 3);   // 熟练度 0~5
-    w.bits((rec.wrong || 0) > 0 ? 1 : 0, 1);             // 上次答错没（wrong 只当布尔用）
-    const seen = Math.max(0, Math.round(rec.seen || 0));
-    w.bits(seen >= 7 ? 7 : seen, 3);                     // 见过几次，7 = 逃逸
-    if(seen >= 7) w.vint(seen - 7);
-  }
+  /* 熟练度：按词库下标存。present 里只放真的有记录的词。第一段永远是**英语词库** */
+  putLex(w, EN_WORDS);
 
   /* 遗物图鉴：同一套写法，按 RELICS 下标 */
   const nR = RELICS.length;
@@ -5531,6 +5613,12 @@ function makeCode(){
     w.vint(at);
   }
 
+  /* 多语言（2026-09-23）：**中文词库的熟练度 + 新手教程过没过**，同样挂在最后、前面 1 bit「有没有」——
+     跟宝珠那一段一个套路：老版本读完宝珠就收手，老码到新版本上读到填充的 0 就当没有，CODE2_V 不用动。*/
+  w.bits(1, 1);
+  putLex(w, ZH_WORDS);
+  w.bits(MET.tut ? 1 : 0, 1);
+
   const bytes = w.finish();
   const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
   bytes.push(ck & 255, (ck >> 8) & 255);
@@ -5540,25 +5628,17 @@ function makeCode(){
 /* ---- 读回来 ---- 返回 mergeData 吃的那个 {lex, codex, meta, town}，外加 note（要跟玩家说的话） */
 function parseCode2(txt){
   const bytes = b64uToBytes(txt.slice(CODE2_TAG.length));
-  if(bytes.length < 4) throw new Error("码太短了");
+  if(bytes.length < 4) throw new Error(T("码太短了"));
   const body = Array.prototype.slice.call(bytes, 0, bytes.length - 2);
   const want = bytes[bytes.length-2] | (bytes[bytes.length-1] << 8);
-  if(sumHash(body) !== want) throw new Error("校验对不上 —— 复制的时候少了一截或者多带了字符");
+  if(sumHash(body) !== want) throw new Error(T("校验对不上 —— 复制的时候少了一截或者多带了字符"));
   const r = new BitR(body);
-  if(r.bits(8) !== CODE2_V) throw new Error("这串码是别的版本生成的");
+  if(r.bits(8) !== CODE2_V) throw new Error(T("这串码是别的版本生成的"));
   const out = {lex:{}, codex:{}, meta:{accF:{}}, town:{}}, notes = [];
 
-  /* 熟练度 */
-  const nW = r.vint(), wh = r.vint();
-  const wordsOk = (nW <= WORDS.length && wordsHash(nW) === wh);
-  const idx = getSet(r, nW);
-  for(let k=0;k<idx.length;k++){
-    const str = r.bits(3), wrong = r.bits(1);
-    let seen = r.bits(3);
-    if(seen === 7) seen = 7 + r.vint();
-    if(wordsOk) out.lex[WORDS[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
-  }
-  if(!wordsOk) notes.push("词库变过了，这串码里的熟练度跳过了");
+  /* 熟练度（英语词库）*/
+  const wordsOk = getLex(r, EN_WORDS, out.lex);
+  if(!wordsOk) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
 
   /* 遗物图鉴 */
   const nR = r.vint(), rh = r.vint();
@@ -5568,7 +5648,7 @@ function parseCode2(txt){
     const depth = r.vint(), times = r.vint();
     if(relicsOk) out.codex[RELICS[ri[k]].id] = {depth:depth, times:times};
   }
-  if(!relicsOk) notes.push("遗物表变过了，图鉴跳过了");
+  if(!relicsOk) notes.push(T("遗物表变过了，图鉴跳过了"));
 
   /* 探索记录 */
   out.meta.best = r.vint(); out.meta.runs = r.vint();
@@ -5609,34 +5689,41 @@ function parseCode2(txt){
     for(let i = 0; i < ORB_SLOTS; i++) od.eq.push(r.vint());   // 下标 +1 正好就是上面给的 uid
     out.town.orb = od;
   }
-  out.note = notes.join("；");
+  /* 中文词库 + 新手教程（老码没有这一段，读这 1 bit 允许读到底）*/
+  let hasZh = 0;
+  try{ hasZh = r.bits(1); }catch(e){ hasZh = 0; }
+  if(hasZh){
+    if(!getLex(r, ZH_WORDS, out.lex)) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
+    out.meta.tut = r.bits(1);
+  }
+  out.note = notes.join(T("；"));
   return out;
 }
 /* 三种都认：新码 YX2、老码 YX1、以及直接粘进来的存档文件 JSON */
 function applyCode(txt){
   txt = (txt || "").trim();
-  if(!txt) return "剪贴板里没有存档码。";
+  if(!txt) return T("剪贴板里没有存档码。");
   /* 测试口令（用户 2026-09-23 要的）：粘贴「audience2006」直接 +10000 宝石，次数不限 */
-  if(txt === "audience2006"){ addGems(10000); return "测试口令：宝石 +10000（现在 " + TOWN.gem + " 颗）。"; }
+  if(txt === "audience2006"){ addGems(10000); return T("测试口令：宝石 +10000（现在 ") + TOWN.gem + T(" 颗）。"); }
   let o;
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
-    catch(e){ return "这段文本读不出来 —— 像是存档文件但缺了一截。"; }
+    catch(e){ return T("这段文本读不出来 —— 像是存档文件但缺了一截。"); }
   } else if(txt.replace(/\s+/g, "").indexOf(CODE2_TAG) === 0){
     try{ o = parseCode2(txt.replace(/\s+/g, "")); }
-    catch(e){ return "这串码读不出来：" + e.message + "。"; }
+    catch(e){ return T("这串码读不出来：") + e.message + T("。"); }
   } else if(txt.replace(/\s+/g, "").indexOf(CODE_TAG) === 0){
     try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
-    catch(e){ return "这串老码读不出来，多半是复制时漏了一截。"; }
+    catch(e){ return T("这串老码读不出来，多半是复制时漏了一截。"); }
   } else {
-    return "这不像存档码 —— 它应该以 " + CODE2_TAG + " 开头。";
+    return T("这不像存档码 —— 它应该以 ") + CODE2_TAG + T(" 开头。");
   }
-  if(!o || typeof o !== "object" || !o.lex) return "这串码里没有存档数据。";
+  if(!o || typeof o !== "object" || !o.lex) return T("这串码里没有存档数据。");
   const note = o.note;
   const res = mergeData(o);
-  return "导入成功：更新了 " + res.words + " 个词，补上 " + res.legs + " 件遗物"
-       + (res.gold ? ("，宝石 +" + res.gold + " 颗") : "") + "。"
-       + (note ? ("（" + note + "）") : "");
+  return T("导入成功：更新了 ") + res.words + T(" 个词，补上 ") + res.legs + T(" 件遗物")
+       + (res.gold ? (T("，宝石 +") + res.gold + T(" 颗")) : "") + T("。")
+       + (note ? (T("（") + note + T("）")) : "");
 }
 /* 合并取优 —— 导出码和本地存档文件共用这一套。
    吃 {lex, codex, meta, town, run}，缺哪块跳过哪块，任何一块都不会让这台设备倒退。 */
@@ -5667,6 +5754,7 @@ function mergeData(o){
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
+  if(im.tut) M.tut = 1;              // 新手教程：哪边走过都算走过（一个账号一次）
   /* 每层答题记录（历史平均正确率用的）：两边**相加** ——
      它是「一共答过多少题」，不是进度，取大值会白丢一边的记录。*/
   if(!M.accF) M.accF = {};
@@ -5749,30 +5837,30 @@ function snapshot(){
 }
 function pad2(n){ return (n < 10 ? "0" : "") + n; }
 function fmtTime(t){
-  if(!t) return "不详";
+  if(!t) return T("不详");
   const d = new Date(t);
   return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()) +
          " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
 }
 function agoText(t){
-  if(!t) return "不详";
+  if(!t) return T("不详");
   const mins = Math.max(1, Math.round((Date.now() - t) / 60000));
-  return mins < 60 ? (mins + " 分钟前")
-       : mins < 1440 ? (Math.round(mins/60) + " 小时前")
-       : (Math.round(mins/1440) + " 天前");
+  return mins < 60 ? (mins + T(" 分钟前"))
+       : mins < 1440 ? (Math.round(mins/60) + T(" 小时前"))
+       : (Math.round(mins/1440) + T(" 天前"));
 }
 /* 一份存档（本地的或刚读出来的文件）摊成信息表 —— 导入前后看的是同一张表，好对数 */
 function tally(o){
   const lex = o.lex || {}, keys = Object.keys(lex);
   const mastered = keys.filter(function(k){ return (lex[k].str||0) >= 3; }).length;
   const M = o.meta || {}, r = o.run;
-  return li("存档时间", fmtTime(o.t || M.t))
-       + li("上次游玩", agoText(o.t || M.t))
-       + li("词汇", "掌握 " + mastered + " / 遇到 " + keys.length + " / 共 " + WORDS.length)
-       + li("遗物图鉴", Object.keys(o.codex || {}).length + " / " + RELICS.length + " 件")
-       + li("最深 / 通关 / 探索", "第 " + (M.best||0) + " 层　" + (M.clears||0) + " 次　" + (M.runs||0) + " 趟")
-       + li("镇上宝石", ((o.town && (typeof o.town.gem === "number" ? o.town.gem : o.town.gold)) || 0) + " 颗")
-       + li("没走完的探索", r && r.P ? ("第 " + r.floor + " 层 · Lv." + r.P.lvl + " · " + Math.max(0, r.P.hp) + " 血") : "无");
+  return li(T("存档时间"), fmtTime(o.t || M.t))
+       + li(T("上次游玩"), agoText(o.t || M.t))
+       + li(T("词汇"), T("掌握 ") + mastered + T(" / 遇到 ") + keys.length + T(" / 共 ") + WORDS.length)
+       + li(T("遗物图鉴"), Object.keys(o.codex || {}).length + " / " + RELICS.length + T(" 件"))
+       + li(T("最深 / 通关 / 探索"), T("第 ") + (M.best||0) + T(" 层　") + (M.clears||0) + T(" 次　") + (M.runs||0) + T(" 趟"))
+       + li(T("镇上宝石"), ((o.town && (typeof o.town.gem === "number" ? o.town.gem : o.town.gold)) || 0) + T(" 颗"))
+       + li(T("没走完的探索"), r && r.P ? (T("第 ") + r.floor + T(" 层 · Lv.") + r.P.lvl + " · " + Math.max(0, r.P.hp) + T(" 血")) : T("无"));
 }
 function fileMsg(t){ $("fileMsg").textContent = t || ""; }
 function closeFileCard(){ pendingFile = null; $("fileCard").hidden = true; $("fileIn").value = ""; }
@@ -5789,39 +5877,39 @@ function downloadSave(){
     document.body.appendChild(a);
     a.click();
     setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 8000);
-    return "已导出 " + name + "（约 " + Math.max(1, Math.round(txt.length/1024)) + " KB）—— 去浏览器的下载列表里找它。";
+    return T("已导出 ") + name + T("（约 ") + Math.max(1, Math.round(txt.length/1024)) + T(" KB）—— 去浏览器的下载列表里找它。");
   }catch(e){
     codeBoxShow(txt, true);        // 下载被挡了就退回下面那个框，至少能手动复制走
-    return "这个浏览器挡了下载。存档已经放进下面「云存档」那个框里，手动复制走一样能用。";
+    return T("这个浏览器挡了下载。存档已经放进下面「云存档」那个框里，手动复制走一样能用。");
   }
 }
 /* 认三种东西：本游戏的存档文件、存成文本的导出码、以及裸 JSON（有 lex 就行） */
 function parseSave(txt){
   txt = (txt || "").replace(/^\uFEFF/, "").trim();
-  if(!txt) return {err:"这个文件是空的。"};
+  if(!txt) return {err:T("这个文件是空的。")};
   let o = null;
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
-    catch(e){ return {err:"这个文件读不出来 —— 内容不完整，或者根本不是存档。"}; }
+    catch(e){ return {err:T("这个文件读不出来 —— 内容不完整，或者根本不是存档。")}; }
   } else if(txt.indexOf(CODE_TAG) === 0){
     try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
-    catch(e){ return {err:"文件里的导出码读不出来，多半是复制时漏了一截。"}; }
+    catch(e){ return {err:T("文件里的导出码读不出来，多半是复制时漏了一截。")}; }
   } else {
-    return {err:"这不是幽墟回廊的存档文件。"};
+    return {err:T("这不是幽墟回廊的存档文件。")};
   }
-  if(!o || typeof o !== "object") return {err:"这不是幽墟回廊的存档文件。"};
-  if(o.game && o.game !== FILE_TAG) return {err:"这是别的东西的存档，不是幽墟回廊的。"};
-  if(!o.lex || typeof o.lex !== "object") return {err:"文件里没有词汇数据，不像是这个游戏的存档。"};
+  if(!o || typeof o !== "object") return {err:T("这不是幽墟回廊的存档文件。")};
+  if(o.game && o.game !== FILE_TAG) return {err:T("这是别的东西的存档，不是幽墟回廊的。")};
+  if(!o.lex || typeof o.lex !== "object") return {err:T("文件里没有词汇数据，不像是这个游戏的存档。")};
   return {data:o};
 }
 /* 选中就读 —— 不用再点一次「读取」，读完直接把信息摊出来 */
 function takeFile(file){
   closeFileCard();
   if(!file) return;
-  if(file.size > 8 * 1024 * 1024){ fileMsg("这个文件有 " + Math.round(file.size/1048576) + "MB，太大了，不像是存档。"); return; }
-  fileMsg("正在读 " + file.name + " …");
+  if(file.size > 8 * 1024 * 1024){ fileMsg(T("这个文件有 ") + Math.round(file.size/1048576) + T("MB，太大了，不像是存档。")); return; }
+  fileMsg(T("正在读 ") + file.name + " …");
   const fr = new FileReader();
-  fr.onerror = function(){ fileMsg("这个文件读不出来 —— 换一份试试。"); };
+  fr.onerror = function(){ fileMsg(T("这个文件读不出来 —— 换一份试试。")); };
   fr.onload = function(){
     const r = parseSave(String(fr.result || ""));
     if(r.err){ fileMsg(r.err); return; }
@@ -5829,7 +5917,7 @@ function takeFile(file){
     $("fileName").textContent = file.name;
     $("fileInfo").innerHTML = tally(r.data);
     $("fileCard").hidden = false;
-    fileMsg("读出来了 —— 对一眼上面的数字，再决定怎么导入。");
+    fileMsg(T("读出来了 —— 对一眼上面的数字，再决定怎么导入。"));
   };
   fr.readAsText(file);
 }
@@ -5993,12 +6081,12 @@ function refreshSaveState(){
     lex: LEX, codex: CODEX, meta: meta(), town: TOWN, run: s
   });
   $("saveState").innerHTML = inRun
-    ? ("你正在洞里。存档停在<b>第 " + (s ? s.floor : G.floor) + " 层的入口</b> —— " +
-       "游戏只在<b>进入关卡、下一层、回到主城</b>这三个时候存。关掉页面，下次打开自动从这一层开头接着走，不会问你。")
+    ? (T("你正在洞里。存档停在<b>第 ") + (s ? s.floor : G.floor) + T(" 层的入口</b> —— ") +
+       T("游戏只在<b>进入关卡、下一层、回到主城</b>这三个时候存。关掉页面，下次打开自动从这一层开头接着走，不会问你。"))
     : s
-      ? ("上次的探索停在<b>" + ((chapterById(s.ch || 1) || CH).name) + " 第 " + s.floor +
-         " 层</b>（Lv." + s.P.lvl + "）的入口。下次打开会自动接着走，也可以现在就继续。")
-      : "存档只在<b>进入关卡、下一层、回到主城</b>这三个时候写，下次打开自动读档。你现在在镇上，没有在进行的探索。";
+      ? (T("上次的探索停在<b>") + ((chapterById(s.ch || 1) || CH).name) + T(" 第 ") + s.floor +
+         T(" 层</b>（Lv.") + s.P.lvl + T("）的入口。下次打开会自动接着走，也可以现在就继续。"))
+      : T("存档只在<b>进入关卡、下一层、回到主城</b>这三个时候写，下次打开自动读档。你现在在镇上，没有在进行的探索。");
   $("btnResumeHere").hidden = !(s && !inRun);
   /* 「放弃」已经挪到取景框左下角，它跟着 stageBox 一起显隐（只有探索时在），
      不用再按存档状态禁用 —— 以前它住在设置页才需要那一行。 */
@@ -6055,7 +6143,7 @@ function renderLock(){
   if(!b) return;
   b.classList.toggle("on", !!OPT.lock);
   b.setAttribute("aria-pressed", OPT.lock ? "true" : "false");
-  b.title = OPT.lock ? "锁定冒险 · 开：每题自动押上" : "锁定冒险 · 关";
+  b.title = OPT.lock ? T("锁定冒险 · 开：每题自动押上") : T("锁定冒险 · 关");
 }
 $("btnLockWager").addEventListener("click", function(){
   OPT.lock = !OPT.lock;
@@ -6067,8 +6155,8 @@ $("btnLockWager").addEventListener("click", function(){
     $("btnWager").classList.toggle("on", B.wager);
     setWagerLabel();
   }
-  say(OPT.lock ? "锁定冒险：接下来每题都<b>自动押上</b> —— 对了伤害翻倍，错了受伤翻倍。"
-               : "解除锁定：恢复成每题自己决定要不要冒险。", "sys");
+  say(OPT.lock ? T("锁定冒险：接下来每题都<b>自动押上</b> —— 对了伤害翻倍，错了受伤翻倍。")
+               : T("解除锁定：恢复成每题自己决定要不要冒险。"), "sys");
 });
 
 /* ---- 遗物页：分解 / 合成 ---- */
@@ -6109,7 +6197,7 @@ $("relicList").addEventListener("click", function(ev){
 $("btnRelicRedraw").addEventListener("click", function(){
   if(!G || (G.rerollUsed || 0) >= rerollBudget()) return;
   G.rerollUsed = (G.rerollUsed || 0) + 1;
-  say("你把这几样推了回去 —— 换一批。", "sys");
+  say(T("你把这几样推了回去 —— 换一批。"), "sys");
   offerRelics();
 });
 
@@ -6168,15 +6256,15 @@ $("btnAbandon").addEventListener("click", function(){
   const b = this;
   if(Date.now() > abandonArmed){
     abandonArmed = Date.now() + 4000;
-    b.textContent = "再点一次";
+    b.textContent = T("再点一次");
     b.classList.add("armed");
     setTimeout(function(){
-      if(Date.now() > abandonArmed){ b.textContent = "放弃"; b.classList.remove("armed"); }
+      if(Date.now() > abandonArmed){ b.textContent = T("放弃"); b.classList.remove("armed"); }
     }, 4100);
     return;
   }
   abandonArmed = 0;
-  b.textContent = "放弃";
+  b.textContent = T("放弃");
   b.classList.remove("armed");
   autoOff();
   giveUpRun();       // 直接结算：算分、发宝石、弹结算窗
@@ -6208,16 +6296,16 @@ function codeBoxHide(){ const box = $("codeBox"); box.value = ""; box.hidden = t
 $("btnCopySave").addEventListener("click", function(){
   let code;
   try{ code = makeCode(); }
-  catch(e){ codeMsg("生成存档码时出错了：" + (e && e.message ? e.message : e)); return; }
+  catch(e){ codeMsg(T("生成存档码时出错了：") + (e && e.message ? e.message : e)); return; }
   const b = this, ok = function(){
     codeBoxHide();
-    b.textContent = "已复制";
-    setTimeout(function(){ b.textContent = "复制存档码"; }, 1600);
-    codeMsg("存档码（" + code.length + " 个字符）已经在剪贴板里 —— 到另一台设备上点「粘贴存档码」。");
+    b.textContent = T("已复制");
+    setTimeout(function(){ b.textContent = T("复制存档码"); }, 1600);
+    codeMsg(T("存档码（") + code.length + T(" 个字符）已经在剪贴板里 —— 到另一台设备上点「粘贴存档码」。"));
   };
   const manual = function(){
     codeBoxShow(code, true);
-    codeMsg("这个浏览器不让网页写剪贴板 —— 码已经放在下面的框里并选中了，自己复制走。");
+    codeMsg(T("这个浏览器不让网页写剪贴板 —— 码已经放在下面的框里并选中了，自己复制走。"));
   };
   try{
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -6237,24 +6325,24 @@ $("btnPasteSave").addEventListener("click", function(){
   if(!box.hidden && !box.readOnly && box.value.trim()){
     const msg = applyCode(box.value);
     codeMsg(msg);
-    if(msg.indexOf("成功") >= 0) codeBoxHide();
+    if(msg.indexOf(T("成功")) >= 0) codeBoxHide();
     return;
   }
   const manual = function(why){
     codeBoxShow("", false);
-    codeMsg(why || "这个浏览器不让网页读剪贴板 —— 把存档码粘到下面的框里，再点一次「粘贴存档码」。");
+    codeMsg(why || T("这个浏览器不让网页读剪贴板 —— 把存档码粘到下面的框里，再点一次「粘贴存档码」。"));
   };
   try{
     if(navigator.clipboard && navigator.clipboard.readText){
       navigator.clipboard.readText().then(function(t){
         // 读到了但是空的：这不是浏览器的锅，别报错怪它
         if(!String(t || "").trim()){
-          manual("剪贴板里是空的 —— 先在旧设备上点「复制存档码」。要手输也行：粘到下面的框里再点一次。");
+          manual(T("剪贴板里是空的 —— 先在旧设备上点「复制存档码」。要手输也行：粘到下面的框里再点一次。"));
           return;
         }
         const msg = applyCode(t);
         codeMsg(msg);
-        if(msg.indexOf("成功") >= 0) codeBoxHide();
+        if(msg.indexOf(T("成功")) >= 0) codeBoxHide();
       }, function(){ manual(); });      // 拒绝理由是个 Error，别把它当提示文案用
       return;
     }
@@ -6281,29 +6369,29 @@ $("dropZone").addEventListener("drop", function(ev){
 ["dragover","drop"].forEach(function(t){
   window.addEventListener(t, function(ev){ if(ev.target.id !== "dropZone") ev.preventDefault(); });
 });
-$("btnCancelFile").addEventListener("click", function(){ closeFileCard(); fileMsg("已取消，什么都没动。"); });
+$("btnCancelFile").addEventListener("click", function(){ closeFileCard(); fileMsg(T("已取消，什么都没动。")); });
 $("btnMergeFile").addEventListener("click", function(){
-  if(!pendingFile){ fileMsg("先选一个存档文件。"); return; }
+  if(!pendingFile){ fileMsg(T("先选一个存档文件。")); return; }
   const r = mergeData(pendingFile);
   closeFileCard();
-  fileMsg("合并完成：更新 " + r.words + " 个词，补上 " + r.legs + " 件遗物"
-        + (r.gold ? ("，宝石 +" + r.gold + " 颗") : "")
-        + (r.run ? "，还接回了一趟没走完的探索。" : "。"));
+  fileMsg(T("合并完成：更新 ") + r.words + T(" 个词，补上 ") + r.legs + T(" 件遗物")
+        + (r.gold ? (T("，宝石 +") + r.gold + T(" 颗")) : "")
+        + (r.run ? T("，还接回了一趟没走完的探索。") : T("。")));
 });
 /* 覆盖是抹掉这台设备的进度，两步确认 —— 跟「清除全部存档」一个规矩 */
 let overArmed = 0;
 $("btnOverwriteFile").addEventListener("click", function(){
-  if(!pendingFile){ fileMsg("先选一个存档文件。"); return; }
+  if(!pendingFile){ fileMsg(T("先选一个存档文件。")); return; }
   const b = this;
   if(Date.now() > overArmed){
     overArmed = Date.now() + 4000;
-    b.textContent = "再点一次确认覆盖";
-    setTimeout(function(){ if(Date.now() > overArmed) b.textContent = "整档覆盖"; }, 4100);
+    b.textContent = T("再点一次确认覆盖");
+    setTimeout(function(){ if(Date.now() > overArmed) b.textContent = T("整档覆盖"); }, 4100);
     return;
   }
   overArmed = 0;
-  b.textContent = "整档覆盖";
-  fileMsg("正在覆盖，马上重新载入…");
+  b.textContent = T("整档覆盖");
+  fileMsg(T("正在覆盖，马上重新载入…"));
   overwriteAll(pendingFile);
 });
 /* 镇上也能接着走上次那一趟 —— 以前只有刚打开页面时才问一次 */
@@ -6407,7 +6495,7 @@ function coopTrySwitchTarget(m){
   m.hp = m.hpMate;
   m.hpMate = 0;
   m.curSide = m.curSide === "a" ? "b" : "a";
-  say("你把" + m.name + "这边砍空了 —— 转去帮队友砍剩下那条。", "crit");
+  say(T("你把") + m.name + T("这边砍空了 —— 转去帮队友砍剩下那条。"), "crit");
   renderBattleBars();
   return true;
 }
@@ -6429,18 +6517,18 @@ function coopHandleDead(cid){
   if(G.mobs.length === 0){
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
-    say("这一层清空了 —— 阶梯 ▼ 出现了。", "crit");
+    say(T("这一层清空了 —— 阶梯 ▼ 出现了。"), "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     if(hasRelic("finale")){    // 收尾：清完一层回 FINALE_PCT 的上限——清场是共识事件，没亲手补最后一刀也该有
       const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
-      if(r.hp || r.sh) say("这一层干净了 —— 收尾替你补了 <b>" + r.hp + "</b> 点生命" +
-        (r.sh ? "，溢出的化成 <b>" + r.sh + "</b> 点护盾" : "") + "。", "good");
+      if(r.hp || r.sh) say(T("这一层干净了 —— 收尾替你补了 <b>") + r.hp + T("</b> 点生命") +
+        (r.sh ? T("，溢出的化成 <b>") + r.sh + T("</b> 点护盾") : "") + T("。"), "good");
     }
     if(hasRelic("welfare")){                       // 均富：清空这一层再单独发一笔
       const wg = G.floor * 2;
       P.gold += wg;
-      say("均富 —— 这一层清空了，回廊分给你 <b>" + wg + "</b> 金。", "good");
+      say(T("均富 —— 这一层清空了，回廊分给你 <b>") + wg + T("</b> 金。"), "good");
     }
   }
   fov();
@@ -6460,11 +6548,11 @@ function coopGoDown(){
   autoOff();
   if(coopIsHost()){
     if(window.NET) NET.send({t:"ready", what:"move", on:false});
-    say("你倒下了 —— 你是房主，寻路先停住，队友得手动清完剩下的怪，你才会原地复活。", "hurt");
+    say(T("你倒下了 —— 你是房主，寻路先停住，队友得手动清完剩下的怪，你才会原地复活。"), "hurt");
   } else {
     // 倒地的人不阻塞移动：替自己把「寻路」那份 ready 摆成「已同意」，房主一个人点寻路也能继续走
     if(window.NET) NET.send({t:"ready", what:"move", on:true});
-    say("你倒下了 —— 撑着等队友把这一层清完，你会原地站起来。", "hurt");
+    say(T("你倒下了 —— 撑着等队友把这一层清完，你会原地站起来。"), "hurt");
   }
   renderHud();
   render();
@@ -6476,7 +6564,7 @@ function coopCheckRevive(){
   if(!COOP || !P || !P.down || !G || G.mobs.length !== 0) return;
   P.down = false;
   P.hp = 1;
-  say("队友把这一层清干净了 —— 你摇晃着站了起来（1 点生命）。", "good");
+  say(T("队友把这一层清干净了 —— 你摇晃着站了起来（1 点生命）。"), "good");
   renderHud();
   render();
   coopSendMe();
@@ -6490,7 +6578,7 @@ function coopCheckBothDown(){
 function coopConfirmStair(){
   NET.send({t:"ready", what:"floor", on:true});
   const b = $("btnStairGo");
-  if(b){ b.disabled = true; b.textContent = "等待队友确认…"; }
+  if(b){ b.disabled = true; b.textContent = T("等待队友确认…"); }
 }
 /* 非房主：收到 path 消息时可能正在打自己的那一场战斗（G.paused），
    stepWalk() 这时候什么都不会做。这个小轮询专门等 G.paused 解开再接着走那条路，
@@ -6510,12 +6598,12 @@ function coopUpdateWaitUi(){
   const connected = NET.isConnected(), mate = NET.hasMate();
   if(!coopEverConnected){ w.hidden = true; return; }   // 还没组过队，不是"断线"，别弹遮罩
   if(!connected){
-    $("coopWaitTitle").textContent = "网络断了…";
-    $("coopWaitNote").textContent = "正在自动重连，接上之后从这一层继续走。";
+    $("coopWaitTitle").textContent = T("网络断了…");
+    $("coopWaitNote").textContent = T("正在自动重连，接上之后从这一层继续走。");
     w.hidden = false;
   } else if(!mate && SCENE === "run"){
-    $("coopWaitTitle").textContent = "等待队友…";
-    $("coopWaitNote").textContent = "队友掉线了，等他重新连上再继续。";
+    $("coopWaitTitle").textContent = T("等待队友…");
+    $("coopWaitNote").textContent = T("队友掉线了，等他重新连上再继续。");
     w.hidden = false;
   } else {
     w.hidden = true;
@@ -6535,9 +6623,9 @@ if(COOP){
   function teamHint(){
     const b = $("teamHint");
     if(!b) return;
-    if(!NET.isConnected()) b.textContent = "创建或加入一个房间";
-    else b.textContent = "房间 " + NET.roomCode() + " · " + (coopIsHost() ? "房主" : "队友") +
-      (NET.hasMate() ? " · 已连接" : " · 等待对方");
+    if(!NET.isConnected()) b.textContent = T("创建或加入一个房间");
+    else b.textContent = T("房间 ") + NET.roomCode() + " · " + (coopIsHost() ? T("房主") : T("队友")) +
+      (NET.hasMate() ? T(" · 已连接") : T(" · 等待对方"));
   }
   function showTeamPanel(which){
     ["teamPick", "teamJoinForm", "teamStatus"].forEach(function(id){ $(id).hidden = (id !== which); });
@@ -6551,17 +6639,17 @@ if(COOP){
     if(!NET.isConnected()){ showTeamPanel("teamPick"); return; }
     showTeamPanel("teamStatus");
     $("teamLedger").innerHTML =
-      li("房间号", "<b>" + NET.roomCode() + "</b>") +
-      li("你是", NET.isHost() ? "房主" : "队友") +
-      li("队友", NET.hasMate() ? "已连接" : "还没连上 —— 把房间号告诉他");
+      li(T("房间号"), "<b>" + NET.roomCode() + "</b>") +
+      li(T("你是"), NET.isHost() ? T("房主") : T("队友")) +
+      li(T("队友"), NET.hasMate() ? T("已连接") : T("还没连上 —— 把房间号告诉他"));
     $("teamNote").textContent = NET.isHost()
-      ? "房主负责在洞窟里选路线。"
-      : "进洞窟之后，房主选好路线，你确认一下就一起下去。";
+      ? T("房主负责在洞窟里选路线。")
+      : T("进洞窟之后，房主选好路线，你确认一下就一起下去。");
     $("teamLinkText").value = coopInviteLink();
   }
   function openTeamPanel(){
     $("roomMsg").textContent = "";
-    $("teamTitle").textContent = "两个人，一个房间号";
+    $("teamTitle").textContent = T("两个人，一个房间号");
     renderTeamStatus();
     $("veilTeam").hidden = false;
   }
@@ -6589,7 +6677,7 @@ if(COOP){
     if(SCENE === "town" && !$("veilCave").hidden) openCave();   // 刷新洞窟弹层（谁是房主/队友到没到）
   }
 
-  NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || "连接失败"; });
+  NET.on("err", function(msg){ $("roomMsg").textContent = msg.why || T("连接失败"); });
   NET.on("joined", afterJoined);
   NET.on("resume", function(){
     renderTeamStatus(); teamHint(); coopUpdateWaitUi();
@@ -6654,7 +6742,7 @@ if(COOP){
         autoOn = true;
         if(b){ b.classList.add("on"); b.classList.remove("armed"); b.setAttribute("aria-pressed", "true"); }
         if(coopIsHost()) autoTick();
-        else say("寻路已同步 —— 两人一起走。", "sys");
+        else say(T("寻路已同步 —— 两人一起走。"), "sys");
       } else {
         coopMoveWant = false;
         autoOff();
@@ -6677,12 +6765,12 @@ if(COOP){
     if(coopIsHost() && wasBusy && !coopMateBusy && autoOn && !(walkPath && walkPath.length)) autoTick();
     if(SCENE === "run" && G && G.map) render();   // 地图还没铺好（等 world 中）就先别画，cells 可能还是空的
     if(B && B.mob) renderBattleBars();   // 战斗窗开着的话，自己血条上方那条队友血条也要跟着刷新
-    if(!wasDown && msg.down) say("队友倒下了 —— 清完这一层他会原地复活。", "hurt");
-    else if(wasDown && !msg.down) say("队友站起来了。", "good");
+    if(!wasDown && msg.down) say(T("队友倒下了 —— 清完这一层他会原地复活。"), "hurt");
+    else if(wasDown && !msg.down) say(T("队友站起来了。"), "good");
     coopCheckBothDown();
   });
   NET.on("used", function(msg){
-    if(SCENE === "run") say("队友用了" + (msg.what || "点什么") + "。", "sys");
+    if(SCENE === "run") say(T("队友用了") + (msg.what || T("点什么")) + T("。"), "sys");
   });
 
   /* ---- 主城「组队」板块 ---- */
@@ -6690,17 +6778,17 @@ if(COOP){
   $("btnTeamClose").addEventListener("click", function(){ $("veilTeam").hidden = true; });
   $("btnTeamCreate").addEventListener("click", function(){
     const code = randRoomCode();
-    coopMyName = "旅人";
-    $("roomMsg").textContent = "房间号 " + code + " —— 正在连接…";
+    coopMyName = T("旅人");
+    $("roomMsg").textContent = T("房间号 ") + code + T(" —— 正在连接…");
     NET.connect(code, coopMyName);
   });
   $("btnTeamJoin").addEventListener("click", function(){ showTeamPanel("teamJoinForm"); });
   $("btnTeamBack").addEventListener("click", function(){ showTeamPanel("teamPick"); });
   $("btnTeamJoinGo").addEventListener("click", function(){
     const code = $("roomCode").value.trim();
-    if(!code){ $("roomMsg").textContent = "先填个房间号。"; return; }
-    coopMyName = $("roomName").value.trim() || "旅人";
-    $("roomMsg").textContent = "连接中…";
+    if(!code){ $("roomMsg").textContent = T("先填个房间号。"); return; }
+    coopMyName = $("roomName").value.trim() || T("旅人");
+    $("roomMsg").textContent = T("连接中…");
     NET.connect(code, coopMyName);
   });
   $("btnTeamCopyLink").addEventListener("click", function(){
@@ -6708,13 +6796,13 @@ if(COOP){
     t.select();
     try{
       navigator.clipboard.writeText(t.value);
-      b.textContent = "已复制";
+      b.textContent = T("已复制");
     }catch(e){
       // 局域网 http:// 不是"安全上下文"，有的浏览器压根没有 navigator.clipboard ——
       // 已经帮你选中了，手动复制（跟设置页「复制导出码」那个按钮一个套路）
-      b.textContent = "已选中，手动复制";
+      b.textContent = T("已选中，手动复制");
     }
-    setTimeout(function(){ b.textContent = "复制邀请链接"; }, 1600);
+    setTimeout(function(){ b.textContent = T("复制邀请链接"); }, 1600);
   });
   $("btnTeamLeave").addEventListener("click", function(){
     NET.close();
@@ -6736,12 +6824,204 @@ if(COOP){
     try{ code = new URLSearchParams(location.search).get("room") || ""; }catch(e){}
     code = code.trim();
     if(!code) return;
-    coopMyName = "旅人";
+    coopMyName = T("旅人");
     openTeamPanel();
-    $("roomMsg").textContent = "邀请链接 —— 正在加入房间 " + code + "…";
+    $("roomMsg").textContent = T("邀请链接 —— 正在加入房间 ") + code + "…";
     NET.connect(code, coopMyName);
   })();
 }
+
+/* ================= 语言（2026-09-23，见 i18n.js）=================
+   母语 = 界面语言，学习语言 = 背哪门的词。能选的组合在 LANG_PAIRS 里（现在两种）。
+   换语言一律**写进 OPT 然后重载**：词库和静态文案都是加载时定死的，重载最干净。
+   ⚠️ 洞里不许换（续玩档里的词是按这一门语言记的，换了读档会对不上）—— 回镇上才能换。*/
+function pairFor(ui, learn){
+  for(let i = 0; i < LANG_PAIRS.length; i++){
+    const p = LANG_PAIRS[i];
+    if((ui == null || p.ui === ui) && (learn == null || p.learn === learn)) return p;
+  }
+  return null;
+}
+function setLang(pair){
+  if(!pair) return;
+  if(pair.ui === LANG_UI && pair.learn === LANG_LEARN && LANG_SET) return;
+  OPT.lang = {ui:pair.ui, learn:pair.learn};
+  saveOpt();
+  if(pair.ui !== LANG_UI || pair.learn !== LANG_LEARN){ try{ location.reload(); }catch(e){} }
+}
+function renderLangPanel(){
+  const box = $("langPanel");
+  if(!box) return;
+  Array.prototype.forEach.call(box.querySelectorAll("button[data-ui]"), function(b){
+    b.classList.toggle("on", b.dataset.ui === LANG_UI);
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("button[data-learn]"), function(b){
+    b.classList.toggle("on", b.dataset.learn === LANG_LEARN);
+  });
+}
+function langClick(ev){
+  const b = ev.target.closest ? ev.target.closest("button") : null;
+  if(!b) return;
+  if(SCENE === "run" && G && !G.over){ toast(L("先回镇上再换语言。", "Return to town before switching languages.")); return; }
+  const pair = b.dataset.ui ? pairFor(b.dataset.ui, null) : pairFor(null, b.dataset.learn);
+  setLang(pair);
+}
+/* 首次进入：先挑语言（双语写死在 HTML 里，那时候还不知道该用哪种）*/
+let langPick = {ui:LANG_UI, learn:LANG_LEARN};
+function renderLangPick(){
+  Array.prototype.forEach.call(document.querySelectorAll("#veilLang button[data-ui]"), function(b){
+    b.classList.toggle("on", b.dataset.ui === langPick.ui);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#veilLang button[data-learn]"), function(b){
+    b.classList.toggle("on", b.dataset.learn === langPick.learn);
+    b.disabled = !pairFor(langPick.ui, b.dataset.learn);
+  });
+}
+function openLangPick(){ renderLangPick(); $("veilLang").hidden = false; }
+function isFreshAccount(){
+  return !(MET.runs || 0) && !Object.keys(LEX).length && !(TOWN.gem || 0) && !Object.keys(CODEX).length;
+}
+
+/* ================= 新手教程（2026-09-23）=================
+   **一个账号一次**：走完（或点「放弃」跳过）就在 MET 上记 `tut:1`，跟着存档码 / 存档文件走。
+   老账号（更新之前就在玩的）直接记成走过，不打扰；设置页「别的」里能再走一遍。
+   教程关就是一趟特殊的探索（P.tut）：一间屋子、一堆金币、两只怪（第二只先考一道拼写），
+   清完挑一件遗物，踩上阶梯就结束。**不写续玩档、不结算、不记死亡**，读条也关掉。
+   提示走右上角那个小气泡（coach），按事件一步一步换字，点一下能收起。*/
+var tutPending = false;
+let tutStep = "", tutBattles = 0;
+function tutDone(){ return !!MET.tut; }
+function startTutorial(){
+  hideAll();
+  setChapter(1);
+  practiceOn = false; diffOn = DIFF_DEFAULT;
+  tutPending = true; tutStep = ""; tutBattles = 0; tutShown = {};
+  SCENE = "run"; showScene(); showView("viewAdv");
+  newRun();
+}
+function genTutorialFloor(){
+  const map = [], seen = [], vis = [];
+  for(let y=0;y<H;y++){
+    map.push(new Array(W).fill(0));
+    seen.push(new Array(W).fill(true));
+    vis.push(new Array(W).fill(true));
+  }
+  /* 一间 7×5 的屋子，按取景框（人居中、左右各 4 格）排：一进来金币和两只怪全都看得见 */
+  const w = 7, h = 5, x0 = Math.floor((W - w) / 2), y0 = Math.floor((H - h) / 2);
+  for(let j=y0;j<y0+h;j++) for(let i=x0;i<x0+w;i++) map[j][i] = 1;
+  G.map = map; G.seen = seen; G.vis = vis; G.mobs = []; G.things = [];
+  G.rooms = [{x:x0, y:y0, w:w, h:h}];
+  const my = y0 + 2;
+  P.x = x0 + 1; P.y = my;
+  G.things.push({x:x0 + 3, y:my, kind:"gold", amt:12});
+  G.mobs.push(makeFoe(FOES[0], x0 + 5, y0 + 1));
+  G.mobs.push(makeFoe(FOES[1], x0 + 5, y0 + 3));
+  G.stair = {x:x0 + 6, y:my};          // 清空前只是个占位，真阶梯开在最后一只怪倒下的地方
+}
+/* 题型排好：第一只怪英→中、中→英轮着来；第二只怪第一题是拼写 */
+function tutQuestionType(asked){
+  if(tutBattles >= 2 && asked === 1) return "spell";
+  return (asked % 2 === 1) ? "en2zh" : "zh2en";
+}
+const TUT_TEXT = {
+  walk:  ["欢迎来到幽墟回廊。<b>点地图上的格子</b>就能走过去 —— 先去捡那堆金币。",
+          "Welcome to the Youxu Corridors. <b>Tap a tile on the map</b> to walk there — first grab the pile of gold."],
+  gold:  ["金币能在路上的游商那儿换遗物。现在<b>走到那只老鼠身上</b>，开打。",
+          "Gold buys relics from merchants along the way. Now <b>walk into the rat</b> to fight it."],
+  fight: ["每一回合一道题：<b>答对你砍它一刀，答错它咬你一口</b>。选出这个词的意思。",
+          "Each round is one question: <b>answer right and you strike, wrong and it bites</b>. Pick what the word means."],
+  right: ["连着答对会<b>攒连击</b>，伤害跟着涨。很有把握时点<b>「冒险」</b>：对了伤害翻倍，错了挨打也翻倍。",
+          "Right answers in a row build your <b>combo</b> for more damage. When you're sure, tap <b>Risk</b>: double damage if right, double hurt if wrong."],
+  wrong: ["答错不要紧 —— 这个词记进<b>心魔</b>，过一会儿还会回来考你。答对就能赶走它。",
+          "Wrong is fine — the word becomes a <b>haunt</b> and comes back later. Get it right to banish it."],
+  kill:  ["打倒怪物拿<b>经验和金币</b>。把这一层的怪全清掉，阶梯才会出现 —— 还剩一只。",
+          "Monsters give <b>XP and gold</b>. Clear every monster and the stairs appear — one left."],
+  spell: ["有时候要你<b>自己把词拼出来</b>：按顺序点下面的字母。拼对了连击 +10、经验翻倍。",
+          "Sometimes you <b>build the word yourself</b>: tap the characters in order (pinyin is the hint). Get it right for combo +10 and double XP."],
+  clear: ["这一层清空了！清完一层可以<b>挑一件遗物</b> —— 这一趟变强全靠它们。",
+          "Floor cleared! Each cleared floor lets you <b>pick a relic</b> — relics are how you grow stronger."],
+  relic: ["阶梯 <b>▼</b> 出现在最后一只怪倒下的地方。<b>走上去</b>就完成教程。",
+          "The stairs <b>▼</b> appeared where the last monster fell. <b>Step on them</b> to finish the tutorial."],
+  done:  ["教程完成！回镇上点<b>「洞窟」</b>，选第一章正式下去。遗物和金币只在一趟里有用，带回镇上的是<b>宝石</b>。",
+          "Tutorial complete! In town, tap <b>Caves</b> and pick Chapter 1 to begin for real. Relics and gold last one run; what you bring home is <b>gems</b>."]
+};
+function coachEl(){
+  let el = $("coach");
+  if(el) return el;
+  el = document.createElement("div");
+  el.id = "coach"; el.className = "coach"; el.hidden = true;
+  el.innerHTML = "<p></p><button type=\"button\" class=\"btn primary\" hidden></button>";
+  el.addEventListener("click", function(ev){
+    if(ev.target.tagName === "BUTTON") return;
+    if(tutStep !== "done") el.hidden = true;       // 点一下收起（最后那一步必须点按钮）
+  });
+  document.body.appendChild(el);
+  return el;
+}
+function coach(key, btn, onBtn){
+  const el = coachEl(), t = TUT_TEXT[key];
+  if(!t) return;
+  tutStep = key;
+  el.querySelector("p").innerHTML = UI_EN ? t[1] : t[0];
+  const b = el.querySelector("button");
+  b.hidden = !btn;
+  if(btn){ b.textContent = btn; b.onclick = onBtn; }
+  el.hidden = false;
+}
+function coachOff(){ const el = $("coach"); if(el) el.hidden = true; }
+function tutBegin(){
+  say(L("—— 新手教程 ——", "— Tutorial —"), "crit");
+  coach("walk");
+}
+/* 按事件推进：每一条提示只出一次（先打第二只再回来捡钱也不会倒着冒出来）。*/
+let tutShown = {};
+function tutEvent(ev){
+  if(!P || !P.tut) return;
+  const once = function(k){ if(!tutShown[k]){ tutShown[k] = 1; coach(k); } };
+  if(ev === "gold"){ if(!tutShown.fight) once("gold"); }
+  else if(ev === "battle"){
+    tutBattles++;
+    once(tutBattles === 1 ? "fight" : "spell");
+  }
+  else if(ev === "right"){ if(tutBattles === 1) once("right"); }
+  else if(ev === "wrong"){ if(tutBattles === 1) once("wrong"); }
+  else if(ev === "kill") once("kill");
+  else if(ev === "clear") once("clear");
+  else if(ev === "relic") once("relic");
+}
+function tutFinish(skipped){
+  MET.tut = 1;
+  commitPerm();                          // 一个账号一次：马上落盘
+  if(skipped){ coachOff(); goTown(); return; }
+  G.paused = true;
+  coach("done", L("回到镇上", "Go to town"), function(){ coachOff(); goTown(); });
+}
+$("btnTutorial").addEventListener("click", function(){
+  if(SCENE === "run" && G && !G.over){ toast(L("先回镇上再重走教程。", "Return to town to replay the tutorial.")); return; }
+  startTutorial();
+});
+$("langPanel").addEventListener("click", langClick);
+$("veilLang").addEventListener("click", function(ev){
+  const b = ev.target.closest ? ev.target.closest("button") : null;
+  if(!b || b.disabled) return;
+  if(b.dataset.ui){
+    langPick.ui = b.dataset.ui;
+    if(!pairFor(langPick.ui, langPick.learn)) langPick.learn = pairFor(langPick.ui, null).learn;
+    renderLangPick();
+  } else if(b.dataset.learn){
+    langPick.learn = b.dataset.learn; renderLangPick();
+  } else if(b.id === "btnLangGo"){
+    const pair = pairFor(langPick.ui, langPick.learn);
+    if(!pair) return;
+    $("veilLang").hidden = true;
+    OPT.lang = {ui:pair.ui, learn:pair.learn};
+    saveOpt();
+    if(pair.ui !== LANG_UI || pair.learn !== LANG_LEARN){ location.reload(); return; }
+    if(!tutDone()) startTutorial();
+  }
+});
+renderLangPanel();
+if(COOP){ $("panelLang").hidden = true; $("btnTutorial").hidden = true; }   // 联机固定语言，也不走教程
 
 /* ================= 启动 =================
    打开就自动接着上次存下的那一层 —— 不问、不弹窗（单人版、联机版都一样，
@@ -6751,6 +7031,16 @@ renderLock();                      // 「锁定冒险」的开关状态存在 OP
   const s = readRun();
   if(s){ SCENE = "run"; showScene(); resumeRun(s); return; }
   goTown();
+  if(COOP) return;                 // 联机固定中文界面 + 学英语，也不走教程
+  if(!LANG_SET){
+    /* 第一次打开：新账号先挑语言（挑完才走教程）；老账号 = 更新之前就在玩的，
+       默认就是原来那一档，不打扰，教程也直接记成走过（设置里能再走一遍）。*/
+    if(isFreshAccount()){ openLangPick(); return; }
+    OPT.lang = {ui:LANG_UI, learn:LANG_LEARN};
+    saveOpt();
+    if(!tutDone()){ MET.tut = 1; commitPerm(); }
+  }
+  if(!tutDone()) startTutorial();
 })();
 refreshSaveState();
 })();

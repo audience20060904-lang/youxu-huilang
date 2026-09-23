@@ -1,0 +1,361 @@
+是|to be|ve
+有|to have|ve
+不|not|av
+人|person|pe
+说|to say|ve
+要|to want|ve
+好|good|ad
+一|one|nu
+会|can (know how)|ve
+对|correct|ad
+到|to arrive|ve
+来|to come|ve
+很|very|av
+去|to go|ve
+想|to think|ve
+给|to give|ve
+没有|not have|ve
+看|to look|ve
+做|to do|ve
+没|have not|av
+大|big|ad
+下|to go down|ve
+真|really|av
+现在|now|ti
+用|to use|ve
+多|many|ad
+两|two (of)|nu
+等|to wait|ve
+天|day|ti
+出|to go out|ve
+太|too (much)|av
+再|again|av
+小|small|ad
+知道|to know|ve
+时候|time (moment)|ti
+走|to walk|ve
+工作|job|th|n
+事|matter|th
+前|front|pl
+时间|time|ti
+爱|to love|fe|v
+喜欢|to like|fe|v
+吃|to eat|ve
+找|to look for|ve
+打|to hit|ve
+快|fast|ad
+今天|today|ti
+话|words (speech)|th
+觉得|to feel (think)|ve
+月|month|ti
+看到|to see|ve
+起来|to get up|ve
+一起|together|av
+起|to rise|ve
+几|how many|nu
+见|to meet|ve
+一些|some|nu
+找到|to find|ve
+手|hand|bo
+听|to listen|ve
+非常|extremely|av
+开|to open|ve
+叫|to call|ve
+孩子|child|pe
+请|please|ve
+回|to return|ve
+东西|thing (object)|th||dōngxi
+一样|the same|ad
+买|to buy|ve
+重要|important|ad
+问|to ask|ve
+告诉|to tell|ve||gàosu
+出来|to come out|ve
+地方|place|pl
+最后|finally|av
+老|old|ad
+放|to put|ve
+朋友|friend|pe
+住|to live|ve
+先|first|av
+得到|to get|ve
+准备|to prepare|ve
+进|to enter|ve
+写|to write|ve
+国家|country|pl
+电话|telephone|th
+女|female|ad
+送|to send|ve
+分|minute|ti
+女人|woman|pe
+小时|hour|ti
+站|to stand|ve
+男人|man|pe
+正在|in the middle of|av
+喝|to drink|ve
+穿|to wear|ve
+学校|school|pl
+早|early|ad
+认识|to know (someone)|ve
+睡|to sleep|ve
+明天|tomorrow|ti
+回来|to come back|ve
+四|four|nu
+外|outside|pl
+晚上|evening|ti
+球|ball|th
+谢谢|thank you|fe|v
+学|to learn|ve
+第二|second|nu
+妈妈|mom|pe
+少|few|ad
+难|difficult|ad
+电影|movie|th
+跑|to run|ve
+回家|to go home|ve
+昨天|yesterday|ti
+晚|late|ad
+五|five|nu
+先生|Mr. / sir|pe
+男|male|ad
+动|to move|ve
+医院|hospital|pl
+远|far|ad
+口|mouth|bo
+学生|student|pe
+二|two|nu
+儿子|son|pe
+明白|to understand|ve
+记得|to remember|ve
+歌|song|th
+半|half|nu
+中国|China|pl
+身体|body|bo
+电视|television|th
+飞|to fly|ve
+介绍|to introduce|ve
+下午|afternoon|ti
+出去|to go out (there)|ve
+学习|to study|ve
+老师|teacher|pe
+六|six|nu
+唱|to sing|ve
+大学|university|pl||dàxué
+病|illness|th
+医生|doctor|pe
+名字|name|th
+马上|at once|av
+今年|this year|ti
+手机|mobile phone|th
+忙|busy|ad
+十|ten|nu
+看见|to catch sight of|ve
+听到|to hear|ve
+女儿|daughter|pe
+说话|to speak|ve
+汽车|car|th
+爸爸|dad|pe
+字|character (word)|th
+高兴|happy|fe
+去年|last year|ti
+热|hot|ad
+试|to try|ve
+睡觉|to go to bed|ve
+电脑|computer|th
+票|ticket|th
+床|bed|th
+差|poor (bad quality)|ad||chà
+家里|at home|pl
+忘|to forget|ve
+认真|serious (earnest)|ad
+电|electricity|na
+房子|house|pl
+飞机|airplane|th
+早上|early morning|ti
+回答|to answer|ve
+记|to note down|ve
+风|wind|na
+累|tired|ad||lèi
+打开|to open up|ve
+病人|patient|pe
+肉|meat|fo
+打电话|to make a phone call|ve
+休息|to rest|ve
+坏|bad|ad
+洗|to wash|ve
+房间|room|pl
+八|eight|nu
+吃饭|to have a meal|ve
+动作|movement|th
+七|seven|nu
+菜|dish (food)|fo
+衣服|clothes|th
+饿|hungry|ad
+树|tree|na
+右|right (side)|pl
+上班|to go to work|ve
+生日|birthday|ti
+姐姐|older sister|pe
+课|class (lesson)|th
+饭|cooked rice|fo
+家人|family member|pe
+有时候|sometimes|av
+小姐|miss (young lady)|pe
+对不起|sorry|fe|v
+哥哥|older brother|pe
+路上|on the way|pl
+天气|weather|na
+最好|had better|av
+考试|exam|th|n
+慢|slow|ad
+旁边|beside|pl
+同学|classmate|pe
+北|north|pl
+帮忙|to help out|ve
+进来|to come in|ve
+见面|to meet up|ve
+好看|good-looking|ad
+中间|middle|pl
+女生|girl (student)|pe
+茶|tea|fo
+雨|rain|na
+星期|week|ti
+妹妹|younger sister|pe
+生气|angry|fe
+地上|on the ground|pl
+上午|morning|ti
+一会儿|a little while|ti|n|yíhuìr
+贵|expensive|ad
+下次|next time|ti
+知识|knowledge|th
+机场|airport|pl
+老人|old person|pe
+工人|worker|pe
+弟弟|younger brother|pe
+干净|clean|ad
+网上|online|pl
+好吃|tasty|ad
+明年|next year|ti
+再见|goodbye|ve
+不对|wrong|ad
+中午|noon|ti
+起床|to get out of bed|ve
+开车|to drive|ve
+门口|doorway|pl
+常常|often|av
+男生|boy (student)|pe
+火车|train|th
+奶奶|grandma|pe
+唱歌|to sing a song|ve
+右边|right side|pl
+上学|to go to school|ve
+牛奶|milk|fo
+女朋友|girlfriend|pe
+上课|to attend class|ve
+爷爷|grandpa|pe
+新年|New Year|ti
+男朋友|boyfriend|pe
+下班|to get off work|ve
+水果|fruit|fo
+读书|to read (study)|ve
+商店|shop|pl
+鸡蛋|egg|fo
+没关系|it doesn't matter|ve
+地图|map|th
+坐下|to sit down|ve
+零|zero|nu
+桌子|table|th
+白天|daytime|ti
+请问|excuse me, …?|ve
+晚饭|dinner|fo
+小学|primary school|pl
+图书馆|library|pl
+开玩笑|to joke|ve
+国外|abroad|pl
+日期|date|ti
+饭店|restaurant|pl
+中学|middle school|pl
+上网|to go online|ve
+商场|shopping mall|pl
+楼下|downstairs|pl
+面包|bread|fo
+外国|foreign country|pl
+生病|to fall ill|ve
+好听|nice-sounding|ad
+开会|to have a meeting|ve
+钱包|wallet|th
+大学生|college student|pe
+车站|station|pl
+走路|to walk (on foot)|ve
+小朋友|little kid|pe
+左边|left side|pl
+北京|Beijing|pl
+有用|useful|ad
+爱好|hobby|fe|n
+午饭|lunch|fo
+上车|to get on (a vehicle)|ve
+马路|road|pl
+机票|plane ticket|th
+楼上|upstairs|pl
+打球|to play ball|ve
+下雨|to rain|ve
+下车|to get off (a vehicle)|ve
+杯子|cup|th
+放假|to have a holiday|ve
+路口|intersection|pl
+有名|famous|ad
+中文|Chinese (language)|th
+电视机|TV set|th
+早饭|breakfast|fo
+一点儿|a little|nu||yìdiǎnr
+书店|bookstore|pl
+放学|school is over|ve
+关上|to close|ve
+玩儿|to play|ve
+星期天|Sunday|ti||xīngqītiān
+车票|bus/train ticket|th
+看病|to see a doctor|ve
+电影院|cinema|pl
+前天|day before yesterday|ti
+后天|day after tomorrow|ti
+渴|thirsty|ad
+洗手间|restroom|pl
+下课|class is over|ve
+请假|to ask for leave|ve
+米饭|rice (cooked)|fo
+里边|inside|pl
+外语|foreign language|th
+书包|schoolbag|th
+外边|outside (there)|pl
+中学生|middle-school student|pe
+本子|notebook|th
+课本|textbook|th
+汉语|Chinese language|th
+后边|behind|pl
+西边|west side|pl
+上边|above|pl
+打车|to take a taxi|ve
+东边|east side|pl
+包子|steamed bun|fo
+南边|south side|pl
+北边|north side|pl
+下边|below|pl
+汉字|Chinese character|th
+好玩儿|fun|ad
+前边|in front|pl
+教学楼|classroom building|pl
+网友|online friend|pe
+课文|text (lesson)|th
+听写|dictation|ve
+猫|cat|an
+狗|dog|an
+鸟|bird|an||niǎo
+鱼|fish|an
+马|horse|an
+牛|cow|an
+红色|red|co|n
+白色|white|co|n
+黑色|black|co|n
+蓝色|blue|co|n
+绿色|green|co|n
+黄色|yellow|co|n

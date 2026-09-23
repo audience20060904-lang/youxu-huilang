@@ -1,0 +1,579 @@
+搞|to do (get done)|ve
+唯一|sole|ad
+肯定|definitely|av
+杀|to kill|ve
+控制|to control|ve
+组织|organization|th
+拥有|to own|ve
+再次|once again|av
+放弃|to give up|ve
+秒|second (time)|ti
+陪|to accompany|ve
+居然|to one's surprise|av
+客户|client|pe
+分析|to analyze|ve
+享受|to enjoy|fe|v
+关键|key (crucial)|ad
+冠军|champion|pe
+抢|to snatch|ve
+傻|foolish|ad
+待|to stay|ve||dāi
+恢复|to recover|ve
+棒|excellent (great)|ad
+意识|consciousness|th
+执行|to execute|ve
+分享|to share|ve
+女性|female sex|pe
+讨厌|to dislike|fe|v
+人物|figure (character)|pe
+拒绝|to refuse|ve
+疯|crazy|ad
+呆|dull (blank)|ad
+鬼|ghost|th
+协议|agreement|th
+竞争|to compete (rival)|ve
+估计|to estimate|ve
+意味着|to signify|ve
+俱乐部|club|pl
+建筑|architecture|pl
+丢|to lose (misplace)|ve
+疯狂|insane|ad
+舞|dance|th
+邀请|to invite|ve
+拍摄|to shoot (film)|ve
+区域|area|pl
+恨|to hate|fe|v
+难以|hard to|av
+偷|to steal|ve
+展示|to exhibit|ve
+基地|base|pl
+掌握|to master|ve
+记忆|memory|th
+剩下|to remain (be left)|ve
+吓|to frighten|ve||xià
+社区|community|pl
+手段|means|th
+接触|to contact|ve
+聪明|clever|ad
+皮肤|skin|bo
+厉害|formidable|ad
+尊重|to respect|ve
+损失|loss|th
+骗|to deceive|ve
+可怜|pitiful|ad
+毒|poison|th
+吐|to spit|ve
+中央|central|pl
+启动|to start up|ve
+年龄|age (years)|th
+可惜|what a pity|fe
+滚|to roll|ve
+回忆|to recollect|ve
+逃|to flee|ve
+打击|to strike|ve
+熟悉|familiar|ad
+撞|to collide|ve
+好运|good luck|th
+欠|to owe|ve
+集团|group (corporation)|pl
+猜|to guess|ve
+视频|video|th
+真相|truth (facts)|th
+暂时|temporarily|av
+洞|hole (cave)|na
+病毒|virus|th
+尝试|to attempt|ve
+仔细|careful (meticulous)|ad
+命令|order (command)|th|n
+欣赏|to appreciate|ve
+神经|nerve|bo
+高度|height (altitude)|th
+碎|broken (to pieces)|ad
+一辈子|a lifetime|ti
+全世界|the whole world|pl
+说法|wording (version)|th
+评论|comment|th|n
+物质|matter (substance)|th
+躲|to hide|ve
+烂|rotten|ad
+尤其|especially (particularly)|av
+醉|drunk|ad
+扔|to toss|ve
+时光|time (days)|ti
+博士|doctor (PhD)|pe
+浪漫|romantic|ad
+道德|morality|th
+编辑|editor|pe
+私人|private|ad
+辛苦|hard (toilsome)|ad
+一路|all the way|av
+剩|to be left over|ve
+拼|to piece together|ve
+硬|hard|ad
+毕竟|after all (in the end)|av
+恋爱|to be in love|fe|v
+歌曲|song (tune)|th
+模式|mode|th
+试图|to try to|ve
+玻璃|glass|th
+咬|to bite|ve
+贷款|loan|th
+缺乏|to be lacking|ve
+瘦|thin (slim)|ad
+锁|lock|th
+骂|to scold|ve
+稍|slightly|av
+达成|to reach (an agreement)|ve
+鼓励|to encourage|ve
+蛋糕|cake|fo
+后悔|to regret|fe|v
+突破|breakthrough|th|n
+发布|to release|ve
+忍|to bear (tolerate)|ve
+回头|to turn one's head|ve
+主管|supervisor|pe
+奖励|reward|th|n
+不幸|unfortunate|ad
+能量|energy|na
+矛盾|contradiction|th
+到来|arrival|th|n
+清理|to clear up|ve
+自杀|suicide|ve
+负责人|person in charge|pe
+插|to insert|ve
+详细|detailed|ad
+线索|clue|th
+臭|smelly|ad
+违法|illegal|ad
+堆|pile|th
+男性|male sex|pe
+收集|to collect|ve
+频道|channel|th
+当年|in those years|ti
+不足|insufficient|ad
+警告|to warn|ve
+报警|to call the police|ve
+业务|business (work)|th
+驾驶|to drive (pilot)|ve
+出版|to publish (print)|ve
+神奇|magical|ad
+诊断|to diagnose|ve
+发射|to launch|ve
+脑子|brain (mind)|bo
+代价|cost (price paid)|th
+局长|bureau chief|pe
+挤|to squeeze|ve
+瞧|to look at|ve
+搜索|to search|ve
+胃|stomach|bo
+厨房|kitchen|pl
+注册|to register (sign up)|ve
+回报|to repay|ve
+展现|to unfold|ve
+评估|to assess|ve
+环节|link (segment)|th
+餐厅|dining hall|pl
+违反|to violate|ve
+活力|vitality|th
+软|soft|ad
+签名|signature|th|n
+摄影|photography|th
+今日|this day|ti
+偶像|idol|pe
+挡|to block|ve
+尝|to taste|ve
+冲突|conflict|th
+敏感|sensitive|ad
+提示|to prompt|ve
+摔|to fall (tumble)|ve
+沟通|to communicate (connect)|ve
+收拾|to put in order|ve
+乘客|passenger|pe
+艰难|arduous|ad
+专辑|album|th
+绕|to go around|ve
+喷|to spray|ve
+抱怨|to complain (grumble)|ve
+卫星|satellite|na
+动手|to get to work|ve
+靠近|to draw near|ve
+邻居|neighbor|pe
+污染|pollution|na
+罚|to punish|ve
+时机|opportune moment|ti
+糟糕|terrible|ad
+渴望|to long for|fe|v
+连接|to link|ve
+拆|to tear down|ve
+耳朵|ear|bo
+画面|image (on screen)|th
+饮料|beverage|fo
+扮演|to play (a role)|ve
+大脑|brain|bo
+鼻子|nose|bo
+资产|assets|th
+祝贺|to congratulate|ve
+运行|to run (operate)|ve
+期望|expectation|fe|n
+询问|to inquire (ask about)|ve
+补偿|to compensate|ve
+软件|software|th
+严肃|solemn|ad
+肌肉|muscle|bo
+随后|soon after|av
+安慰|to comfort|fe|v
+抬|to lift|ve
+检验|to inspect|ve
+排除|to exclude|ve
+加速|to accelerate|ve
+解放|to liberate|ve
+拥抱|to embrace|ve
+悲剧|tragedy|th
+太空|outer space|na
+夹|to clip|ve
+指示|instruction|th|n
+双手|both hands|bo
+偶尔|occasionally|av
+悲伤|sorrowful|fe
+劝|to advise (urge)|ve
+顾问|consultant|pe
+助理|assistant|pe
+利润|profit|th
+珍惜|to treasure|ve
+消除|to eliminate|ve
+随意|casual|ad
+友谊|friendship|th
+拔|to pull out|ve
+装饰|to decorate (adorn)|ve
+锅|pot (wok)|th
+大厅|lobby|pl
+耐心|patience|fe|n
+冲动|impulsive|fe
+公正|just (fair)|ad
+冻|to freeze|ve
+辞职|to resign|ve
+遵守|to abide by|ve
+建造|to construct|ve
+戒|to give up (quit)|ve
+思维|thinking|th
+规划|to plan (program)|ve
+饼|flatbread|fo
+地震|earthquake|na
+震惊|to shock|fe|v
+赔偿|compensation|th|n
+返回|to go back|ve
+过度|excessive (over-)|ad
+群众|the masses|pe
+按摩|massage|th|n
+电池|battery|th
+敲|to knock|ve
+脾气|temper|th
+涨|to rise (prices)|ve
+宿舍|dormitory|pl
+乡村|rural area|pl
+蔬菜|vegetables|fo
+贸易|trade|th
+子弹|bullet|th
+染|to dye|ve
+博物馆|museum|pl
+码头|dock (pier)|pl
+总裁|CEO|pe
+超越|to surpass|ve
+用户|user|pe
+正义|justice|th
+立场|standpoint|th
+火灾|fire (disaster)|na
+不利|unfavorable|ad
+漏|to leak|ve
+稍微|a little bit|av
+场面|scene (spectacle)|th
+一下子|all of a sudden|av
+目光|gaze|th
+伸|to stretch|ve
+有力|forceful|ad
+技能|skill|th
+动机|motive|th
+情节|plot|th
+打扮|to dress up|ve
+天才|genius|pe
+绝望|despair|fe|n
+迷人|charming|ad
+职位|post (job)|th
+骗子|swindler|pe
+裁判|referee|pe
+剧本|script|th
+干脆|simply (just go ahead)|av
+干扰|to interfere|ve
+增强|to enhance|ve
+握|to grip|ve
+忍受|to endure|ve
+扶|to support (hold up)|ve
+漫画|comic|th
+真诚|sincere|ad
+继承|to inherit|ve
+暂停|to pause|ve
+大胆|bold|ad
+改革|reform|th|n
+偷偷|stealthily|av
+卧室|bedroom|pl
+众多|numerous|ad
+失误|slip (error)|th|n
+尊敬|to revere|ve
+依旧|as usual|av
+包装|packaging|th|n
+强迫|to force|ve
+回顾|to look back|ve
+肩|shoulder|bo
+模仿|to imitate|ve
+前提|premise|th
+自豪|proud|fe
+福利|welfare|th
+成本|cost (production)|th
+闯|to rush in|ve
+睡眠|sleep|th
+困扰|to trouble|ve
+优先|priority|th
+减轻|to lighten|ve
+劳动|labor|th|n
+献|to offer (dedicate)|ve
+意志|will (willpower)|th
+坚定|firm (resolute)|ad
+灾难|catastrophe|na
+打扰|to disturb|ve
+幽默|humorous|ad
+军人|serviceman|pe
+修复|to restore|ve
+机器人|robot|th
+竞赛|competition|th
+逃跑|to run away|ve
+自愿|voluntary|ad
+师傅|master (craftsman)|pe
+原始|primitive|ad
+总算|finally (at long last)|av
+钢琴|piano|th
+传递|to transmit|ve
+转换|to convert|ve
+逻辑|logic|th
+脸色|complexion|bo
+宾馆|guesthouse|pl
+保卫|to defend|ve
+眼光|vision (eye)|th
+一流|first-class|ad
+光荣|glory|th|n
+象征|symbol|th|n
+射击|to shoot (fire)|ve
+客气|polite|ad
+犹豫|to hesitate|ve
+中毒|to be poisoned|ve
+早期|early stage|ti
+难得|rare (hard to come by)|ad
+深处|depths|pl
+损害|to damage|ve
+珍贵|valuable|ad
+赔|to pay back (lose money)|ve
+摘|to pick (pluck)|ve
+学者|scholar|pe
+古老|ancient|ad
+摄影师|photographer|pe
+四周|all around|pl
+休闲|leisure|th
+等级|rank (grade)|th
+签字|to sign (one's name)|ve
+戏剧|drama|th
+包围|to surround|ve
+隔壁|next door|pl
+偶然|by chance|av
+模糊|blurry|ad
+信念|belief|th
+差别|disparity|th
+更新|to update|ve
+当场|on the spot|av
+餐馆|eatery|pl
+打架|to fight|ve
+助手|helper|pe
+键|key (on keyboard)|th
+闲|idle|ad
+真理|truth (principle)|th
+典礼|ceremony|th
+放大|to enlarge|ve
+乘坐|to ride|ve
+过敏|allergy|th|n
+上级|superior (boss)|pe
+例外|exception|th
+土豆|potato|fo
+示范|to demonstrate|ve
+严厉|stern|ad
+展览|exhibition|th|n
+处罚|penalty|th|n
+行驶|to travel (vehicle)|ve
+客厅|living room|pl
+饮食|diet|fo
+脚步|footstep|th
+流动|to flow (circulate)|ve
+漫长|very long|ad
+喜剧|comedy|th
+群体|group (community)|pe
+胆|courage (gall)|fe|n
+共享|to share (jointly)|ve
+乡|township|pl
+愁|to worry (be sad)|fe|v
+发觉|to realize|ve
+回收|to recycle|ve
+沙漠|desert|na
+存款|savings|th
+面子|face (reputation)|th
+披|to drape|ve
+博客|blog|th
+停留|to stay (linger)|ve
+边境|border|pl
+学位|degree (academic)|th
+岁月|years|ti
+占领|to occupy|ve
+紫|purple|co
+肠|intestine|bo
+指甲|fingernail|bo
+体力|stamina|th
+气体|gas|na
+服从|to obey|ve
+洒|to sprinkle|ve
+夜间|nighttime|ti
+等候|to wait for|ve
+盒子|box|th
+彩票|lottery ticket|th
+桃|peach|fo
+广泛|wide-ranging|ad
+悄悄|quietly|av
+差距|gap|th
+证书|certificate|th
+慌|flustered|fe
+饼干|biscuit|fo
+葡萄|grape|fo
+胡子|beard|bo
+西装|suit (Western)|th
+优惠|discount|th|n
+抬头|to raise one's head|ve
+跟随|to follow|ve
+分类|to classify|ve
+充足|adequate|ad
+艰苦|harsh|ad
+抢救|to rescue|ve
+热门|in vogue|ad
+终点|finish line|pl
+拜访|to pay a visit|ve
+鼓掌|to applaud|ve
+频繁|frequent|ad
+礼拜|week (worship)|ti
+葡萄酒|wine|fo
+误解|to misunderstand|ve
+罚款|fine (penalty)|th|n
+摇头|to shake one's head|ve
+点燃|to light|ve
+歇|to take a rest|ve
+心态|mindset|th
+清晨|dawn|ti
+消毒|to disinfect|ve
+光线|light ray|na
+出差|to go on a business trip|ve
+泉|spring (water)|na
+查询|to look up|ve
+气象|weather (meteorology)|na
+铃声|ringtone|th
+值班|to be on duty|ve
+递|to hand over (pass)|ve
+珍珠|pearl|na
+不停|nonstop|av
+月球|the moon (science)|na
+挣钱|to earn money|ve
+温和|mild|ad
+远处|distance (far place)|pl
+有毒|poisonous|ad
+牛仔裤|jeans|th
+墙壁|wall|pl
+斜|slanting|ad
+有害|harmful|ad
+梨|pear|fo
+郊区|suburbs|pl
+进化|to evolve|ve
+高跟鞋|high heels|th
+为难|awkward|fe
+上涨|to go up (prices)|ve
+消极|negative|ad
+摔倒|to fall down|ve
+活泼|lively (vivacious)|ad
+诗歌|poetry|th
+热量|heat|na
+签证|visa|th
+亏|to lose (deficit)|ve
+口号|slogan|th
+键盘|keyboard|th
+繁荣|prosperous|ad
+长度|length|nu|n
+煤|coal|na
+背包|backpack|th
+高大|tall and big|ad
+草原|grassland|na
+无奈|helpless|ad
+煤气|coal gas|na
+印刷|to print (press)|ve
+舍不得|to hate to part with|fe|v
+台风|typhoon|na
+敲门|to knock on a door|ve
+窗帘|curtain|th
+领带|necktie|th
+摩托|motorcycle|th
+烤肉|barbecue|fo
+天然气|natural gas|na
+明亮|well-lit|ad
+剪刀|scissors|th
+迷信|superstition|th
+水库|reservoir|pl
+火腿|ham|fo
+游泳池|swimming pool|pl
+驾照|driver's license|th
+山区|mountain area|pl
+平原|plain|na
+西红柿|tomato|fo
+勤奋|diligent|ad
+皮鞋|leather shoes|th
+柜子|cabinet|th
+亚军|runner-up|pe
+香肠|sausage|fo
+火柴|match (for fire)|th
+南极|South Pole|pl
+高原|plateau|na
+丰收|bumper harvest|th
+胆小|timid|fe
+北极|North Pole|pl
+除夕|New Year's Eve|ti||chúxī
+不耐烦|impatient|fe
+白酒|baijiu (liquor)|fo
+快活|merry|fe
+心疼|to feel sorry for|fe|v
+化石|fossil|na
+书法|calligraphy|th
+鲜艳|bright-colored|co
+竹子|bamboo|na
+晴朗|clear (sunny)|na|a
+羽毛球|badminton|th
+书桌|desk|th
+桃花|peach blossom|na
+元旦|New Year's Day|ti||yuándàn
+钢笔|fountain pen|th
+鼠标|mouse (computer)|th
+大熊猫|giant panda|an
+成语|idiom|th
+烤鸭|roast duck|fo
+月饼|mooncake|fo
+羽绒服|down jacket|th
+毛笔|writing brush|th
+中秋节|Mid-Autumn Festival|ti||zhōngqiūjié
+鼠|mouse (animal)|an
+虎|tiger (formal)|an
+狼|wolf|an
+熊|bear|an
+鲸鱼|whale|an
+狐狸|fox|an
+粉红|rosy pink|co
+雪白|snow-white|co
+金黄|golden yellow|co
+碧绿|emerald green|co

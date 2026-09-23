@@ -1027,3 +1027,37 @@ a.place{text-decoration:none}
   .veil:not([hidden]), .veil:not([hidden]) > .sheet{animation:none}
   .veil.ghost{display:none !important}
 }
+
+/* ===== 多语言 / 学中文 / 新手教程（2026-09-23）===== */
+/* 拼音：跟汉字一起出现的地方都挂一个 .py（题面、答完的释义、图鉴、结算的词） */
+.py{font-family:var(--mono);font-style:normal;font-weight:400;color:var(--frost);letter-spacing:.02em}
+.qword .py{display:block;font-size:clamp(11px,1.8vh,14px);line-height:1.1}
+.cx .cn .py{font-size:12px}
+.verdict .mean{font-size:13.5px}
+/* 汉字题面 / 选项 / 字键 / 字格：换成正文字体，字号稍大（等宽字体里的汉字又窄又虚） */
+/* ⚠️ 汉字 + 拼音两行加起来只比英文单词那一行高 13px 左右 —— 390×667 上战斗窗就剩这么点富余，别再放大 */
+.qword.zh{font-family:var(--body);font-size:clamp(22px,4vh,32px);letter-spacing:.06em;line-height:1.05}
+.opt.zh{font-size:clamp(17px,2.6vh,21px)}
+.lbtn.zh{font-family:var(--body);font-size:clamp(19px,3.2vh,25px)}
+.spellrow.zh .sbox{font-family:var(--body);width:clamp(34px,6vh,46px)}
+
+/* 设置页的语言、首次进入的语言选择 */
+.langset{display:flex;flex-direction:column;gap:8px}
+.langrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.langrow .lk{width:56px;flex:none;font-size:12.5px;color:var(--dim)}
+.lk2{font-size:12.5px;color:var(--dim);margin-top:4px}
+.lchip{font-family:var(--body);font-size:13.5px;padding:7px 14px;border-radius:2px;cursor:pointer;
+  background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);min-width:86px}
+.lchip.on{background:var(--torch);border-color:var(--torch-deep);color:#FFF8E8;font-weight:600}
+.lchip:disabled{opacity:.4;cursor:default}
+
+/* 教程的小气泡：钉在屏幕顶上，压过所有弹层（战斗窗里也要看得见）。点一下收起。 */
+.coach{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);
+  width:min(calc(100% - 24px),420px);z-index:70;background:#FFFBF0;border:1px solid var(--torch-deep);
+  border-left:4px solid var(--torch);border-radius:3px;padding:9px 12px;
+  box-shadow:0 6px 18px rgba(60,40,10,.18);font-size:13.5px;line-height:1.45;color:var(--bone);cursor:pointer}
+.coach p{margin:0}
+.coach .btn{margin-top:8px;width:100%}
+.coach:not([hidden]){animation:coachIn .22s ease-out}
+@keyframes coachIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.coach:not([hidden]){animation:none}}

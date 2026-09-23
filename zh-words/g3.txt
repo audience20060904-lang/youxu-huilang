@@ -1,0 +1,615 @@
+需要|to need|ve
+开始|to begin|ve
+死|to die|ve
+种|kind (type)|th||zhǒng
+希望|to hope|fe|v
+发生|to happen|ve
+世界|world|pl
+情况|situation|th
+比赛|match (contest)|th
+继续|to continue|ve
+心|heart|bo
+关系|relationship|th
+决定|to decide|ve
+其实|actually|av
+当然|of course|av
+消息|news (message)|th
+表现|to perform (show)|ve
+解决|to solve|ve
+成功|success|th|n|chénggōng
+结束|to end|ve
+调查|to investigate|ve
+方式|manner|th
+美元|US dollar|th||měiyuán
+处理|to deal with|ve
+能力|ability|th
+保护|to protect|ve
+支持|to support|ve
+注意|to pay attention|ve
+活|alive|ad
+拍|to pat (to film)|ve
+整个|entire|ad
+保证|to guarantee|ve
+根本|at all|av
+城市|city (town)|pl
+目前|at present|ti
+游戏|game|th
+比较|comparatively|av
+存在|to exist|ve
+终于|at last|av
+现场|scene (on site)|pl
+个人|individual|pe
+总是|always|av
+指|to point at|ve
+精神|spirit|th
+保持|to maintain|ve
+代表|representative|pe
+突然|sudden|ad
+里面|interior|pl
+确定|to confirm|ve
+目标|goal|th
+任务|task|th
+容易|easy|ad
+合作|to cooperate|ve
+人员|staff|pe
+报告|report|th|n
+生命|life (living)|th
+明显|obvious|ad
+伤|wound|bo
+曾经|once (formerly)|av
+简单|simple|ad
+血|blood|bo
+到底|after all|av
+绝对|absolutely|av
+坚持|to persist|ve
+好好|properly|av
+技术|technology|th
+设计|to design|ve
+利用|to utilize|ve
+建议|suggestion|th|n
+抓|to grab|ve
+光|light|na
+意义|significance|th
+父亲|father|pe
+社会|society|th
+证明|to prove|ve
+记者|journalist|pe
+确实|indeed|av
+发展|to develop|ve
+至少|at least|av
+负责|to be in charge|ve
+首先|first of all|av
+交易|deal (trade)|th
+理解|to comprehend|ve
+报道|to report (news)|ve
+父母|parents|pe
+安排|to arrange|ve
+力量|strength|th
+敢|to dare|ve
+造成|to cause|ve
+人生|life (human)|th
+会议|meeting|th
+幸福|happiness|fe|n
+自然|natural|ad
+责任|responsibility|th
+失去|to lose|ve
+赢|to win|ve
+人民|the people|pe
+面对|to face|ve
+事件|incident|th
+压力|pressure|th
+结婚|to marry|ve
+母亲|mother|pe
+同意|to agree|ve
+训练|to train|ve
+部门|department|pl
+过程|process|th
+选手|contestant|pe
+仍然|still|av
+显示|to display|ve
+属于|to belong to|ve
+值得|to be worth|ve
+人类|mankind|pe
+经历|experience (lived)|th|n
+紧张|nervous|fe
+事实|fact|th
+本来|originally (at first)|av
+基本|basic|ad
+专家|expert|pe
+跳|to jump|ve
+久|long (time)|ad
+反应|reaction|th
+地区|region|pl
+关注|to follow closely|ve
+表演|performance|th|n
+警察|police officer|pe
+价值|value|th
+相当|quite (fairly)|av
+困难|difficulty|th|n
+专业|major (specialty)|th
+规定|rule|th|n
+产生|to produce|ve
+对方|the other side|pe
+状态|state (condition)|th
+环境|environment|na
+建立|to establish|ve
+更加|all the more|av
+市场|market|pl
+必要|necessary|ad
+危险|dangerous|ad
+管理|to manage|ve
+乱|messy|ad
+适合|to fit|ve
+正式|formal|ad
+从来|always (ever)|av
+实际上|in fact|av
+达到|to reach|ve
+现实|reality|th
+不断|continuously|av
+媒体|media|th
+内容|content|th
+上面|on top|pl
+痛|painful|fe
+感情|emotion|fe|n
+观众|audience|pe
+变化|change|th|n
+美丽|beautiful|ad
+追|to chase|ve||zhuī
+经验|experience (skill)|th
+集中|to concentrate|ve
+破|broken|ad
+理由|excuse (reason)|th
+感受|to feel (experience)|fe|v
+完美|perfect|ad
+传|to pass on|ve
+真实|true|ad
+后面|at the back|pl
+错误|mistake|th|n
+记录|record|th|n
+标准|standard|th|n
+职业|profession|th
+精彩|wonderful|ad
+范围|scope|th
+事业|career|th
+痛苦|suffering|fe|n
+速度|speed|th
+文件|document|th
+空|empty|ad||kōng
+显然|evidently|av
+左右|about (approximately)|nu
+外面|outside (out there)|pl
+效果|result (effect)|th
+经济|economy|th
+按照|according to|av
+有效|effective|ad
+反对|to oppose|ve
+作品|work (of art)|th
+时代|era|ti||shídài
+伟大|great|ad
+输|to lose (a game)|ve
+充满|to be full of|ve
+增加|to increase|ve
+成员|member|pe
+保险|insurance|th
+年代|decade|ti
+领导|leader|pe
+胜利|victory|th
+受伤|to be injured|ve
+程度|degree (extent)|th
+下面|underneath|pl
+理论|theory|th
+宣布|to announce|ve
+姑娘|girl (young woman)|pe
+创造|to create|ve
+艺术|art|th
+麻烦|trouble|th|n
+事故|accident|th
+美好|fine (happy)|ad
+抓住|to seize|ve
+武器|weapon|th
+思想|thought|th
+破坏|to destroy|ve
+消失|to disappear|ve
+害怕|to be afraid|fe|v
+满足|to satisfy|ve
+等待|to await|ve
+演出|show (perform)|th|n
+超级|super|ad
+设备|equipment|th
+世纪|century|ti
+制造|to manufacture|ve
+紧|tight|ad
+对手|opponent|pe
+不得不|have no choice but|av
+当地|local|pl
+大概|probably|av
+共同|common (shared)|ad
+杂志|magazine|th
+停止|to cease|ve
+文化|culture|th
+具体|specific|ad
+演员|actor|pe
+周围|surroundings|pl
+奇怪|strange|ad
+复杂|complicated|ad
+表达|to express|ve
+慢慢|slowly|av
+压|to press|ve
+队员|team member|pe
+足够|sufficient|ad
+咖啡|coffee|fo
+意外|unexpected|ad
+风险|risk|th
+时刻|moment|ti
+断|to break|ve
+观察|to observe|ve
+千万|be sure to|av
+接近|to approach|ve
+重大|major|ad
+持续|to last|ve
+和平|peace|th||hépíng
+发表|to publish|ve
+价格|price|th
+旧|old (used)|ad
+前面|ahead|pl
+简直|simply (just)|av
+退|to retreat|ve
+强大|powerful|ad
+证据|evidence|th
+交流|to communicate|ve
+幸运|lucky|ad
+制作|to make (produce)|ve
+教练|coach|pe
+公开|public (open)|ad
+资金|funds|th
+员工|employee|pe
+全球|global|ad
+升|to rise (go up)|ve
+经营|to run (business)|ve
+困|sleepy|ad
+立刻|immediately|av
+实验|experiment|th
+取消|to cancel|ve
+通常|usually (normally)|av
+浪费|to waste|ve
+合理|reasonable|ad
+香|fragrant|ad
+成熟|mature|ad
+文章|article|th
+信任|to trust (rely on)|fe|v
+内心|inner heart|fe|n
+赶紧|hurriedly|av
+舞台|stage|pl
+不必|need not|av
+现金|cash|th
+调整|to adjust|ve
+糖|sugar|fo
+阳光|sunlight|na
+紧急|urgent|ad
+宣传|to promote|ve
+优势|advantage|th
+互相|mutually|av
+科技|science and technology|th
+印象|impression|th
+烟|smoke (cigarette)|th
+生意|business|th
+赶|to hurry|ve
+存|to deposit (save)|ve
+评价|to evaluate|ve
+桥|bridge|pl
+形象|image|th
+商业|commerce|th
+到达|to arrive at|ve
+主任|director|pe
+基础|foundation|th
+功能|function|th
+生产|to produce (goods)|ve
+适应|to adapt|ve
+食品|foodstuff|fo
+大约|approximately|av
+提前|in advance|av
+积极|active (positive)|ad
+强烈|intense|ad
+争取|to strive for|ve
+恐怕|I'm afraid|av
+搬|to move (carry)|ve
+命运|fate|th
+尽量|as much as possible|av
+及时|in time|av
+专门|specially|av
+工具|tool|th
+快速|rapid|ad
+连续|in a row|ad
+决赛|final (match)|th
+形成|to take shape|ve
+背后|behind (the back)|pl
+配合|to coordinate|ve
+亲自|in person|av
+公共|public|ad
+费用|expense|th
+自动|automatic|ad
+明确|explicit|ad
+结合|to combine|ve
+男子|male (man)|pe
+生存|to survive|ve
+胖|fat|ad||pàng
+进步|progress|th|n
+村|village|pl
+现象|phenomenon|th
+缺|to lack|ve
+主动|on one's own initiative|ad
+甜|sweet|ad
+服装|clothing|th
+形式|form|th
+判断|to judge|ve
+成立|to found|ve
+现代|modern|ad||xiàndài
+工资|salary|th
+深刻|profound|ad
+庆祝|to celebrate|ve
+伤心|heartbroken|fe
+眼前|before one's eyes|pl
+足球|soccer|th
+全面|comprehensive|ad
+体验|to experience|ve
+话题|topic|th
+坚强|strong (tough)|ad
+苹果|apple|fo
+银|silver|co|n
+区别|difference|th
+合法|legal|ad
+将来|future|ti
+个性|personality|th
+批准|to approve|ve
+前进|to advance|ve
+啤酒|beer|fo
+机器|machine|th
+公布|to make public|ve
+工厂|factory|pl
+举办|to host|ve
+人才|talent (person)|pe
+双方|both sides|pe
+离婚|to divorce|ve
+退出|to withdraw|ve
+支付|to pay|ve
+赶快|quickly|av
+整理|to tidy up|ve
+吵|noisy|ad
+丰富|rich (abundant)|ad
+温暖|warm|ad
+表面|surface|th
+作者|author|pe
+上升|to ascend|ve
+路线|route|pl
+完整|complete|ad
+谈判|to negotiate|ve
+飞行|to fly (aviation)|ve
+纪念|to commemorate|ve
+补|to mend|ve
+公民|citizen|pe
+分别|separately|av
+愿望|wish|fe|n
+长期|long-term|ad
+数量|quantity|nu|n
+保留|to retain|ve
+深入|in-depth|ad
+石油|petroleum|na
+情感|sentiment|fe|n
+人群|crowd|pe
+计算|to calculate (compute)|ve
+开发|to develop (land)|ve
+始终|from start to end|av
+争|to compete|ve
+订|to book|ve
+卫生|hygiene|th
+加强|to strengthen|ve
+保安|security guard|pe
+歌手|singer|pe
+实验室|laboratory|pl
+开放|to open up|ve
+性格|character (temper)|th
+团结|to unite|ve
+成就|achievement|th
+课程|course|th
+果然|as expected|av
+静|still (calm)|ad
+需求|demand (need)|th
+只好|have to|av
+国内|domestic|pl
+谈话|conversation|th
+传说|legend|th
+至今|up to now|av
+后果|consequence|th
+打破|to break (a record)|ve
+石头|stone|na
+主持|to host (a show)|ve
+访问|to visit (officially)|ve
+先进|advanced (cutting-edge)|ad
+文明|civilization|th
+玩具|toy|th
+防止|to prevent|ve
+年纪|age|th
+手指|finger|bo
+天空|sky|na
+制度|system|th
+工业|industry|th
+广播|broadcast|th
+退休|to retire|ve
+概念|concept|th
+创作|to create (art)|ve
+据说|it is said|av
+整天|all day|ti
+去世|to pass away|ve
+批评|to criticize|ve
+增长|to grow (increase)|ve
+主意|idea (plan)|th||zhǔyi
+感冒|to catch a cold|ve
+高速|high-speed|ad
+安装|to install|ve
+欢乐|happiness (joy)|fe|n
+功夫|kung fu|th
+房屋|houses|pl
+游泳|to swim|ve
+农民|farmer|pe
+民族|ethnic group|pe
+商品|goods|th
+裤子|trousers|th
+运输|to transport|ve
+传播|to spread|ve
+好奇|curious|fe
+落后|backward|ad
+沙发|sofa|th
+强调|to emphasize|ve
+加快|to speed up|ve
+乐队|band|pe
+演唱会|live concert|th
+修改|to revise|ve
+保存|to keep (save)|ve
+跳舞|to dance|ve
+电视台|TV station|pl
+发明|to invent|ve
+邮件|mail|th
+乐观|optimistic|fe
+会员|member (club)|pe
+热烈|enthusiastic|fe
+相似|similar|ad
+往往|often (tend to)|av
+可靠|reliable|ad
+决心|determination|th
+球迷|sports fan|pe
+克服|to overcome|ve
+文字|written language|th
+热爱|to love deeply|fe|v
+家具|furniture|th
+特色|characteristic|th
+电视剧|TV series|th
+身份证|ID card|th
+迎接|to greet|ve
+建设|to build|ve
+文学|literature|th
+难度|difficulty level|th
+头脑|brains (mind)|bo
+屋子|room (house)|pl
+铁路|railway|pl
+缺少|to be short of|ve
+环保|environmental protection|th
+家乡|hometown|pl
+读者|reader|pe
+消费|to consume|ve
+吵架|to quarrel|ve
+不安|uneasy|fe
+首都|capital (city)|pl
+发言|to speak (in public)|ve
+告别|to bid farewell|ve
+亲人|family (relatives)|pe
+总结|summary|th
+空调|air conditioner|th
+营养|nutrition|fo
+行李|luggage|th
+毛病|fault (problem)|th
+衬衫|shirt|th
+合格|qualified|ad
+提问|to ask questions|ve
+从前|in the past|ti
+日常|everyday|ad
+缺点|shortcoming|th
+预防|to take precautions|ve
+写作|writing|th
+手续|procedures|th
+本事|skill (ability)|th
+高速公路|expressway|pl
+种子|seed|na
+录音|to record (audio)|ve
+裙子|skirt|th
+香蕉|banana|fo
+牌子|brand|th
+服务员|waiter|pe
+工程师|engineer|pe
+优点|strong point|th
+旅馆|hostel|pl
+志愿者|volunteer|pe
+普遍|universal|ad
+形状|shape|th
+价钱|cost (price)|th
+美食|delicious food|fo
+古代|ancient times|ti
+散步|to take a walk|ve
+农业|agriculture|th
+大夫|doctor (physician)|pe||dàifu
+面积|area (size)|th
+学费|tuition|th
+性别|gender|th
+亲切|kind (cordial)|ad
+气候|climate|na
+办理|to handle (process)|ve
+可乐|cola|fo
+握手|to shake hands|ve
+题目|title (topic)|th
+跑步|to jog|ve
+初中|junior high school|pl
+卫生间|bathroom|pl
+子女|children (sons and daughters)|pe
+老太太|old lady|pe
+上衣|jacket|th
+打听|to inquire|ve
+老百姓|ordinary people|pe
+果汁|juice|fo
+剧场|theater|pl
+搬家|to move house|ve
+生动|vivid|ad
+节约|to economize|ve
+海关|customs|pl
+暖和|warm (weather)|ad
+被子|quilt|th
+农村|countryside|pl
+听众|listeners|pe
+邮箱|mailbox|th
+整齐|neat|ad
+木头|wood|na
+熟人|acquaintance|pe
+景色|scenery|na
+美术|fine arts|th
+故乡|native place|pl
+邮票|stamp|th
+房租|rent|th
+武术|martial arts|th
+短裤|shorts|th
+房东|landlord|pe
+收音机|radio|th
+长城|the Great Wall|pl||Chángchéng
+信封|envelope|th
+结实|sturdy|ad||jiēshi
+旅行社|travel agency|pl
+大使馆|embassy|pl
+沙子|sand|na
+年底|end of the year|ti
+国庆|National Day|ti||guóqìng
+理发|to get a haircut|ve
+华人|ethnic Chinese|pe||huárén
+复印|to photocopy|ve
+绿茶|green tea|fo
+留学|to study abroad|ve
+书架|bookshelf|th
+白菜|Chinese cabbage|fo
+红茶|black tea|fo
+人民币|RMB (yuan)|th
+划船|to row a boat|ve
+跳高|high jump|th
+预习|to preview (a lesson)|ve
+京剧|Peking opera|th||jīngjù
+后年|year after next|ti
+连忙|promptly|av
+兔子|rabbit|an
+猴子|monkey|an
+蛇|snake|an
+老鼠|mouse (rat)|an
+羊肉|mutton|fo
+紫色|purple|co|n
+灰色|gray|co|n
+棕色|brown|co|n
+粉色|pink|co|n
+橙色|orange (color)|co|n
+鹿|deer|an
+蜜蜂|bee|an
+胳膊|arm|bo
+脖子|neck|bo
