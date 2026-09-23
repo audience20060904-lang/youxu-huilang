@@ -28,6 +28,11 @@ var BF = {
   relicMax: 15,
   cutMax: 75,           // 常驻减伤封顶 %
   touchCd: 0.65,        // 同一只怪的接触伤害冷却（秒）
+  /* 远程怪（BF_FOES 里 kind:"ranged" 的那 7 只）统一再乘这两个（用户 2026-09-23：「远程怪物攻击间隔翻倍，移动速度减慢」）。
+     攻击间隔 = 弹丸的 shot.cd 和唤雷者的 storm.cd（缝合者的回血不算攻击，没动）；移速在 makeFoe() 里乘。
+     ⚠️ 只管普通怪，Boss 不吃。要调就改这两个数，别去一只只改表。 */
+  rangedCdX: 2,
+  rangedSpdX: 0.7,
   /* 连击加成：**每 10 连击 +1%**（用户 2026-09-23，原来每 5 连击 +2%）。
      进 ② 层百分比桶，乘区还是两个。「火星」按原来的比例（5 → 2）跟着缩成 10 → 4。 */
   comboStep: 10,
@@ -1957,18 +1962,20 @@ function killFoe(f){
    ================================================================ */
 function isBossWave(w){ return w % BF.bossEvery === 0; }
 
+/* 这只怪的攻击间隔（远程怪 ×BF.rangedCdX）*/
+function foeCd(d, cd){ return d.kind === "ranged" ? cd * BF.rangedCdX : cd; }
 function makeFoe(id, w, x, y){
   var d = BF_FOES[id], sc = d.scale || 1;
   return {id:id, def:d, name:d.name, col:d.col, art:d.art, x:x, y:y,
     hp: Math.max(1, Math.round(d.hp * hpMul(w) * TIER.hp)),
     maxHp: Math.max(1, Math.round(d.hp * hpMul(w) * TIER.hp)),
     dmg: Math.max(1, Math.round(d.dmg * dmgMul(w) * TIER.dmg)),
-    spd: d.spd * spdMul(w), armor: d.armor,
+    spd: d.spd * spdMul(w) * (d.kind === "ranged" ? BF.rangedSpdX : 1), armor: d.armor,
     xp: Math.max(1, Math.round(d.xp * xpMul(w))),
     gold: Math.max(1, Math.round((ri(1, 3) + Math.floor(w / 2)) * BF.goldMult)),
     r: d.r * sc, sc: sc, elite: !!d.elite, noKnock: !!d.noKnock, phase: !!d.phase,
     kx:0, ky:0, t: Math.random() * 10, touch:0, flash:0, haunt:false, dead:false,
-    shotCd: d.shot ? d.shot.cd * (0.4 + Math.random() * 0.6) : 0, castT:0,
+    shotCd: d.shot ? foeCd(d, d.shot.cd) * (0.4 + Math.random() * 0.6) : 0, castT:0,
     dashT:0, dashCd: d.dash ? d.dash.every * Math.random() : 0,
     blinkCd: d.blink ? d.blink.every * Math.random() : 0, blinkWarn:0,
     /* 11–19 波那一批的状态（用户 2026-09-22）*/
@@ -1979,7 +1986,7 @@ function makeFoe(id, w, x, y){
     /* 21–39 波那一批的状态 */
     immuneT: 0, immCd: d.immune ? d.immune.every * Math.random() : 0,
     hatchCd: d.hatch ? d.hatch.cd * Math.random() : 0,
-    stormCd: d.storm ? d.storm.cd * Math.random() : 0,
+    stormCd: d.storm ? foeCd(d, d.storm.cd) * Math.random() : 0,
     back: false, aimDir: 0,
     stormDmg: d.storm ? Math.max(1, Math.round(d.storm.dmg * dmgMul(w) * TIER.dmg)) : 0,
     leaveDmg: d.leave ? Math.max(1, Math.round(d.leave.dmg * dmgMul(w) * TIER.dmg)) : 0};
@@ -2159,7 +2166,7 @@ function updateFoes(dt){
       if(def.shot){
         if(f.castT > 0){
           f.castT -= dt; sp = 0; tx = 0; ty = 0;       // 抬手时钉在原地
-          if(f.castT <= 0){ shoot(f); f.shotCd = def.shot.cd; }
+          if(f.castT <= 0){ shoot(f); f.shotCd = foeCd(def, def.shot.cd); }
         } else {
           f.shotCd -= dt;
           if(d < def.shot.keep * 0.8){ tx = -tx; ty = -ty; }
@@ -2208,7 +2215,7 @@ function updateFoes(dt){
         else if(d < def.storm.keep * 1.1){ tx = 0; ty = 0; }
         f.stormCd -= dt;
         if(f.stormCd <= 0 && d < def.storm.keep * 1.6){
-          f.stormCd = def.storm.cd;
+          f.stormCd = foeCd(def, def.storm.cd);
           addZone(me.x, me.y, def.storm.r, def.storm.warn, 0.25, f.stormDmg, "#3A5A8A");
         }
       }
