@@ -8,7 +8,7 @@ var EN_WORDS = WORDS;
 function zhWordObj(w){ return {en:w[0], cn:w[1], cat:w[2], lv:w[3] || 1, pos:w[4] || "n", py:w[5] || ""}; }
 if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
   WORDS = ZH_WORDS;
-  WMAP = {}; BYCAT = {}; BYPOS = {}; BYLV = {1:[], 2:[], 3:[], 4:[], 5:[]};
+  WMAP = {}; BYCAT = {}; BYPOS = {}; BYLV = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[]};   // 中文多一档：6 = HSK 6
   WORDS.forEach(function(w){
     const o = WMAP[w[0]] = zhWordObj(w);
     (BYCAT[o.cat] = BYCAT[o.cat] || []).push(o);

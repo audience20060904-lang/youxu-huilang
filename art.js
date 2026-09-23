@@ -586,3 +586,5 @@ MOB_ART.steward = MOB_ART.warden;
 /* 深渊那只「无终之影」（前四章第 51 层，见 content.js 的 ABYSS）的**地图小图**：借冕者那张。
    战斗立绘不在这儿 —— 它现取当前这一章章末 Boss 的 art（game.js 的 makeAbyssFoe）。 */
 MOB_ART.abyss = MOB_ART.crown;
+/* 学中文才有的第五章「书冢」的章末 Boss（content.js 的 scribe）：借祭司的小图，颜色在 style.css 的 m-scribe */
+MOB_ART.scribe = MOB_ART.priest;

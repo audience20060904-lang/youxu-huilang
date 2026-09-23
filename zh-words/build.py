@@ -4,7 +4,7 @@
     curl -sSo zh-words/complete.json https://raw.githubusercontent.com/drkameleon/complete-hsk-vocabulary/main/complete.json
     python3 zh-words/build.py
 complete.json 太大（10MB）不进仓库，用完可以删。
-词表的「真相」是 zh-words/g1.txt ~ g5.txt（HSK 3.0 的 1~5 级，逐条手写的英文释义）：
+词表的「真相」是 zh-words/g1~g5 / g1b~g5b / g6.txt（HSK 3.0 的 1~6 级，逐条手写的英文释义）：
     汉字|英文释义|类别代码[|词性][|拼音]
     类别代码：an 动物 fo 食物 co 颜色 bo 身体 pe 人 th 物品 na 自然 ve 动作 ad 描述 ti 时间 pl 地点 fe 情绪 nu 数字 av 副词
     词性不写就按类别推（ve→v ad/fe/co→adj av→adv nu→num 其余→n）；拼音不写就用 HSK 数据里的（单字用 pypinyin）。
@@ -50,8 +50,11 @@ def write_js(rows):
 
 FIXPY={'切':'qiē','划':'huá','好处':'hǎochù'}
 seen=set();out=[];errs=[]
-for L in range(1,6):
-    for ln,line in enumerate(open(os.path.join(HERE,f'g{L}.txt'),encoding='utf-8'),1):
+# 顺序就是词库下标：g1~g5 是第一批（2026-09-23），g1b~g5b + g6 是第二批（同一天扩到约 4800 词）——
+# ⚠️ 只许往后面加文件 / 往文件末尾加行，别往前面插（存档码按下标存熟练度）
+FILES = [(f'g{L}.txt', L) for L in range(1, 6)] + [(f'g{L}b.txt', L) for L in range(1, 6)] + [('g6.txt', 6)]
+for fn, L in FILES:
+    for ln,line in enumerate(open(os.path.join(HERE,fn),encoding='utf-8'),1):
         line=line.rstrip('\n')
         if not line.strip(): continue
         p=line.split('|')
@@ -66,7 +69,7 @@ for L in range(1,6):
         if len(zh)>4: errs.append('long '+zh)
         out.append([zh,gl,cat,L,pos,py])
 # checks
-for L in range(1,6):
+for L in range(1,7):
     g=collections.Counter(r[1].lower() for r in out if r[3]==L)
     for k,v in g.items():
         if v>1: errs.append(f'L{L} dup gloss "{k}": '+' '.join(r[0] for r in out if r[3]==L and r[1].lower()==k))

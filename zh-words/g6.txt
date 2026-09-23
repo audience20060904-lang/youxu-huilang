@@ -1,0 +1,1023 @@
+有关|to be related to|ve
+另|another (separately)|av
+超|to exceed (super)|ve
+特|special (very)|av
+入|to enter (join)|ve
+最终|final (ultimately)|av
+不再|no longer|av
+死亡|death|th
+投票|to vote|ve
+犯罪|to commit a crime|ve
+逼|to force (press)|ve
+赛|race (contest)|th
+副|deputy (vice-)|ad
+队伍|ranks (troops)|pe
+命|life (fate)|th
+招|to beckon (recruit)|ve
+英雄|hero|pe
+威胁|to threaten|ve
+攻击|to attack|ve
+镇|town|pl
+允许|to allow|ve
+错过|to miss (an opportunity)|ve
+犯|to violate (commit)|ve
+服|clothes (to serve)|th
+理|to tidy (reason)|ve
+股|share (stock)|th
+说实话|to be honest|ve
+剑|sword|th
+爆炸|to explode|ve
+情绪|mood (emotions)|fe|n
+混|to mix (muddle)|ve
+军队|army|pe
+学会|to learn (master)|ve
+遗憾|regret (pity)|fe|n
+部队|troops (unit)|pe
+爆|to burst|ve
+罪|crime (guilt)|th
+承诺|to promise|ve
+算是|to count as|ve
+滴|drop (to drip)|ve
+时期|period (era)|ti
+剧|drama (play)|th
+酷|cool (cruel)|ad
+赚|to earn|ve
+品牌|brand name|th
+炒|to stir-fry|ve
+塔|tower (pagoda)|pl
+惊喜|pleasant surprise|fe|n
+搭|to put up (take a ride)|ve
+权力|power (authority)|th
+泡|to soak (bubble)|ve||pào
+疾病|disease|th
+娱乐|entertainment|th
+聊|to chat|ve
+政策|policy (political)|th
+法庭|court (tribunal)|pl
+踢|to kick|ve
+联盟|alliance|pe
+母|mother (female)|pe
+仪式|ceremony (rite)|th
+能否|whether or not (can)|av
+进攻|to attack (offensive)|ve
+再说|besides (put off)|av
+除|to remove (except)|ve
+负|to bear (negative)|ve
+端|to carry (end)|ve
+上帝|God|pe||shàngdì
+不见|to disappear|ve
+扣|to button (deduct)|ve
+球员|player (ball)|pe
+挖|to dig|ve
+透露|to reveal (disclose)|ve
+侧|side (to lean)|pl
+团队|team (group)|pe
+闭|to close (shut)|ve
+异常|abnormal|ad
+档案|file (archives)|th
+协会|association|pe
+公|public (male)|ad
+细胞|cell|bo
+托|to entrust (hold up)|ve
+症状|symptom|th
+患者|patient (sufferer)|pe
+军事|military affairs|th
+绝|absolutely (cut off)|av
+料|material (to expect)|th
+公众|the public (masses)|pe
+心脏|heart (organ)|bo
+斗争|struggle|th
+给予|to give (grant)|ve
+舞蹈|dance (art)|th
+因素|factor|th
+为此|for this reason|av
+股票|stock (share)|th
+血液|blood (fluid)|bo
+原谅|to forgive|ve
+公主|princess|pe
+市民|city resident|pe
+咨询|to consult (seek advice)|ve
+大赛|big competition|th
+埋|to bury|ve
+顺|smooth (along)|ad
+妇女|woman (women)|pe
+激情|passion|fe|n
+愉快|cheerful|fe
+装备|equipment (gear)|th
+圣诞节|Christmas|ti||shèngdànjié
+障碍|obstacle|th
+全新|brand-new|ad
+危机|crisis|th
+护|to protect|ve
+精|essence (refined)|ad
+毁|to destroy (ruin)|ve
+晕|dizzy|ad
+孤独|lonely|fe
+贡献|contribution|th
+赌|to gamble|ve
+暴力|violence|th
+物品|articles (goods)|th
+骄傲|proud (arrogant)|fe
+止|to stop (end)|ve
+界|circle (boundary)|th
+平衡|balance|th
+偏|slanting (biased)|ad
+主持人|host (presenter)|pe
+涉及|to involve|ve
+炸|to fry (explode)|ve
+策略|tactics (strategy)|th||cèlüè
+牺牲|to sacrifice|ve
+选举|election|th
+陷入|to sink into|ve
+愤怒|anger (angry)|fe
+气氛|atmosphere (mood)|th
+全力|all-out|av
+道歉|to apologize|ve
+心灵|soul (heart)|fe|n
+天堂|paradise|pl
+通道|passage (channel)|pl||tōngdào
+混乱|chaos (confused)|ad
+创意|creativity|th
+火箭|rocket|th
+大师|master (expert)|pe
+海军|navy|pe
+起诉|to sue|ve
+智慧|wisdom|th
+提升|to promote (raise)|ve
+战略|strategy|th||zhànlüè
+定位|to locate (position)|ve
+撑|to prop up|ve
+遭到|to meet with (suffer)|ve
+职责|responsibility (duty)|th
+远远|far (by far)|av
+无关|unrelated|ad
+肺|lung|bo
+民主|democracy|th
+监督|to supervise|ve
+厕所|toilet|pl
+遭遇|to encounter (fate)|ve
+猛|fierce (sudden)|ad
+险|danger (risky)|ad
+药品|medicines|th
+当作|to treat as|ve||dàngzuò
+运作|to operate (run)|ve
+判|to judge (sentence)|ve
+炸弹|bomb|th
+爆发|to break out|ve
+宗教|religion|th
+夺|to seize (snatch)|ve
+核心|core|th
+扎|to prick (tie)|ve
+一时|for a moment (temporary)|ti
+屏幕|screen|th
+惨|miserable|ad
+毒品|drugs (narcotics)|th
+升级|to upgrade|ve
+国王|king|pe
+播|to broadcast (sow)|ve
+作战|to fight (combat)|ve
+税|tax|th
+当天|that very day|ti
+赚钱|to make money|ve
+王子|prince|pe
+被告|defendant|pe
+大街|main street|pl
+收藏|to collect (hoard)|ve
+佛|Buddha|pe||fó
+幻想|fantasy (illusion)|th
+暴露|to expose|ve
+机械|machinery|th
+伤口|wound (cut)|bo
+电力|electric power|th
+设计师|designer|pe
+协助|to assist (help)|ve
+防守|to defend (guard)|ve
+主角|leading role|pe||zhǔjué
+潜力|potential|th
+总部|headquarters|pl
+笑容|smiling face|th
+地板|floor (boards)|pl
+通讯|telecommunications|th
+隐藏|to conceal|ve
+狠|ruthless|ad
+策划|to plan (scheme)|ve
+蹲|to squat|ve
+牵|to lead by the hand|ve
+账户|bank account|th
+当成|to take as|ve||dàngchéng
+远离|to keep away from|ve
+天下|the world (under heaven)|pl
+适当|appropriate|ad
+和谐|harmonious|ad
+高手|master hand (ace)|pe
+参赛|to compete|ve
+刮|to scrape (blow)|ve
+信仰|faith (belief)|th
+录像|video recording|th
+查看|to examine (look over)|ve
+大道|main road (the Way)|pl
+疼痛|ache|fe|n
+混合|to blend|ve
+领袖|leader (head)|pe
+会见|to meet with|ve
+合约|contract (agreement)|th
+机关|government office|pl
+富有|rich (wealthy)|ad
+倾向|tendency|th
+救命|help! (to save a life)|ve
+持有|to hold (possess)|ve
+探索|to explore|ve
+对抗|to resist (confront)|ve
+灭|to extinguish|ve
+支援|to support (aid)|ve
+线路|line (circuit)|th
+血管|blood vessel|bo
+热线|hotline|th
+娃娃|doll (baby)|th
+关联|connection|th
+捡|to pick up|ve
+金钱|money (wealth)|th
+消灭|to wipe out|ve
+街头|street corner|pl
+惊人|astonishing|ad
+路过|to pass by|ve
+海洋|ocean|na
+金融|finance|th
+首席|chief (principal)|ad
+成分|ingredient|th
+同一|same (identical)|ad
+循环|cycle (circulation)|th
+从没|never (have not)|av
+鉴定|to appraise|ve
+协调|to coordinate|ve
+膜|membrane (film)|th
+铺|to spread (pave)|ve||pū
+泥|mud|na
+场景|scene (setting)|th
+跨|to stride across|ve
+战术|tactics|th
+救援|to rescue (relief)|ve
+跌|to fall (tumble)|ve
+妙|wonderful (clever)|ad
+足以|enough to|av
+祖国|motherland|pl
+凶|fierce (ominous)|ad
+约定|to agree on|ve
+抵抗|to resist|ve
+援助|aid|th
+侵犯|to violate (infringe)|ve
+战场|battlefield|pl
+知名|well-known|ad
+推出|to launch (release)|ve
+出场|to appear (on stage)|ve
+节奏|rhythm|th
+外科|surgery (department)|th
+名义|name (in the name of)|th
+从不|never (as a rule)|av
+肿|swollen|ad
+途径|way (channel)|th
+遭受|to suffer (sustain)|ve
+康复|to recover (health)|ve
+轨道|track (orbit)|th
+城镇|cities and towns|pl
+企图|to attempt|ve
+前来|to come (arrive)|ve
+平台|platform|th
+国会|parliament|pl||guóhuì
+扑|to pounce|ve
+抵达|to arrive (reach)|ve
+肝|liver|bo
+留言|to leave a message|ve
+忽略|to neglect|ve||hūlüè
+捐|to donate|ve
+酱|sauce (paste)|fo
+支撑|to support (prop)|ve
+边缘|edge (margin)|pl
+元素|element|th
+开通|to open (a service)|ve
+宠物|pet|an
+浮|to float|ve
+四处|all over|pl
+直升机|helicopter|th
+仓库|warehouse (depot)|pl
+病情|patient's condition|th
+岗位|post (job)|th
+磨|to grind (wear)|ve
+清洁|clean (cleaning)|ad
+内衣|underwear|th
+焦点|focus|th
+回应|to respond|ve
+故障|breakdown (fault)|th
+联赛|league|th
+上演|to stage (perform)|ve
+欺负|to bully|ve
+吊|to hang (suspend)|ve
+指定|to appoint (designate)|ve
+无效|invalid|ad
+融入|to blend into|ve
+新人|newcomer|pe
+刚好|just right (exactly)|av
+高层|high level (upper floors)|ad
+飞船|spaceship|th
+孤儿|orphan|pe
+正当|legitimate (proper)|ad||zhèngdàng
+常规|convention (routine)|th
+依赖|to depend on (rely)|ve
+误|to miss (error)|ve
+添|to add|ve
+争夺|to fight over|ve
+分裂|to split|ve
+空军|air force|pe
+出事|to have an accident|ve
+抱歉|sorry (apologetic)|fe
+抗议|to protest|ve
+尖|sharp (pointed)|ad
+箭|arrow|th
+扭|to twist|ve
+搭配|to match (pair up)|ve
+活跃|active (lively)|ad
+沿|along (edge)|av
+诞生|to be born (emerge)|ve
+用品|articles for use|th
+重建|to rebuild|ve
+阴谋|conspiracy|th
+串|string (skewer)|th
+横|horizontal|ad
+看好|to be optimistic about|ve||kànhǎo
+占据|to occupy (hold)|ve
+哲学|philosophy|th
+管道|pipeline|th
+薯条|French fries|fo
+凶手|murderer|pe
+赶上|to catch up with|ve
+嘉宾|honored guest|pe
+时装|fashion|th
+掏|to pull out (dig)|ve
+赌博|gambling|th
+本质|essence (nature)|th
+股东|shareholder|pe
+残酷|cruel|ad
+实践|practice|th
+好转|to improve (get better)|ve
+窗口|window (counter)|pl
+债|debt|th
+指数|index|nu|n
+极端|extreme|ad
+理智|reason (rational)|th
+风暴|storm|na
+捐赠|to donate (contribute)|ve
+皇帝|emperor|pe
+搭档|partner (to team up)|pe
+深深|deeply|av
+住宅|residence|pl
+丧失|to lose (forfeit)|ve
+旋转|to rotate (spin)|ve
+吞|to swallow|ve
+反抗|to revolt|ve
+办公|to do office work|ve
+跪|to kneel|ve
+细菌|bacteria|th
+棉|cotton|th
+晓得|to know (dialect)|ve
+掌声|applause|th
+接收|to receive (take over)|ve
+大使|ambassador|pe
+崇拜|to worship|ve
+打造|to forge (create)|ve
+影响力|influence (clout)|th
+想不到|unexpected|ad
+首相|prime minister|pe
+上市|to go on the market|ve
+会长|president (of a club)|pe
+发起|to initiate|ve
+场地|site (field)|pl
+审查|to examine (censor)|ve
+港口|port (harbor)|pl
+驻|to be stationed|ve
+渠道|channel (ditch)|th
+花费|to spend (cost)|ve
+伤亡|casualties|th
+歌词|lyrics|th
+缺陷|defect|th
+查出|to find out|ve
+阴影|shadow (shade)|na
+炮|cannon|th||pào
+仪器|instrument (apparatus)|th
+流感|flu|th
+超出|to go beyond|ve
+教堂|church|pl
+纠正|to correct (redress)|ve
+难忘|unforgettable|ad
+用心|attentively|av
+奉献|to devote|ve
+挨|to suffer (be next to)|ve||ái
+心脏病|heart disease|th
+救助|to help (rescue)|ve
+一同|together (along)|av
+珠宝|jewelry|th
+提交|to submit|ve
+游行|parade (march)|ve
+水泥|cement|th
+信用|credit (trustworthiness)|th
+都市|metropolis|pl
+重组|to reorganize|ve
+专用|special-purpose|ad
+认同|to identify with|ve
+外出|to go out (away)|ve
+派出|to send out|ve
+矿|mine (ore)|na
+意愿|wish (desire)|fe|n
+织|to weave (knit)|ve
+通话|to talk (on the phone)|ve
+头疼|headache|fe|n
+担忧|to be concerned|fe|v
+飞行员|pilot|pe
+嫌|to dislike (suspect)|ve
+犯规|to foul|ve
+融合|to fuse (merge)|ve
+牢|firm (prison)|ad
+同胞|compatriot|pe
+变形|to deform|ve
+大力|vigorously|av
+长久|long-lasting|ad
+决策|decision (policy)|th
+贫困|poverty-stricken|ad
+家园|homeland (home)|pl
+清洗|to rinse (clean)|ve
+传出|to spread out (leak)|ve
+上台|to go on stage|ve
+不仅仅|not only|av
+对外|external (foreign)|ad
+渡|to cross (ferry)|ve
+捉|to catch|ve
+打断|to interrupt (break)|ve
+撤销|to revoke|ve
+演奏|to play (music)|ve
+拨打|to dial|ve
+干涉|to interfere (meddle)|ve
+操纵|to manipulate|ve
+行程|itinerary|th
+前方|ahead (the front)|pl
+天然|natural (innate)|ad
+罪恶|evil (sin)|th
+金额|sum of money|nu|n
+舌头|tongue|bo
+原告|plaintiff|pe
+美容|beauty treatment|th
+特意|specially (on purpose)|av
+捐款|donation|th
+病房|ward (hospital)|pl
+研发|research and development|ve
+吸毒|to take drugs|ve
+拿走|to take away|ve
+过后|afterwards (later)|ti
+墓|tomb|pl
+传输|to transmit|ve
+感人|touching|fe
+同行|peer (same trade)|pe||tóngháng
+高档|high-end|ad
+应急|emergency|ad
+急救|first aid|ve
+灵活|flexible|ad
+官司|lawsuit|th
+没收|to confiscate|ve
+恰恰|exactly (just)|av
+村庄|village (hamlet)|pl
+外部|exterior|pl
+打动|to move (touch)|ve
+预约|to book (make an appointment)|ve
+亲眼|with one's own eyes|av
+医药|medicine (pharma)|th
+总监|director (chief)|pe
+供给|to supply (provide)|ve
+撤离|to evacuate|ve
+听取|to listen to (hear)|ve
+艺人|performer|pe
+出名|to become famous|ve
+杰出|outstanding (distinguished)|ad
+消耗|to consume (use up)|ve
+平凡|ordinary (common)|ad
+花生|peanut|fo
+评|to judge (appraise)|ve
+发言人|spokesperson|pe
+隐私|privacy|th
+通报|to circulate (notify)|ve
+出路|way out|th
+宴会|banquet|th
+次数|number of times|nu|n
+素质|quality (caliber)|th
+纠纷|dispute (quarrel)|th
+起点|starting point|pl
+创建|to create (found)|ve
+走私|to smuggle|ve
+租金|rental fee|th
+差异|difference (discrepancy)|th
+裂|to crack|ve
+账|account (bill)|th
+有事|to be busy (have something on)|ve
+层面|aspect (level)|th
+协商|to negotiate (consult)|ve
+应对|to cope (respond)|ve
+外来|foreign (external)|ad
+波动|to fluctuate|ve
+传言|rumor|th
+开头|beginning (start)|ti
+出动|to set out (dispatch)|ve
+探讨|to explore (discuss)|ve
+一次性|disposable (one-time)|ad
+烟花|fireworks|th
+海报|poster|th
+拐|to turn (a corner)|ve
+发放|to distribute (issue)|ve
+学员|trainee|pe
+互动|interaction|ve
+热水|hot water|fo
+歌唱|to sing (praise)|ve
+维生素|vitamin|fo
+笑声|laughter|th
+海底|seabed|na
+赛场|arena|pl
+一贯|consistent (always)|ad
+低头|to lower one's head|ve
+政权|regime|th
+强势|strong (powerful)|ad
+面向|to face (be geared to)|ve
+迎来|to usher in|ve
+再生|to regenerate|ve
+高峰|peak|th
+船长|ship's captain|pe
+奇妙|marvelous|ad
+悬|to dangle|ve
+车牌|license plate|th
+陆军|army (ground forces)|pe
+薪水|wages|th
+衡量|to weigh (measure)|ve
+师父|master (teacher)|pe
+压迫|to oppress|ve
+绝大多数|the vast majority|nu
+户外|outdoor|pl
+炸药|explosive|th
+本土|native (local)|ad
+恰当|fitting (proper)|ad
+监测|to monitor|ve
+追究|to investigate (look into)|ve
+防范|to guard against (precaution)|ve
+马车|horse carriage|th
+看作|to look upon as|ve
+开关|switch|th
+古典|classical|ad
+不通|blocked (impassable)|ad
+名誉|reputation|th
+图书|books|th
+厨师|chef|pe
+电器|electrical appliance|th
+选拔|to select (pick)|ve
+人权|human rights|th
+恰好|as it happens|av
+洪水|flood water|na
+自在|comfortable (free)|fe
+缘故|cause (reason)|th
+心愿|cherished wish|fe|n
+往后|from now on (later)|ti
+处处|everywhere (in all respects)|av
+不至于|not go so far as to|av
+海外|overseas|pl
+醋|vinegar|fo
+罢工|to strike|ve
+不便|inconvenient|ad
+招聘|to recruit (hire)|ve
+不禁|can't help|av
+早晚|sooner or later|av
+坡|slope|na
+父子|father and son|pe
+悲惨|tragic|ad
+昏|dizzy (faint)|ad
+收养|to adopt|ve
+残疾人|disabled person|pe
+入学|to enter school|ve
+收取|to collect (charge)|ve
+强化|to strengthen (reinforce)|ve
+夺取|to capture (seize)|ve
+特地|especially (specially)|av
+强壮|strong (sturdy)|ad
+出入|to go in and out|ve
+区分|to distinguish|ve
+富人|rich person|pe
+捕|to catch (arrest)|ve
+光辉|radiance (brilliant)|th
+船员|crew member|pe
+黑夜|night (darkness)|ti
+过渡|transition|ve
+假日|holiday (day off)|ti
+电动|electric|ad
+联手|to join hands|ve
+总经理|general manager|pe
+战友|comrade-in-arms|pe
+主流|mainstream|th
+陪同|to accompany (escort)|ve
+中等|medium|ad
+一道|together (a line)|av
+番茄|tomato (Western)|fo
+精美|exquisite|ad
+储存|to store|ve
+到期|to expire|ve
+事后|afterwards (after the event)|ti
+不怎么|not very (not much)|av
+往来|contact (dealings)|ve
+来往|to come and go|ve
+动画|animation|th
+关爱|care and love|fe|n
+凡是|every (all)|av
+小麦|wheat|fo
+氧气|oxygen|na
+保健|health care|th
+野生|wild|ad
+出行|to travel (go out)|ve
+残疾|disability|th
+长远|long-term (far-reaching)|ad
+明日|tomorrow (formal)|ti
+去掉|to get rid of|ve
+巧妙|ingenious|ad
+传媒|media (communication)|th
+通行|to pass through|ve
+一代|a generation|ti
+繁殖|to breed (reproduce)|ve
+铅笔|pencil|th
+眼看|soon (watch helplessly)|av
+聘请|to engage (hire)|ve
+免得|so as to avoid|av
+特大|extra large|ad
+奏|to perform (an instrument)|ve
+改装|to refit (modify)|ve
+笑脸|smiling face (grin)|th
+截止|to close (deadline)|ve
+发病|to fall ill (onset)|ve
+复苏|to recover (revive)|ve
+高等|higher (advanced)|ad
+地下室|basement|pl
+法语|French|th||fǎyǔ
+观光|to go sightseeing|ve
+强盗|robber|pe
+海湾|bay (gulf)|na||hǎiwān
+敢于|to dare to|ve
+书房|study (room)|pl
+打发|to send away (pass time)|ve
+出面|to act personally|ve
+奔跑|to run (dash)|ve
+绘画|painting (drawing)|th
+照样|as before (all the same)|av
+理财|financial management|ve
+上当|to be fooled|ve
+桥梁|bridge (link)|th
+宇航员|astronaut|pe
+中期|midterm (middle period)|ti
+开创|to pioneer|ve
+壮观|spectacular|ad
+谦虚|modest|ad
+科研|scientific research|th
+奶牛|dairy cow|an
+国旗|national flag|th
+网页|web page|th
+此前|before this|ti
+巩固|to consolidate|ve
+广阔|vast (wide)|ad
+祝愿|to wish (good wishes)|ve
+过时|out of date|ad
+大米|rice (uncooked)|fo
+傍晚|dusk|ti
+顽强|tenacious|ad
+要素|key element|th
+必将|will surely|av
+背心|vest|th
+领取|to receive (claim)|ve
+弯曲|curved (winding)|ad
+亲属|kin (relatives)|pe
+发电|to generate electricity|ve
+创办|to establish (set up)|ve
+山谷|valley|na
+太阳能|solar energy|na
+多半|most likely (mostly)|av
+远方|distant place|pl
+名额|quota (places)|nu|n
+优质|high quality|ad
+盼望|to long for (look forward)|fe|v
+拖鞋|slippers|th
+变更|to alter|ve
+配置|configuration|th
+切实|practical (realistic)|ad
+意想不到|unexpected (unimaginable)|ad
+船只|vessels (ships)|th
+半决赛|semifinal|th
+姑姑|aunt (father's sister)|pe
+说明书|instructions (manual)|th
+评选|to choose by vote|ve
+开设|to offer (open)|ve
+百分点|percentage point|nu|n
+首脑|head of state (leader)|pe
+站台|platform (station)|pl
+变换|to vary (switch)|ve
+茄子|eggplant|fo
+低温|low temperature|na
+暴雨|rainstorm|na
+吉利|lucky (auspicious)|ad||jílì
+高考|college entrance exam|th
+微波炉|microwave oven|th
+日语|Japanese|th||rìyǔ
+补助|allowance (subsidy)|th
+热点|hot spot|th
+先锋|vanguard (pioneer)|pe
+自来水|tap water|fo
+蓝天|blue sky|na
+短片|short film|th
+基督教|Christianity|th||jīdūjiào
+养老|to provide for the aged|ve
+花瓶|vase|th
+挨着|next to (close by)|pl
+打牌|to play cards|ve
+酱油|soy sauce|fo
+捐助|to donate (help)|ve
+反响|repercussion (response)|th
+祖父|grandfather (paternal)|pe
+球星|sports star|pe
+整顿|to rectify (reorganize)|ve
+外衣|outer garment|th
+秘书长|secretary-general|pe
+峰会|summit|th
+白领|white-collar|pe
+徒弟|apprentice|pe
+测定|to determine (measure)|ve
+产量|output (yield)|nu|n
+治病|to treat an illness|ve
+盲人|blind person|pe
+办事处|office (agency)|pl
+要好|close (on good terms)|ad
+伤员|wounded person|pe
+影迷|film fan|pe
+编制|to compile (staffing)|ve
+冷水|cold water (tap)|fo
+用处|use (usefulness)|th
+化解|to resolve (defuse)|ve
+排行榜|chart (ranking list)|th
+母女|mother and daughter|pe
+日夜|day and night|ti
+城区|urban district|pl
+大批|large quantity|nu
+厂商|manufacturer|pe
+食欲|appetite|fo
+祖母|grandmother (paternal)|pe
+布满|to be covered with|ve
+外观|exterior appearance|th
+采纳|to adopt (accept)|ve
+分工|division of labor|ve
+影星|film star|pe
+政党|political party|pe
+跳水|diving|ve
+钟头|hour (colloquial)|ti
+调研|investigation and research|ve||diàoyán
+栏目|column (program)|th
+田径|track and field|th
+构建|to construct (build)|ve
+解说|to explain (commentary)|ve
+儿科|pediatrics|th
+看得见|visible|ad
+歌星|singing star|pe
+网吧|Internet cafe|pl
+游戏机|game console|th
+脚印|footprint|th
+母子|mother and son|pe
+佛教|Buddhism|th||fójiào
+革新|to innovate (reform)|ve
+成品|finished product|th
+炒作|to hype|ve
+觉悟|consciousness (awareness)|th
+一齐|at the same time (all together)|av
+山坡|hillside|na
+增进|to enhance (promote)|ve
+只顾|to be absorbed only in|ve
+议题|topic of discussion|th
+音量|volume (sound)|th
+安检|security check|th
+盗版|pirated copy|th
+定价|to set a price|ve
+精品|fine goods|th
+三明治|sandwich|fo
+依次|in order (one by one)|av
+景点|scenic spot|pl
+照耀|to shine on|ve
+加盟|to join (franchise)|ve
+畅通|unimpeded|ad
+截至|up to (as of)|ve
+公安|public security (police)|pe
+楼房|building (multi-story)|pl
+暴风雨|thunderstorm|na
+民意|public opinion|th
+识字|to be literate|ve
+送礼|to give a present|ve
+打官司|to go to court|ve
+好似|to seem (as if)|ve
+显出|to show (reveal)|ve
+长假|long vacation|ti
+定时|at a fixed time|av
+升值|to appreciate (in value)|ve
+电车|tram|th
+海浪|sea wave|na
+音像|audio and video|th
+踏实|steady (at ease)|ad
+出台|to be introduced (policy)|ve
+简介|brief introduction|th
+生活费|living expenses|th
+座谈会|forum (symposium)|th
+借鉴|to draw lessons from|ve
+旅店|inn|pl
+近日|recently (in the next few days)|ti
+地名|place name|th
+老乡|fellow townsman|pe
+内外|inside and outside|pl
+取款|to withdraw money|ve
+时节|season (time)|ti
+作废|to become invalid|ve
+房价|house price|th
+报刊|newspapers and magazines|th
+挨打|to take a beating|ve
+只得|to have no choice but|av
+清洁工|cleaner|pe
+省钱|to save money|ve
+小于|less than|ve
+多媒体|multimedia|th
+稿子|draft (manuscript)|th
+打印机|printer|th
+王后|queen|pe
+工商|industry and commerce|th
+奶粉|powdered milk|fo
+波浪|wave|na
+自学|to study on one's own|ve
+修车|to repair a car|ve
+墨水|ink|th
+父女|father and daughter|pe
+礼堂|auditorium|pl
+时而|now and then|av
+柱子|pillar|th
+岁数|age (years old)|th||suìshu
+指头|finger (colloquial)|bo
+试点|pilot scheme|th
+讲课|to teach (lecture)|ve
+往年|former years|ti
+节能|energy saving|ve
+看管|to look after (guard)|ve
+时时|often (constantly)|av
+只管|by all means|av
+更是|even more so|av
+忠心|loyalty|fe|n
+公鸡|rooster|an
+军舰|warship|th
+客车|passenger vehicle|th
+盛行|to be in vogue|ve
+待会儿|in a moment|ti
+单打|singles (sports)|th
+拆迁|to demolish and relocate|ve
+处长|section chief|pe
+馒头|steamed bread|fo
+乌云|dark cloud|na
+内地|inland (interior)|pl||nèidì
+外头|outside (out there)|pl
+吉祥|auspicious|ad
+求职|to look for a job|ve
+扎实|solid (sturdy)|ad
+响声|noise|th
+国歌|national anthem|th
+师生|teachers and students|pe
+游玩|to amuse oneself (tour)|ve
+两侧|both sides (flanks)|pl
+乐曲|musical composition|th
+母鸡|hen|an
+酒水|drinks (beverages)|fo
+新兴|emerging|ad||xīnxīng
+发炎|to become inflamed|ve
+发怒|to get angry|fe|v
+叹气|to sigh|ve
+台灯|desk lamp|th
+小费|tip (gratuity)|th
+西班牙语|Spanish|th||xībānyáyǔ
+反问|to ask in reply|ve
+国产|domestically made|ad
+热水器|water heater|th
+同期|same period|ti
+常年|all year round|ti
+快车|express train|th
+山峰|mountain peak|na
+民工|migrant worker|pe
+整治|to renovate (fix)|ve
+民歌|folk song|th
+宽阔|broad (wide)|ad
+遍地|everywhere (all over)|av
+少儿|children (juvenile)|pe
+机动车|motor vehicle|th
+皮球|rubber ball|th
+节假日|holidays|ti
+增值|to rise in value|ve
+宏大|grand|ad
+长跑|long-distance running|th
+中外|China and abroad|pl
+特快|express (special fast)|ad
+梅花|plum blossom|na
+近视|nearsighted|ad
+顽皮|mischievous|ad
+录音机|tape recorder|th
+送行|to see off|ve
+总量|total amount|nu|n
+首次|for the first time|av
+凉鞋|sandals|th
+兴旺|prosperous (flourishing)|ad
+手续费|service charge|th
+中华|China (Chinese nation)|pl||zhōnghuá
+恩人|benefactor|pe
+补习|to take extra lessons|ve
+多方面|many-sided|ad
+补课|to make up a lesson|ve
+晕车|carsick|ad
+楼道|corridor|pl
+绿化|to make green (plant trees)|ve
+长短|length|nu|n
+参展|to exhibit (at a fair)|ve
+写字楼|office building|pl
+雨衣|raincoat|th
+报考|to register for an exam|ve
+冷气|air conditioning (cold air)|th
+铜牌|bronze medal|th
+双打|doubles (sports)|th
+退票|to return a ticket|ve
+果酱|jam|fo
+不料|unexpectedly|av
+笔试|written exam|th
+沿海|coastal|pl
+升学|to go on to higher school|ve
+球拍|racket|th
+民警|police officer (people's)|pe
+游人|visitor (sightseer)|pe
+补考|makeup exam|th
+上班族|office worker|pe
+外币|foreign money|th
+深化|to deepen|ve
+洗衣粉|laundry powder|th
+袖珍|pocket-sized|ad
+场馆|venue (stadium)|pl
+乳制品|dairy products|fo
+考场|exam hall|pl
+高科技|high tech|th
+圆珠笔|ballpoint pen|th
+两手|both hands (two tricks)|bo
+赶忙|hastily (hurriedly)|av
+城乡|town and country|pl
+出访|to visit abroad|ve
+用法|usage|th
+果树|fruit tree|na
+名胜|scenic spot (famous site)|pl
+蓝领|blue-collar|pe
+家电|household appliances|th
+好容易|with great difficulty|av
+卧铺|sleeping berth|th
+道教|Taoism|th||dàojiào
+司长|department director|pe
+园地|garden plot (field)|pl
+让座|to give up one's seat|ve
+文娱|recreation|th
+车号|vehicle number|th
+口试|oral exam|th
+写字台|writing desk|th
+必修|compulsory (course)|ad
+昌盛|prosperous (thriving)|ad
+办学|to run a school|ve
+外资|foreign capital|th
+看得起|to think highly of|ve
+望见|to catch sight of (see from afar)|ve
+考题|exam question|th
+戏曲|traditional opera|th
+好学|studious|ad
+开夜车|to burn the midnight oil|ve
+初等|elementary (primary)|ad
+慢车|slow train|th
+端午节|Dragon Boat Festival|ti||duānwǔjié
+本地|local|ad
+本身|itself|th
+表面上|on the surface|av
+车展|auto show|th
+清明节|Qingming Festival|ti||qīngmíngjié
+取款机|ATM|th
+薯片|potato chips|fo
+算了|forget it|ve
+通红|bright red|co
+一模一样|exactly alike|ad
+自言自语|to talk to oneself|ve
+最佳|best|ad
+面对面|face to face|av
+自我|self|pe
+蚊子|mosquito|an
+老鹰|eagle|an
+鸽子|pigeon|an
+蜘蛛|spider|an
+青蛙|frog|an
+深红|crimson|co
+淡蓝|pale blue|co
+浅绿|light green|co
+乳白|milky white|co
+紫红|purplish red|co

@@ -109,7 +109,16 @@ var CHAPTERS = [
          不加这一层的话，经验和等级会把曲线拉平，300 层和 60 层一样好打，无尽就没有尽头压力了。 */
   {id:5, name:"无尽", level:"B1–C1", wordLv:[3,4,5], gemMult:2.00, endless:true,
    foeBonus:{hp:16, dmg:4, armor:0, xp:8},
-   boss:null}
+   boss:null},
+  /* 第六条（2026-09-23）：**只有学中文时才有**（learn:"zh"）—— HSK 5 一章，排在无尽前面，
+     所以学中文时它显示成「第五章」、无尽顺延成「第六章」（no 字段，见文件末尾那段 + game.js 的 chNo()）。
+     id 故意是 6 不是 5：无尽的 id 5 已经写进了各种存档，不能动。
+     数值接在墟心后面一档（+16 血 +4 伤害 +8 经验，Boss 比冕者再硬一截）。
+     立绘借祭司的（art.js 末尾挂了 MOB_ART.scribe 的别名），地图上单独上色（style.css 的 m-scribe）。*/
+  {id:6, name:"书冢", level:"HSK 5", wordLv:5, gemMult:2.00, learn:"zh",
+   foeBonus:{hp:16, dmg:4, armor:0, xp:8},
+   boss:{id:"scribe", g:"书", name:"书冢执笔", art:"priest", cat:"all",
+         hp:680, dmg:30, armor:7, xp:180, boss:true, fixed:true}}
 ];
 
 /* ===== 无尽章的深渊压迫（用户 2026-09）=====
@@ -378,10 +387,30 @@ var ROUTES = [
    desc:"B2 高阶词 · 50 层",
    open:true},
   /* 无尽：**没有层数上限**，所以 desc 里写的是「走到倒下为止」而不是层数（用户 2026-09）*/
+  /* 学中文才有的那一章（learn:"zh"，openCave() 按学习语言筛）—— 排在无尽前面 */
+  {id:"tomb", ch:6, name:"书冢", tag:"第五章 · HSK 5",
+   desc:"HSK 5 词 · 50 层", learn:"zh",
+   open:true},
   {id:"endless", ch:5, name:"无尽", tag:"第五章 · B1–C1",
    desc:"B1 / B2 / C1 混出 · 走到倒下为止",
    open:true}
 ];
+
+/* ===== 学中文时的章节（2026-09-23，用户：「拓展 HSK5 关卡，无尽模式是 4~6 词库混出」）=====
+   词难度 1~6 = HSK 1~6（words-zh.js）。前四章照旧一章一档（HSK 1~4），多出来的「书冢」是 HSK 5，
+   **无尽改成 HSK 4 / 5 / 6 混出**。显示用的章号走 no（书冢第五章、无尽第六章），id 不动。
+   ⚠️ battle.html 不加载 i18n.js（没有 LANG_LEARN），所以要兜 typeof。*/
+if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
+  CHAPTERS.forEach(function(c){
+    c.level = {1:"HSK 1", 2:"HSK 2", 3:"HSK 3", 4:"HSK 4", 5:"HSK 4–6", 6:"HSK 5"}[c.id] || c.level;
+    if(c.id === 5){ c.wordLv = [4, 5, 6]; c.no = 6; }
+    if(c.id === 6) c.no = 5;
+  });
+  ROUTES.forEach(function(r){
+    if(r.ch >= 1 && r.ch <= 4){ r.tag = r.tag.replace(/[AB][12]$/, "HSK " + r.ch); r.desc = "HSK " + r.ch + " 词 · 50 层"; }
+    if(r.ch === 5){ r.tag = "第六章 · HSK 4–6"; r.desc = "HSK 4 / 5 / 6 混出 · 走到倒下为止"; }
+  });
+}
 
 /* ===== 难度等级 =====
    **A 级就是原本的全部数值**（用户 2026-09-21 加难度调节之前，游戏只有这一档），

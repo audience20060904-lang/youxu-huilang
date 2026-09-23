@@ -5,6 +5,8 @@
      · **学习语言 LANG_LEARN** = 背哪一门的词（en 英语 / zh 中文）—— 词库、朗读、拼写题。
    能选的组合在 LANG_PAIRS 里（要有「这门语言的词 + 母语释义」那一份词库才算数）：
      中文母语 → 学英语（words-a1.js，游戏本来的样子）/ 英语母语 → 学中文（words-zh.js）。
+   **母语只做中英两种，学习语言以后会有很多**（用户 2026-09-23）—— 所以选择分两步：
+     先挑母语（veilLang），再弹一个学习语言的列表（veilLearn，按 LANG_PAIRS 现算）。
    选择存在设置 OPT（youxu.opt.v1）的 `lang` 字段上 —— 它是「这台设备怎么显示」，不是进度。
    ⚠️ **必须在 util.js 之后、词库之前加载**：words-zh.js 要读 LANG_LEARN 决定换不换词库。
    ⚠️ 换语言一律**重载页面**（词库和静态文案都是加载时定死的），见 game.js 的 setLang()。
@@ -20,6 +22,13 @@ var LANG_PAIRS = [
   {ui:"en", learn:"zh"}
 ];
 var LANG_NAME = {zh:"中文", en:"English"};
+/* 学习语言的介绍（第二步那个弹窗的卡片）：name 按母语写、self 是这门语言自己的写法、
+   lv 是这门语言的分级。**以后加一门学习语言：这里加一条 + LANG_PAIRS 加一对 + 一份词库**。
+   词数不写死，game.js 现数（learnWordCount）。*/
+var LEARN_INFO = {
+  en: {name:{zh:"英语", en:"English"}, self:"English", lv:"A1 → C1"},
+  zh: {name:{zh:"中文", en:"Chinese"}, self:"中文", lv:"HSK 1 → 6"}
+};
 var LANG_UI = "zh", LANG_LEARN = "en", LANG_SET = false;
 function langPairOk(ui, learn){
   for(var i = 0; i < LANG_PAIRS.length; i++)

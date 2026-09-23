@@ -255,6 +255,7 @@ body{
    类名来自 render() 挂的 m-<怪的 id>。 */
 .c.mob.boss.m-priest{color:#C2510E}
 .c.mob.boss.m-crown{color:#4A3A8C}
+.c.mob.boss.m-scribe{color:#1F6B63}
 .c.stair{color:var(--venom);font-weight:700}
 /* 以前有个「上锁的阶梯」的淡色状态，现在清空前压根不画阶梯，用不上了 */
 /* 金币要一眼看出是金的 —— --torch 偏棕，单独给一个亮金 */
@@ -268,7 +269,7 @@ body{
    阶梯不在这里：它清空后才出现，是玩家要去的地方，淡了反而找不着。 */
 .c.mem.gold svg,.c.mem.feat svg,.c.mem.shop svg,
 .c.mem.chest svg,.c.mem.altar svg,
-.c.mem.m-priest svg,.c.mem.m-crown svg{opacity:.5}
+.c.mem.m-priest svg,.c.mem.m-crown svg,.c.mem.m-scribe svg{opacity:.5}
 .c.it0{color:var(--r0)}.c.it1{color:var(--r1)}.c.it2{color:var(--r2)}
 .c.it3{color:var(--r3)}.c.it4{color:var(--r4)}
 /* hover 必须放在底色规则之后才盖得住 */
@@ -1061,3 +1062,18 @@ a.place{text-decoration:none}
 .coach:not([hidden]){animation:coachIn .22s ease-out}
 @keyframes coachIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (prefers-reduced-motion:reduce){.coach:not([hidden]){animation:none}}
+/* 挑母语（第一步）：两颗大按钮并排；挑学习语言（第二步）：一列卡片，以后语言多了就在 .sx 里滚 */
+.nativepick{flex-direction:row;gap:10px}
+.lchip.big{flex:1;font-size:17px;padding:16px 10px}
+.learnlist{display:flex;flex-direction:column;gap:8px}
+.lcard{flex-shrink:0;display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:10px;row-gap:2px;
+  text-align:left;width:100%;padding:12px 14px;border:1px solid var(--edge);border-radius:3px;
+  background:var(--stone-2);color:var(--bone);cursor:pointer;font-family:var(--body)}
+.lcard .lself{grid-row:1 / span 2;font-family:var(--disp);font-size:22px;color:var(--torch-deep);min-width:88px}
+.lcard .lname{font-size:14.5px;font-weight:600}
+.lcard .linfo{font-size:12px;color:var(--faint)}
+.lcard.on{border-color:var(--torch);background:#FDF6E7}
+@media (hover:hover){ .lcard:hover{border-color:var(--torch-deep)} }
+/* 学中文时答错摊开：英文释义本来就长（「to prepare (get ready)」这种），再加一行「汉字 拼音」会撑出方块 —— 收一号字 */
+.opt.two.tight{font-size:clamp(12px,1.75vh,14px);line-height:1.2;padding:6px}
+.opt.two.tight .sub{font-size:clamp(10.5px,1.5vh,12px)}

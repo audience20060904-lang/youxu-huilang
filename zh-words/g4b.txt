@@ -1,0 +1,281 @@
+无|to lack (without)|ve
+作为|as (to serve as)|av
+之间|between|pl
+是否|whether|av
+定|to fix (decide)|ve
+首|first (head)|ad
+不管|no matter|av
+停下|to stop (halt)|ve
+共|together (total)|av
+机构|institution|pl
+型|model (type)|th
+盘|plate (dish)|th
+极|extreme (pole)|ad
+牌|card (sign)|th
+俩|the two of us|nu
+投入|to put into|ve
+手里|in hand|pl
+处于|to be in (a state)|ve
+人家|others (other people)|pe
+在于|to lie in|ve
+针对|to target|ve
+宝宝|baby|pe
+治|to cure (govern)|ve
+量|to measure (amount)|ve||liáng
+系列|series|th
+检测|to test (detect)|ve
+列|to list|ve
+不然|otherwise|av
+批|batch|nu
+大会|conference|th
+兵|soldier (troops)|pe
+获|to obtain (win)|ve
+造型|modeling (look)|th
+引|to lead (attract)|ve
+度过|to spend (time)|ve
+装置|device|th
+移|to shift|ve
+测|to survey|ve
+作出|to make (a decision)|ve
+位于|to be located at|ve
+航空|aviation|th
+聚|to gather together|ve
+设置|to set up (settings)|ve
+事物|thing (object)|th
+大众|the public|pe||dàzhòng
+假如|supposing|av
+末|end (tip)|ti
+大陆|mainland|pl||dàlù
+唱片|record (music)|th
+眼里|in one's eyes|bo
+不在乎|to not care|fe|v
+多年|many years|ti
+多次|many times|av
+男女|men and women|pe
+收回|to take back|ve
+含量|content (amount)|nu|n
+高潮|climax|th
+待遇|treatment (pay)|th
+比分|score (match)|nu|n
+办事|to handle affairs|ve
+分散|to disperse|ve
+器官|organ (body)|bo
+前途|prospects|th
+被迫|to be forced|ve
+台上|on stage|pl
+获取|to gain|ve
+担保|to guarantee (vouch)|ve
+品质|quality (character)|th
+情景|scene (situation)|th
+季度|quarter (of a year)|ti
+赞助|to sponsor|ve
+含有|to contain (have)|ve
+收益|earnings|th
+潮|tide (damp)|na
+拉开|to pull open|ve
+大规模|large-scale (massive)|ad
+善于|to be good at|ve
+大多|mostly|av
+包含|to include (embody)|ve
+上门|to visit (door to door)|ve
+封闭|to seal off|ve
+遗传|heredity|th
+期限|deadline|ti
+泪|teardrop|bo
+商务|business affairs|th
+燃料|fuel|th
+替代|to substitute|ve
+安置|to settle (place)|ve
+美金|US dollars (cash)|th||měijīn
+吸烟|smoking|ve
+延长|to extend|ve||yáncháng
+途中|en route|pl
+数码|digital|ad
+延续|to continue (last)|ve
+性质|nature (quality)|th
+电源|power supply|th
+考察|to inspect (survey)|ve
+避|to avoid (dodge)|ve
+机遇|opportunity|th
+含义|meaning (implication)|th
+紧密|close (tight)|ad
+语音|voice (speech sound)|th
+记载|to record (write down)|ve
+毕业生|graduate|pe
+个别|individual (a few)|ad
+利息|interest (money)|th
+潮流|trend (tide)|th
+预订|to reserve|ve
+推销|to promote (sell)|ve
+学术|academic|th
+原料|raw material|th
+冬季|winter season|ti
+手工|handmade|ad
+来得及|there's still time|ve
+登录|to log in|ve
+穷人|poor person|pe
+符号|symbol|th
+节省|to save (economize)|ve
+以内|within|pl
+多种|many kinds|nu
+型号|model number|th
+新型|new type|ad
+两边|both sides|pl
+按时|on time|av
+分布|distribution|th
+夏季|summer season|ti
+获奖|to win a prize|ve
+促使|to urge (bring about)|ve
+爱国|patriotic|fe
+个体|individual|pe
+圆满|satisfactory (complete)|ad
+泪水|teardrops|bo
+流传|to spread (be handed down)|ve
+中奖|to win a lottery|ve
+中介|agency (broker)|pe
+征求|to solicit|ve
+赏|to reward (enjoy)|ve
+引进|to introduce (import)|ve
+列入|to include in|ve
+排列|to arrange|ve
+迫切|urgent (pressing)|ad
+分为|to divide into|ve
+难免|hard to avoid|ad
+促销|sales promotion|th
+着火|to catch fire|ve
+光临|to honor with presence|ve
+逐步|step by step|av
+可见|it is clear that|av
+晚点|to be delayed|ve
+研制|to develop (manufacture)|ve
+转动|to rotate|ve
+格外|especially (extra)|av
+离不开|can't do without|ve
+列为|to be listed as|ve
+动摇|to waver|ve
+大爷|uncle (old man)|pe||dàye
+秋季|autumn season|ti
+扩展|to extend (expand)|ve
+平稳|stable (smooth)|ad
+描写|to depict|ve
+大姐|elder sister (ma'am)|pe
+缩短|to shorten|ve
+春季|spring season|ti
+赞赏|to admire|fe|v
+议论|to discuss (comment)|ve
+讲究|to be particular about|ve
+构造|structure (construction)|th
+发票|receipt (invoice)|th
+不要紧|not serious|ad
+一再|repeatedly|av
+培育|to breed (cultivate)|ve
+改正|to correct (rectify)|ve
+特价|special price|th
+鲜明|distinct|ad
+延期|to postpone (extend)|ve
+爱护|to cherish (protect)|ve
+二手|second-hand|ad
+味儿|smell (flavor)|fo
+期末|end of term|ti
+方针|policy|th
+上楼|to go upstairs|ve
+细致|meticulous|ad
+百货|department store goods|th
+点名|to call the roll|ve
+陆地|dry land|na
+交际|social interaction|th
+茶叶|tea leaves|fo
+感兴趣|to be interested|fe|v
+运动会|sports meet|th
+登山|mountain climbing|ve
+降温|to cool down|ve
+抽奖|prize draw|ve
+概括|to summarize|ve
+大巴|coach (bus)|th
+倒闭|to go bankrupt (close down)|ve
+坚固|solid (firm)|ad
+高价|high price|th
+大妈|auntie (older woman)|pe
+随手|conveniently (in passing)|av
+转告|to pass on (a message)|ve
+调皮|naughty|ad
+公元|AD (Common Era)|ti
+制订|to formulate|ve
+陆续|one after another (gradually)|av
+率先|to take the lead|av
+试卷|test paper|th
+冰雪|ice and snow|na
+单调|monotonous|ad
+养成|to form (a habit)|ve
+诚信|integrity|th
+窗子|window (casement)|th
+再三|over and over|av
+平方|square (meter)|nu|n
+果实|fruit (result)|fo
+月底|end of the month|ti
+内科|internal medicine|th
+深厚|deep (profound)|ad
+一律|all without exception|av
+降价|to cut prices|ve
+通知书|notice (letter)|th
+学问|learning (knowledge)|th
+光盘|CD|th
+外交官|diplomat|pe
+看不起|to look down on|ve
+培训班|training class|th
+外汇|foreign currency|th
+轮子|wheel|th
+汽水|soda|fo
+学分|credit (course)|th
+能干|capable|ad
+风俗|custom|th
+摆动|to swing|ve
+开水|boiled water|fo
+充电器|charger|th
+倒车|to reverse (a car)|ve
+后头|at the rear|pl
+片面|one-sided|ad
+本科|undergraduate|th
+宽广|broad|ad
+前头|at the front|pl
+汇率|exchange rate|th
+急忙|in a hurry|av
+期中|midterm|ti
+网址|web address|th
+吸管|straw|th
+窗台|windowsill|pl
+松树|pine tree|na
+多样|diverse|ad
+学年|school year|ti
+售货员|shop assistant|pe
+电灯|electric light|th
+口语|spoken language|th
+近代|modern times|ti
+疗养|to recuperate|ve
+矮小|short and small|ad
+刷子|brush|th
+亚运会|Asian Games|th||yàyùnhuì
+电动车|electric scooter|th
+打雷|to thunder|ve
+抄写|to copy out|ve
+括号|brackets|th
+纯净水|purified water|fo
+填空|to fill in the blank|ve
+学时|class hour|ti
+穿上|to put on|ve
+翻译|to translate|ve
+高铁|high-speed rail|th
+模特儿|model (fashion)|pe
+帅|handsome|ad
+帅哥|handsome guy|pe
+微信|WeChat|th||wēixìn
+五颜六色|colorful|co
+下个月|next month|ti
+下楼|to go downstairs|ve
+显著|notable|ad
+优良|fine (good)|ad
+著名|renowned|ad
+著作|writings|th
+之一|one of|nu
+受不了|can't stand|ve
+没想到|didn't expect|ve

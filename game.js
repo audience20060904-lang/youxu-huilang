@@ -97,6 +97,11 @@ function chapterById(id){
   for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].id === id) return CHAPTERS[i];
   return null;
 }
+/* 显示用的章号：学中文时多了一章「书冢」（id 6）排在无尽前面，所以显示的第几章看 no（content.js 末尾那段），
+   没有 no 就是 id。存档、查表一律用 id —— 这个只给「第 N 章」那几行字用。*/
+function chNo(c){ c = c || CH; return (c && (c.no || c.id)) || 1; }
+/* 这条路 / 这一章是不是当前学习语言的（learn 字段；不写 = 所有语言都有）*/
+function forLearn(x){ return !x || !x.learn || x.learn === LANG_LEARN; }
 function setChapter(id){
   const c = chapterById(id);
   if(c) CH = c;
@@ -475,7 +480,7 @@ function nextFloor(){
   if(G.floor > floorMax()){
     if(!P.cleared){
       P.cleared = true;
-      say(T("章末的门在身后合上 —— <b>第") + CH.id + T("章通关</b>。这一趟的通关已经记下了。"), "crit");
+      say(T("章末的门在身后合上 —— <b>第") + chNo() + T("章通关</b>。这一趟的通关已经记下了。"), "crit");
     }
     if(!isAbyssFloor(G.floor)){ chapterClear(); return; }
   }
@@ -2140,6 +2145,7 @@ function answer(btn, ok){
                                                  : (o.py ? o.en + " " + o.py : o.en);
         b.appendChild(sub);
         b.classList.add("two");
+        if(LEARN_ZH) b.classList.add("tight");     // 学中文：英文释义长，摊开两行时收一号字，别撑出方块
       }
     });
     if(!ok && btn) btn.classList.add("wrong");
@@ -4825,6 +4831,7 @@ function openCave(){
   const box = $("routeList");
   box.innerHTML = "";
   ROUTES.forEach(function(r){
+    if(!forLearn(r)) return;                 // 学英语时没有「书冢」那一章
     const d = document.createElement("button");
     d.type = "button";
     d.className = "route" + (r.open ? "" : " off");
@@ -4903,7 +4910,7 @@ function coopConfirmEnter(){
 }
 function enterRoute(id, fromNet){
   const r = ROUTES.filter(function(x){ return x.id === id; })[0];
-  if(!r || !r.open) return;
+  if(!r || !r.open || !forLearn(r)) return;
   setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
   pendingRoute = null;
   $("veilDiff").hidden = true;
@@ -5160,7 +5167,7 @@ function endRun(win, gaveUp){
                                   : gaveUp ? (T("你从第 ") + G.floor + T(" 层退了出来"))
                                            : (T("你倒在第 ") + G.floor + T(" 层"));
   $("endEyebrow").textContent = cleared
-    ? (T("第") + CH.id + T("章 · 通关") + (P.abyss ? T(" · 深渊 ") + P.abyss + T(" 层") : ""))
+    ? (T("第") + chNo() + T("章 · 通关") + (P.abyss ? T(" · 深渊 ") + P.abyss + T(" 层") : ""))
     : gaveUp ? T("主动撤离") : T("你被抬回了镇上");
   /* 强调这一块（用户 2026-09）：本局正确率 vs 这一层历史上的平均正确率。
      高了标绿、低了标红，没有历史记录就写「—」。 */
@@ -5181,7 +5188,7 @@ function endRun(win, gaveUp){
     sc.rows.map(function(r){ return li(r.k, "+" + r.v); }).join("") +
     li(T("<b>小计</b>"), "<b>" + sc.sum + "</b>") +
     li(T("到达第 ") + sc.floor + T(" 层"), "×" + sc.fmul.toFixed(1)) +
-    li(T("难度 · 第") + CH.id + T("章 ") + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
+    li(T("难度 · 第") + chNo() + T("章 ") + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
     li(T("<b>获得宝石</b>"), "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
     li(T("宝石合计"), TOWN.gem) +
     (P.practice ? li(T("练习模式"), T("护甲 +50 · 攻击 −50%")) : "") +
@@ -5213,7 +5220,7 @@ function endRun(win, gaveUp){
   hideAll();
   $("veilEnd").hidden = false;
   $("btnAgain").focus();
-  if(win && CH.boss) say(CH.boss.name + T("碎成了石块。第") + CH.id + T("章结束。"), "crit");
+  if(win && CH.boss) say(CH.boss.name + T("碎成了石块。第") + chNo() + T("章结束。"), "crit");
 }
 function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
 
@@ -6833,7 +6840,8 @@ if(COOP){
 
 /* ================= 语言（2026-09-23，见 i18n.js）=================
    母语 = 界面语言，学习语言 = 背哪门的词。能选的组合在 LANG_PAIRS 里（现在两种）。
-   换语言一律**写进 OPT 然后重载**：词库和静态文案都是加载时定死的，重载最干净。
+   选择分两步：先母语（veilLang / 设置页母语钮），再弹学习语言列表（veilLearn，openLearnPick）。
+   换语言一律**写进 OPT 然后重载**（takeLearn）：词库和静态文案都是加载时定死的，重载最干净。
    ⚠️ 洞里不许换（续玩档里的词是按这一门语言记的，换了读档会对不上）—— 回镇上才能换。*/
 function pairFor(ui, learn){
   for(let i = 0; i < LANG_PAIRS.length; i++){
@@ -6842,42 +6850,67 @@ function pairFor(ui, learn){
   }
   return null;
 }
-function setLang(pair){
-  if(!pair) return;
-  if(pair.ui === LANG_UI && pair.learn === LANG_LEARN && LANG_SET) return;
-  OPT.lang = {ui:pair.ui, learn:pair.learn};
-  saveOpt();
-  if(pair.ui !== LANG_UI || pair.learn !== LANG_LEARN){ try{ location.reload(); }catch(e){} }
-}
+/* 设置页：母语两个钮 + 「学习：English ▸」一个钮。点哪个都是弹 veilLearn 挑学习语言（学习语言跟着母语走）。*/
 function renderLangPanel(){
   const box = $("langPanel");
   if(!box) return;
   Array.prototype.forEach.call(box.querySelectorAll("button[data-ui]"), function(b){
     b.classList.toggle("on", b.dataset.ui === LANG_UI);
   });
-  Array.prototype.forEach.call(box.querySelectorAll("button[data-learn]"), function(b){
-    b.classList.toggle("on", b.dataset.learn === LANG_LEARN);
-  });
+  const lp = $("btnLearnPick"), li = LEARN_INFO[LANG_LEARN];
+  if(lp && li) lp.textContent = li.name[LANG_UI] + " ▸";
 }
 function langClick(ev){
   const b = ev.target.closest ? ev.target.closest("button") : null;
   if(!b) return;
   if(SCENE === "run" && G && !G.over){ toast(L("先回镇上再换语言。", "Return to town before switching languages.")); return; }
-  const pair = b.dataset.ui ? pairFor(b.dataset.ui, null) : pairFor(null, b.dataset.learn);
-  setLang(pair);
+  if(b.dataset.ui){ if(b.dataset.ui !== LANG_UI) openLearnPick(b.dataset.ui, "settings"); }
+  else if(b.id === "btnLearnPick") openLearnPick(LANG_UI, "settings");
 }
-/* 首次进入：先挑语言（双语写死在 HTML 里，那时候还不知道该用哪种）*/
-let langPick = {ui:LANG_UI, learn:LANG_LEARN};
-function renderLangPick(){
-  Array.prototype.forEach.call(document.querySelectorAll("#veilLang button[data-ui]"), function(b){
-    b.classList.toggle("on", b.dataset.ui === langPick.ui);
-  });
-  Array.prototype.forEach.call(document.querySelectorAll("#veilLang button[data-learn]"), function(b){
-    b.classList.toggle("on", b.dataset.learn === langPick.learn);
-    b.disabled = !pairFor(langPick.ui, b.dataset.learn);
-  });
+/* 第二步：学习语言的列表。文字按「刚挑的母语」写 —— 那时候界面可能还是另一种语言，所以不走 T()，自带一张小表。*/
+const LEARN_UI = {
+  zh: {eb:"学习语言", title:"想学哪门语言？", back:"返回", cur:"正在学", words:" 词"},
+  en: {eb:"Learning language", title:"Which language do you want to learn?", back:"Back", cur:"current", words:" words"}
+};
+let learnFor = {ui:LANG_UI, mode:"first"};
+function learnWordCount(learn){
+  const list = learn === "zh" ? (window.ZH_WORDS || []) : learn === "en" ? (window.EN_WORDS || []) : [];
+  return list.length;
 }
-function openLangPick(){ renderLangPick(); $("veilLang").hidden = false; }
+function openLearnPick(ui, mode){
+  learnFor = {ui:ui, mode:mode};
+  const t = LEARN_UI[ui] || LEARN_UI.zh;
+  $("learnEyebrow").textContent = t.eb;
+  $("learnTitle").textContent = t.title;
+  $("btnLearnBack").textContent = t.back;
+  const box = $("learnList");
+  box.innerHTML = "";
+  LANG_PAIRS.filter(function(p){ return p.ui === ui; }).forEach(function(p){
+    const info = LEARN_INFO[p.learn] || {name:{}, self:p.learn, lv:""};
+    const cur = p.ui === LANG_UI && p.learn === LANG_LEARN && LANG_SET;
+    const n = learnWordCount(p.learn);
+    const d = document.createElement("button");
+    d.type = "button"; d.className = "lcard" + (cur ? " on" : ""); d.dataset.learn = p.learn;
+    d.innerHTML = "<span class=\"lself\">" + info.self + "</span>" +
+      "<span class=\"lname\">" + (info.name[ui] || info.self) + (cur ? " · " + t.cur : "") + "</span>" +
+      "<span class=\"linfo\">" + info.lv + (n ? " · " + n.toLocaleString(ui === "zh" ? "zh-CN" : "en-US") + t.words : "") + "</span>";
+    box.appendChild(d);
+  });
+  $("veilLang").hidden = true;
+  $("veilLearn").hidden = false;
+}
+function takeLearn(learn){
+  const pair = pairFor(learnFor.ui, learn);
+  if(!pair) return;
+  $("veilLearn").hidden = true;
+  const first = learnFor.mode === "first";
+  OPT.lang = {ui:pair.ui, learn:pair.learn};
+  saveOpt();
+  if(pair.ui !== LANG_UI || pair.learn !== LANG_LEARN){ try{ location.reload(); }catch(e){} return; }
+  renderLangPanel();
+  if(first && !tutDone()) startTutorial();
+}
+function openLangPick(){ $("veilLang").hidden = false; }
 function isFreshAccount(){
   return !(MET.runs || 0) && !Object.keys(LEX).length && !(TOWN.gem || 0) && !Object.keys(CODEX).length;
 }
@@ -7002,23 +7035,16 @@ $("btnTutorial").addEventListener("click", function(){
 });
 $("langPanel").addEventListener("click", langClick);
 $("veilLang").addEventListener("click", function(ev){
-  const b = ev.target.closest ? ev.target.closest("button") : null;
-  if(!b || b.disabled) return;
-  if(b.dataset.ui){
-    langPick.ui = b.dataset.ui;
-    if(!pairFor(langPick.ui, langPick.learn)) langPick.learn = pairFor(langPick.ui, null).learn;
-    renderLangPick();
-  } else if(b.dataset.learn){
-    langPick.learn = b.dataset.learn; renderLangPick();
-  } else if(b.id === "btnLangGo"){
-    const pair = pairFor(langPick.ui, langPick.learn);
-    if(!pair) return;
-    $("veilLang").hidden = true;
-    OPT.lang = {ui:pair.ui, learn:pair.learn};
-    saveOpt();
-    if(pair.ui !== LANG_UI || pair.learn !== LANG_LEARN){ location.reload(); return; }
-    if(!tutDone()) startTutorial();
-  }
+  const b = ev.target.closest ? ev.target.closest("button[data-ui]") : null;
+  if(b) openLearnPick(b.dataset.ui, "first");
+});
+$("learnList").addEventListener("click", function(ev){
+  const b = ev.target.closest ? ev.target.closest(".lcard") : null;
+  if(b) takeLearn(b.dataset.learn);
+});
+$("btnLearnBack").addEventListener("click", function(){
+  $("veilLearn").hidden = true;
+  if(learnFor.mode === "first") openLangPick();   // 第一次进来：退回挑母语那一步
 });
 renderLangPanel();
 if(COOP){ $("panelLang").hidden = true; $("btnTutorial").hidden = true; }   // 联机固定语言，也不走教程
