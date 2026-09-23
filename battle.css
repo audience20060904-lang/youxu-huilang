@@ -41,6 +41,18 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .xpbar{height:6px;margin-top:4px;border-radius:3px;background:var(--stone-3);overflow:hidden}
 .hud .hpbar{margin-top:5px}
 .foot .xpbar{height:8px;margin-top:0;border-radius:4px;border:1px solid var(--edge)}
+/* 连击：经验条正上方一行（用户 2026-09-23）。连击 = 没挨打之前挥了几刀；受伤清零时闪一下红。 */
+.combo{display:flex;align-items:baseline;gap:5px;width:max-content;transform-origin:left center;
+       margin:0 0 4px 2px;font-family:var(--disp);
+       color:#A93729;text-shadow:0 1px 0 rgba(255,255,255,.7);transition:opacity .2s}
+.combo b{font-size:20px;line-height:1;font-variant-numeric:tabular-nums}
+.combo span{font-size:12px}
+.combo em{font-style:normal;font-size:11px;padding:1px 6px;border-radius:8px;
+          background:rgba(216,65,47,.14);color:#8A3223}
+.combo.zero{opacity:.45}
+.combo.brk{animation:cmbBrk .45s ease-out}
+@keyframes cmbBrk{0%{transform:scale(1.25);color:#D8412F}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.combo.brk{animation:none}}
 .xpbar i{display:block;height:100%;width:0;background:var(--coin);transition:width .12s linear}
 
 /* Boss 血条：Boss 会跑出取景框，没有这条就完全不知道打到哪儿了 */

@@ -1262,6 +1262,10 @@ function swing(mult){
   /* 共鸣：离你最近的那座塔跟着开一次火 */
   if(hasSp("sp_reso") && mult === 1) resoFire();
   if(!hits.length){
+    /* 连击 = **没挨打之前挥了几刀**（用户 2026-09-23 定的口径）—— 空刀也算一刀，受伤才清零。
+       ⚠️ 空刀不触发「挥刀时」的遗物（onSwingRelics），只涨这个数。 */
+    P.combo += 1;
+    if(P.combo > P.maxCombo) P.maxCombo = P.combo;
     if(hasSp("sp_flurry") && !P.flurryReady) P.flurryN = 0;   // 空刀断掉「连续命中」
     /* 空刀也记一笔出手伤害（只算等级和连击）——「玩家一刀不砍、全靠塔」的打法里，
        不补这一句的话 towerPower() 会永远停在初始值。 */
@@ -3848,13 +3852,13 @@ function draw(){
     ctx2.globalAlpha = Math.min(1, pw.life * 1.6);
     ctx2.lineCap = "round";
     if(pw.ring){
-      ctx2.strokeStyle = "#245E8C"; ctx2.lineWidth = 6;
+      ctx2.strokeStyle = "#C0392B"; ctx2.lineWidth = 6;           // 刀气跟刀一个颜色（红，2026-09-23）
       ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, 0, 6.2832); ctx2.stroke();
     } else {
       var pd = pw.dir !== undefined ? pw.dir : Math.atan2(pw.vy, pw.vx);
-      ctx2.strokeStyle = "#245E8C"; ctx2.lineWidth = 6;
+      ctx2.strokeStyle = "#C0392B"; ctx2.lineWidth = 6;
       ctx2.beginPath(); ctx2.arc(sx(pw.x), sy(pw.y), pw.r, pd - 1.1, pd + 1.1); ctx2.stroke();
-      ctx2.strokeStyle = "rgba(36,94,140,.4)"; ctx2.lineWidth = 3;
+      ctx2.strokeStyle = "rgba(192,57,43,.4)"; ctx2.lineWidth = 3;
       ctx2.beginPath(); ctx2.arc(sx(pw.x) - Math.cos(pd) * 12, sy(pw.y) - Math.sin(pd) * 12,
                                  pw.r * 0.8, pd - 0.9, pd + 0.9); ctx2.stroke();
     }
@@ -4699,16 +4703,17 @@ function drawFx(){
       var cx0 = sx(f.x), cy0 = sy(f.y);
       ctx2.lineCap = "round";
       /* 外圈那一道淡的（刀气的余势）*/
-      ctx2.strokeStyle = f.crit ? "rgba(240,194,60,.45)" : "rgba(252,248,240,.45)";
+      /* ⚠️ 玩家的刀是**红色**（用户 2026-09-23）；狂刃那一刀外圈描金、刀身更亮更粗，照样认得出来 */
+      ctx2.strokeStyle = f.crit ? "rgba(240,194,60,.55)" : "rgba(216,65,47,.40)";
       ctx2.lineWidth = wid * 0.55;
       ctx2.beginPath(); ctx2.arc(cx0, cy0, f.range * 0.96, tail, head); ctx2.stroke();
       /* 刀身 */
-      ctx2.strokeStyle = f.crit ? "#F0C23C" : "#FCF8F0";
+      ctx2.strokeStyle = f.crit ? "#FF3B1F" : "#D8412F";
       ctx2.lineWidth = wid;
       ctx2.beginPath(); ctx2.arc(cx0, cy0, f.range * 0.82, tail, head); ctx2.stroke();
       ctx2.strokeStyle = "rgba(46,42,35,.30)"; ctx2.lineWidth = 1.5; ctx2.stroke();
       /* 刀尖上那一点白 */
-      ctx2.fillStyle = f.crit ? "#FFF3CB" : "#FFFFFF";
+      ctx2.fillStyle = f.crit ? "#FFF3CB" : "#FFD9D2";
       ctx2.beginPath();
       ctx2.arc(cx0 + Math.cos(head) * f.range * 0.82, cy0 + Math.sin(head) * f.range * 0.82,
                wid * 0.42, 0, 6.2832);
@@ -5152,6 +5157,16 @@ function renderHud(){
   $("hGold").textContent = P.gold;
   $("hKill").textContent = P.kills;
   $("xpFill").style.width = Math.min(100, P.xp / xpNeed() * 100) + "%";
+  /* 连击（经验条上方，用户 2026-09-23）：数字 + 它现在给的伤害加成。
+     掉回 0 的那一下闪一次红（跟护盾那条一样，上一次的数记在元素自己的 data 上）。 */
+  var cb = $("comboBar"), cwas = +(cb.dataset.n || 0);
+  $("cmbN").textContent = P.combo;
+  $("cmbP").textContent = "+" + comboPct(s) + "%";
+  cb.classList.toggle("zero", P.combo === 0);
+  if(P.combo < cwas && cwas >= 5 && !REDUCE_MOTION){
+    cb.classList.remove("brk"); void cb.offsetWidth; cb.classList.add("brk");
+  }
+  cb.dataset.n = P.combo;
   var hp = Math.max(0, P.hp);
   $("hpFill").style.width = (hp / s.maxHp * 100) + "%";
   $("shFill").style.width = Math.min(100, P.shield / s.maxHp * 100) + "%";
