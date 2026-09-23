@@ -99,16 +99,24 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
          border-radius:50%;background:var(--hero);opacity:.55}
 
 /* ===== 弹层 ===== */
-.veil{position:absolute;inset:0;z-index:30;display:none;place-items:center;
+/* ⚠️ 弹层自己不滚（用户 2026-09-23，跟主城一个规矩）：窗口高度封顶一屏，要滚的只有窗口里的 .scroll，
+   标题和底下的按钮不动。高频的挑选窗（升级四选一 / Boss 三选一 / 合成挑一件）**不滚**，靠 .pick 的定高卡片排进一屏。 */
+.veil{position:absolute;inset:0;z-index:30;display:none;place-items:center;overflow:hidden;
       background:rgba(46,42,35,.45);padding:14px}
 .veil.on{display:grid}
-.box{width:min(100%,420px);max-height:calc(100dvh - 28px);overflow-y:auto;
+.box{width:min(100%,420px);max-height:calc(100dvh - 28px);overflow:hidden;
+     display:flex;flex-direction:column;
      background:var(--stone);border:1px solid var(--edge);border-radius:14px;padding:16px}
+.box > *{flex:none}
+.box > .scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -2px;padding:0 2px}
+/* 列表会变长变短的窗口定死高度（遗物页 / 取舍 / 特殊页 / 游商 / 塔商店 / 结算）—— 卖一件、换一批，窗口不缩放 */
+.box.tall{height:min(700px, calc(100dvh - 28px))}
+/* 兜底：没有 .scroll 的窗口在小屏上装不下时，整个窗口自己滚（仍然在窗口里面） */
+.box:not(:has(> .scroll)){overflow-y:auto}
 .box.wide{width:min(100%,520px)}
 /* 「列表自己滚、按钮钉在底下」的弹层（遗物页 / 特殊页 / 结算页）。
    ⚠️ 别把按钮塞回 .scroll 里 —— 带满 15 件时列表很长，按钮会跟着滚下去找不着。 */
 .box.col{display:flex;flex-direction:column;overflow:hidden}
-.box.col .scroll{flex:1;min-height:0;overflow-y:auto;margin:0 -2px;padding:0 2px}
 .box.col .rowb.pin{flex:none;margin-top:10px;padding-top:10px;
                    border-top:1px solid var(--edge-soft)}
 .box h2{font-family:var(--disp);font-size:20px;margin:0 0 6px}
@@ -251,3 +259,15 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 
 /* 「换一批」→「换一批（还剩 2 次）」→「已经换过了」三种字：定宽，旁边的「都不要」不跟着跳（用户 2026-09-23） */
 #btnRedraw{width:11em;white-space:nowrap}
+
+/* ===== 高频挑选窗：定高卡片（用户 2026-09-23）=====
+   升级四选一 / Boss 三选一 / 合成挑一件：每张卡**一样高**，品质和名字并一行，效果最多三行，铭文收起来。
+   ⚠️ 战场词条最长 48 字、特殊遗物最长 58 字，三行都装得下（改词条前跑一遍「全表量高度」的测试）。 */
+.cards.pick{gap:7px}
+/* ⚠️ 用 grid 贴顶排：<button> 定了高度会把内容**垂直居中**，文字就浮在卡片中间了 */
+.cards.pick .card{display:grid;grid-template-columns:auto 1fr;align-content:start;align-items:baseline;
+  column-gap:8px;height:88px;overflow:hidden;padding:8px 11px}
+.cards.pick .card .cn{font-size:15px;margin:0}
+.cards.pick .card .cp{grid-column:1 / -1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;margin-top:3px;line-height:1.45}
+.cards.pick .card .cl{display:none}

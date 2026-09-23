@@ -78,7 +78,7 @@
     <div class="box">
       <h2>战场</h2>
       <p class="sub">走位躲怪，刀会自己挥。每升一级从四件遗物里挑一件。轮数没有尽头。</p>
-      <div id="tierList"></div>
+      <div class="scroll"><div id="tierList"></div></div>
       <!-- ⚠️ 「继续」只有存着没走完的那一趟时才出现（每一波存一次档，用户 2026-09-22）。
            点「下场」会把那一趟丢掉，所以按钮上写清楚是第几波。 -->
       <div class="rowb">
@@ -91,7 +91,7 @@
 
   <!-- 塔的商店：部署阶段点「商店」弹出来，刷新和购买都在这儿（用户 2026-09-22）-->
   <div class="veil" id="veilTwShop">
-    <div class="box wide col">
+    <div class="box wide col tall">
       <h2>商店</h2>
       <p class="sub" id="twShopSub"></p>
       <div class="scroll"><div id="twShopList"></div></div>
@@ -107,7 +107,7 @@
     <div class="box">
       <h2 id="pickTitle">升到 2 级</h2>
       <p class="sub">挑一件带走</p>
-      <div id="pickList" class="cards"></div>
+      <div id="pickList" class="cards pick"></div>
       <div class="rowb">
         <button class="btn ghost" id="btnRedraw" hidden>换一批</button>
         <button class="btn ghost" id="btnSkipPick">都不要</button>
@@ -117,12 +117,12 @@
 
   <!-- 带满了的取舍 -->
   <div class="veil" id="veilSwap">
-    <div class="box">
+    <div class="box col tall">
       <h2>遗物带满了</h2>
       <p class="sub">换掉一件，换下来的当场分解成金币</p>
       <div id="swapNew" class="cards"></div>
       <div class="hr">身上的</div>
-      <div id="swapOld" class="cards"></div>
+      <div class="scroll"><div id="swapOld" class="cards"></div></div>
     </div>
   </div>
 
@@ -131,9 +131,11 @@
     <div class="box">
       <h2>信息</h2>
       <p class="sub" id="infoSub"></p>
-      <div id="infoStats" class="stats"></div>
-      <!-- 宝珠（局外养成）点亮了什么：开局那一下定死的，没装就整块藏起来 -->
-      <div id="infoOrb" class="orbinfo" hidden></div>
+      <div class="scroll">
+        <div id="infoStats" class="stats"></div>
+        <!-- 宝珠（局外养成）点亮了什么：开局那一下定死的，没装就整块藏起来 -->
+        <div id="infoOrb" class="orbinfo" hidden></div>
+      </div>
       <div class="rowb">
         <button class="btn" id="btnInfoClose">继续</button>
       </div>
@@ -142,7 +144,7 @@
 
   <!-- 特殊遗物：打 Boss 掉的，不占 15 个遗物位 -->
   <div class="veil" id="veilSp">
-    <div class="box wide col">
+    <div class="box wide col tall">
       <h2 id="spTitle">特殊遗物</h2>
       <p class="sub">打倒 Boss 才有，不占遗物位，也不能分解或当合成材料。</p>
       <div class="scroll"><div id="spList" class="cards"></div></div>
@@ -154,7 +156,7 @@
 
   <!-- 特殊遗物带满 5 件时的取舍窗 -->
   <div class="veil" id="veilSpSwap">
-    <div class="box col">
+    <div class="box col tall">
       <h2>特殊遗物满了</h2>
       <p class="sub">最多带 5 件。换掉一件，或者不要这件新的。</p>
       <div class="scroll">
@@ -173,13 +175,13 @@
     <div class="box">
       <h2>Boss 倒下了</h2>
       <p class="sub">从三件特殊遗物里挑一件 —— 它不占遗物位</p>
-      <div id="spPickList" class="cards"></div>
+      <div id="spPickList" class="cards pick"></div>
     </div>
   </div>
 
   <!-- 遗物页（合成面板就在这儿，随时能开）-->
   <div class="veil" id="veilBag">
-    <div class="box wide col">
+    <div class="box wide col tall">
       <h2 id="bagTitle">遗物 0 / 15</h2>
       <p class="sub" id="fuseSub"></p>
       <div class="scroll"><div id="bagList" class="cards"></div></div>
@@ -195,7 +197,7 @@
 
   <!-- 游商（击杀掉落，踩上去弹出）-->
   <div class="veil" id="veilShop">
-    <div class="box wide col">
+    <div class="box wide col tall">
       <h2>游商</h2>
       <p class="sub" id="shopSub">金币 0</p>
       <div class="scroll"><div id="shopList" class="cards"></div></div>
@@ -212,7 +214,7 @@
   <div class="veil" id="veilGot">
     <div class="box">
       <h2 id="gotTitle">挑一件</h2>
-      <div id="gotList" class="cards"></div>
+      <div id="gotList" class="cards pick"></div>
     </div>
   </div>
 
@@ -230,7 +232,7 @@
 
   <!-- 结算 -->
   <div class="veil" id="veilEnd">
-    <div class="box col">
+    <div class="box col tall">
       <h2 id="endTitle">倒下了</h2>
       <div class="scroll">
         <div id="endStats" class="stats"></div>

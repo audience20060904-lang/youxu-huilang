@@ -333,11 +333,23 @@ body{
 .stats .s b{color:var(--bone);font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 
 /* ===== 弹层 ===== */
+/* ⚠️ 弹层**自己不滚**（用户 2026-09-23：「弹窗做固定大小，内置滚动，不要调用浏览器滚动」）——
+   窗口高度封顶在一屏以内，要滚的是窗口里指定的那一块（.sx），标题和底下的按钮不动。 */
 .veil{position:fixed;inset:0;background:rgba(58,48,32,.42);backdrop-filter:blur(2px);
-  display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto;z-index:30}
+  display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;z-index:30}
 .veil[hidden]{display:none !important}
 .sheet{width:100%;max-width:560px;background:var(--stone);border:1px solid var(--edge);border-radius:4px;
-  box-shadow:0 18px 50px rgba(70,58,38,.28);padding:18px;display:flex;flex-direction:column;gap:13px;margin-block:auto}
+  box-shadow:0 18px 50px rgba(70,58,38,.28);padding:18px;display:flex;flex-direction:column;gap:13px;margin-block:auto;
+  max-height:calc(100dvh - 28px);overflow:hidden}
+/* 窗口里的东西默认不伸缩；只有标了 .sx 的那一块吃剩下的高度、自己滚 */
+.sheet > *{flex:none}
+.sheet > .sx{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+/* 列表会变长变短的窗口（图鉴、祝福、挑宝珠、取舍、熔炉、玩法、结算）**定死高度** ——
+   搜一下、换一批、卸一颗，窗口都不跟着缩放 */
+.sheet.tall{height:min(720px, calc(100dvh - 28px))}
+/* 兜底：没有 .sx 的窗口万一在小屏上装不下，就整个窗口自己滚（还是在窗口里面，不是浏览器滚） */
+.sheet:not(:has(> .sx)){overflow-y:auto}
+.sheet > .endsx{display:flex;flex-direction:column;gap:13px}
 .sheet h2{font-family:var(--disp);font-weight:600;font-size:20px;margin:0;letter-spacing:.04em;text-wrap:balance}
 .eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
 .btn{font-family:var(--body);font-size:13.5px;padding:9px 16px;border-radius:2px;cursor:pointer;
@@ -563,7 +575,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
   font-family:var(--body);font-size:12.5px;padding:6px 10px;cursor:pointer;margin-bottom:-1px}
 .tab.on{color:var(--torch);border-bottom-color:var(--torch)}
-.codex{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;padding-right:2px}
+.codex{display:flex;flex-direction:column;gap:6px}   /* 高度交给外面的 .sheet.tall / .sx（2026-09-23 去掉了 52vh）*/
 /* ⚠️ 图鉴卡片占用了 .cx / .cn / .cd —— 战斗窗那条连击用的是带前缀的 .cmb-*，别再撞名字
    （跟当年 .opt 撞设置页复选框是同一个坑）。 */
 .cx{border:1px solid var(--edge-soft);border-left:3px solid var(--edge);background:#FFFDF7;
@@ -839,7 +851,7 @@ a.place{text-decoration:none}
 /* ===== 祝福（主城的局外养成）=====
    10 个槽位排成两组，每组 5 行（一个品质一行）。开着的行点进去挑遗物，
    没开的行是两步确认的「开启」按钮（.armed 是已经点过一下、等第二下的样子）。 */
-.blesslots{display:flex;flex-direction:column;gap:6px;max-height:54vh;overflow-y:auto;padding-right:2px}
+.blesslots{display:flex;flex-direction:column;gap:6px}
 .blesslots .bhead{margin-top:4px}
 .blesslots .bhead:first-child{margin-top:0}
 .bslot{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
@@ -861,7 +873,7 @@ a.place{text-decoration:none}
 .bslot.armed .bn,.bslot.armed .bgo{color:var(--torch-deep)}
 .bslot.set{border-left:3px solid var(--torch-deep)}
 /* 挑遗物那一页：一个品质最多四十几张卡，列表自己滚 */
-#blessPickList{max-height:52vh;overflow-y:auto;padding-right:2px}
+
 .relic.cur{border-color:var(--torch-deep);background:#F6E6C4}
 
 /* ===== 宝珠（局外养成，用户 2026-09-23）=====
@@ -964,7 +976,7 @@ a.place{text-decoration:none}
 .orbfx.ref i{font-style:normal; font-size:12px; color:var(--faint)}
 .orbfx.ref i.lit{color:var(--torch-deep); font-weight:600}
 /* 挑宝珠的弹窗：背包可能很长，列表自己滚 */
-.orbpicklist{max-height:46vh; overflow-y:auto; padding-right:2px}
+
 @media (hover:hover){.orbslot:hover{border-color:var(--torch-deep)}}
 
 /* ===== 浮窗提示 toast（用户 2026-09-23）=====
@@ -983,3 +995,16 @@ a.place{text-decoration:none}
   .nav, .nav i, .osub, .toast{transition:none}
   .nav.on i{transform:none}
 }
+
+/* ===== 高频挑选窗：**固定大小、不滚**（用户 2026-09-23：「战斗内的高频弹窗选择固定窗口，优先调整窗口内排版」）=====
+   清层五选一（#relicList）/ 合成挑一件（#fuseGotList）：每张卡**定高**，品质和名字并成一行，
+   效果最多两行、铭文收起来（铭文在遗物页和图鉴里看得到）。换一批时窗口一个像素都不动。
+   ⚠️ 效果最长 48 个字，390 宽上两行刚好装下 —— 加更长的遗物前先跑一遍那个「全表量高度」的测试。 */
+.relics.pickset{gap:7px}
+/* ⚠️ 用 grid 贴顶排：<button> 定了高度会把内容**垂直居中**，文字就浮在卡片中间了 */
+.relics.pickset .relic{display:grid;grid-template-columns:auto 1fr;align-content:start;align-items:baseline;
+  column-gap:8px;height:78px;overflow:hidden;padding:8px 11px}
+.relics.pickset .relic .rn{font-size:15px}
+.relics.pickset .relic .rp{grid-column:1 / -1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;margin-top:3px;font-size:12.5px;line-height:1.5}
+.relics.pickset .relic .rl{display:none}

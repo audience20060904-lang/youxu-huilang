@@ -287,7 +287,7 @@
   <div class="sheet">
     <div class="eyebrow">洞窟 · 选一条路</div>
     <h2>下去哪里？</h2>
-    <div class="routes" id="routeList"></div>
+    <div class="routes sx" id="routeList"></div>
     <!-- 练习模式：进洞之前勾，整趟有效（用户 2026-09） -->
     <button class="practice" id="btnPractice" type="button" aria-pressed="false">练习模式 · 关
       <em>开着：护甲 +50（每下只掉 1 血），但攻击减半</em></button>
@@ -301,7 +301,7 @@
   <div class="sheet">
     <div class="eyebrow" id="diffSub">洞窟 · 选难度</div>
     <h2>用哪一档下去？</h2>
-    <div class="routes" id="diffList"></div>
+    <div class="routes sx" id="diffList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnCloseDiff" type="button">换条路</button></div>
   </div>
 </div>
@@ -402,11 +402,11 @@
 
 <!-- 熔炉：祭坛有两成概率长成这个。献祭一件遗物，升一档 / 同档换一件 / 降一档，各三分之一 -->
 <div class="veil" id="veilForge" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">石台 · 炉膛还热着</div>
     <h2>把一件遗物扔进去？</h2>
     <p class="note">三分之一<b>升一档</b>，三分之一<b>换一件同档的</b>，三分之一<b>降一档</b>。扔进去就收不回来了。</p>
-    <div class="relics" id="forgeList"></div>
+    <div class="relics sx" id="forgeList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnForgeSkip" type="button">什么也不扔</button></div>
   </div>
 </div>
@@ -436,7 +436,7 @@
     <div class="eyebrow">游商</div>
     <h2>他没抬头，只把布摊开</h2>
     <p class="note">「洞里的钱，洞里花。带出去的，我也收不着。」<span id="shopGold"></span></p>
-    <div class="shop" id="shopList"></div>
+    <div class="shop sx" id="shopList"></div>
     <div class="rowb">
       <button class="btn ghost" id="btnShopReroll" type="button" hidden>刷新 · 换一批货</button>
       <span class="sp"></span>
@@ -446,12 +446,12 @@
 </div>
 
 <div class="veil" id="veilSwap" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">带不下了</div>
     <h2 id="swapTitle">换掉哪一件？</h2>
     <div class="relic hot" id="swapNew"></div>
     <p class="note">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
-    <div class="relics" id="swapList"></div>
+    <div class="relics sx" id="swapList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
   </div>
 </div>
@@ -461,20 +461,23 @@
     <div class="eyebrow" id="relicEyebrow">这一层清干净了</div>
     <h2 id="relicTitle">石廊给了你一样东西</h2>
     <p class="note">遗物只在这一趟里管用。选一个。</p>
-    <div class="relics" id="relicList"></div>
+    <div class="relics pickset" id="relicList"></div>
     <button class="btn ghost" id="btnRelicRedraw" type="button" hidden>重掷 · 换一批</button>
   </div>
 </div>
 
 <div class="veil" id="veilEnd" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow" id="endEyebrow">本次探索结束</div>
     <h2 id="endTitle">你倒在了石廊里</h2>
+    <!-- 结算：中间这一块自己滚，「再来一次」钉在底下（用户 2026-09-23：弹窗固定大小、内置滚动）-->
+    <div class="sx endsx">
     <!-- 本局正确率 vs 这一层历史上的平均正确率（用户 2026-09 要的那个强调） -->
     <div id="endAcc"></div>
     <div class="ledger" id="endStats"></div>
     <div class="eyebrow">这一趟遇到的词</div>
     <div class="codex" id="endWords"></div>
+    </div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnAgain" type="button">再来一次</button></div>
   </div>
 </div>
@@ -499,28 +502,28 @@
   <div class="sheet">
     <div class="eyebrow" id="fuseGotEyebrow">合成</div>
     <h2 id="fuseGotTitle">两件，挑一件</h2>
-    <div class="relics" id="fuseGotList"></div>
+    <div class="relics pickset" id="fuseGotList"></div>
   </div>
 </div>
 
 <!-- 祝福：局外养成。10 个槽位 = 偏爱 5 + 封印 5，每一组每个品质各一个 -->
 <div class="veil" id="veilBless" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">祝福 · 跨局永久</div>
     <h2>把宝石押在两件事上</h2>
     <p class="note">宝石 <b id="blessGem">0</b>　一个槽位 <b id="blessCost">2000</b>，开了之后换遗物不再收钱。</p>
-    <div class="blesslots" id="blessList"></div>
+    <div class="blesslots sx" id="blessList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseBless" type="button">关闭</button></div>
   </div>
 </div>
 
 <div class="veil" id="veilBlessPick" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow" id="blessPickEyebrow">偏爱 · 普通</div>
     <h2 id="blessPickTitle">什么是你的最爱</h2>
     <input class="findbox" id="blessFind" type="search" autocomplete="off"
            placeholder="搜索：名字 / 效果 / 铭文">
-    <div class="relics" id="blessPickList"></div>
+    <div class="relics sx" id="blessPickList"></div>
     <div class="rowb">
       <button class="btn ghost" id="btnBlessClear" type="button" hidden>空出这个槽位</button>
       <span class="sp"></span>
@@ -558,18 +561,18 @@
 
 <!-- 点「人物」里的装备位弹出来：空位挑一颗戴上；有珠的能强化、卸下、换一颗 -->
 <div class="veil" id="veilOrbPick" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">装备宝珠</div>
     <h2 id="orbPickTitle">第 1 个位置</h2>
     <div class="orblist" id="orbPickCur"></div>
     <div class="eyebrow">背包</div>
-    <div class="orblist orbpicklist" id="orbPickList"></div>
+    <div class="orblist orbpicklist sx" id="orbPickList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnOrbPickClose" type="button">返回</button></div>
   </div>
 </div>
 
 <div class="veil" id="veilCodex" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">图鉴 · 跨局永久记录</div>
     <div class="tabs">
       <button class="tab on" data-tab="word" type="button">词库</button>
@@ -580,16 +583,16 @@
     <div class="tally" id="codexTally"></div>
     <input class="findbox" id="codexFind" type="search" autocomplete="off"
            placeholder="搜索：英文 / 中文 / 遗物名">
-    <div class="codex" id="codexList"></div>
+    <div class="codex sx" id="codexList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseCodex" type="button">关闭</button></div>
   </div>
 </div>
 
 <div class="veil" id="veilHelp" hidden>
-  <div class="sheet">
+  <div class="sheet tall">
     <div class="eyebrow">幽墟回廊 · 玩法</div>
     <h2>词就是你的剑</h2>
-    <div class="rules">
+    <div class="rules sx">
       <ul>
         <li><b>走路</b>：<b>点地图上任何走过的地面，角色会自己找路过去</b>。点怪物就走过去开战，点 <span style="color:var(--venom)">▼</span> 就走去下楼（清空前地图上没有 ▼）。走到一半想停下，点别处或按 <span class="kbd">Esc</span>。</li>
         <li><b>探索</b>：怪物待在原地不动，你要自己去找。前四章各 <b>50 层</b>，第五章「无尽」<b>没有底</b>；每层 <b>十来只</b>怪。<b>清完这一层的怪</b>，下行阶梯才会出现 —— 就在<b>最后一只怪倒下的地方</b>。</li>
