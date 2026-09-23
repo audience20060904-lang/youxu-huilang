@@ -178,13 +178,12 @@
         <span class="sp"></span>
         <span class="orbgemtag">宝石 <b id="orbGemB">0</b></span>
       </div>
-      <p class="note orbmsg" id="orbMsg" hidden></p>
       <div class="panel grow" id="orbBagPanel">
         <!-- 顶上这一行钉住不滚（用户 2026-09-23 要「置顶分解宝珠按钮」），滚的是下面的方格 -->
         <div class="orbbar">
-          <div class="phead"><span id="orbBagHead">背包 0</span> · 只在战场生效</div>
+          <div class="phead"><span id="orbBagHead">背包 0</span></div>
           <span class="sp"></span>
-          <button class="btn" id="btnOrbMeltGo" type="button" hidden>分解</button>
+          <button class="btn" id="btnOrbMeltGo" type="button" style="visibility:hidden">分解</button>
           <button class="btn" id="btnOrbMelt" type="button">分解</button>
         </div>
         <div class="orbgrid" id="orbList"></div>
@@ -252,7 +251,6 @@
           <button class="btn primary" id="btnCopySave" type="button">复制存档码</button>
           <button class="btn" id="btnPasteSave" type="button">粘贴存档码</button>
         </div>
-        <p class="note" id="codeMsg"></p>
         <textarea class="code" id="codeBox" rows="3" hidden></textarea>
       </div>
       <div class="panel">
@@ -578,7 +576,6 @@
     <div class="eyebrow">宝珠商店 · 只在战场生效</div>
     <h2>三颗没开过光的珠子</h2>
     <p class="note">宝石 <b id="orbGemS">0</b></p>
-    <p class="note orbmsg" id="orbShopMsg" hidden></p>
     <div class="orblist" id="orbShop"></div>
     <div class="rowb">
       <button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button>
@@ -594,12 +591,9 @@
     <div class="eyebrow">宝珠 · 只在战场生效</div>
     <h2 id="orbInfoTitle">宝珠</h2>
     <div class="orbinfo" id="orbInfoBody"></div>
-    <p class="note orbmsg" id="orbInfoMsg" hidden></p>
-    <div class="rowb orbinfoacts">
-      <span id="orbInfoActs" class="orbinfobtns"></span>
-      <span class="sp"></span>
-      <button class="btn ghost" id="btnOrbInfoClose" type="button">返回</button>
-    </div>
+    <!-- 按钮一律定宽（两格平分一行）：「强化 · 500」变成「再点一次 · 500 宝石」时不许把别的按钮挤走 -->
+    <div class="orbinfobtns" id="orbInfoActs"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnOrbInfoClose" type="button">返回</button></div>
   </div>
 </div>
 
@@ -608,7 +602,6 @@
   <div class="sheet">
     <div class="eyebrow">装备宝珠</div>
     <h2 id="orbPickTitle">第 1 个位置</h2>
-    <p class="note orbmsg" id="orbPickMsg" hidden></p>
     <div class="orblist" id="orbPickCur"></div>
     <div class="eyebrow">背包</div>
     <div class="orblist orbpicklist" id="orbPickList"></div>

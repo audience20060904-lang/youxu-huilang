@@ -28,8 +28,10 @@ var BF = {
   relicMax: 15,
   cutMax: 75,           // 常驻减伤封顶 %
   touchCd: 0.65,        // 同一只怪的接触伤害冷却（秒）
-  comboStep: 5,
-  comboPct: 2,
+  /* 连击加成：**每 10 连击 +1%**（用户 2026-09-23，原来每 5 连击 +2%）。
+     进 ② 层百分比桶，乘区还是两个。「火星」按原来的比例（5 → 2）跟着缩成 10 → 4。 */
+  comboStep: 10,
+  comboPct: 1,
   wagerInner: 0.45,     // 刀程内侧这一段算「贴身」（= 地牢的冒险）
   hauntMax: 5,          // 同时最多标记几只仇敌（= 心魔）
   bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
@@ -1084,7 +1086,7 @@ function bstats(){
   if(has("greed")) s.goldPct += 20;
   if(has("rust"))  s.goldPct += 10;
   if(has("study")) s.xpPct  += 10;
-  if(has("spark")) s.comboStep = 2;
+  if(has("spark")) s.comboStep = 4;                                 // 火星：10 → 4（跟地牢 5 → 2 同一个比例）
   if(has("wellread")) s.range = Math.round(s.range * 1.10);         // 战场改写
   if(has("steady") && hpPct < 0.25) s.spd = Math.round(s.spd * 1.25);
   /* 宝珠：词条 + 「疾起」（每波开始 3 秒移速 +30%）*/

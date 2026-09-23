@@ -4175,6 +4175,27 @@ function blessTake(id){
   closeBlessPick();
 }
 
+/* ================= 浮窗提示 toast（用户 2026-09-23）=================
+   「买下了一颗宝珠」「分解了两颗」「存档码已复制」这类一句话的反馈，一律从底部弹出来、过一会儿自己淡掉。
+   ⚠️ **别再往面板里塞一行 note 当提示** —— 那会把下面的东西顶下去，用户明确要「交互后不要变形」。
+   同一时间只有一条：新的来了直接换字、重新计时。纯装饰，挂在 body 上，不占任何布局。 */
+let toastTimer = null;
+function toast(text){
+  if(!text) return;
+  let t = $("toast");
+  if(!t){
+    t = document.createElement("div");
+    t.id = "toast"; t.className = "toast";
+    t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite");
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.classList.remove("show"); void t.offsetWidth;    // 连着两条时也重播一次弹出
+  t.classList.add("show");
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); toastTimer = null; }, 2400);
+}
+
 /* ================= 宝珠（局外养成，用户 2026-09-23）=================
    用宝石买、在「背包」里鉴定 / 强化 / 装备，**只在战场生效**（battle.js 开局读一次）。
    配置表和纯函数在 orb.js；这里只管主城的界面和花钱。
@@ -4184,7 +4205,6 @@ function blessTake(id){
       一次一千到五千，误点一下很亏。鉴定是免费的，一下就鉴。 */
 let orbSub = "bag";           // 背包页里停在哪个子栏目：bag 背包 / me 人物
 let orbArmed = "";            // 两步确认："buy:0" / "re" / "enh:<uid>"
-let orbMsg = "";              // 上一次操作的结果（鉴定出什么、强化抽到什么），显示在背包顶上
 let orbMeltOn = false;        // 分解的挑选状态（背包顶上那颗「分解」按钮开的）
 let orbMeltSel = [];          // 挑中要分解的 uid
 let orbInfoU = 0;             // 详情弹窗开着的是哪一颗
@@ -4220,7 +4240,7 @@ function orbBuy(i){
   od.bag.push({u: ++od.seq, c:"", b:s.b, lv:0, pt:0, a:[]});
   s.sold = true;
   commitPerm();
-  orbMsg = "买下了一颗未鉴定的宝珠，放进背包了。";
+  toast("买下了一颗未鉴定的宝珠，放进背包了。");
   renderOrbShop();
 }
 function orbReroll(){
@@ -4244,7 +4264,7 @@ function orbIdentify(u){
   if(!orbPay(ORB_IDENT_COST)) return;
   o.c = orbRollColor();
   commitPerm();
-  orbMsg = "鉴定出来了：" + orbColorName(o) + "。";
+  toast("鉴定出来了：" + orbColorName(o) + "。");
   orbRefresh();
 }
 function orbEnhCost(o){
@@ -4278,9 +4298,9 @@ function orbEnhance(u){
     if(pool.length){ const x = pick(pool); x.d = 1; dbl = orbAffixText(x); }
   }
   commitPerm();
-  orbMsg = orbColorName(o) + " 第 " + o.lv + " 次强化 +" + roll + " 点（共 " + o.pt + "）" +
+  toast(orbColorName(o) + " 第 " + o.lv + " 次强化 +" + roll + " 点（共 " + o.pt + "）" +
            (got.length ? "　新词条：" + got.join("、") : "") +
-           (dbl ? "　翻倍：" + dbl : "");
+           (dbl ? "　翻倍：" + dbl : ""));
   orbRefresh();
 }
 function orbSlotOf(u){ return orbData().eq.indexOf(u); }
@@ -4293,12 +4313,12 @@ function orbPut(u, slot){
   const od = orbData(), o = orbFind(od, u);
   if(!o || !o.c) return;
   if(slot === undefined || slot < 0) slot = od.eq.indexOf(0);
-  if(slot < 0){ orbMsg = "六个位置都满了，先在「人物」里卸下一颗。"; orbRefresh(); return; }
+  if(slot < 0){ toast("六个位置都满了，先在「人物」里卸下一颗。"); orbRefresh(); return; }
   const was = orbSlotOf(u);
   if(was >= 0) od.eq[was] = 0;
   od.eq[slot] = u;
   commitPerm();
-  orbMsg = orbColorName(o) + " 装备上了。";
+  toast(orbColorName(o) + " 装备上了。");
   orbRefresh();
 }
 function orbOff(u){
@@ -4358,11 +4378,9 @@ function renderOrbBag(){
   });
   $("orbBagPanel").hidden = orbSub !== "bag";
   $("orbMePanel").hidden = orbSub !== "me";
-  const m = $("orbMsg");
-  m.textContent = orbMsg; m.hidden = !orbMsg;
   if(orbSub === "bag"){
     const loose = orbLoose();
-    $("orbBagHead").textContent = "背包 " + loose.length;
+    $("orbBagHead").textContent = "背包 " + loose.length;   // 只写这一句 —— 右边要给两颗定宽的按钮留位置
     /* 背包是**定死大小的方格**（用户 2026-09-23）：格子里只有珠子、名字、强化等级，
        点一格才弹详情窗（鉴定 / 强化 / 装备都在那儿）。分解状态下点一格 = 勾选。
        排序：没鉴定的最前（等着处理），其余按颜色，同色强化高的在前。 */
@@ -4380,7 +4398,8 @@ function renderOrbBag(){
     const mb = $("btnOrbMelt"), mg = $("btnOrbMeltGo"), n = orbMeltSel.length, armed = orbArmed === "melt";
     mb.textContent = orbMeltOn ? "取消" : "分解";
     mb.classList.toggle("on", orbMeltOn);
-    mg.hidden = !orbMeltOn;
+    /* ⚠️ 用 visibility 不用 hidden：那一格位置永远留着，进出分解状态时顶上这一行不变形 */
+    mg.style.visibility = orbMeltOn ? "visible" : "hidden";
     mg.disabled = !n;
     mg.classList.toggle("primary", armed);
     mg.textContent = !n ? "点宝珠勾选" : armed ? "再点一次 · +" + n * ORB_MELT + " 宝石" : "分解 " + n + " 颗 · +" + n * ORB_MELT;
@@ -4421,7 +4440,7 @@ function renderOrbBag(){
    ⚠️ 跟祝福的弹层一样是**主城弹层**，故意不进 hideAll() / anyVeil()（那两张表是局内的）。 */
 let orbPickSlot = -1;
 function openOrbPick(slot){
-  orbPickSlot = slot; orbArmed = ""; orbMsg = "";
+  orbPickSlot = slot; orbArmed = ""
   renderOrbPick();
   $("veilOrbPick").hidden = false;
 }
@@ -4439,8 +4458,6 @@ function renderOrbPick(){
   const unk = orbLoose().length - list.length;
   $("orbPickList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "pick"); }).join("")
     : "<div class=\"bagempty\">背包里没有鉴定过的宝珠" + (unk ? "（还有 " + unk + " 颗没鉴定）" : "") + "。</div>";
-  const m = $("orbPickMsg");
-  m.textContent = orbMsg; m.hidden = !orbMsg;
 }
 /* 按颜色排（ORB_COLORS 的顺序），没鉴定的最前；同色强化高的在前、再按买的顺序 */
 function orbColorOrder(a, b){
@@ -4451,7 +4468,7 @@ function orbColorOrder(a, b){
 /* ---- 分解（用户 2026-09-23）：背包顶上那颗按钮进挑选状态，勾好了两步确认，一颗统一 ORB_MELT 宝石 ----
    只分得到背包里的（戴着的本来就不在背包里）。spent 不退 —— 它是「投入过多少」，合并存档时按它比。 */
 function orbMeltToggle(){
-  orbMeltOn = !orbMeltOn; orbMeltSel = []; orbArmed = ""; orbMsg = "";
+  orbMeltOn = !orbMeltOn; orbMeltSel = []; orbArmed = ""
   renderOrbBag();
 }
 function orbMeltPick(u){
@@ -4469,7 +4486,7 @@ function orbMeltGo(){
   orbMeltSel.forEach(function(u){ if(orbSlotOf(u) < 0 && orbFind(od, u)){ kill[u] = 1; n++; } });
   od.bag = od.bag.filter(function(o){ return !kill[o.u]; });
   orbMeltSel = []; orbMeltOn = false;
-  orbMsg = "分解了 " + n + " 颗，宝石 +" + n * ORB_MELT + "。";
+  toast("分解了 " + n + " 颗，宝石 +" + n * ORB_MELT + "。");
   addGems(n * ORB_MELT);                 // 它自己 commitPerm()，宝珠的删除跟着一起落盘
   renderOrbBag();
 }
@@ -4477,7 +4494,7 @@ function orbMeltGo(){
 /* ---- 点背包里的一格弹出来的详情窗：全部信息 + 鉴定 / 强化 / 装备 ----
    ⚠️ 主城弹层，跟祝福一样故意不进 hideAll() / anyVeil()。 */
 function openOrbInfo(u){
-  orbInfoU = u; orbArmed = ""; orbMsg = "";
+  orbInfoU = u; orbArmed = ""
   renderOrbInfo();
   $("veilOrbInfo").hidden = false;
 }
@@ -4504,8 +4521,6 @@ function renderOrbInfo(){
     h += orbBtn("eq", o.u, "装备", "");
   }
   $("orbInfoActs").innerHTML = h;
-  const m = $("orbInfoMsg");
-  m.textContent = orbMsg; m.hidden = !orbMsg;
 }
 
 /* 两处列表共用一个点击处理 */
@@ -4513,7 +4528,7 @@ function orbActClick(e){
   const b = e.target.closest ? e.target.closest("button[data-act]") : null;
   if(!b || b.disabled) return;
   const u = +b.dataset.u, act = b.dataset.act;
-  if(act !== "enh"){ orbArmed = ""; orbMsg = ""; }
+  if(act !== "enh"){ orbArmed = ""; }
   if(act === "id") orbIdentify(u);
   else if(act === "enh") orbEnhance(u);
   else if(act === "eq"){ orbPut(u); if(!$("veilOrbInfo").hidden && orbSlotOf(u) >= 0) closeOrbInfo(); }
@@ -4523,12 +4538,12 @@ function orbActClick(e){
 
 /* ---- 宝珠商店：主城的一个地点（用户 2026-09-23 从底部标签挪到主城）---- */
 function openOrbShop(){
-  orbArmed = ""; orbMsg = "";
+  orbArmed = ""
   hideAll();
   renderOrbShop();
   $("veilOrbShop").hidden = false;
 }
-function closeOrbShop(){ $("veilOrbShop").hidden = true; orbArmed = ""; orbMsg = ""; }
+function closeOrbShop(){ $("veilOrbShop").hidden = true; orbArmed = ""; }
 function renderOrbShop(){
   const shop = orbShop(), gem = TOWN.gem || 0;
   $("orbGemS").textContent = gem;
@@ -4544,11 +4559,9 @@ function renderOrbShop(){
       "</div></div>";
   }).join("");
   const re = $("btnOrbReroll"), armed = orbArmed === "re";
-  re.textContent = armed ? "再点一次 · 花 " + ORB_REROLL + " 宝石刷新" : "刷新 · " + ORB_REROLL + " 宝石";
+  re.textContent = armed ? "再点一次 · " + ORB_REROLL + " 宝石" : "刷新 · " + ORB_REROLL + " 宝石";
   re.classList.toggle("primary", armed);
   re.disabled = gem < ORB_REROLL && !armed;
-  const m = $("orbShopMsg");
-  m.textContent = orbMsg; m.hidden = !orbMsg;
 }
 
 let SCENE = "town";
@@ -5868,7 +5881,7 @@ function showView(id){
   // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
   if(id === "viewSet") refreshSaveState();
   // 宝珠的两页：换页就把没点完的两步确认和上一条消息清掉
-  if(id === "viewOrb"){ orbArmed = ""; orbMsg = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); }
+  if(id === "viewOrb"){ orbArmed = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); }
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
@@ -5876,7 +5889,7 @@ Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
 
 /* ---- 宝珠：背包 / 人物 / 商店（用户 2026-09-23）---- */
 Array.prototype.forEach.call(document.querySelectorAll(".osub"), function(b){
-  b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMsg = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); });
+  b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMeltOn = false; orbMeltSel = []; renderOrbBag(); });
 });
 /* 背包的方格：平时点开详情窗，分解状态下点 = 勾选 */
 $("orbList").addEventListener("click", function(e){
@@ -6145,7 +6158,7 @@ $("btnPathfind").addEventListener("click", function(){
    ⚠️ 剪贴板不是每个浏览器都给网页用（Firefox 不给读、http 页面两样都不给），
    所以两条路都有同一个退路：露出 #codeBox 那个框，让玩家自己复制/粘贴。
    平时它是 hidden 的 —— 界面上就只有那两个按钮。*/
-function codeMsg(t){ $("codeMsg").textContent = t || ""; }
+function codeMsg(t){ toast(t); }   // 2026-09-23 起走浮窗（面板里那行 note 删了，不再把按钮顶下去）
 function codeBoxShow(v, ro){
   const box = $("codeBox");
   box.hidden = false;
