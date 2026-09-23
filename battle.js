@@ -3609,6 +3609,7 @@ function updateBuilds(dt){
       if(P.hp >= s.maxHp){ b.inside = false; continue; }   // 满血就留着，掉了血踩回来还能喝
       var got = healUp(s.maxHp * BF.springHeal);
       b.used = true;                                // ⚠️ 不删它 —— 下一波自己回复（newWave 里清 used）
+      b.useRem = BF.waveSec - G.t;                  // 喝的时候这一波还剩几秒 —— 泉上那层遮罩按它退
       fxText("+" + got, "#266F7B"); fxRing(b.x, b.y, 34, "#266F7B");
     } else { openShop(b); return; }
   }
@@ -4197,13 +4198,34 @@ function drawBuilds(){
     if(px < -padX || px > cw + padX || py < -padY || py > ch + padY) continue;
     if(b.k === "spring" || b.k === "shop"){
       var tc = b.k === "spring" ? "#266F7B" : "#9C6A10";
-      var dim = (b.k === "spring" && b.used) || b.cool > 0 ? 0.38 : 1;
+      /* 喝过的泉不再整体变淡，改成上面那层「恢复进度」遮罩（用户 2026-09-23）；商摊的冷却照旧变淡 */
+      var dim = b.k === "shop" && b.cool > 0 ? 0.38 : 1;
       ctx2.strokeStyle = tc; ctx2.globalAlpha = (0.30 + 0.16 * Math.sin(b.t * 2.6)) * dim; ctx2.lineWidth = 2.5;
       ctx2.beginPath(); ctx2.arc(px, py, BF.site.r + 6, 0, 6.2832); ctx2.stroke();
       ctx2.globalAlpha = dim;
       var im = IMG[b.k];
       if(im && im.complete && im.naturalWidth) ctx2.drawImage(im, px - 21, py - 23, 42, 42);
       ctx2.globalAlpha = 1;
+      /* 泉的恢复进度（用户 2026-09-23）：喝完那一下整块盖 50% 暗色，**这一波还剩多久**就盖多少，
+         从下往上退，退完 = 下一波到了、又能喝了（跟塔的冷却遮罩一个样子）。
+         分母是喝的那一刻这一波还剩几秒（b.useRem），所以刚喝完总是满格。
+         ⚠️ Boss 波没有倒计时（打死才进下一波），那一波一直盖满；
+            读档回来没有 useRem，就按整波 30 秒算。 */
+      if(b.k === "spring" && b.used){
+        var sf = 1;
+        if(!isBossWave(P.wave)){
+          var rem = Math.max(0, BF.waveSec - G.t), base = b.useRem > 0 ? b.useRem : BF.waveSec;
+          sf = Math.min(1, rem / base);
+        }
+        if(sf > 0){
+          var sr = BF.site.r + 6;
+          ctx2.save();
+          ctx2.beginPath(); ctx2.arc(px, py, sr, 0, 6.2832); ctx2.clip();
+          ctx2.fillStyle = "rgba(30,26,20,0.5)";
+          ctx2.fillRect(px - sr, py - sr, sr * 2, sr * 2 * sf);
+          ctx2.restore();
+        }
+      }
       continue;
     }
     if(!DEPLOY && !(b.silT > 0)) drawTowerAmb(b, px, py);
