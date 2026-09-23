@@ -165,6 +165,40 @@
       </div>
     </section>
 
+    <!-- ---------- 背包（宝珠，用户 2026-09-23）----------
+         主城里第三个标签是它，进了洞变回「遗物」（showScene 换 #navBag 的 data-view）。
+         两个子栏目：背包（鉴定 / 强化 / 装备）/ 人物（六个位置 + 点亮的效果）。 -->
+    <section class="view" id="viewOrb">
+      <div class="orbtabs">
+        <button class="osub on" data-osub="bag" type="button">背包</button>
+        <button class="osub" data-osub="me" type="button">人物</button>
+        <span class="sp"></span>
+        <span class="orbgemtag">宝石 <b id="orbGemB">0</b></span>
+      </div>
+      <p class="note orbmsg" id="orbMsg" hidden></p>
+      <div class="panel grow" id="orbBagPanel">
+        <div class="phead"><span id="orbBagHead">宝珠 0</span> · 只在战场生效</div>
+        <div class="orblist" id="orbList"></div>
+      </div>
+      <div class="panel grow" id="orbMePanel" hidden>
+        <div class="phead">装备 · 最多 6 颗 · 点一下卸下</div>
+        <div class="orbslots" id="orbSlots"></div>
+        <div class="phead">点亮的效果</div>
+        <div class="orbsets" id="orbSets"></div>
+        <details class="orbref"><summary>各颜色的效果</summary><div id="orbRef"></div></details>
+      </div>
+    </section>
+
+    <!-- ---------- 商店（宝珠，用户 2026-09-23）---------- -->
+    <section class="view" id="viewShop">
+      <div class="panel">
+        <div class="phead">宝珠商店 · 宝石 <b id="orbGemS">0</b></div>
+        <p class="note orbmsg" id="orbShopMsg" hidden></p>
+        <div class="orblist" id="orbShop"></div>
+        <div class="rowb"><span class="sp"></span><button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button></div>
+      </div>
+    </section>
+
     <section class="view" id="viewSet">
       <div class="panel">
         <div class="phead">设置 Settings</div>
@@ -212,7 +246,7 @@
       <!-- 云存档：只有两个按钮。剪贴板被浏览器挡住时才露出 #codeBox 那个退路 -->
       <div class="panel" id="panelCode">
         <div class="phead">云存档 · 换设备</div>
-        <p class="note">一段<b>存档码</b>装下<b>词汇熟练度、遗物图鉴、探索记录、宝石和祝福</b>。
+        <p class="note">一段<b>存档码</b>装下<b>词汇熟练度、遗物图鉴、探索记录、宝石、祝福和宝珠</b>。
           旧设备上点「复制」，新设备上点「粘贴」就过去了。导入是<b>取两边更好的那份</b>合并，不会抹掉这台设备上的进度；
           <b>没走完的那一趟不在码里</b>。</p>
         <div class="rowb">
@@ -233,7 +267,9 @@
   <nav class="tabbar">
     <button class="nav on" data-view="viewAdv" type="button"><i>⌖</i><span>冒险</span></button>
     <button class="nav" data-view="viewInfo" type="button"><i>◈</i><span>信息</span></button>
-    <button class="nav" data-view="viewRelic" type="button"><i>✦</i><span>遗物</span><em class="dot" id="bagDot" hidden></em></button>
+    <!-- 第三个标签：主城里是「背包」，进洞变回「遗物」（showScene 里换，用户 2026-09-23） -->
+    <button class="nav" id="navBag" data-view="viewOrb" type="button"><i>◎</i><span>背包</span><em class="dot" id="bagDot" hidden></em></button>
+    <button class="nav" data-view="viewShop" type="button"><i>¤</i><span>商店</span></button>
     <button class="nav" data-view="viewSet" type="button"><i>⚙</i><span>设置</span></button>
   </nav>
 </div>
@@ -581,6 +617,7 @@
 <script src="util.js"></script>
 <script src="words-a1.js"></script>
 <script src="content.js"></script>
+<script src="orb.js"></script>
 <script src="art.js"></script>
 <script src="net.js"></script>
 <script>window.__COOP = true;</script>

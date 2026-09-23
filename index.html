@@ -179,6 +179,40 @@
       </div>
     </section>
 
+    <!-- ---------- 背包（宝珠，用户 2026-09-23）----------
+         主城里第三个标签是它，进了洞变回「遗物」（showScene 换 #navBag 的 data-view）。
+         两个子栏目：背包（鉴定 / 强化 / 装备）/ 人物（六个位置 + 点亮的效果）。 -->
+    <section class="view" id="viewOrb">
+      <div class="orbtabs">
+        <button class="osub on" data-osub="bag" type="button">背包</button>
+        <button class="osub" data-osub="me" type="button">人物</button>
+        <span class="sp"></span>
+        <span class="orbgemtag">宝石 <b id="orbGemB">0</b></span>
+      </div>
+      <p class="note orbmsg" id="orbMsg" hidden></p>
+      <div class="panel grow" id="orbBagPanel">
+        <div class="phead"><span id="orbBagHead">宝珠 0</span> · 只在战场生效</div>
+        <div class="orblist" id="orbList"></div>
+      </div>
+      <div class="panel grow" id="orbMePanel" hidden>
+        <div class="phead">装备 · 最多 6 颗 · 点一下卸下</div>
+        <div class="orbslots" id="orbSlots"></div>
+        <div class="phead">点亮的效果</div>
+        <div class="orbsets" id="orbSets"></div>
+        <details class="orbref"><summary>各颜色的效果</summary><div id="orbRef"></div></details>
+      </div>
+    </section>
+
+    <!-- ---------- 商店（宝珠，用户 2026-09-23）---------- -->
+    <section class="view" id="viewShop">
+      <div class="panel">
+        <div class="phead">宝珠商店 · 宝石 <b id="orbGemS">0</b></div>
+        <p class="note orbmsg" id="orbShopMsg" hidden></p>
+        <div class="orblist" id="orbShop"></div>
+        <div class="rowb"><span class="sp"></span><button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button></div>
+      </div>
+    </section>
+
     <!-- ---------- 设置 ---------- -->
     <section class="view" id="viewSet">
       <div class="panel">
@@ -223,7 +257,7 @@
       <!-- 云存档：只有两个按钮。剪贴板被浏览器挡住时才露出 #codeBox 那个退路 -->
       <div class="panel" id="panelCode">
         <div class="phead">云存档 · 换设备</div>
-        <p class="note">一段<b>存档码</b>装下<b>词汇熟练度、遗物图鉴、探索记录、宝石和祝福</b>。
+        <p class="note">一段<b>存档码</b>装下<b>词汇熟练度、遗物图鉴、探索记录、宝石、祝福和宝珠</b>。
           旧设备上点「复制」，新设备上点「粘贴」就过去了。导入是<b>取两边更好的那份</b>合并，不会抹掉这台设备上的进度；
           <b>没走完的那一趟不在码里</b>。</p>
         <div class="rowb">
@@ -241,11 +275,13 @@
 
   </div>
 
-  <!-- ===== 底部四标签 ===== -->
+  <!-- ===== 底部五标签（2026-09-23 加了「商店」）===== -->
   <nav class="tabbar">
     <button class="nav on" data-view="viewAdv" type="button"><i>⌖</i><span>冒险</span></button>
     <button class="nav" data-view="viewInfo" type="button"><i>◈</i><span>信息</span></button>
-    <button class="nav" data-view="viewRelic" type="button"><i>✦</i><span>遗物</span><em class="dot" id="bagDot" hidden></em></button>
+    <!-- 第三个标签：主城里是「背包」，进洞变回「遗物」（showScene 里换，用户 2026-09-23） -->
+    <button class="nav" id="navBag" data-view="viewOrb" type="button"><i>◎</i><span>背包</span><em class="dot" id="bagDot" hidden></em></button>
+    <button class="nav" data-view="viewShop" type="button"><i>¤</i><span>商店</span></button>
     <button class="nav" data-view="viewSet" type="button"><i>⚙</i><span>设置</span></button>
   </nav>
 </div>
@@ -551,7 +587,7 @@
           <b>自动寻路会绕开它们</b>，想用就直接点它。</li>
         <li><b>存档</b>：<b>打开网页自动读档</b>，不会问你。存档点只有三个 —— <b>进入关卡、下一层、回到主城</b>（宝石一变也会单独存一次）。
           所以一层打到一半关掉页面，下次是<b>从这一层的入口重来</b>：这一层里砍的怪、捡的金币、拿的遗物都不算数。</li>
-        <li><b>换设备</b>：设置页的<b>云存档</b>只有两个按钮 —— 在旧设备上点<b>「复制存档码」</b>，到新设备上点<b>「粘贴存档码」</b>，词汇熟练度、遗物图鉴、探索记录、宝石和祝福就过去了。导入是<b>两边取更好的那份</b>，不会把这台设备上的进度抹掉；<b>没走完的那一趟不在码里</b>。</li>
+        <li><b>换设备</b>：设置页的<b>云存档</b>只有两个按钮 —— 在旧设备上点<b>「复制存档码」</b>，到新设备上点<b>「粘贴存档码」</b>，词汇熟练度、遗物图鉴、探索记录、宝石、祝福和宝珠就过去了。导入是<b>两边取更好的那份</b>，不会把这台设备上的进度抹掉；<b>没走完的那一趟不在码里</b>。</li>
         <li><b>主城</b>：你从<b>灰岩镇</b>出发，进洞窟选一条路下去。等级和遗物都是<b>进洞之后才有的</b>，只在这一趟里算数。</li>
         <li><b>结算</b>：一趟结束（倒下或通关）会按<b>最大连击、击杀数、正确率、没花完的金币</b>算一笔分，
           再乘两个倍率 —— <b>到达层数</b>（层数 ÷ 10，没有上限）和这一章的<b>难度倍率</b>（一章一档：100% / 125% / 150% / 175% / 200%），换成<b>宝石</b>带回镇上。宝石花在主城的<b>祝福</b>上：2000 开一个槽位，让某件遗物更常出现（同品质里 300%，拿到一次失效），或者让它这一局永不出现。</li>
@@ -567,6 +603,7 @@
 <script src="util.js"></script>
 <script src="words-a1.js"></script>
 <script src="content.js"></script>
+<script src="orb.js"></script>
 <script src="art.js"></script>
 <script src="game.js"></script>
 </body></html>

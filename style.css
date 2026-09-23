@@ -44,7 +44,7 @@ body{
 .view{flex:1; min-width:0; display:none; flex-direction:column; gap:10px}
 .view.on{display:flex}
 /* 冒险以外的标签页内容是竖着排的列表，自己滚。 */
-#viewInfo,#viewSet{overflow-y:auto; padding-bottom:4px}
+#viewInfo,#viewSet,#viewShop{overflow-y:auto; padding-bottom:4px}
 /* 遗物页是个例外：**整页不滚**，滚的是遗物列表本身 ——
    合成面板钉在标签页下方，带满 15 件时不用滚半天才看得见它（用户 2026-09）。
    ⚠️ 要滚的是 .relics，不是 #viewRelic；给 .panel.grow 留 min-height:0，否则 flex 不肯收缩。 */
@@ -57,7 +57,7 @@ body{
 
 /* ===== 底部标签栏 ===== */
 .tabbar{
-  flex:none; display:grid; grid-template-columns:repeat(4,1fr); gap:2px;
+  flex:none; display:grid; grid-template-columns:repeat(5,1fr); gap:2px;   /* 2026-09-23 多了「商店」*/
   border-top:1px solid var(--edge); background:var(--stone);
   margin-inline:-16px; padding:4px 6px calc(4px + env(safe-area-inset-bottom));
 }
@@ -854,3 +854,54 @@ a.place{text-decoration:none}
 /* 挑遗物那一页：一个品质最多四十几张卡，列表自己滚 */
 #blessPickList{max-height:52vh;overflow-y:auto;padding-right:2px}
 .relic.cur{border-color:var(--torch-deep);background:#F6E6C4}
+
+/* ===== 宝珠（局外养成，用户 2026-09-23）=====
+   背包页整页不滚，滚的是宝珠列表（跟遗物页一个规矩）。
+   ⚠️ 类名全带 orb / o 前缀 —— 别再跟 .tab / .opt / .cx 这种短名撞（踩过三次了）。 */
+#viewOrb{overflow:hidden; padding-bottom:4px}
+#viewOrb .panel.grow{flex:1; min-height:0; overflow-y:auto}
+.orbtabs{display:flex; gap:6px; align-items:center}
+.orbtabs .sp{flex:1}
+.osub{font-family:var(--body); font-size:13px; padding:6px 16px; border-radius:2px; cursor:pointer;
+  background:var(--stone-3); color:var(--dim); border:1px solid var(--edge)}
+.osub.on{background:var(--torch); color:#FFF9EC; border-color:var(--torch-deep); font-weight:600}
+.orbgemtag{font-size:12.5px; color:var(--dim)}
+.orbgemtag b,.phead b{color:var(--torch); font-family:var(--mono)}
+.orbmsg{margin:0; padding:6px 9px; border:1px solid var(--edge-soft); background:#FDF6E7;
+  border-radius:2px; font-size:12.5px; color:var(--torch-deep)}
+.orblist{display:flex; flex-direction:column; gap:7px}
+.orbcard{display:flex; align-items:center; gap:10px; border:1px solid var(--edge);
+  background:var(--stone-2); border-radius:3px; padding:8px 10px}
+.orbcard.eq{border-left:3px solid var(--torch-deep)}
+.orbcard.sold{opacity:.5}
+.orbcard .ocol{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
+.orbcard .ocol b{font-size:14px; font-weight:600}
+.orbcard .ocol em{font-style:normal; font-size:11px; color:var(--faint)}
+.orbcard .ob{font-size:12px; color:var(--dim)}
+.orbcard .oa{font-size:11.5px; color:var(--venom); line-height:1.45}
+.oa i{display:inline-block; font-style:normal; margin-right:9px; white-space:nowrap}
+.orbcard .oacts{flex:none; display:flex; flex-direction:column; gap:5px}
+.orbcard .oacts .btn{padding:5px 10px; font-size:12px; line-height:1.25; min-width:72px}
+.orbcard .oacts .btn:disabled{opacity:.45; cursor:default}
+.orbgem{flex:none; width:24px; height:24px; border-radius:50%;
+  border:1px solid rgba(0,0,0,.28); box-shadow:inset -3px -4px 6px rgba(0,0,0,.18), inset 3px 3px 5px rgba(255,255,255,.35)}
+.orbgem.unk{background:#CFC6B4; color:#FFF; font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:center; font-family:var(--mono)}
+.orbgem.none{background:none; border:1px dashed var(--edge); box-shadow:none}
+.orbgem.bow{background:conic-gradient(#B8322A,#C99A1E,#3F7A35,#2A62AD,#6F3D98,#B8322A)}
+.orbslots{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+.orbslot{display:flex; flex-direction:column; align-items:center; gap:4px; padding:9px 4px;
+  border:1px solid var(--edge); background:var(--stone-2); border-radius:3px; cursor:pointer;
+  font-family:var(--body); font-size:12px; color:var(--bone)}
+.orbslot.empty{cursor:default; color:var(--faint)}
+.orbsets{display:flex; flex-direction:column; gap:5px}
+.orbfx{display:flex; align-items:center; gap:8px; font-size:12.5px}
+.orbfx .orbgem{width:16px; height:16px}
+.orbfx b{flex:none; min-width:38px; font-weight:600}
+.orbfx span{color:var(--dim)}
+.orbref summary{cursor:pointer; font-size:12.5px; color:var(--dim)}
+.orbref > div{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+.orbfx.ref{align-items:flex-start}
+.orbfx.ref span{display:flex; flex-direction:column}
+.orbfx.ref i{font-style:normal; font-size:12px; color:var(--faint)}
+.orbfx.ref i.lit{color:var(--torch-deep); font-weight:600}

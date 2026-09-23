@@ -3966,7 +3966,8 @@ var TOWN_KEY = "youxu.town.v1";
    字段从 gold 改叫 gem，读的时候兜一下老档。宝石以后花在「祝福」上。 */
 var TOWN = (function(){
   const t = load(TOWN_KEY, {gem:0}) || {};
-  return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0), bless: fixBless(t.bless)};
+  return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0), bless: fixBless(t.bless),
+          orb: fixOrb(t.orb)};            // 宝珠（2026-09-23，orb.js 里正规化）
 })();
 /* 宝石一变就落盘（用户要求）——**别绕过这个函数直接改 TOWN.gem** */
 function addGems(n){
@@ -4174,6 +4175,222 @@ function blessTake(id){
   closeBlessPick();
 }
 
+/* ================= 宝珠（局外养成，用户 2026-09-23）=================
+   用宝石买、在「背包」里鉴定 / 强化 / 装备，**只在战场生效**（battle.js 开局读一次）。
+   配置表和纯函数在 orb.js；这里只管主城的界面和花钱。
+   数据挂在 TOWN.orb 上，跟着宝石一起走 TOWN_KEY —— **没有新开 localStorage 键**，
+   commit / snapshot / overwrite 三处自动带上，mergeData 和存档码各单独写了一段。
+   ⚠️ **所有花宝石的按钮都是两步确认**（orbArmed，跟祝福开槽位一个套路）——
+      一次一千到五千，误点一下很亏。鉴定是免费的，一下就鉴。 */
+let orbSub = "bag";           // 背包页里停在哪个子栏目：bag 背包 / me 人物
+let orbArmed = "";            // 两步确认："buy:0" / "re" / "enh:<uid>"
+let orbMsg = "";              // 上一次操作的结果（鉴定出什么、强化抽到什么），显示在背包顶上
+
+function orbData(){ return TOWN.orb; }
+/* 商店货架：没有就当场摇一批并**立刻落盘** —— 不存的话刷新页面就是免费换货 */
+function orbShop(){
+  const od = orbData();
+  if(!od.shop){ od.shop = orbRollShop(); commitPerm(); }
+  return od.shop;
+}
+function orbRollShop(){
+  const out = [];
+  for(let i = 0; i < ORB_SHOP_N; i++)
+    out.push({b: Math.random() < ORB_BASE_RATE ? pick(ORB_BASE).id : "", sold:false});
+  return out;
+}
+/* 花宝石都从这儿过：扣钱（addGems 自己落盘）+ 记一笔 spent（合并存档时按它判谁的进度多） */
+function orbPay(n){
+  if(n <= 0){ commitPerm(); return true; }
+  if((TOWN.gem || 0) < n) return false;
+  orbData().spent += n;
+  addGems(-n);
+  return true;
+}
+function orbBuy(i){
+  const s = orbShop()[i];
+  if(!s || s.sold) return;
+  if(orbArmed !== "buy:" + i){ orbArmed = "buy:" + i; renderOrbShop(); return; }
+  orbArmed = "";
+  if(!orbPay(ORB_PRICE)){ renderOrbShop(); return; }
+  const od = orbData();
+  od.bag.push({u: ++od.seq, c:"", b:s.b, lv:0, pt:0, a:[]});
+  s.sold = true;
+  commitPerm();
+  orbMsg = "买下了一颗未鉴定的宝珠，去背包里鉴定。";
+  renderOrbShop();
+}
+function orbReroll(){
+  if(orbArmed !== "re"){ orbArmed = "re"; renderOrbShop(); return; }
+  orbArmed = "";
+  if(!orbPay(ORB_REROLL)){ renderOrbShop(); return; }
+  orbData().shop = orbRollShop();
+  commitPerm();
+  renderOrbShop();
+}
+function orbRollColor(){
+  let t = 0, i;
+  for(i = 0; i < ORB_COLORS.length; i++) t += ORB_COLORS[i].w;
+  let x = Math.random() * t;
+  for(i = 0; i < ORB_COLORS.length; i++){ x -= ORB_COLORS[i].w; if(x < 0) return ORB_COLORS[i].id; }
+  return ORB_COLORS[0].id;
+}
+function orbIdentify(u){
+  const o = orbFind(orbData(), u);
+  if(!o || o.c) return;
+  if(!orbPay(ORB_IDENT_COST)) return;
+  o.c = orbRollColor();
+  commitPerm();
+  orbMsg = "鉴定出来了：" + orbColorName(o) + "。";
+  renderOrbBag();
+}
+function orbEnhCost(o){
+  const c = ORB_ENH_COST[o.lv];
+  if(c === undefined) return 0;
+  return o.b === "thrift" ? Math.round(c * 0.8) : c;
+}
+/* 强化一次：抽 7~12 点（稳手至少 9、淬心再 +1）。
+   点数每跨过一个 10 就抽一条词条（最多 8 条），跨过 100 的那一下随机翻倍一条。
+   ⚠️ 一次最多 13 点，所以一次可能跨两个 10（比如 9 → 22），要逐个数。 */
+function orbEnhance(u){
+  const o = orbFind(orbData(), u);
+  if(!o || !o.c || o.lv >= ORB_ENH_COST.length) return;
+  const cost = orbEnhCost(o);
+  if(orbArmed !== "enh:" + u){ orbArmed = "enh:" + u; renderOrbBag(); return; }
+  orbArmed = "";
+  if(!orbPay(cost)){ renderOrbBag(); return; }
+  let roll = ri(ORB_PT_MIN, ORB_PT_MAX);
+  if(o.b === "steady") roll = Math.max(9, roll);
+  if(o.b === "temper") roll += 1;
+  const old = o.pt, got = [];
+  o.pt += roll; o.lv++;
+  for(let k = Math.floor(old / ORB_PT_STEP) + 1; k <= Math.floor(o.pt / ORB_PT_STEP); k++){
+    if(o.a.length >= ORB_AFFIX_MAX) break;
+    const d = pick(ORB_AFFIX), x = {k:d.id, v:ri(d.lo, d.hi), d:0};
+    o.a.push(x); got.push(orbAffixText(x));
+  }
+  let dbl = "";
+  if(old < ORB_DOUBLE_AT && o.pt >= ORB_DOUBLE_AT){
+    const pool = o.a.filter(function(x){ return !x.d; });
+    if(pool.length){ const x = pick(pool); x.d = 1; dbl = orbAffixText(x); }
+  }
+  commitPerm();
+  orbMsg = orbColorName(o) + " 第 " + o.lv + " 次强化 +" + roll + " 点（共 " + o.pt + "）" +
+           (got.length ? "　新词条：" + got.join("、") : "") +
+           (dbl ? "　翻倍：" + dbl : "");
+  renderOrbBag();
+}
+function orbSlotOf(u){ return orbData().eq.indexOf(u); }
+function orbEquip(u){
+  const od = orbData(), o = orbFind(od, u);
+  if(!o || !o.c) return;
+  const at = orbSlotOf(u);
+  if(at >= 0){ od.eq[at] = 0; commitPerm(); renderOrbBag(); return; }   // 已经戴着 = 卸下
+  const free = od.eq.indexOf(0);
+  if(free < 0){ orbMsg = "六个位置都满了，先卸下一颗。"; renderOrbBag(); return; }
+  od.eq[free] = u;
+  commitPerm();
+  renderOrbBag();
+}
+
+/* ---- 界面 ---- */
+function orbGemHtml(o){
+  if(!o) return "<span class=\"orbgem none\"></span>";
+  if(!o.c) return "<span class=\"orbgem unk\">?</span>";
+  if(o.c === "rainbow") return "<span class=\"orbgem bow\"></span>";
+  return "<span class=\"orbgem\" style=\"background:" + ORB_CMAP[o.c].c + "\"></span>";
+}
+function orbCardHtml(o){
+  const at = orbSlotOf(o.u), full = o.lv >= ORB_ENH_COST.length;
+  let h = "<div class=\"orbcard" + (at >= 0 ? " eq" : "") + "\">" + orbGemHtml(o) +
+    "<div class=\"ocol\"><b>" + orbColorName(o) + (o.lv ? " +" + o.lv : "") + "</b>" +
+    (o.c ? "<em>点数 " + o.pt + (at >= 0 ? " · 已装备" : "") + "</em>" : "") +
+    "<span class=\"ob\">" + (o.b ? orbBaseText(o.b) : "基础词缀：无") + "</span>";
+  /* 一条词条一个 <i>（inline-block）—— 折行只在两条之间折，别把「生命上限」拦腰切开 */
+  if(o.a.length) h += "<span class=\"oa\">" + o.a.map(function(x){ return "<i>" + orbAffixText(x) + "</i>"; }).join("") + "</span>";
+  h += "</div><div class=\"oacts\">";
+  if(!o.c){
+    h += "<button class=\"btn primary\" type=\"button\" data-act=\"id\" data-u=\"" + o.u + "\">鉴定</button>";
+  } else {
+    const cost = orbEnhCost(o), armed = orbArmed === "enh:" + o.u, poor = (TOWN.gem || 0) < cost;
+    h += "<button class=\"btn" + (armed ? " primary" : "") + "\" type=\"button\" data-act=\"enh\" data-u=\"" + o.u + "\"" +
+         (full || (poor && !armed) ? " disabled" : "") + ">" +
+         (full ? "已满" : armed ? "再点一次<br>" + cost + " 宝石" : "强化<br>" + cost) + "</button>";
+    h += "<button class=\"btn ghost\" type=\"button\" data-act=\"eq\" data-u=\"" + o.u + "\">" +
+         (at >= 0 ? "卸下" : "装备") + "</button>";
+  }
+  return h + "</div></div>";
+}
+function renderOrbBag(){
+  const od = orbData();
+  $("orbGemB").textContent = TOWN.gem || 0;
+  Array.prototype.forEach.call(document.querySelectorAll(".osub"), function(b){
+    b.classList.toggle("on", b.dataset.osub === orbSub);
+  });
+  $("orbBagPanel").hidden = orbSub !== "bag";
+  $("orbMePanel").hidden = orbSub !== "me";
+  const m = $("orbMsg");
+  m.textContent = orbMsg; m.hidden = !orbMsg;
+  if(orbSub === "bag"){
+    $("orbBagHead").textContent = "宝珠 " + od.bag.length;
+    /* 没鉴定的排最前（等着处理），戴着的其次，其余按买的顺序 */
+    const list = od.bag.slice().sort(function(a, b){
+      const ka = a.c ? (orbSlotOf(a.u) >= 0 ? 1 : 2) : 0, kb = b.c ? (orbSlotOf(b.u) >= 0 ? 1 : 2) : 0;
+      return ka - kb || a.u - b.u;
+    });
+    $("orbList").innerHTML = list.length ? list.map(orbCardHtml).join("")
+      : "<div class=\"bagempty\">还没有宝珠。去「商店」买一颗。</div>";
+    return;
+  }
+  /* 人物：六个位置 + 点亮的效果 */
+  let h = "";
+  for(let i = 0; i < ORB_SLOTS; i++){
+    const o = od.eq[i] ? orbFind(od, od.eq[i]) : null;
+    h += "<button class=\"orbslot" + (o ? "" : " empty") + "\" type=\"button\" data-u=\"" + (o ? o.u : 0) + "\">" +
+         orbGemHtml(o) + "<span>" + (o ? orbColorName(o) + (o.lv ? " +" + o.lv : "") : "空") + "</span></button>";
+  }
+  $("orbSlots").innerHTML = h;
+  const b = orbBuild(od), on = orbOnLines(b), base = orbBaseLines(b), add = orbAddLines(b);
+  let s = "";
+  on.forEach(function(x){
+    s += "<div class=\"orbfx\">" + orbGemHtml({c:x.c}) + "<b>" + ORB_CMAP[x.c].n + " " + x.t + "</b><span>" + x.s + "</span></div>";
+  });
+  base.forEach(function(t){ s += "<div class=\"orbfx\"><b>词缀</b><span>" + t + "</span></div>"; });
+  if(add.length) s += "<div class=\"orbfx\"><b>词条</b><span class=\"oa\">" + add.map(function(t){ return "<i>" + t + "</i>"; }).join("") + "</span></div>";
+  $("orbSets").innerHTML = s || "<div class=\"bagempty\">还没点亮任何效果。同色 2 颗起生效。</div>";
+  /* 全部颜色的效果表，收在 details 里（别堆提示文字） */
+  let ref = "";
+  ORB_COLORS.forEach(function(c){
+    const st = ORB_SETS[c.id], cnt = b.cnt[c.id] || 0;
+    ref += "<div class=\"orbfx ref\">" + orbGemHtml({c:c.id}) + "<b>" + c.n + " ×" + cnt + "</b><span>" +
+      ORB_TIERS.filter(function(t){ return st[t]; }).map(function(t){
+        return "<i" + (b.on[c.id + t] ? " class=\"lit\"" : "") + ">" + t + "：" + st[t] + "</i>";
+      }).join("") + "</span></div>";
+  });
+  $("orbRef").innerHTML = ref;
+}
+function renderOrbShop(){
+  const shop = orbShop(), gem = TOWN.gem || 0;
+  $("orbGemS").textContent = gem;
+  $("orbShop").innerHTML = shop.map(function(s, i){
+    const armed = orbArmed === "buy:" + i;
+    return "<div class=\"orbcard" + (s.sold ? " sold" : "") + "\">" + orbGemHtml(s.sold ? null : {c:""}) +
+      "<div class=\"ocol\"><b>" + (s.sold ? "已售出" : "未鉴定宝珠") + "</b>" +
+      (s.sold ? "" : "<span class=\"ob\">" + (s.b ? orbBaseText(s.b) : "基础词缀：无") + "</span>") +
+      "</div><div class=\"oacts\">" +
+      (s.sold ? "" : "<button class=\"btn" + (armed ? " primary" : "") + "\" type=\"button\" data-i=\"" + i + "\"" +
+        (gem < ORB_PRICE && !armed ? " disabled" : "") + ">" +
+        (armed ? "再点一次<br>" : "购买<br>") + ORB_PRICE + " 宝石</button>") +
+      "</div></div>";
+  }).join("");
+  const re = $("btnOrbReroll"), armed = orbArmed === "re";
+  re.textContent = armed ? "再点一次 · 花 " + ORB_REROLL + " 宝石刷新" : "刷新 · " + ORB_REROLL + " 宝石";
+  re.classList.toggle("primary", armed);
+  re.disabled = gem < ORB_REROLL && !armed;
+  const m = $("orbShopMsg");
+  m.textContent = orbMsg; m.hidden = !orbMsg;
+}
+
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -4184,6 +4401,16 @@ function showScene(){
   $("townPanel").hidden = inRun;
   /* 探索时顶栏整块收起 —— 章节名挪进了地图浮层的「层」那一格，省下的高度全给地图 */
   $("topBar").hidden = inRun;
+  /* 第三个标签：主城里是「背包」（宝珠），进了洞变回「遗物」（用户 2026-09-23）。
+     点击时现读 data-view，所以换掉它就够了；正停在被换掉的那一页上就跟着换过去。 */
+  const nb = $("navBag");
+  if(nb){
+    const want = inRun ? "viewRelic" : "viewOrb", gone = inRun ? "viewOrb" : "viewRelic";
+    nb.dataset.view = want;
+    nb.querySelector("i").textContent = inRun ? "✦" : "◎";
+    nb.querySelector("span").textContent = inRun ? "遗物" : "背包";
+    if($(gone).classList.contains("on")) showView(want);
+  }
   $("hChap").textContent = CH.name;
   $("chapterTag").textContent = "主城 · 灰岩镇";
   if(inRun) sizeMap();
@@ -5069,6 +5296,30 @@ function makeCode(){
     }
   });
 
+  /* 宝珠（2026-09-23）：挂在最后，前面 1 bit「有没有这一段」。
+     老版本的解析器读完祝福就收手、不管后面剩下的字节，所以**新码拿到老版本上照样能读**；
+     老码到了新版本上，这一位读到的是填充的 0（或者正好读到底），就当没有宝珠 ——
+     所以**不用动 CODE2_V**。商店货架不进码（那是这台设备的事）。
+     ⚠️ 颜色 / 基础词缀 / 词条都按 orb.js 那三张表的**下标**存，那三张表只许往末尾追加。 */
+  const od = TOWN.orb;
+  w.bits(1, 1);
+  w.vint(od.spent || 0);
+  w.vint(od.bag.length);
+  od.bag.forEach(function(o){
+    w.vint(o.c ? ORB_COLORS.indexOf(ORB_CMAP[o.c]) + 1 : 0);
+    w.vint(o.b ? ORB_BASE.indexOf(ORB_BMAP[o.b]) + 1 : 0);
+    w.vint(o.lv); w.vint(o.pt);
+    w.vint(o.a.length);
+    o.a.forEach(function(x){
+      w.vint(ORB_AFFIX.indexOf(ORB_AMAP[x.k])); w.vint(x.v); w.bits(x.d ? 1 : 0, 1);
+    });
+  });
+  for(let i = 0; i < ORB_SLOTS; i++){
+    let at = 0;
+    for(let k = 0; k < od.bag.length; k++) if(od.bag[k].u === od.eq[i]){ at = k + 1; break; }
+    w.vint(at);
+  }
+
   const bytes = w.finish();
   const ck = sumHash(bytes);                 // 尾巴上两个字节：粘漏了一截当场就能查出来
   bytes.push(ck & 255, (ck >> 8) & 255);
@@ -5128,6 +5379,25 @@ function parseCode2(txt){
     if(relicsOk && at >= 0 && at < nR) bl.pick[slot[0]][slot[1]] = RELICS[at].id;
   });
   out.town.bless = bl;
+
+  /* 宝珠：老码没有这一段 —— 只有「读这 1 bit」这一下允许读到底，后面照常报错 */
+  let hasOrb = 0;
+  try{ hasOrb = r.bits(1); }catch(e){ hasOrb = 0; }
+  if(hasOrb){
+    const od = {seq:0, spent:r.vint(), bag:[], eq:[]}, n = r.vint();
+    for(let k = 0; k < n; k++){
+      const c = r.vint(), b = r.vint(), lv = r.vint(), pt = r.vint(), na = r.vint(), a = [];
+      for(let j = 0; j < na; j++){
+        const ai = r.vint(), v = r.vint(), d = r.bits(1);
+        if(ORB_AFFIX[ai]) a.push({k:ORB_AFFIX[ai].id, v:v, d:d});
+      }
+      od.bag.push({u:k + 1, c: c && ORB_COLORS[c - 1] ? ORB_COLORS[c - 1].id : "",
+                   b: b && ORB_BASE[b - 1] ? ORB_BASE[b - 1].id : "", lv:lv, pt:pt, a:a});
+    }
+    od.seq = n;
+    for(let i = 0; i < ORB_SLOTS; i++) od.eq.push(r.vint());   // 下标 +1 正好就是上面给的 uid
+    out.town.orb = od;
+  }
   out.note = notes.join("；");
   return out;
 }
@@ -5205,6 +5475,12 @@ function mergeData(o){
   let inN = 0, myN = blessSlots();
   ["fav", "ban"].forEach(function(k){ for(let r = 0; r < 5; r++) if(inBless.open[k][r]) inN++; });
   if(inN > myN) TOWN.bless = inBless;
+  /* 宝珠：**整份取「在宝珠上花得多」的那一边**（spent = 买 + 刷新 + 强化花掉的宝石累计），
+     不做并集 —— 并起来就是一份钱买出两份宝珠。本机的商店货架不动（码里本来也不带）。 */
+  if(o.town && o.town.orb){
+    const inOrb = fixOrb(o.town.orb);
+    if(inOrb.spent > (TOWN.orb.spent || 0)){ inOrb.shop = TOWN.orb.shop; TOWN.orb = inOrb; }
+  }
 
   /* 导入是玩家自己点的，就地写一次盘 —— 它不是游戏里的那三个存档点，而是存档管理本身；
      不马上写的话玩家关掉页面会以为导入没生效。只写永久数据，
@@ -5427,9 +5703,43 @@ function showView(id){
   if(id === "viewAdv") sizeMap();
   // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
   if(id === "viewSet") refreshSaveState();
+  // 宝珠的两页：换页就把没点完的两步确认和上一条消息清掉
+  if(id === "viewOrb" || id === "viewShop"){
+    orbArmed = ""; orbMsg = "";
+    if(id === "viewOrb") renderOrbBag(); else renderOrbShop();
+  }
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
+});
+
+/* ---- 宝珠：背包 / 人物 / 商店（用户 2026-09-23）---- */
+Array.prototype.forEach.call(document.querySelectorAll(".osub"), function(b){
+  b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMsg = ""; renderOrbBag(); });
+});
+$("orbList").addEventListener("click", function(e){
+  const b = e.target.closest ? e.target.closest("button[data-act]") : null;
+  if(!b || b.disabled) return;
+  const u = +b.dataset.u, act = b.dataset.act;
+  if(act !== "enh") orbArmed = "";
+  if(act === "id") orbIdentify(u);
+  else if(act === "enh") orbEnhance(u);
+  else if(act === "eq"){ orbMsg = ""; orbEquip(u); }
+});
+$("orbSlots").addEventListener("click", function(e){
+  const b = e.target.closest ? e.target.closest(".orbslot") : null;
+  if(!b || !+b.dataset.u) return;
+  orbEquip(+b.dataset.u);                // 点一下已经戴着的 = 卸下
+});
+$("orbShop").addEventListener("click", function(e){
+  const b = e.target.closest ? e.target.closest("button[data-i]") : null;
+  if(!b || b.disabled) return;
+  if(orbArmed.indexOf("buy:") !== 0) orbArmed = "";
+  orbBuy(+b.dataset.i);
+});
+$("btnOrbReroll").addEventListener("click", function(){
+  if(orbArmed !== "re") orbArmed = "";
+  orbReroll();
 });
 
 /* ---- 设置 ---- */

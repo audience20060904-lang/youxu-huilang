@@ -872,6 +872,16 @@ var REDUCE_MOTION = !!(window.matchMedia && matchMedia("(prefers-reduced-motion:
 function has(id){ return P && P.rset[id] === 1; }
 /* 特殊遗物（Boss 掉的）跟那 209 件是**两套**，别混：判定走 hasSp，不走 has。 */
 function hasSp(id){ return P && P.sset[id] === 1; }
+/* ================================================================
+   宝珠（局外养成，用户 2026-09-23）—— 配置和纯函数在 orb.js，主城那边买 / 鉴定 / 强化 / 装备。
+   **开局那一下**从 youxu.town.v1 读一次（只读，这边从不写那个键），算好快照进 P.orb：
+   跟着每波存档走，所以读档不会变，一趟中途去主城换宝珠也改不了这一趟。
+   ⚠️ 它不是遗物：不进 P.relics、不能卖、不吃「幸运」，判定走 orbOn / orbAdd / orbBaseOn。
+   ================================================================ */
+function readOrbs(){ var t = load("youxu.town.v1", null); return orbBuild(fixOrb(t && t.orb)); }
+function orbOn(k){ return !!(P && P.orb && P.orb.on && P.orb.on[k]); }
+function orbAdd(k){ return (P && P.orb && P.orb.add && P.orb.add[k]) || 0; }
+function orbBaseOn(k){ return !!(P && P.orb && P.orb.base && P.orb.base[k]); }
 function spDef(id){ for(var i = 0; i < BF_SPECIAL.length; i++) if(BF_SPECIAL[i].id === id) return BF_SPECIAL[i]; return null; }
 function reindex(){ P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1; }
 function nRar(r){ var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r === r) n++; return n; }
@@ -894,7 +904,8 @@ function newRun(){
        round:0,                           // 已经进行过几轮部署
        bank:0,                            // 上一次部署吸走的金币，**下一轮部署才到账**（用户 2026-09-22）
        freeRe:0,                          // 金库二星攒下的免费刷新次数
-       power:0};                          // 玩家最近几刀的实际出手伤害 —— 塔的伤害读它
+       power:0,                           // 玩家最近几刀的实际出手伤害 —— 塔的伤害读它
+       orb:readOrbs(), orbGasp:false, orbGold:0};   // 宝珠快照 / 「回光」用过没 / 开局宝珠给了多少金
   initPool();
   reindex();
   newWave(1, true);                       // ⚠️ G 必须先建好 —— bstats() 要读 G 上的几个计数
@@ -902,7 +913,7 @@ function newRun(){
        builds:[], tshots:[], zones:[]};   // builds 是塔/泉/商，tshots 是塔的弹，zones 是地面危险区
   /* wardT / wardCut 是**涌泉台三星**给的那 3 秒减伤（buildCut 里跟归墟碑并在一起读）*/
   E.me = {x:0, y:0, dir:0, swingCd:0, moving:0, moveT:0, slowT:0, slowPct:0, second:0, aim:0,
-          wardT:0, wardCut:0};
+          wardT:0, wardCut:0, invT: orbBaseOn("ward") ? 0.5 : 0};   // invT：宝珠「先机」的无敌
   CAM.x = 0; CAM.y = 0;
   P.hp = bstats().maxHp;
   OVER = false; pendPicks = 0;
@@ -928,6 +939,7 @@ function newWave(w, quiet){
   /* 泉每一波回一次（用户 2026-09-22）—— 它不再消失，只是每波能喝一口 */
   if(E) for(var bi = 0; bi < E.builds.length; bi++)
     if(E.builds[bi].k === "spring") E.builds[bi].used = false;
+  if(E && orbBaseOn("ward")) E.me.invT = 0.5;              // 宝珠「先机」：每波开始 0.5 秒无敌
   if(quiet) return;
   /* 「叠甲」：上一整波一点血都没掉才算一波（护盾吃掉的不算掉血）。
      ⚠️ 以前写在 onWaveRelics 里读 G.hurt —— 那时 G 已经是新一波的了，恒为 false，等于每波白加一次。 */
@@ -950,6 +962,8 @@ function bstats(){
            armor: b.armor, crit: b.crit, critMult: b.critMult, spd: b.spd, aspd: b.aspd,
            range: b.range, arc: b.arc, pickup: b.pickup, knock: b.knock,
            cut: 0, goldPct: 0, xpPct: 0, comboStep: BF.comboStep, defGear: 0};
+  s.maxHp += orbAdd("hp");                                          // 宝珠词条（跟底子一起算）
+  s.atk   += orbAdd("atk");
 
   /* --- ① 加法：最大生命 --- */
   if(has("heart"))       s.maxHp += 6;
@@ -960,6 +974,9 @@ function bstats(){
   if(has("pad"))         s.maxHp += 8;
   if(has("paperweight")) s.maxHp += 6;
   if(has("engrave"))     s.maxHp += Math.min(30, 3 * lv);
+  /* 宝珠：绿 2 + 生命百分比词条，排在加法件之后、铁躯之前 */
+  var ohp = orbAdd("hpPct") + (orbOn("green2") ? 25 : 0);
+  if(ohp) s.maxHp = s.maxHp * (1 + ohp / 100);
   if(has("titan"))       s.maxHp = Math.round(s.maxHp * 1.5);      // 铁躯
   if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
   s.maxHp = Math.max(1, Math.round(s.maxHp));
@@ -993,6 +1010,8 @@ function bstats(){
   if(has("mirroredge")) s.crit += Math.min(20, 4 * Math.floor(sh / 15));
   if(has("vim") && hpPct >= 1)     s.crit += 30;
   if(has("slaughter") && P.killStreak >= 5) s.crit += 50;
+  s.crit += orbAdd("crit") + (orbOn("red3") ? 8 : 0);               // 宝珠
+  s.critMult += orbAdd("critDmg") / 100 + (orbOn("red6") ? 0.5 : 0);
   if(has("edge"))  s.critMult += 0.5;
   if(has("clean")) s.critMult += 0.4;                               // 战场改写
   if(has("maul"))  s.critMult += 1.0;
@@ -1021,6 +1040,7 @@ function bstats(){
   if(has("whole") && hpPct >= 1)   s.armor += 8;
   if(has("slaughter") && P.killStreak >= 5) s.armor += 6;
   s.armor += G.stepArmor + G.glyphArmor + G.corrodeArmor;
+  s.armor += orbAdd("armor");                                       // 宝珠词条（加法，排在乘法件之前）
   if(has("dawn") && G.swings < 20) s.armor += 5;
   /* 乘法几件，位置写死 */
   if(has("heavy"))  s.armor = (s.armor + 1) * 4;
@@ -1053,6 +1073,7 @@ function bstats(){
   if(has("ease")  && hpPct > 0.80) c += 12;
   if(has("ironvow")) c += 2 * Math.min(5, Math.floor(s.armor / 3));
   if(has("confluence")) c += 2 * confTiers(s);
+  c += orbAdd("cut");                                               // 宝珠词条
   s.cutStatic = c;
   s.cut = c;
   /* 恒甲：常驻减伤 → 护甲（2026-09-23 补：以前只有减伤和护盾，这半句是空的）。
@@ -1066,6 +1087,14 @@ function bstats(){
   if(has("spark")) s.comboStep = 2;
   if(has("wellread")) s.range = Math.round(s.range * 1.10);         // 战场改写
   if(has("steady") && hpPct < 0.25) s.spd = Math.round(s.spd * 1.25);
+  /* 宝珠：词条 + 「疾起」（每波开始 3 秒移速 +30%）*/
+  s.goldPct += orbAdd("gold");
+  s.xpPct   += orbAdd("xp") + (orbOn("purple2") ? 25 : 0);
+  s.spd = (s.spd + orbAdd("spd")) * (1 + orbAdd("spdPct") / 100);
+  if(orbBaseOn("dash") && G.t < 3) s.spd *= 1.3;
+  s.aspd *= 1 + orbAdd("aspd") / 100;
+  s.range += orbAdd("range");
+  s.pickup += orbAdd("pickup");
   s.aspd = Math.max(0.35, s.aspd * (1 - G.aspdCut / 100));          // 沙漏的代价
 
   /* --- ⑦ 特殊遗物（Boss 掉的）：只改「一刀能打到多少」，不给伤害百分比 --- */
@@ -1095,7 +1124,7 @@ function confTiers(s){
          Math.min(3, Math.floor(s.armor / 5)) +
          Math.min(3, Math.floor(P.combo / 10));
 }
-function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0); }
+function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0) + (orbOn("black2") ? 2 : 0); }   // 黑 2：宝珠
 /* 遗物刚好装满时自动把遗物页弹出来（用户 2026-09-22）——
    下一件就要做取舍了，先让玩家看一眼手里有什么、顺手合成掉几件。
    ⚠️ 只在**从没满到满**的那一下弹一次（P.bagAlerted），掉到满以下才复位；
@@ -1288,6 +1317,7 @@ function swing(mult){
   if(has("offer"))    pct += 100;                                   // 献身（2026-09-23 补：以前只减了血，伤害那半句是空的）
   if(has("whim"))     pct += G.whim;
   if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
+  pct += orbAdd("atkPct") + (orbOn("red2") ? 25 : 0);               // 宝珠：② 层，跟别的百分比同一个桶
   if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
   if(hasSp("sp_magnet")){ pct += 3 * G.magnetN; G.magnetN = 0; }
   if(has("rend")){ extra += 20; if(P.rend < 100){ P.rend++; P.hp = Math.max(1, P.hp - 1); } }
@@ -1462,6 +1492,8 @@ function mitigate(dmg, s, o){
 /* 每一条「怪打你」的路都必须接到这儿，否则护盾会被绕过去 */
 function takeHit(dmg, foe, o){
   if(OVER) return;
+  /* 宝珠「先机」：每波开始 0.5 秒无敌 —— 排在一切之前，连击 / 护盾 / 各种次数都不动 */
+  if(E.me.invT > 0){ fxText("无敌", "#E3B23C"); return; }
   o = o || {};
   var s = bstats();
   /* ---- 连击处理（优先级：铁胆 ＞ 断链 ＞ 惯性 ＞ 长链 ＞ 清零，归位兜一次）---- */
@@ -1539,6 +1571,8 @@ function deathSave(s){
     fxText("薪火", "#E3B23C"); return; }
   if(has("revive") && P.revived < 3){ P.revived++; P.hp = Math.round(s.maxHp * 0.50);
     fxText("回魂", "#E3B23C"); return; }
+  if(orbBaseOn("gasp") && !P.orbGasp){ P.orbGasp = true; P.hp = 1;   // 宝珠「回光」：本局一次
+    fxText("回光", "#E3B23C"); return; }
   endRun();
 }
 
@@ -1608,6 +1642,10 @@ function onWaveRelics(w){
   if(has("vow"))     P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.20));  // 取大值，别按回去
   if(has("track") && P.wrong2 !== undefined && P.wrong1 < P.wrong2) addShield(110);
   if(has("gatewait") && isBossWave(w)){ addShield(120); healUp(s.maxHp * 0.25); }
+  /* 宝珠：绿 3 回血、「护身」「猎首」给盾 */
+  if(orbOn("green3"))       healUp(s.maxHp * 0.10);
+  if(orbBaseOn("aegis"))    addShield(s.maxHp * 0.08);
+  if(orbBaseOn("hunter") && isBossWave(w)) addShield(s.maxHp * 0.20);
   if(has("purse"))   P.gold += 30;
   if(has("welfare")) addGold(w * 2);
   if(has("dig"))     dropCoinPile(3);
@@ -2321,7 +2359,10 @@ function updateDrops(dt){
     var d = E.drops[i]; d.t += dt;
     var dx = me.x - d.x, dy = me.y - d.y, dd = Math.hypot(dx, dy);
     if(dd < s.pickup){ d.x += dx / dd * 320 * dt; d.y += dy / dd * 320 * dt; }
-    if(dd < 16){ addGold(d.n); E.drops.splice(i, 1); if(hasSp("sp_magnet")) G.magnetN++; }
+    if(dd < 16){
+      /* 宝珠黄 2：捡到的这一堆 30% 概率翻倍（不是遗物，不走 luck）*/
+      addGold(orbOn("yellow2") && Math.random() < 0.3 ? d.n * 2 : d.n);
+      E.drops.splice(i, 1); if(hasSp("sp_magnet")) G.magnetN++; }
   }
 }
 
@@ -2353,7 +2394,9 @@ function fieldTowers(){
   return n;
 }
 /* ⚠️ 人口只数塔 —— 泉 / 商 / 城墙**不占人口**（用户定的）。 */
-function popLeft(){ return P.dlvl - fieldTowers(); }
+function popLeft(){ return popCap() - fieldTowers(); }
+/* 人口上限 = 部署等级（宝珠白 2 再 +1，2026-09-23）。⚠️ 抽牌概率照旧看 P.dlvl，只有人口吃这一格。 */
+function popCap(){ return P.dlvl + (orbOn("white2") ? 1 : 0); }
 
 function mkTower(tid, star, x, y){
   return {k:"tower", tid:tid, def:TW_MAP[tid], star:star, x:x, y:y,
@@ -2583,6 +2626,9 @@ function openDeploy(resume){
   for(di = 0; di < E.drops.length; di++) vac += E.drops[di].n;
   E.drops.length = 0;
   P.bank = vac;
+  /* 宝珠黄 6：这一轮吸走的当场到账，不用等下一轮 */
+  var vacNow = orbOn("yellow6") && vac > 0;
+  if(vacNow){ addGold(vac); P.bank = 0; }
   /* ---- 金库（经济塔）：每次部署额外一笔；二星白送一次刷新、三星白送一张牌 ---- */
   var vg = 0, vre = 0, vcard = 0, vi, vb, vse;
   for(vi = 0; vi < E.builds.length; vi++){
@@ -2598,8 +2644,10 @@ function openDeploy(resume){
     vcard += vse.vaultCard || 0;
   }
   if(vg > 0) addGold(vg);
+  if(orbOn("blue3")) vre++;                                      // 宝珠蓝 3：每次部署白送一次刷新
   P.freeRe = (P.freeRe || 0) + vre;
-  lastIncome = {inc:inc, start: P.round === 1 ? d.startGold : 0, claim:claim, vac:vac, vault:vg};
+  lastIncome = {inc:inc, start: P.round === 1 ? d.startGold : 0, claim:claim, vac:vac, vault:vg,
+                vacNow:vacNow, orb: P.round === 1 ? (P.orbGold || 0) : 0};
   giveBuildCard("spring"); giveBuildCard("shop");                // 用户：每次部署白给一张泉 + 一张商
   for(i = 0; i < E.builds.length; i++)                           // 用户：商店每五波刷新
     if(E.builds[i].k === "shop"){ E.builds[i].stock = null; E.builds[i].cool = 0; }
@@ -2677,7 +2725,7 @@ function renderDeploy(){
   var d = BF.deploy, i, h;
   $("dTitle").textContent = "部署 · 第 " + P.wave + " 波前";
   $("dGold").textContent  = P.gold + " 金" + (P.bank > 0 ? "（待领 " + P.bank + "）" : "");
-  $("dPop").textContent   = "等级 " + P.dlvl + " · 人口 " + fieldTowers() + "/" + P.dlvl;
+  $("dPop").textContent   = "等级 " + P.dlvl + " · 人口 " + fieldTowers() + "/" + popCap();
 
   /* 一排按钮。⚠️ 商店 2026-09-22 搬进了弹窗（用户要求）——
      面板矮了一半，上面看得见的营地就多了一半。 */
@@ -2719,7 +2767,8 @@ function renderDeploy(){
     hint = "收入 +" + lastIncome.inc + (lastIncome.start ? "　开局 +" + lastIncome.start : "") +
            (lastIncome.vault ? "　金库 +" + lastIncome.vault : "") +
            (lastIncome.claim ? "　上轮回收到账 +" + lastIncome.claim : "") +
-           (lastIncome.vac ? "　场上回收 " + lastIncome.vac + "（下一轮到账）" : "") +
+           (lastIncome.orb ? "　宝珠 +" + lastIncome.orb : "") +
+           (lastIncome.vac ? "　场上回收 " + lastIncome.vac + (lastIncome.vacNow ? "（已到账）" : "（下一轮到账）") : "") +
            "　·　拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
   } else hint = "拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
   $("dHint").textContent = hint;
@@ -2761,7 +2810,9 @@ function towerPower(){ return Math.max(1, Math.round(P.power || bstats().atk)); 
 /* 遗物给**全体塔**的伤害加成。现在只有「祭余」——
    战场里合成本来就不要钱，它原来那条「合成花费 −50%」是完全空的（用户 2026-09-22 点名要修）。
    以后再加「强化塔」的遗物就往这儿并，别散在 fireTower 里。 */
-function towerRelicPct(){ return has("spare") ? 0.10 : 0; }
+function towerRelicPct(){
+  return (has("spare") ? 0.10 : 0) + orbAdd("tower") / 100 + (orbOn("blue2") ? 0.25 : 0);   // 宝珠蓝 2 + 词条
+}
 function refreshTowerStats(){
   var i, j, t, o;
   /* ⚠️ 先把每座塔的升星效果都算出来 —— 下面那一圈要读**别人**的 t.se（光环覆盖全场就在里面）。 */
@@ -4907,6 +4958,7 @@ function frame(ts){
 function step(dt){
   var me = E.me, s = bstats();
   P.time += dt; G.t += dt;
+  if(me.invT > 0) me.invT -= dt;                   // 宝珠「先机」
 
   /* 移动 */
   var v = inputVec(), sp = s.spd;
@@ -5201,7 +5253,7 @@ var pendPicks = 0, pickOffer = [], rerollLeft = 0;
    不是以前那种「每波一次」—— 别改回去。 */
 function openPick(){
   if(pendPicks <= 0){ hide("veilPick"); return; }
-  rerollLeft = BF.rerollN + (fullSet() ? 1 : 0);
+  rerollLeft = BF.rerollN + (fullSet() ? 1 : 0) + (orbOn("purple3") ? 1 : 0);   // 紫 3：宝珠
   rollPick();
 }
 function rollPick(){
@@ -5277,6 +5329,14 @@ function openInfo(){
     st2("攻速", s.aspd.toFixed(2) + " 刀/秒") + st2("刀程", Math.round(s.range)) +
     st2("张角", Math.round(s.arc) + "°") + st2("拾取", Math.round(s.pickup)) +
     st2("连击", P.combo + "（+" + comboPct(s) + "%）") + st2("护盾", Math.round(P.shield));
+  /* 宝珠：点亮的效果 / 基础词缀 / 词条合计，一行一条 */
+  var ob = P.orb || {on:{}, add:{}, base:{}}, lines = [];
+  orbOnLines(ob).forEach(function(x){ lines.push("<b>" + ORB_CMAP[x.c].n + " " + x.t + "</b>" + x.s); });
+  orbBaseLines(ob).forEach(function(t){ lines.push(t); });
+  var al = orbAddLines(ob);
+  if(al.length) lines.push(al.join("　"));
+  $("infoOrb").hidden = !lines.length;
+  $("infoOrb").innerHTML = lines.length ? "<h3>宝珠</h3><p>" + lines.join("</p><p>") + "</p>" : "";
   show("veilInfo");
 }
 function openBag(){
@@ -5606,6 +5666,38 @@ function resumeSaved(r){
   else { PAUSED = false; last = 0; }
 }
 
+/* ---- 宝珠的开局礼（白 3/6、黄 3、绿 6、蓝 6、紫 6、黑 3/6、「私囊」）----
+   只在「下场 / 再来一次」那一下走一次，**读档不走**（这些东西已经在存档的 P 里了）。
+   塔进备战区、照样走牌库；遗物直接进身上（开局不会满，满了就作罢）。 */
+function orbStart(){
+  var g = (orbOn("white3") ? 50 : 0) + (orbOn("yellow3") ? 100 : 0) + (orbBaseOn("purse") ? 30 : 0);
+  P.gold += g; P.orbGold = g;
+  if(orbOn("white6")) orbGiveTowers(function(d){ return d.r === 0; }, 2);
+  if(orbOn("blue6"))  orbGiveTowers(function(d){ return d.r === 1; }, 2);
+  if(orbOn("green6")) orbGiveTowers(function(d){ return d.kind === "heal"; }, 1);
+  var rars = [];
+  if(orbOn("black3"))  rars.push(0);
+  if(orbOn("black6"))  rars.push(1, 1);
+  if(orbOn("purple6")) rars.push(2);
+  if(rars.length) withMaxHp(function(){
+    rars.forEach(function(r){
+      var pool = relicPool(r);
+      if(pool.length && P.relics.length < relicCap()){ P.relics.push(pick(pool).id); reindex(); }
+    });
+  });
+  P.hp = bstats().maxHp;                                   // 开局满血（绿 2 之类的上限加成算进去）
+}
+function orbGiveTowers(ok, n){
+  for(var k = 0; k < n; k++){
+    if(benchFree() <= 0) break;
+    var list = BF_TOWERS.filter(function(d){ return ok(d) && poolLeft(d.id) > 0; });
+    if(!list.length) break;
+    var d = pick(list);
+    poolTake(d.id); P.bench.push({k:"tower", tid:d.id, star:1});
+  }
+  combineAll();
+}
+
 function endRun(){
   if(OVER) return;
   OVER = true; PAUSED = true;
@@ -5686,7 +5778,7 @@ function boot(){
   });
   $("btnGo").addEventListener("click", function(){
     clearSavedRun();                       // 重开一趟：把上一趟没走完的档丢掉
-    newRun(); pendPicks = 0; pendSpecial = 0;
+    newRun(); pendPicks = 0; pendSpecial = 0; orbStart();
     $("veilStart").classList.remove("on"); last = 0;
     openDeploy();                          // 用户：**开始游戏时也进入一次部署阶段**（它自己会存一次档）
   });
@@ -5770,7 +5862,7 @@ function boot(){
   onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, openBag); });
 
   $("btnPause").addEventListener("click", function(){ show("veilPause"); });
-  $("btnResume").addEventListener("click", function(){ hide("veilPause"); });
+  $("btnUnpause").addEventListener("click", function(){ hide("veilPause"); });
   $("btnQuit").addEventListener("click", function(){ hide("veilPause"); endRun(); });
 
   /* ---- 游商 ---- */
@@ -5782,7 +5874,7 @@ function boot(){
 
   $("btnAgain").addEventListener("click", function(){
     $("veilEnd").classList.remove("on"); OVER = false;
-    newRun(); pendPicks = 0; pendSpecial = 0; last = 0;
+    newRun(); pendPicks = 0; pendSpecial = 0; last = 0; orbStart();
     openDeploy();
   });
 
