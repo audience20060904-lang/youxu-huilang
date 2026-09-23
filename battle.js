@@ -15,9 +15,11 @@ var BF = {
      ⚠️ atk 是小数，`bstats()` 末尾统一 round 一次 —— 别在这儿先取整。 */
   perLevel: {maxHp:9, atk:1.5},
   levelHealPct: 0.08,
-  /* **每升几级才给一次遗物四选一**（用户 2026-09-22 从 1 改成 2）。
-     ⚠️ 升级本身照旧一级一算（面板、onLevelRelics 都按级走），只有「挑遗物」这一下按这个数攒。 */
-  pickEvery: 2,
+  /* **升到哪几级给一次遗物四选一**（用户 2026-09-23 改）：
+     50 级以内每 2 级（2/4/6…50）、51~80 级每 5 级（55/60…80）、80 级往后每 10 级（90/100…）。
+     ⚠️ 按「到达的那一级」判，一次升好几级就逐级数，不会漏。原来那套 P.lvlSince 攒零头 +
+        「80 级之后不再发」已经换掉了，别加回来。 */
+  pickSteps: [{to:50, every:2}, {to:80, every:5}, {to:Infinity, every:10}],
 
   waveSec: 30,          // 每波多少秒
   bossEvery: 10,        // 每几波一个 Boss
@@ -28,9 +30,6 @@ var BF = {
   touchCd: 0.65,        // 同一只怪的接触伤害冷却（秒）
   comboStep: 5,
   comboPct: 2,
-  /* onKill 那一类（回血/护盾）统一乘这个 —— 一波的怪比一层多 2~6 倍，
-     不折算的话「杀怪回血」会直接无敌。见设计文档 6.1。 */
-  killScale: 0.45,
   wagerInner: 0.45,     // 刀程内侧这一段算「贴身」（= 地牢的冒险）
   hauntMax: 5,          // 同时最多标记几只仇敌（= 心魔）
   bigR: 15,             // 碰撞半径 ≥ 这个数算「大体型」（= 地牢的长单词）
@@ -43,9 +42,6 @@ var BF = {
        不刹一下的话 60 级之后一波能升七八级。别去砍怪的 xp 来代替它。 */
     return lv >= 40 ? n * 3 : n;
   },
-  /* **超过这一级就不再发遗物四选一**（用户 2026-09-22）——
-     15 个遗物位早就满了，再弹只是打断节奏。升级本身照旧给面板。 */
-  pickLvlMax: 80,
   /* 怪掉的金币统一乘这个（用户 2026-09-22：**金币爆率 −50%**）。
      Boss 掉的那一笔也吃，别单独开小灶。 */
   goldMult: 0.5,
@@ -673,11 +669,11 @@ var TW_MAP = {};
    ⚠️ **2026-09-22 整排 ×5**（用户要求），跟 DLVL_COST 是一起的。
    ⚠️ **同一天又按品质各乘了一道**（用户：稀有 ×2 / 史诗 ×3 / 传奇 ×4 / 神圣 ×5）——
       普通 20 没动，于是「开局铺普通塔」仍然便宜，高品质变成需要攒的东西。
-   ⚠️ **刷新还是 6 金没动** —— 所以现在是「牌便宜、人贵」，多刷几次找想要的那张是划算的。
-      嫌刷新太便宜就抬 BF.deploy.rerollCost，别去动这张表。 */
+   ⚠️ **刷新的底价还是 6 金，但部署每升一级翻一倍**（用户 2026-09-23，`rerollCost()`）——
+      1 级 6、5 级 96、9 级 1536。越往后越不能靠刷找牌。 */
 var TW_COST   = [20, 80, 210, 480, 1000];
 /* 牌库里每种塔各有几张（云顶那套「大家抢同一个池子」）。卖掉会还回池子里。 */
-var TW_COPIES = [22, 18, 14, 10, 6];
+var TW_COPIES = [22, 18, 14, 10, 9];      // 神圣 6 → 9（用户 2026-09-23）
 /* ⚠️ **星级不再给任何数值加成**（用户 2026-09-22：「塔升星不会有基础数值提升，变成效果」）——
    这两张表整排留成 1，只是为了不动一片调用点。**别把 1.8 / 3.2 那一套加回来**，
    升星的全部价值在每座塔自己的 s2 / s3 上。 */
@@ -789,10 +785,6 @@ function newRun(){
        round:0,                           // 已经进行过几轮部署
        bank:0,                            // 上一次部署吸走的金币，**下一轮部署才到账**（用户 2026-09-22）
        freeRe:0,                          // 金库二星攒下的免费刷新次数
-       /* 距离下一次「挑遗物」还差几级（见 BF.pickEvery）。
-          ⚠️ 从 1 起步，所以**第一件遗物在 2 级拿到**，之后 4/6/8…；
-             从 0 起步的话第一件要等到 3 级，开局太空了。 */
-       lvlSince:1,
        power:0};                          // 玩家最近几刀的实际出手伤害 —— 塔的伤害读它
   initPool();
   reindex();
@@ -1184,6 +1176,7 @@ function swing(mult){
   if(has("ironvow"))  pct += 5 * Math.min(5, Math.floor(s.armor / 3));
   if(has("shieldking")) pct += 5 * Math.min(4, Math.floor(P.shield / 30));
   if(has("empty"))    pct += 7 * Math.max(0, BF.relicMax - P.relics.length);
+  if(has("offer"))    pct += 100;                                   // 献身（2026-09-23 补：以前只减了血，伤害那半句是空的）
   if(has("whim"))     pct += G.whim;
   if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
   if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
@@ -1375,6 +1368,7 @@ function takeHit(dmg, foe, o){
     } else P.combo = 0;
   }
   G.wrongN++; G.hurt = true;
+  if(has("corrode")) G.corrodeArmor = Math.max(0, G.corrodeArmor - 2);   // 蚀甲：受伤 −2（2026-09-23 补）
 
   /* ---- 免伤（排在减伤链之前，别白吃屏息/错身的次数）---- */
   if(!free && has("echo") && !G.echoUsed){ G.echoUsed = true; healUp(s.maxHp * 0.05); free = true; }
@@ -1532,19 +1526,19 @@ function gainXp(n){
     var s2 = bstats();
     P.hp = Math.min(s2.maxHp, P.hp + Math.round(s2.maxHp * BF.levelHealPct));
     for(var i = 0; i < up; i++) onLevelRelics();
-    /* ⚠️ **每 BF.pickEvery 级才给一次四选一**（用户 2026-09-22）——
-       零头攒在 P.lvlSince 上，跨升级继续攒，别改成「偶数级才给」（一次升两级会漏）。 */
-    P.lvlSince += up;
-    /* ⚠️ **超过 pickLvlMax 级就不再发遗物**（用户 2026-09-22）——
-       零头一并清掉，免得 80 级之前攒的那半档在 81 级补弹一次。 */
-    if(P.lvl > BF.pickLvlMax){ P.lvlSince = 0; return; }
-    var got = Math.floor(P.lvlSince / BF.pickEvery);
-    if(got > 0){
-      P.lvlSince -= got * BF.pickEvery;
-      pendPicks += got;
-      openPick();
-    }
+    /* 升到的每一级各判一次（BF.pickSteps），一次升好几级也不会漏 */
+    var got = 0;
+    for(var L = P.lvl - up + 1; L <= P.lvl; L++) if(pickAtLevel(L)) got++;
+    if(got > 0){ pendPicks += got; openPick(); }
   }
+}
+/* 升到第 L 级时给不给一次遗物四选一（用户 2026-09-23）*/
+function pickAtLevel(L){
+  for(var i = 0; i < BF.pickSteps.length; i++){
+    var st = BF.pickSteps[i];
+    if(L <= st.to) return L % st.every === 0;
+  }
+  return false;
 }
 
 /* ================================================================
@@ -1675,18 +1669,20 @@ function killFoe(f){
   f.dead = true;
   /* 「蚀空」：死了还占着一块地（走 addZone，跟唤雷者和祭司的火场同一套）*/
   if(f.def.leave) addZone(f.x, f.y, f.def.leave.r, 0, f.def.leave.life, f.leaveDmg, "#4A3A6A");
-  var s = bstats(), k = BF.killScale;
+  var s = bstats();
   P.kills++; P.killStreak++;
   P.kinds[f.id] = (P.kinds[f.id] || 0) + 1;
   if(f.haunt){ G.hauntN = Math.max(0, G.hauntN - 1); P.hauntKills++;
     if(has("bind")) healUp(s.maxHp * 0.02);                  // 缚魂：驱散回血（2026-09-23 补）
     if(has("exorcise") && G.exorN < 3){ G.exorN++; healUp(s.maxHp * 0.02); }
     if(has("calmsoul") && G.calmsN < 3){ G.calmsN++; addShield(5); } }
-  if(has("salve") && luck(0.40)) healUp(4 * k);
-  if(has("reap"))     healUp(2 * k);
-  if(has("breath"))   healUp(s.maxHp * 0.02 * k);
-  if(has("mend"))     healUp(s.maxHp * 0.04 * k);
-  if(has("reapfull")) healUp(s.maxHp * 0.025 * k);
+  /* 杀怪回血这一类在战场里一波杀 20~70 只，所以数值比地牢小一截（原来是统一乘 killScale 0.45，
+     但词条上写的还是地牢的数 —— 2026-09-23 改成直接写战场的数，词条在 content.js 的 BFW）。 */
+  if(has("salve") && luck(0.40)) healUp(2);
+  if(has("reap"))     healUp(1);
+  if(has("breath"))   healUp(s.maxHp * 0.01);
+  if(has("mend"))     healUp(s.maxHp * 0.02);
+  if(has("reapfull")) healUp(s.maxHp * 0.012);
   if(has("lesson") && !G.kindsSeen[f.id]) addGold(10);
   if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
   G.kindsSeen[f.id] = 1;
@@ -2334,10 +2330,13 @@ function buyCard(i){
   combineAll();
   renderDeploy(); renderTwShop();
 }
+/* 刷新一次多少金：**部署每升一级就翻一倍**（用户 2026-09-23）——1 级 6、2 级 12 … 9 级 1536。
+   ⚠️ 界面上的价签和按钮禁用都读它，别再直接读 BF.deploy.rerollCost。 */
+function rerollCost(){ return BF.deploy.rerollCost * Math.pow(2, Math.max(0, P.dlvl - 1)); }
 function rerollShop(){
   /* 金库二星攒下的免费刷新先用掉（用户 2026-09-22 的经济塔）*/
   if(P.freeRe > 0){ P.freeRe--; rollShopCards(); renderDeploy(); renderTwShop(); return; }
-  var c = BF.deploy.rerollCost;
+  var c = rerollCost();
   if(P.gold < c) return;
   P.gold -= c; P.spent += c;
   rollShopCards(); renderDeploy(); renderTwShop();
@@ -2635,8 +2634,8 @@ function renderTwShop(){
   $("twShopSub").textContent = "金币 " + P.gold + " · 备战区 " + P.bench.length + " / " + BF.deploy.bench +
                                " · 等级 " + P.dlvl + " 决定抽到什么品质";
   $("btnTwRe").textContent = P.freeRe > 0 ? "刷新 · 免费 ×" + P.freeRe
-                                          : "刷新 " + BF.deploy.rerollCost + " 金";
-  $("btnTwRe").disabled = P.freeRe <= 0 && P.gold < BF.deploy.rerollCost;
+                                          : "刷新 " + rerollCost() + " 金";
+  $("btnTwRe").disabled = P.freeRe <= 0 && P.gold < rerollCost();
 }
 
 /* ================================================================
@@ -4533,10 +4532,12 @@ function fuseN(){ return has("recipe") ? 2 : FUSE_N; }
    金币现在只有游商一个去处。别把 FUSE_COST 加回来。
    「配方」还在（少一件材料），「祭余」在战场里是另一条词条（见 BFW）。 */
 function fuseCost(){ return 0; }
+/* 配方的后半句（战场改写）：合成不花钱，「金币减半」是空的 → 换成多一件候选 */
+function fusePick(){ return FUSE_PICK + (has("recipe") ? 1 : 0); }
 function renderFuse(){
   $("fuseSub").textContent = fuseMode
     ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length
-    : fuseN() + " 件同品质 → 换一件高一档的，从 " + FUSE_PICK + " 件里挑（不要金币）";
+    : fuseN() + " 件同品质 → 换一件高一档的，从 " + fusePick() + " 件里挑（不要金币）";
   $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
   var ready = fuseSel.length === fuseN();
   $("btnFuseGo").disabled = !ready;
@@ -4557,7 +4558,7 @@ function fuseGo(){
   while(!pool.length && want > 0){ want--; pool = relicPool(want); }
   if(!pool.length){ openBag(); return; }
   var picks = [], t = 0;
-  while(picks.length < Math.min(FUSE_PICK, pool.length) && t++ < 100){
+  while(picks.length < Math.min(fusePick(), pool.length) && t++ < 100){
     var r = pick(pool); if(picks.indexOf(r) < 0) picks.push(r); }
   if(picks.length === 1){ grantRelic(picks[0].id, openBag); return; }
   $("gotTitle").textContent = "合成出了 " + RAR_CN[want] + " · 挑一件";
@@ -4725,9 +4726,15 @@ function resumeSaved(r){
   reindex();
   P.sset = {};
   for(i = 0; i < P.special.length; i++) P.sset[P.special[i]] = 1;
-  if(!P.pool) P.pool = {};
+  /* 牌库按「总张数 − 手上已有的」重算一遍：新加的塔、改过张数的档（神圣 6 → 9）都自动对上。
+     ⚠️ 手上已有的 = 备战区 + 场上，按星级折回一星张数（1 / 3 / 9）。 */
+  var owned = {};
+  function own(tid, star){ owned[tid] = (owned[tid] || 0) + starCopies(star || 1); }
+  for(i = 0; i < P.bench.length; i++) if(P.bench[i].k === "tower") own(P.bench[i].tid, P.bench[i].star);
+  for(i = 0; i < (r.builds || []).length; i++) if(r.builds[i].k === "tower" && TW_MAP[r.builds[i].tid]) own(r.builds[i].tid, r.builds[i].star);
+  P.pool = {};
   for(i = 0; i < BF_TOWERS.length; i++)
-    if(P.pool[BF_TOWERS[i].id] === undefined) P.pool[BF_TOWERS[i].id] = TW_COPIES[BF_TOWERS[i].r];
+    P.pool[BF_TOWERS[i].id] = Math.max(0, TW_COPIES[BF_TOWERS[i].r] - (owned[BF_TOWERS[i].id] || 0));
   E.me.x = r.me.x; E.me.y = r.me.y; CAM.x = E.me.x; CAM.y = E.me.y;
   E.builds = [];
   for(i = 0; i < (r.builds || []).length; i++){
@@ -4805,7 +4812,7 @@ function renderTiers(){
     if(sr) rb.textContent = "继续 · 第 " + sr.wave + " 波";
   }
   $("veilStart").querySelector(".sub").textContent =
-    "走位躲怪，刀会自己挥。每升两级从四件遗物里挑一件。第 " + BF.lateFrom +
+    "走位躲怪，刀会自己挥。升级挑遗物：50 级前每 2 级，之后每 5 级，80 级后每 10 级。第 " + BF.lateFrom +
     " 波是终点，往后是 1–" + BF.lateFrom + " 波的怪混着出。" +
     (m.best ? "　历史最深：第 " + m.best + " 波。" : "");
 }
