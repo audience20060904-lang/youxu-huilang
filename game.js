@@ -4217,7 +4217,7 @@ function orbBuy(i){
   od.bag.push({u: ++od.seq, c:"", b:s.b, lv:0, pt:0, a:[]});
   s.sold = true;
   commitPerm();
-  orbMsg = "买下了一颗未鉴定的宝珠，去背包里鉴定。";
+  orbMsg = "买下了一颗未鉴定的宝珠，放进背包了。";
   renderOrbShop();
 }
 function orbReroll(){
@@ -4242,7 +4242,7 @@ function orbIdentify(u){
   o.c = orbRollColor();
   commitPerm();
   orbMsg = "鉴定出来了：" + orbColorName(o) + "。";
-  renderOrbBag();
+  orbRefresh();
 }
 function orbEnhCost(o){
   const c = ORB_ENH_COST[o.lv];
@@ -4256,9 +4256,9 @@ function orbEnhance(u){
   const o = orbFind(orbData(), u);
   if(!o || !o.c || o.lv >= ORB_ENH_COST.length) return;
   const cost = orbEnhCost(o);
-  if(orbArmed !== "enh:" + u){ orbArmed = "enh:" + u; renderOrbBag(); return; }
+  if(orbArmed !== "enh:" + u){ orbArmed = "enh:" + u; orbRefresh(); return; }
   orbArmed = "";
-  if(!orbPay(cost)){ renderOrbBag(); return; }
+  if(!orbPay(cost)){ orbRefresh(); return; }
   let roll = ri(ORB_PT_MIN, ORB_PT_MAX);
   if(o.b === "steady") roll = Math.max(9, roll);
   if(o.b === "temper") roll += 1;
@@ -4278,19 +4278,32 @@ function orbEnhance(u){
   orbMsg = orbColorName(o) + " 第 " + o.lv + " 次强化 +" + roll + " 点（共 " + o.pt + "）" +
            (got.length ? "　新词条：" + got.join("、") : "") +
            (dbl ? "　翻倍：" + dbl : "");
-  renderOrbBag();
+  orbRefresh();
 }
 function orbSlotOf(u){ return orbData().eq.indexOf(u); }
-function orbEquip(u){
+/* 背包里的 = 没戴着的（用户 2026-09-23：「装备后宝珠会从背包里消失」）。
+   ⚠️ 数据上 TOWN.orb.bag 还是**全部**宝珠、eq 记着戴的是哪几颗 —— 只是背包页不画戴着的。
+      这样存档格式和存档码一个字节都不用动。 */
+function orbLoose(){ return orbData().bag.filter(function(o){ return orbSlotOf(o.u) < 0; }); }
+/* 戴到第 slot 个位置（slot 省略 = 第一个空位）；那个位置原来有一颗就换回背包 */
+function orbPut(u, slot){
   const od = orbData(), o = orbFind(od, u);
   if(!o || !o.c) return;
-  const at = orbSlotOf(u);
-  if(at >= 0){ od.eq[at] = 0; commitPerm(); renderOrbBag(); return; }   // 已经戴着 = 卸下
-  const free = od.eq.indexOf(0);
-  if(free < 0){ orbMsg = "六个位置都满了，先卸下一颗。"; renderOrbBag(); return; }
-  od.eq[free] = u;
+  if(slot === undefined || slot < 0) slot = od.eq.indexOf(0);
+  if(slot < 0){ orbMsg = "六个位置都满了，先在「人物」里卸下一颗。"; orbRefresh(); return; }
+  const was = orbSlotOf(u);
+  if(was >= 0) od.eq[was] = 0;
+  od.eq[slot] = u;
   commitPerm();
-  renderOrbBag();
+  orbMsg = orbColorName(o) + " 装备上了。";
+  orbRefresh();
+}
+function orbOff(u){
+  const od = orbData(), at = orbSlotOf(u);
+  if(at < 0) return;
+  od.eq[at] = 0;
+  commitPerm();
+  orbRefresh();
 }
 
 /* ---- 界面 ---- */
@@ -4300,26 +4313,38 @@ function orbGemHtml(o){
   if(o.c === "rainbow") return "<span class=\"orbgem bow\"></span>";
   return "<span class=\"orbgem\" style=\"background:" + ORB_CMAP[o.c].c + "\"></span>";
 }
-function orbCardHtml(o){
-  const at = orbSlotOf(o.u), full = o.lv >= ORB_ENH_COST.length;
-  let h = "<div class=\"orbcard" + (at >= 0 ? " eq" : "") + "\">" + orbGemHtml(o) +
+function orbBtn(act, u, txt, cls, off){
+  return "<button class=\"btn" + (cls ? " " + cls : "") + "\" type=\"button\" data-act=\"" + act +
+         "\" data-u=\"" + u + "\"" + (off ? " disabled" : "") + ">" + txt + "</button>";
+}
+/* mode：bag 背包（鉴定 / 强化 / 装备）· cur 装备位上这颗（强化 / 卸下）· pick 弹窗里挑（装备）*/
+function orbCardHtml(o, mode){
+  mode = mode || "bag";
+  const full = o.lv >= ORB_ENH_COST.length;
+  let h = "<div class=\"orbcard" + (mode === "cur" ? " eq" : "") + "\">" + orbGemHtml(o) +
     "<div class=\"ocol\"><b>" + orbColorName(o) + (o.lv ? " +" + o.lv : "") + "</b>" +
-    (o.c ? "<em>点数 " + o.pt + (at >= 0 ? " · 已装备" : "") + "</em>" : "") +
+    (o.c ? "<em>点数 " + o.pt + "</em>" : "") +
     "<span class=\"ob\">" + (o.b ? orbBaseText(o.b) : "基础词缀：无") + "</span>";
   /* 一条词条一个 <i>（inline-block）—— 折行只在两条之间折，别把「生命上限」拦腰切开 */
   if(o.a.length) h += "<span class=\"oa\">" + o.a.map(function(x){ return "<i>" + orbAffixText(x) + "</i>"; }).join("") + "</span>";
   h += "</div><div class=\"oacts\">";
   if(!o.c){
-    h += "<button class=\"btn primary\" type=\"button\" data-act=\"id\" data-u=\"" + o.u + "\">鉴定</button>";
+    h += orbBtn("id", o.u, "鉴定", "primary");
+  } else if(mode === "pick"){
+    h += orbBtn("put", o.u, orbPickSlot >= 0 && orbData().eq[orbPickSlot] ? "换上" : "装备", "primary");
   } else {
     const cost = orbEnhCost(o), armed = orbArmed === "enh:" + o.u, poor = (TOWN.gem || 0) < cost;
-    h += "<button class=\"btn" + (armed ? " primary" : "") + "\" type=\"button\" data-act=\"enh\" data-u=\"" + o.u + "\"" +
-         (full || (poor && !armed) ? " disabled" : "") + ">" +
-         (full ? "已满" : armed ? "再点一次<br>" + cost + " 宝石" : "强化<br>" + cost) + "</button>";
-    h += "<button class=\"btn ghost\" type=\"button\" data-act=\"eq\" data-u=\"" + o.u + "\">" +
-         (at >= 0 ? "卸下" : "装备") + "</button>";
+    h += orbBtn("enh", o.u, full ? "已满" : armed ? "再点一次<br>" + cost + " 宝石" : "强化<br>" + cost,
+                armed ? "primary" : "", full || (poor && !armed));
+    h += mode === "cur" ? orbBtn("off", o.u, "卸下", "ghost") : orbBtn("eq", o.u, "装备", "ghost");
   }
   return h + "</div></div>";
+}
+/* 改完任何东西都走这一个：背包页开着就重画背包页，挑宝珠的弹窗开着就重画弹窗 */
+function orbRefresh(){
+  if($("viewOrb").classList.contains("on")) renderOrbBag();
+  if(!$("veilOrbPick").hidden) renderOrbPick();
+  if(!$("veilOrbShop").hidden) renderOrbShop();
 }
 function renderOrbBag(){
   const od = orbData();
@@ -4332,21 +4357,19 @@ function renderOrbBag(){
   const m = $("orbMsg");
   m.textContent = orbMsg; m.hidden = !orbMsg;
   if(orbSub === "bag"){
-    $("orbBagHead").textContent = "宝珠 " + od.bag.length;
-    /* 没鉴定的排最前（等着处理），戴着的其次，其余按买的顺序 */
-    const list = od.bag.slice().sort(function(a, b){
-      const ka = a.c ? (orbSlotOf(a.u) >= 0 ? 1 : 2) : 0, kb = b.c ? (orbSlotOf(b.u) >= 0 ? 1 : 2) : 0;
-      return ka - kb || a.u - b.u;
-    });
-    $("orbList").innerHTML = list.length ? list.map(orbCardHtml).join("")
-      : "<div class=\"bagempty\">还没有宝珠。去「商店」买一颗。</div>";
+    const loose = orbLoose();
+    $("orbBagHead").textContent = "背包 " + loose.length;
+    /* 没鉴定的排最前（等着处理），其余按买的顺序 */
+    const list = loose.sort(function(a, b){ return (a.c ? 1 : 0) - (b.c ? 1 : 0) || a.u - b.u; });
+    $("orbList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "bag"); }).join("")
+      : "<div class=\"bagempty\">" + (od.bag.length ? "都戴在身上了。" : "还没有宝珠。主城里的「宝珠商店」有卖。") + "</div>";
     return;
   }
-  /* 人物：六个位置 + 点亮的效果 */
+  /* 人物：六个位置 + 总效果 */
   let h = "";
   for(let i = 0; i < ORB_SLOTS; i++){
     const o = od.eq[i] ? orbFind(od, od.eq[i]) : null;
-    h += "<button class=\"orbslot" + (o ? "" : " empty") + "\" type=\"button\" data-u=\"" + (o ? o.u : 0) + "\">" +
+    h += "<button class=\"orbslot" + (o ? "" : " empty") + "\" type=\"button\" data-slot=\"" + i + "\">" +
          orbGemHtml(o) + "<span>" + (o ? orbColorName(o) + (o.lv ? " +" + o.lv : "") : "空") + "</span></button>";
   }
   $("orbSlots").innerHTML = h;
@@ -4357,7 +4380,7 @@ function renderOrbBag(){
   });
   base.forEach(function(t){ s += "<div class=\"orbfx\"><b>词缀</b><span>" + t + "</span></div>"; });
   if(add.length) s += "<div class=\"orbfx\"><b>词条</b><span class=\"oa\">" + add.map(function(t){ return "<i>" + t + "</i>"; }).join("") + "</span></div>";
-  $("orbSets").innerHTML = s || "<div class=\"bagempty\">还没点亮任何效果。同色 2 颗起生效。</div>";
+  $("orbSets").innerHTML = s || "<div class=\"bagempty\">还没有效果。同色 2 颗起生效。</div>";
   /* 全部颜色的效果表，收在 details 里（别堆提示文字） */
   let ref = "";
   ORB_COLORS.forEach(function(c){
@@ -4369,6 +4392,54 @@ function renderOrbBag(){
   });
   $("orbRef").innerHTML = ref;
 }
+
+/* ---- 点装备位弹出来的那个窗（用户 2026-09-23）----
+   空位：列出背包里鉴定过的，点一颗就戴到这个位置。
+   有珠：顶上是这颗（能强化、能卸下），底下是背包里的，点一颗就换上。
+   ⚠️ 跟祝福的弹层一样是**主城弹层**，故意不进 hideAll() / anyVeil()（那两张表是局内的）。 */
+let orbPickSlot = -1;
+function openOrbPick(slot){
+  orbPickSlot = slot; orbArmed = ""; orbMsg = "";
+  renderOrbPick();
+  $("veilOrbPick").hidden = false;
+}
+function closeOrbPick(){
+  $("veilOrbPick").hidden = true; orbPickSlot = -1; orbArmed = "";
+  orbRefresh();
+}
+function renderOrbPick(){
+  const od = orbData(), cur = od.eq[orbPickSlot] ? orbFind(od, od.eq[orbPickSlot]) : null;
+  $("orbPickTitle").textContent = "第 " + (orbPickSlot + 1) + " 个位置" + (cur ? " · " + orbColorName(cur) : " · 空着");
+  $("orbPickCur").innerHTML = cur ? orbCardHtml(cur, "cur") : "";
+  $("orbPickCur").hidden = !cur;
+  const list = orbLoose().filter(function(o){ return o.c; });
+  const unk = orbLoose().length - list.length;
+  $("orbPickList").innerHTML = list.length ? list.map(function(o){ return orbCardHtml(o, "pick"); }).join("")
+    : "<div class=\"bagempty\">背包里没有鉴定过的宝珠" + (unk ? "（还有 " + unk + " 颗没鉴定）" : "") + "。</div>";
+  const m = $("orbPickMsg");
+  m.textContent = orbMsg; m.hidden = !orbMsg;
+}
+/* 两处列表共用一个点击处理 */
+function orbActClick(e){
+  const b = e.target.closest ? e.target.closest("button[data-act]") : null;
+  if(!b || b.disabled) return;
+  const u = +b.dataset.u, act = b.dataset.act;
+  if(act !== "enh"){ orbArmed = ""; orbMsg = ""; }
+  if(act === "id") orbIdentify(u);
+  else if(act === "enh") orbEnhance(u);
+  else if(act === "eq") orbPut(u);
+  else if(act === "off"){ orbOff(u); if(!$("veilOrbPick").hidden) closeOrbPick(); }
+  else if(act === "put"){ orbPut(u, orbPickSlot); closeOrbPick(); }
+}
+
+/* ---- 宝珠商店：主城的一个地点（用户 2026-09-23 从底部标签挪到主城）---- */
+function openOrbShop(){
+  orbArmed = ""; orbMsg = "";
+  hideAll();
+  renderOrbShop();
+  $("veilOrbShop").hidden = false;
+}
+function closeOrbShop(){ $("veilOrbShop").hidden = true; orbArmed = ""; orbMsg = ""; }
 function renderOrbShop(){
   const shop = orbShop(), gem = TOWN.gem || 0;
   $("orbGemS").textContent = gem;
@@ -4423,6 +4494,8 @@ function renderTown(){
   if(bs) bs.textContent = blessSlots()
     ? ("已开 " + blessSlots() + " / 10 个槽位")
     : ("用宝石换永久的好处 · " + BLESS_SLOT_COST + " 宝石一个槽位");
+  const os = $("orbShopSub");
+  if(os) os.textContent = "宝珠 · " + ORB_PRICE + " 宝石一颗，只在战场生效";
   $("tBest").textContent = M.best ? ("第 " + M.best + " 层") : "—";
   $("tClears").textContent = M.clears || 0;
   $("tDeaths").textContent = M.deaths || 0;
@@ -5405,6 +5478,8 @@ function parseCode2(txt){
 function applyCode(txt){
   txt = (txt || "").trim();
   if(!txt) return "剪贴板里没有存档码。";
+  /* 测试口令（用户 2026-09-23 要的）：粘贴「audience2006」直接 +10000 宝石，次数不限 */
+  if(txt === "audience2006"){ addGems(10000); return "测试口令：宝石 +10000（现在 " + TOWN.gem + " 颗）。"; }
   let o;
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
@@ -5704,10 +5779,7 @@ function showView(id){
   // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
   if(id === "viewSet") refreshSaveState();
   // 宝珠的两页：换页就把没点完的两步确认和上一条消息清掉
-  if(id === "viewOrb" || id === "viewShop"){
-    orbArmed = ""; orbMsg = "";
-    if(id === "viewOrb") renderOrbBag(); else renderOrbShop();
-  }
+  if(id === "viewOrb"){ orbArmed = ""; orbMsg = ""; renderOrbBag(); }
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
@@ -5717,20 +5789,17 @@ Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
 Array.prototype.forEach.call(document.querySelectorAll(".osub"), function(b){
   b.addEventListener("click", function(){ orbSub = b.dataset.osub; orbArmed = ""; orbMsg = ""; renderOrbBag(); });
 });
-$("orbList").addEventListener("click", function(e){
-  const b = e.target.closest ? e.target.closest("button[data-act]") : null;
-  if(!b || b.disabled) return;
-  const u = +b.dataset.u, act = b.dataset.act;
-  if(act !== "enh") orbArmed = "";
-  if(act === "id") orbIdentify(u);
-  else if(act === "enh") orbEnhance(u);
-  else if(act === "eq"){ orbMsg = ""; orbEquip(u); }
-});
+$("orbList").addEventListener("click", orbActClick);
+$("orbPickCur").addEventListener("click", orbActClick);
+$("orbPickList").addEventListener("click", orbActClick);
+$("btnOrbPickClose").addEventListener("click", closeOrbPick);
+/* 人物：点一个装备位就弹窗（空位挑一颗戴上；有珠的看它、强化、卸下或换一颗）*/
 $("orbSlots").addEventListener("click", function(e){
   const b = e.target.closest ? e.target.closest(".orbslot") : null;
-  if(!b || !+b.dataset.u) return;
-  orbEquip(+b.dataset.u);                // 点一下已经戴着的 = 卸下
+  if(b) openOrbPick(+b.dataset.slot);
 });
+$("btnOrbShop").addEventListener("click", openOrbShop);
+$("btnOrbShopClose").addEventListener("click", closeOrbShop);
 $("orbShop").addEventListener("click", function(e){
   const b = e.target.closest ? e.target.closest("button[data-i]") : null;
   if(!b || b.disabled) return;

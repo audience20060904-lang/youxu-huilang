@@ -104,6 +104,9 @@
           <button class="place" id="btnBless" type="button">
             <i>祝</i><span class="pn">祝福<em id="blessSub">用宝石换永久的好处</em></span><span class="go">▸</span>
           </button>
+          <button class="place" id="btnOrbShop" type="button">
+            <i>珠</i><span class="pn">宝珠商店<em id="orbShopSub">宝珠 · 只在战场生效</em></span><span class="go">▸</span>
+          </button>
           <a class="place" id="btnBattle" href="battle.html">
             <i>战</i><span class="pn">战场<em>能站多久？</em></span><span class="go">▸</span>
           </a>
@@ -181,7 +184,7 @@
 
     <!-- ---------- 背包（宝珠，用户 2026-09-23）----------
          主城里第三个标签是它，进了洞变回「遗物」（showScene 换 #navBag 的 data-view）。
-         两个子栏目：背包（鉴定 / 强化 / 装备）/ 人物（六个位置 + 点亮的效果）。 -->
+         两个子栏目：背包（没戴着的：鉴定 / 强化 / 装备）/ 人物（六个位置，点一个弹窗挑宝珠 + 总效果）。 -->
     <section class="view" id="viewOrb">
       <div class="orbtabs">
         <button class="osub on" data-osub="bag" type="button">背包</button>
@@ -195,21 +198,11 @@
         <div class="orblist" id="orbList"></div>
       </div>
       <div class="panel grow" id="orbMePanel" hidden>
-        <div class="phead">装备 · 最多 6 颗 · 点一下卸下</div>
+        <div class="phead">装备 · 最多 6 颗 · 点一个位置换宝珠</div>
         <div class="orbslots" id="orbSlots"></div>
-        <div class="phead">点亮的效果</div>
+        <div class="phead">总效果</div>
         <div class="orbsets" id="orbSets"></div>
         <details class="orbref"><summary>各颜色的效果</summary><div id="orbRef"></div></details>
-      </div>
-    </section>
-
-    <!-- ---------- 商店（宝珠，用户 2026-09-23）---------- -->
-    <section class="view" id="viewShop">
-      <div class="panel">
-        <div class="phead">宝珠商店 · 宝石 <b id="orbGemS">0</b></div>
-        <p class="note orbmsg" id="orbShopMsg" hidden></p>
-        <div class="orblist" id="orbShop"></div>
-        <div class="rowb"><span class="sp"></span><button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button></div>
       </div>
     </section>
 
@@ -275,13 +268,12 @@
 
   </div>
 
-  <!-- ===== 底部五标签（2026-09-23 加了「商店」）===== -->
+  <!-- ===== 底部四标签（第三个在主城是「背包」，进洞是「遗物」）===== -->
   <nav class="tabbar">
     <button class="nav on" data-view="viewAdv" type="button"><i>⌖</i><span>冒险</span></button>
     <button class="nav" data-view="viewInfo" type="button"><i>◈</i><span>信息</span></button>
     <!-- 第三个标签：主城里是「背包」，进洞变回「遗物」（showScene 里换，用户 2026-09-23） -->
     <button class="nav" id="navBag" data-view="viewOrb" type="button"><i>◎</i><span>背包</span><em class="dot" id="bagDot" hidden></em></button>
-    <button class="nav" data-view="viewShop" type="button"><i>¤</i><span>商店</span></button>
     <button class="nav" data-view="viewSet" type="button"><i>⚙</i><span>设置</span></button>
   </nav>
 </div>
@@ -530,6 +522,35 @@
       <span class="sp"></span>
       <button class="btn primary" id="btnBlessBack" type="button">返回</button>
     </div>
+  </div>
+</div>
+
+<!-- 宝珠商店：主城的一个地点（用户 2026-09-23 从底部标签挪过来的） -->
+<div class="veil" id="veilOrbShop" hidden>
+  <div class="sheet">
+    <div class="eyebrow">宝珠商店 · 只在战场生效</div>
+    <h2>三颗没开过光的珠子</h2>
+    <p class="note">宝石 <b id="orbGemS">0</b></p>
+    <p class="note orbmsg" id="orbShopMsg" hidden></p>
+    <div class="orblist" id="orbShop"></div>
+    <div class="rowb">
+      <button class="btn" id="btnOrbReroll" type="button">刷新 · 2000 宝石</button>
+      <span class="sp"></span>
+      <button class="btn primary" id="btnOrbShopClose" type="button">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 点「人物」里的装备位弹出来：空位挑一颗戴上；有珠的能强化、卸下、换一颗 -->
+<div class="veil" id="veilOrbPick" hidden>
+  <div class="sheet">
+    <div class="eyebrow">装备宝珠</div>
+    <h2 id="orbPickTitle">第 1 个位置</h2>
+    <p class="note orbmsg" id="orbPickMsg" hidden></p>
+    <div class="orblist" id="orbPickCur"></div>
+    <div class="eyebrow">背包</div>
+    <div class="orblist orbpicklist" id="orbPickList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnOrbPickClose" type="button">返回</button></div>
   </div>
 </div>
 
