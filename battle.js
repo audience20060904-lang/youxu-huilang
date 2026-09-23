@@ -716,7 +716,21 @@ var BF_TOWERS = [
   pw:"每 5 秒在敌人最密处撕开一道裂隙（半径 90，2.5 秒），里面的敌人移速 −60%，每 0.25 秒受一次伤害。",
   s2:{t:"裂隙会追着最近的敌人游走", riftMove:true},
   s3:{t:"裂隙合拢时把圈里的敌人全拽到中心，再炸一下（4 倍伤害）", riftClose:4},
-  lore:"那里原本什么都没有，现在也是。"}
+  lore:"那里原本什么都没有，现在也是。"},
+
+ /* ===== 兵营（用户 2026-09-23：「类似 kingdom rush 的兵营塔，主动攻击怪物并且被怪攻击，死亡后隔一段时间复活」）=====
+    全表**唯一会被怪打的东西**（别的建筑一律没有血量，见 12.7）—— 被打的是**士兵**，塔本身照旧打不掉。
+    士兵自己冲上去**拦住**射程内的近战怪：被拦住的怪改去追士兵、停下来跟他对砍，不再追你。
+    ⚠️ 只拦 canBlock() 认的怪（近战、非 Boss）；远程 / 缝合者 / 唤雷者 / 爆囊 / Boss 拦不住，
+       士兵照样会上去砍，但它们不理士兵。结算全在 updateBarracks()，怪那一侧在 updateFoes() 里两处。
+    cd 是**士兵的出刀间隔**（吃战鼓 / 熔炉的攻速光环），dmg 是每一刀的倍率（跟别的塔一样乘 towerPower()）。
+    menHp = 士兵血量占**玩家生命上限**的比例（怪的伤害跟着波数涨，写死的血量十波之后就是纸）。 */
+ {id:"tw_barracks", n:"兵营", r:1, shape:"barracks", range:150, cd:0.9, dmg:0.40, kind:"barracks",
+  men:2, menHp:1.5, resp:10,
+  pw:"驻 2 名士兵，冲上去拦住射程内的敌人、每 0.9 秒砍一刀；被拦住的敌人会停下来打士兵。倒下的士兵 10 秒后复活。",
+  s2:{t:"驻兵 2 → 3 名", men:3},
+  s3:{t:"士兵每一刀横扫身边一圈，每人能同时拦住 2 个敌人", cleave:46, blockN:2},
+  lore:"号角一响，营门里就有人往外走，从来没有人问为什么。"}
 ];
 var TW_MAP = {};
 (function(){ for(var i = 0; i < BF_TOWERS.length; i++) TW_MAP[BF_TOWERS[i].id] = BF_TOWERS[i]; })();
@@ -771,7 +785,9 @@ var TW_FX = {
  tw_quake:  {c:"#8B5A2B"},
  tw_leech:  {c:"#A8323E"},
  tw_lance:  {c:"#2F7FD1"},
- tw_rift:   {c:"#5B2C83"}
+ tw_rift:   {c:"#5B2C83"},
+ /* 第五批 */
+ tw_barracks:{c:"#3E5C9A"}
 };
 function twFx(d){ return TW_FX[d.id] || {}; }
 function twc(d){ return twFx(d).c || TW_COL[d.r]; }
@@ -2182,6 +2198,15 @@ function updateFoes(dt){
           }
         } else if(d < def.boom.at) f.fuse = def.boom.warn;
       }
+      /* 兵营：被士兵拦住的怪改去追那名士兵，贴上了就站住跟他对砍（见 updateBarracks）。
+         ⚠️ 只改走位方向 —— 上面那些按「离你多远」判的技能（噬盾 / 冲刺…）照旧看你。 */
+      var bl = f.blockBy;
+      if(bl && (bl.dead || bl.foes.indexOf(f) < 0)){ f.blockBy = null; bl = null; }
+      if(bl){
+        var bx = bl.x - f.x, by = bl.y - f.y, bdd = Math.hypot(bx, by) || 1;
+        tx = bx / bdd; ty = by / bdd;
+        if(bdd <= f.r + SOL_R) sp = 0;
+      }
       /* 幽魂的飘移 */
       if(def.wob){ var w2 = Math.sin(f.t * 2.4) * 0.5;
         var nx = -ty, ny = tx; tx += nx * w2; ty += ny * w2; }
@@ -2210,6 +2235,11 @@ function updateFoes(dt){
         takeHit(f.dmg, f, {haunt:f.haunt, hitByMe:(f.hitByMe || 0) >= 1, boss:!!f.boss,
                            repeat:!!G.catSeen[f.id], touch:true});
         G.catSeen[f.id] = 1;
+      } else if(f.blockBy && f.touch <= 0 && !f.blockBy.dead &&
+                Math.hypot(f.blockBy.x - f.x, f.blockBy.y - f.y) < f.r + SOL_R + 4){
+        /* 被拦住的怪砍士兵：同一个接触冷却，砍了士兵这一下就砍不到你 */
+        f.touch = BF.touchCd;
+        hurtMan(f.blockBy, f.dmg);
       }
     }
   }
@@ -2678,7 +2708,9 @@ function openDeployUI(){
     var tb = E.builds[i]; if(tb.k !== "tower") continue;
     tb.warn = 0; tb.vortT = 0; tb.beamT = 0; tb.tgt = null; tb.cd = 0; tb.rep = 0; tb.repT = 0;
     tb.drainT = 0; tb.dtgts = null; tb.beamTs = null;
+    resetMen(tb);                         // 兵营：满血站回营门口
   }
+  for(i = 0; i < E.foes.length; i++) E.foes[i].blockBy = null;
   $("deploy").hidden = false;
   renderDeploy();
 }
@@ -2708,6 +2740,8 @@ function screenToWorld(cx, cy){
 }
 function closeDeploy(){
   DEPLOY = false; selBench = -1; camShift = 0;
+  /* 兵营挪过位置的话，士兵跟着站到新的营门口 */
+  for(var i = 0; i < E.builds.length; i++) if(E.builds[i].k === "tower") resetMen(E.builds[i]);
   saveWave(false);                       // 摆完塔开战：把这一轮买的塔和花掉的钱落盘
   DRAG = null; ZOOM = 1; PAN.x = 0; PAN.y = 0;
   $("deploy").hidden = true;
@@ -2868,7 +2902,11 @@ function refreshTowerStats(){
       stun:   se.stun || 0,
       slowHit: se.slowHit || d.slow || null,
       ccX:    se.ccX || d.ccX || 0,
-      beamN:  se.beamN || 1
+      beamN:  se.beamN || 1,
+      /* 兵营：驻几名 / 每人拦几个 / 三星的横扫半径 */
+      men:    se.men || d.men || 0,
+      blockN: se.blockN || 1,
+      cleave: se.cleave || 0
     };
   }
 }
@@ -3287,6 +3325,13 @@ function updateTowers(dt){
     var d = t.def, ef = t.ef, se = t.se || {};
     if(t.beamT > 0) t.beamT -= dt;
     if(t.drainT > 0) t.drainT -= dt;
+    /* 兵营：士兵自己跑自己的（被缚锁者封住时照样挨打、照样复活，只是不出刀）*/
+    if(d.kind === "barracks"){
+      if(t.silT > 0) t.silT -= dt;
+      if(!st) st = bstats();
+      updateBarracks(t, dt, ef, st);
+      continue;
+    }
     /* 「缚锁者」封住的塔这几秒完全停手（光环塔也一样失效）—— 见 BF_FOES.warder */
     if(t.silT > 0){ t.silT -= dt; t.warn = 0; t.vortT = 0; t.rep = 0; continue; }
     /* 纯被动：光环 / 拾荒幡 / 金库。霜灯三星的「冻一下」是光环塔里唯一会动的东西。 */
@@ -3390,6 +3435,130 @@ function updateTowers(dt){
     if(d.warn){ t.warn = d.warn; t.lockX = t.tgt.x; t.lockY = t.tgt.y; }
     else { fireTower(t, ef); t.rep = ef.shots - 1; t.repT = 0.12; }
   }
+}
+/* ===== 兵营的士兵（用户 2026-09-23，Kingdom Rush 那种）=====
+   士兵挂在塔自己身上（t.men），**不进存档** —— 读档 / 部署时一律满血站回营门口（resetMen）。
+   一名士兵：{x, y, hp, maxHp, dead, resp, cd, foes:[拦住的怪], hunt:拦不住但在砍的那只, swT:出刀动画}
+   ⚠️ 怪那一侧只认 f.blockBy：它指着一名活着、并且 foes 里还有自己的士兵，才算被拦住（updateFoes 里两处）。
+      所以士兵倒下 / 放手时**必须**把 f.blockBy 清掉（releaseMan），不然怪会一直去追一个死人。 */
+var SOL_R = 8;            // 士兵的碰撞半径
+var SOL_SPD = 150;        // 士兵跑多快（比玩家 155 慢一点，追不上的就交给别的塔）
+var SOL_LEASH = 60;       // 追出兵营射程多远就放手、跑回营门口
+var SOL_REGEN = 0.10;     // 没在打的时候每秒回多少（占士兵血量）
+/* 拦得住的怪：近战、非 Boss。远程 / 缝合者 / 唤雷者要保持距离，爆囊只认你，Boss 谁也拦不住。 */
+function canBlock(f){
+  var d = f.def;
+  return !f.boss && !d.shot && !d.heal && !d.storm && !d.boom;
+}
+/* 营门口的站位：塔脚下一个小扇形，几名士兵并排站 */
+function manSpot(t, i, n){
+  var a = Math.PI / 2 + (i - (n - 1) / 2) * 0.75;
+  return {x: t.x + Math.cos(a) * 30, y: t.y + Math.sin(a) * 30};
+}
+function releaseMan(m){
+  for(var i = 0; i < m.foes.length; i++) if(m.foes[i].blockBy === m) m.foes[i].blockBy = null;
+  m.foes.length = 0; m.hunt = null;
+}
+/* 部署时（开 / 关各一次）：全部满血、站回营门口、放开拦住的怪 */
+function resetMen(t){
+  if(!t.men) return;
+  for(var i = 0; i < t.men.length; i++){
+    var m = t.men[i], sp = manSpot(t, i, t.men.length);
+    releaseMan(m);
+    m.x = sp.x; m.y = sp.y; m.dead = false; m.resp = 0; m.cd = 0; m.swT = 0;
+    if(m.maxHp) m.hp = m.maxHp;
+  }
+}
+function hurtMan(m, dmg){
+  if(m.dead) return;
+  m.hp -= dmg; m.flash = 0.12;
+  if(m.hp > 0) return;
+  m.hp = 0; m.dead = true; m.resp = m.respMax;
+  releaseMan(m);
+  fxPop(m.x, m.y, "#A93729"); fxSpark(m.x, m.y, "#8A8378", 5);
+}
+function updateBarracks(t, dt, ef, st){
+  var d = t.def, n = ef.men, i, j, m, f;
+  var maxHp = Math.max(1, Math.round(st.maxHp * d.menHp));
+  if(!t.men) t.men = [];
+  /* 升星会多一名（combineAll 新建的塔本来就是空的，这里只管补齐 / 砍掉多的）*/
+  while(t.men.length > n){ releaseMan(t.men[t.men.length - 1]); t.men.pop(); }
+  while(t.men.length < n){
+    var sp0 = manSpot(t, t.men.length, n);
+    t.men.push({x:sp0.x, y:sp0.y, hp:maxHp, maxHp:maxHp, dead:false, resp:0, respMax:d.resp,
+                cd:0, foes:[], hunt:null, swT:0, flash:0});
+  }
+  var silent = t.silT > 0, reach = ef.range, worst = 0;
+  for(i = 0; i < t.men.length; i++){
+    m = t.men[i];
+    m.respMax = d.resp;
+    /* 血量跟着玩家的生命上限走：上限涨了按比例补，跌了压回去 */
+    if(m.maxHp !== maxHp){ m.hp = m.dead ? 0 : Math.max(1, Math.round(m.hp * maxHp / m.maxHp)); m.maxHp = maxHp; }
+    if(m.flash > 0) m.flash -= dt;
+    if(m.swT > 0) m.swT -= dt;
+    var home = manSpot(t, i, t.men.length);
+    if(m.dead){
+      m.resp -= dt;
+      worst = Math.max(worst, m.resp / m.respMax);
+      if(m.resp <= 0){ m.dead = false; m.hp = m.maxHp; m.x = home.x; m.y = home.y; m.cd = 0.3;
+                       fxDash(m.x, m.y, 14, twc(d)); }
+      continue;
+    }
+    /* 放掉死了的、被别人接走的、跑出营地太远的 */
+    for(j = m.foes.length - 1; j >= 0; j--){
+      f = m.foes[j];
+      if(f.dead || f.blockBy !== m || Math.hypot(f.x - t.x, f.y - t.y) > reach + SOL_LEASH){
+        if(f.blockBy === m) f.blockBy = null;
+        m.foes.splice(j, 1);
+      }
+    }
+    if(m.hunt && (m.hunt.dead || Math.hypot(m.hunt.x - t.x, m.hunt.y - t.y) > reach + SOL_LEASH)) m.hunt = null;
+    /* 拦人：射程里离这名士兵最近的、还没被别人拦住的近战怪 */
+    while(m.foes.length < ef.blockN){
+      var best = null, bd = 1e9;
+      for(j = 0; j < E.foes.length; j++){
+        f = E.foes[j];
+        if(f.dead || !canBlock(f)) continue;
+        if(f.blockBy && !f.blockBy.dead) continue;
+        if(Math.hypot(f.x - t.x, f.y - t.y) > reach + f.r) continue;
+        var dd = Math.hypot(f.x - m.x, f.y - m.y);
+        if(dd < bd){ bd = dd; best = f; }
+      }
+      if(!best) break;
+      best.blockBy = m; m.foes.push(best);
+    }
+    /* 一个都拦不住的时候，射程里有别的（远程 / Boss）就上去砍，它们不理士兵 */
+    if(!m.foes.length && !m.hunt){
+      var hb = null, hd = 1e9;
+      for(j = 0; j < E.foes.length; j++){
+        f = E.foes[j]; if(f.dead) continue;
+        if(Math.hypot(f.x - t.x, f.y - t.y) > reach + f.r) continue;
+        var hd2 = Math.hypot(f.x - m.x, f.y - m.y);
+        if(hd2 < hd){ hd = hd2; hb = f; }
+      }
+      m.hunt = hb;
+    }
+    var tg = m.foes[0] || m.hunt;
+    /* 走位：有目标就贴上去，没有就回营门口（回去的路上慢慢回血）*/
+    var gx = tg ? tg.x : home.x, gy = tg ? tg.y : home.y;
+    var stop = tg ? tg.r + SOL_R : 2;
+    var vx = gx - m.x, vy = gy - m.y, vd = Math.hypot(vx, vy);
+    if(vd > stop){ var mv = Math.min(vd - stop, SOL_SPD * dt); m.x += vx / vd * mv; m.y += vy / vd * mv; m.dir = Math.atan2(vy, vx); }
+    if(!tg && m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * SOL_REGEN * dt);
+    /* 出刀 */
+    m.cd -= dt;
+    if(tg && !silent && m.cd <= 0 && Math.hypot(tg.x - m.x, tg.y - m.y) <= tg.r + SOL_R + 8){
+      m.cd = ef.cd; m.swT = 0.18; m.dir = Math.atan2(tg.y - m.y, tg.x - m.x);
+      if(ef.cleave){
+        fxArc(m.x, m.y, m.dir, ef.cleave, 360, twc(d));
+        towerAoe(m.x, m.y, ef.cleave, ef.dmg, null, 0, ef);
+      } else {
+        fxSpark(tg.x, tg.y, twc(d), 3);
+        towerHurt(tg, ef.dmg, ef);
+      }
+    }
+  }
+  t.respF = worst;                          // 塔身上那层遮罩 = 最慢的那一名还差多久复活
 }
 function updateTShots(dt){
   for(var i = E.tshots.length - 1; i >= 0; i--){
@@ -3757,6 +3926,8 @@ function draw(){
   drawBuilds();
   /* 塔留在地上的东西（毒雾 / 灼痕 / 裂隙 / 地刺 / 抬手预警）也在怪底下 */
   if(fight) drawTowerGround();
+  /* 兵营的士兵：也在怪底下（被拦住的怪压在士兵身上才看得出是在对砍）。部署时照样画，站在营门口 */
+  drawMen();
 
   /* 石箱。脚下画一圈淡光圈，远远就能看见 */
   for(i = 0; i < E.sites.length; i++){
@@ -4190,9 +4361,9 @@ function drawBuilds(){
       b = E.builds[i];
       /* 回血塔和拾荒幡也画 —— 它们的整套价值就是「你（或者怪）站没站在圈里」 */
       if(b.k !== "tower") continue;
-      /* 焚风口 / 血藤也画：一个射程很短、一个「你站在圈里才回血」 */
+      /* 焚风口 / 血藤也画：一个射程很短、一个「你站在圈里才回血」；兵营画的是士兵出营拦人的范围 */
       var kd = b.def.kind;
-      if(kd !== "aoe" && kd !== "heal" && kd !== "gold" && kd !== "flame" && kd !== "drain") continue;
+      if(kd !== "aoe" && kd !== "heal" && kd !== "gold" && kd !== "flame" && kd !== "drain" && kd !== "barracks") continue;
       ctx2.strokeStyle = twc(b.def); ctx2.globalAlpha = 0.13;
       ctx2.beginPath(); ctx2.arc(sx(b.x), sy(b.y), b.ef ? b.ef.range : b.def.range, 0, 6.2832);
       ctx2.stroke();
@@ -4236,6 +4407,52 @@ function drawBuilds(){
     }
     if(!DEPLOY && !(b.silT > 0)) drawTowerAmb(b, px, py);
     drawTower(b, px, py);
+  }
+}
+/* 兵营的士兵（canvas 画的，一张新图都没加）：塔色的小圆身子 + 一把刀，挨了打头顶一条塔色血条。
+   倒下的那一名在营门口画一个虚圈，外面一圈弧按复活进度长满。
+   部署时士兵一律画在营门口（manSpot）—— 拖着兵营挪位置时他们跟着走。 */
+function drawMen(){
+  for(var i = 0; i < E.builds.length; i++){
+    var b = E.builds[i];
+    if(b.k !== "tower" || b.def.kind !== "barracks") continue;
+    if(sx(b.x) < -padX - 60 || sx(b.x) > cw + padX + 60 || sy(b.y) < -padY - 60 || sy(b.y) > ch + padY + 60) continue;
+    var col = twc(b.def), se = starEff(b), n = se.men || b.def.men, j, m, sp;
+    for(j = 0; j < n; j++){
+      m = b.men && b.men[j];
+      sp = manSpot(b, j, n);
+      if(DEPLOY || !m){ drawMan(sp.x, sp.y, col, Math.PI / 2, 0, 1, false); continue; }
+      if(m.dead){
+        var px = sx(sp.x), py = sy(sp.y), k = 1 - Math.max(0, m.resp) / (m.respMax || 1);
+        ctx2.strokeStyle = col; ctx2.lineWidth = 1.5; ctx2.globalAlpha = 0.45; ctx2.setLineDash([3, 3]);
+        ctx2.beginPath(); ctx2.arc(px, py, SOL_R, 0, 6.2832); ctx2.stroke(); ctx2.setLineDash([]);
+        ctx2.globalAlpha = 0.9; ctx2.lineWidth = 2.5;
+        ctx2.beginPath(); ctx2.arc(px, py, SOL_R + 3, -Math.PI / 2, -Math.PI / 2 + 6.2832 * k); ctx2.stroke();
+        ctx2.globalAlpha = 1;
+        continue;
+      }
+      drawMan(m.x, m.y, col, m.dir === undefined ? Math.PI / 2 : m.dir, m.swT, m.hp / m.maxHp, m.flash > 0);
+    }
+  }
+}
+function drawMan(x, y, col, dir, swT, frac, flash){
+  var px = sx(x), py = sy(y), r = SOL_R - 1;
+  ctx2.fillStyle = "rgba(46,42,35,.16)";
+  ctx2.beginPath(); ctx2.ellipse(px, py + r, r, 3, 0, 0, 6.2832); ctx2.fill();
+  /* 刀：出刀那 0.18 秒从一侧扫到另一侧 */
+  var a = dir + (swT > 0 ? (0.5 - swT / 0.18) * 1.8 : 0.5);
+  ctx2.strokeStyle = "#8A8378"; ctx2.lineWidth = 2; ctx2.lineCap = "round";
+  ctx2.beginPath(); ctx2.moveTo(px + Math.cos(a) * (r - 2), py + Math.sin(a) * (r - 2));
+  ctx2.lineTo(px + Math.cos(a) * (r + 8), py + Math.sin(a) * (r + 8)); ctx2.stroke();
+  /* 身子 + 盔（上半圈亮一档）*/
+  ctx2.fillStyle = flash ? "#FCF8F0" : col; ctx2.strokeStyle = "#2A2620"; ctx2.lineWidth = 1.5;
+  ctx2.beginPath(); ctx2.arc(px, py, r, 0, 6.2832); ctx2.fill(); ctx2.stroke();
+  ctx2.fillStyle = "rgba(255,255,255,.35)";
+  ctx2.beginPath(); ctx2.arc(px, py, r - 1.5, Math.PI, 0); ctx2.fill();
+  ctx2.fillStyle = "#2A2620"; ctx2.fillRect(px - 3, py - 1, 6, 1.6);          // 盔的眼缝
+  if(frac < 1){
+    ctx2.fillStyle = "rgba(46,42,35,.25)"; ctx2.fillRect(px - 9, py - r - 7, 18, 3);
+    ctx2.fillStyle = col; ctx2.fillRect(px - 9, py - r - 7, 18 * Math.max(0, frac), 3);
   }
 }
 /* 光环塔 / 拾荒幡常驻的小动画（TW_FX.amb）—— 光环塔从来不「开火」，不画点什么就像摆设。
@@ -4420,6 +4637,12 @@ function drawTower(b, px, py){
       ctx2.beginPath(); ctx2.ellipse(px + 4, py + 2, 3, 1.8, 0.6, 0, 6.2832); ctx2.fill(); }
   else if(k === "lance"){ ctx2.lineWidth = 4; ctx2.moveTo(px - 8, py + 6); ctx2.lineTo(px + 8, py - 6); ctx2.stroke();
       ctx2.beginPath(); ctx2.lineWidth = 2; ctx2.arc(px - 2, py + 1.5, 4.5, 0, 6.2832); ctx2.stroke(); }
+  else if(k === "barracks"){ ctx2.moveTo(px - 8, py + 7); ctx2.lineTo(px, py - 6); ctx2.lineTo(px + 8, py + 7);
+      ctx2.closePath(); ctx2.fill();
+      ctx2.fillStyle = "#FCF8F0"; ctx2.fillRect(px - 2, py + 1, 4, 6);             // 营门
+      ctx2.beginPath(); ctx2.moveTo(px, py - 6); ctx2.lineTo(px, py - 10); ctx2.stroke();
+      ctx2.fillStyle = ic; ctx2.beginPath(); ctx2.moveTo(px, py - 10); ctx2.lineTo(px + 5, py - 8.5);
+      ctx2.lineTo(px, py - 7); ctx2.closePath(); ctx2.fill(); }
   else if(k === "rift"){ ctx2.ellipse(px, py, 8, 5, -0.5, 0, 6.2832); ctx2.stroke();
       ctx2.beginPath(); ctx2.moveTo(px - 5, py + 3); ctx2.lineTo(px - 1, py - 1); ctx2.lineTo(px + 1, py + 1);
       ctx2.lineTo(px + 5, py - 3); ctx2.stroke(); }
@@ -4428,8 +4651,10 @@ function drawTower(b, px, py){
      冷却走多少，遮罩就从**下往上**退多少 —— 走一半只剩上半截，走完就全亮（= 可以出手了）。
      ⚠️ 只看 b.cd / b.ef.cd（剩余 ÷ 总长），光环 / 拾荒幡 / 金库没有冷却（def.cd 为 0），不画。
      ⚠️ 部署阶段 openDeploy() 会把 cd 清 0，所以摆塔的时候塔都是亮的。 */
-  if(b.def.cd > 0 && b.ef && b.ef.cd > 0 && b.cd > 0){
-    var cf = Math.min(1, b.cd / b.ef.cd);
+  /* 兵营的遮罩不是出刀冷却，是「倒下的士兵还差多久复活」（取最慢的那一名，b.respF）*/
+  var cf = b.def.kind === "barracks" ? (DEPLOY ? 0 : b.respF || 0)
+         : (b.def.cd > 0 && b.ef && b.ef.cd > 0 && b.cd > 0) ? Math.min(1, b.cd / b.ef.cd) : 0;
+  if(cf > 0){
     ctx2.save();
     ctx2.beginPath(); ctx2.arc(px, py, s + 1.3, 0, 6.2832); ctx2.clip();
     ctx2.fillStyle = "rgba(30,26,20,0.5)";

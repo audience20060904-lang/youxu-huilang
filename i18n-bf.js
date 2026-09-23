@@ -97,7 +97,8 @@ var BF_EN = {
     tw_quake:   ["Quake Hammer", "Every 2.4s, slams the ground, splitting a fissure toward its target that damages and knocks back every enemy on the line.", "Splits three fissures (in a fan)", "Enemies on the fissure are stunned for 0.7s", "It doesn't hit people. It hits the ground."],
     tw_leech:   ["Blood Vine", "Vines bind the 3 nearest enemies, draining them every 0.3s; while you're in range, 3% of the damage heals you.", "Binds 5 at once", "Bound enemies move 50% slower and are strangled below 15% HP (not Bosses)", "It grows slowly, but once it binds, it never lets go."],
     tw_lance:   ["Focus Cannon", "Every 3.6s, charges for 1s, then fires a 420-long laser through every enemy in a line.", "The laser leaves a burning trail that deals damage for 2s", "Fires three at once (in a fan)", "It's been quiet too long — beware the moment it speaks."],
-    tw_rift:    ["Void Rift", "Every 5s, tears a rift at the densest spot (radius 90, 2.5s); enemies inside are slowed 60% and take damage every 0.25s.", "The rift drifts after the nearest enemy", "As it closes, it drags everything inside to the center and bursts (4× damage)", "There was nothing there before. There's nothing now either."]
+    tw_rift:    ["Void Rift", "Every 5s, tears a rift at the densest spot (radius 90, 2.5s); enemies inside are slowed 60% and take damage every 0.25s.", "The rift drifts after the nearest enemy", "As it closes, it drags everything inside to the center and bursts (4× damage)", "There was nothing there before. There's nothing now either."],
+    tw_barracks:["Barracks", "Houses 2 soldiers who rush out to block enemies in range and strike every 0.9s; blocked enemies stop to fight them. Fallen soldiers return after 10s.", "2 → 3 soldiers", "Every strike sweeps the area around the soldier, and each soldier can block 2 enemies at once", "When the horn sounds, someone always walks out the gate. Nobody ever asks why."]
   }
 };
 
