@@ -1188,7 +1188,7 @@ function deflectShots(s, aim, range, halfArc){
     fxSpark(sh.x, sh.y, "#245E8C", 5);
     aoe(sh.x, sh.y, 52, dmg);
   }
-  if(n) fxText("格挡 ×" + n, "#245E8C");
+  if(n) fxText(L("格挡 ×", "Parry ×") + n, "#245E8C");
 }
 /* 共鸣：离你最近的那座会开火的塔立刻来一发。
    ⚠️ 只找**有目标、没被封停、真的会开火**的那几种 kind —— 光环/经济塔按它们自己的节奏走，
@@ -1364,7 +1364,7 @@ function swing(mult){
     f = hits[i]; if(f.dead) continue;
     /* 处决：残血直接抹掉（Boss 除外）*/
     if(hasSp("sp_exec") && !f.boss && f.hp / f.maxHp < 0.25){
-      fxText("处决", "#8A6A10"); killFoe(f); continue;
+      fxText(L("处决", "Execute"), "#8A6A10"); killFoe(f); continue;
     }
     var slowed = hasSp("sp_ice") && isSlowed(f);
     var rr = raw;
@@ -1499,7 +1499,7 @@ function mitigate(dmg, s, o){
 function takeHit(dmg, foe, o){
   if(OVER) return;
   /* 宝珠「先机」：每波开始 0.5 秒无敌 —— 排在一切之前，连击 / 护盾 / 各种次数都不动 */
-  if(E.me.invT > 0){ fxText("无敌", "#E3B23C"); return; }
+  if(E.me.invT > 0){ fxText(L("无敌", "Immune"), "#E3B23C"); return; }
   o = o || {};
   var s = bstats();
   /* ---- 连击处理（优先级：铁胆 ＞ 断链 ＞ 惯性 ＞ 长链 ＞ 清零，归位兜一次）---- */
@@ -1528,7 +1528,7 @@ function takeHit(dmg, foe, o){
   if(has("thorns")) splash(foe, 30);
   if(has("build")) addShield(2);
 
-  if(free){ fxText("免伤", "#47702F"); return; }
+  if(free){ fxText(L("免伤", "No damage"), "#47702F"); return; }
 
   var out = mitigate(dmg, s, o);
   if(out <= 0){ fxText("0", "#47702F"); return; }
@@ -1540,7 +1540,7 @@ function takeHit(dmg, foe, o){
     P.shield -= eat; out -= eat;
     if(hadShield && P.shield <= 0) onShieldBroken();
   }
-  if(out <= 0){ fxText("盾", "#6E86A8"); return; }
+  if(out <= 0){ fxText(L("盾", "Shield"), "#6E86A8"); return; }
 
   P.hp -= out; G.dmgTaken += out;
   /* 逆刺：挨一下，还一片 */
@@ -1574,11 +1574,11 @@ function onShieldBroken(){
 function deathSave(s){
   if(has("undying") && !G.undyingUsed){ G.undyingUsed = true; P.hp = Math.round(s.maxHp * 0.25);
     if(has("warmth")) P.warmthLeft = 5;                      // 余温：薪火触发后也算（2026-09-23 补）
-    fxText("薪火", "#E3B23C"); return; }
+    fxText(L("薪火", "Undying Ember"), "#E3B23C"); return; }
   if(has("revive") && P.revived < 3){ P.revived++; P.hp = Math.round(s.maxHp * 0.50);
-    fxText("回魂", "#E3B23C"); return; }
+    fxText(L("回魂", "Revive"), "#E3B23C"); return; }
   if(orbBaseOn("gasp") && !P.orbGasp){ P.orbGasp = true; P.hp = 1;   // 宝珠「回光」：本局一次
-    fxText("回光", "#E3B23C"); return; }
+    fxText(L("回光", "Last Light"), "#E3B23C"); return; }
   endRun();
 }
 
@@ -1681,7 +1681,7 @@ function gainXp(n){
     for(var i = 0; i < up; i++) onLevelRelics();
     /* 升到的每一级各判一次（BF.pickSteps），一次升好几级也不会漏 */
     var got = 0;
-    for(var L = P.lvl - up + 1; L <= P.lvl; L++) if(pickAtLevel(L)) got++;
+    for(var lv = P.lvl - up + 1; lv <= P.lvl; lv++) if(pickAtLevel(lv)) got++;
     if(got > 0){ pendPicks += got; openPick(); }
   }
 }
@@ -1738,7 +1738,7 @@ function guarded(f, d){
 }
 function hurtFoe(f, d, s, crit){
   d = guarded(f, d);
-  if(d <= 0){ fxText("免疫", "#8A5AA8"); return; }
+  if(d <= 0){ fxText(L("免疫", "Immune"), "#8A5AA8"); return; }
   f.hp -= d;
   f.flash = 0.12;
   if(!f.noKnock){
@@ -2719,31 +2719,35 @@ function closeDeploy(){
 /* 提示行里那两条升星说明（纯文本，面板的 dHint 是 textContent）*/
 function starText(d, star){
   var h = "";
-  if(d.s2) h += "　★★ " + d.s2.t + (star >= 2 ? "（已点亮）" : "");
-  if(d.s3) h += "　★★★ " + d.s3.t + (star >= 3 ? "（已点亮）" : "");
+  if(d.s2) h += L("　★★ ", "  ★★ ") + d.s2.t + (star >= 2 ? L("（已点亮）", " (active)") : "");
+  if(d.s3) h += L("　★★★ ", "  ★★★ ") + d.s3.t + (star >= 3 ? L("（已点亮）", " (active)") : "");
   return h;
 }
 function twName(tid, star){
   return TW_MAP[tid].n + " " + (star >= 3 ? "★★★" : star === 2 ? "★★" : "★");
 }
+function DEPLOY_TIP(){
+  return L("拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。",
+           "Drag a building to move it, tap it to send it back to the bench; drag empty ground to look around, pinch (or scroll) to zoom.");
+}
 function renderDeploy(){
   if(!DEPLOY) return;
   var d = BF.deploy, i, h;
-  $("dTitle").textContent = "部署 · 第 " + P.wave + " 波前";
-  $("dGold").textContent  = P.gold + " 金" + (P.bank > 0 ? "（待领 " + P.bank + "）" : "");
-  $("dPop").textContent   = "等级 " + P.dlvl + " · 人口 " + fieldTowers() + "/" + popCap();
+  $("dTitle").textContent = L("部署 · 第 " + P.wave + " 波前", "Deploy · wave " + P.wave);
+  $("dGold").textContent  = P.gold + L(" 金", " gold") + (P.bank > 0 ? L("（待领 " + P.bank + "）", " (+" + P.bank + " due)") : "");
+  $("dPop").textContent   = L("等级 ", "Lv ") + P.dlvl + L(" · 人口 ", " · Pop ") + fieldTowers() + "/" + popCap();
 
   /* 一排按钮。⚠️ 商店 2026-09-22 搬进了弹窗（用户要求）——
      面板矮了一半，上面看得见的营地就多了一半。 */
   var lvUp = P.dlvl >= d.lvlMax, lvc = DLVL_COST[P.dlvl + 1];
-  $("btnDLvl").textContent = lvUp ? "已满级" : "升级 " + lvc + " 金";
+  $("btnDLvl").textContent = lvUp ? L("已满级", "Max level") : L("升级 " + lvc + " 金", "Level up · " + lvc + " gold");
   $("btnDLvl").disabled = lvUp || !lvc || P.gold < lvc;
-  $("btnDShop").textContent = "商店";
+  $("btnDShop").textContent = L("商店", "Shop");
   $("btnDSell").hidden = selBench < 0;
   if(selBench >= 0){
     var sc = P.bench[selBench];
     $("btnDSell").textContent = sc && sc.k === "tower"
-      ? "出售 +" + (twCost(sc.tid) * starCopies(sc.star)) + " 金" : "丢掉";
+      ? L("出售 +", "Sell +") + (twCost(sc.tid) * starCopies(sc.star)) + L(" 金", " gold") : L("丢掉", "Discard");
   }
 
   /* 备战区 9 格 */
@@ -2757,7 +2761,7 @@ function renderDeploy(){
            '<b>' + td.n + '</b><i>' + (c2.star >= 3 ? "★★★" : c2.star === 2 ? "★★" : "★") + '</i></button>';
     } else {
       h += '<button class="bs bld' + (i === selBench ? " sel" : "") + '" data-i="' + i + '">' +
-           '<b>' + (c2.k === "spring" ? "泉" : "商") + '</b><i>不占人口</i></button>';
+           '<b>' + (c2.k === "spring" ? L("泉", "Spring") : L("商", "Merchant")) + '</b><i>' + L("不占人口", "No pop") + '</i></button>';
     }
   }
   $("dBench").innerHTML = h;
@@ -2767,16 +2771,16 @@ function renderDeploy(){
   if(selBench >= 0){
     var sc2 = P.bench[selBench];
     hint = (sc2.k === "tower" ? TW_MAP[sc2.tid].pw + starText(TW_MAP[sc2.tid], sc2.star)
-         : sc2.k === "spring" ? "泉：每一波能喝一口，回 25% 最大生命。不占人口。"
-         : "游商：卖遗物，每五波换一批货。不占人口。") + "　拖到画面上放下。";
+         : sc2.k === "spring" ? L("泉：每一波能喝一口，回 25% 最大生命。不占人口。", "Spring: one drink per wave, restores 25% max HP. Uses no population.")
+          : L("游商：卖遗物，每五波换一批货。不占人口。", "Merchant: sells relics, new stock every 5 waves. Uses no population.")) + L("　拖到画面上放下。", "  Drag it onto the field to place.");
   } else if(lastIncome){
-    hint = "收入 +" + lastIncome.inc + (lastIncome.start ? "　开局 +" + lastIncome.start : "") +
-           (lastIncome.vault ? "　金库 +" + lastIncome.vault : "") +
-           (lastIncome.claim ? "　上轮回收到账 +" + lastIncome.claim : "") +
-           (lastIncome.orb ? "　宝珠 +" + lastIncome.orb : "") +
-           (lastIncome.vac ? "　场上回收 " + lastIncome.vac + (lastIncome.vacNow ? "（已到账）" : "（下一轮到账）") : "") +
-           "　·　拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
-  } else hint = "拖动建筑挪位置，点一下收回备战区；空白处拖动看四周，两指（或滚轮）缩放。";
+    hint = L("收入 +", "Income +") + lastIncome.inc + (lastIncome.start ? L("　开局 +", "  Start +") + lastIncome.start : "") +
+           (lastIncome.vault ? L("　金库 +", "  Vault +") + lastIncome.vault : "") +
+           (lastIncome.claim ? L("　上轮回收到账 +", "  Last round's pickup +") + lastIncome.claim : "") +
+           (lastIncome.orb ? L("　宝珠 +", "  Orbs +") + lastIncome.orb : "") +
+           (lastIncome.vac ? L("　场上回收 ", "  Field gold ") + lastIncome.vac + (lastIncome.vacNow ? L("（已到账）", " (paid)") : L("（下一轮到账）", " (paid next round)")) : "") +
+           L("　·　", "  ·  ") + DEPLOY_TIP();
+  } else hint = DEPLOY_TIP();
   $("dHint").textContent = hint;
   camShift = $("deploy").offsetHeight / 2;
 }
@@ -2787,19 +2791,19 @@ function renderTwShop(){
   var h = "", i;
   for(i = 0; i < shopCards.length; i++){
     var tid = shopCards[i];
-    if(!tid){ h += '<div class="tw gone">已买走</div>'; continue; }
+    if(!tid){ h += '<div class="tw gone">' + L("已买走", "Sold") + '</div>'; continue; }
     var t = TW_MAP[tid], c = twCost(tid);
     var no = P.gold < c || (benchFree() <= 0 && !wouldCombine(tid));
     h += '<button class="tw r' + t.r + (no ? " dim" : "") + '" data-i="' + i + '">' +
-         '<span class="tcost">' + c + ' 金</span>' +
-         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + ' · 池中 ' + poolLeft(tid) + '</i>' +
+         '<span class="tcost">' + c + L(' 金', ' gold') + '</span>' +
+         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + L(' · 池中 ', ' · pool ') + poolLeft(tid) + '</i>' +
          '<p>' + t.pw + '</p>' + starLines(t, 1) + '</button>';
   }
   $("twShopList").innerHTML = h;
-  $("twShopSub").textContent = "金币 " + P.gold + " · 备战区 " + P.bench.length + " / " + BF.deploy.bench +
-                               " · 等级 " + P.dlvl + " 决定抽到什么品质";
-  $("btnTwRe").textContent = P.freeRe > 0 ? "刷新 · 免费 ×" + P.freeRe
-                                          : "刷新 " + rerollCost() + " 金";
+  $("twShopSub").textContent = L("金币 ", "Gold ") + P.gold + L(" · 备战区 ", " · Bench ") + P.bench.length + " / " + BF.deploy.bench +
+                               L(" · 等级 " + P.dlvl + " 决定抽到什么品质", " · Lv " + P.dlvl + " sets the rarity odds");
+  $("btnTwRe").textContent = P.freeRe > 0 ? L("刷新 · 免费 ×", "Refresh · free ×") + P.freeRe
+                                          : L("刷新 " + rerollCost() + " 金", "Refresh · " + rerollCost() + " gold");
   $("btnTwRe").disabled = P.freeRe <= 0 && P.gold < rerollCost();
 }
 
@@ -3152,7 +3156,7 @@ function fireTower(t, ef){
     var raw = d.mint + P.wave;
     if(se.mintPerTower) raw += se.mintPerTower * fieldTowers();
     var amt = Math.max(1, Math.round(raw * BF.goldMult));
-    if(se.goldAuto){ addGold(amt); fxText("+" + amt + " 金", "#9C6A10"); }
+    if(se.goldAuto){ addGold(amt); fxText("+" + amt + L(" 金", " gold"), "#9C6A10"); }
     else dropGold(t.x, t.y, amt);
     fxCoin(t.x, t.y - 10);
 
@@ -3316,7 +3320,7 @@ function updateTowers(dt){
       if(!st) st = bstats();
       if(P.hp > 0 && P.hp < st.maxHp * 0.35){
         G.chapelUsed = true; healUp(st.maxHp * 0.25);
-        fxText("祷堂", "#E3B23C"); fxRing(t.x, t.y, 40, "#E3B23C");
+        fxText(TW_MAP.tw_chapel.n, "#E3B23C"); fxRing(t.x, t.y, 40, "#E3B23C");
       }
     }
     /* 塌陷核心：漩涡持续拽人，结束时炸一下（二星期间每 0.5 秒还伤一次）*/
@@ -5144,7 +5148,7 @@ function nextWave(){
   var cyc = Math.floor((w - 1) / BF.site.chest.every);
   if(cyc !== P.chestCycle){ P.chestCycle = cyc; P.chestN = 0; }
   newWave(w);
-  if(w === BF.lateFrom + 1) fxText("通关 · 往后是混战", "#E3B23C");
+  if(w === BF.lateFrom + 1) fxText(L("通关 · 往后是混战", "Cleared · the melee begins"), "#E3B23C");
   /* ⚠️ **每一波存一次档**（用户 2026-09-22）：存的是「刚进这一波」的样子。
      部署波下面那句 openDeploy() 还会**再存一次**（发完钱、摇完货架之后），后面那一次说了算。 */
   saveWave(false);
@@ -5175,8 +5179,8 @@ function onBossDown(b){
    ================================================================ */
 function renderHud(){
   var s = bstats();
-  $("hWave").textContent = "第 " + P.wave + " 波" + (isBossWave(P.wave) ? " ·  BOSS" : "");
-  $("hTime").textContent = isBossWave(P.wave) ? "杀光它" : Math.max(0, Math.ceil(BF.waveSec - G.t)) + "";
+  $("hWave").textContent = L("第 " + P.wave + " 波", "Wave " + P.wave) + (isBossWave(P.wave) ? " ·  BOSS" : "");
+  $("hTime").textContent = isBossWave(P.wave) ? L("杀光它", "Kill it") :  Math.max(0, Math.ceil(BF.waveSec - G.t)) + "";
   $("hLvl").textContent  = "Lv " + P.lvl;
   $("hGold").textContent = P.gold;
   $("hKill").textContent = P.kills;
@@ -5208,7 +5212,7 @@ function renderHud(){
   if(E.boss && !E.boss.dead){
     bb.hidden = false;
     $("bossFill").style.width = Math.max(0, E.boss.hp / E.boss.maxHp * 100) + "%";
-    $("bossName").textContent = E.boss.name + (E.boss.rage ? " · 狂暴" : "");
+    $("bossName").textContent = E.boss.name + (E.boss.rage ? L(" · 狂暴", " · Enraged") : "");
   } else bb.hidden = true;
 }
 
@@ -5341,14 +5345,14 @@ function openPick(){
 function rollPick(){
   pickOffer = rollRelics(BF.pickN, P.wave);
   if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
-  $("pickTitle").textContent = "升到 " + P.lvl + " 级 · 挑一件遗物" +
-    (pendPicks > 1 ? "（还有 " + (pendPicks - 1) + " 次）" : "");
+  $("pickTitle").textContent = L("升到 " + P.lvl + " 级 · 挑一件遗物", "Level " + P.lvl + " · pick a relic") +
+    (pendPicks > 1 ? L("（还有 " + (pendPicks - 1) + " 次）", " (" + (pendPicks - 1) + " more)") : "");
   fillCards("pickList", pickOffer);
   /* ⚠️ 用完是**变灰**不是藏起来（用户 2026-09-22）—— 按钮突然消失会让下面的「都不要」跳位置。 */
   $("btnRedraw").hidden = false;
   $("btnRedraw").disabled = rerollLeft <= 0;
-  $("btnRedraw").textContent = rerollLeft <= 0 ? "已经换过了"
-                             : rerollLeft > 1 ? "换一批（还剩 " + rerollLeft + " 次）" : "换一批";
+  $("btnRedraw").textContent = rerollLeft <= 0 ? L("已经换过了", "Rerolled")
+                             : rerollLeft > 1 ? L("换一批（还剩 " + rerollLeft + " 次）", "Reroll (" + rerollLeft + " left)") : L("换一批", "Reroll");
   show("veilPick");
 }
 function takePick(id){
@@ -5367,9 +5371,9 @@ function grantRelic(id, after){
     return;
   }
   swapNewId = id; swapAfter = after;
-  fillCards("swapNew", [RMAP[id]], function(r){ return '<span class="cost">卖 ' + sellPrice(r) + ' 金</span>'; });
+  fillCards("swapNew", [RMAP[id]], function(r){ return '<span class="cost">' + L('卖 ', 'Sell ') + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
   fillCards("swapOld", relicsByRar(),
-            function(r){ return '<span class="cost">+' + sellPrice(r) + ' 金</span>'; });
+            function(r){ return '<span class="cost">+' + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
   show("veilSwap");
 }
 function doSwap(oldId){
@@ -5402,33 +5406,33 @@ function withMaxHp(fn){
 /* 「信息」是从遗物页里拆出来的（用户 2026-09-22），单独一个按钮 */
 function openInfo(){
   var s = bstats();
-  $("infoSub").textContent = "第 " + P.wave + " 波 · " + TIER.name + " · 击杀 " + P.kills +
-    " · 遗物 " + P.relics.length + " / " + relicCap() + " · 特殊 " + P.special.length;
+  $("infoSub").textContent = L("第 " + P.wave + " 波 · ", "Wave " + P.wave + " · ") + TIER.name + L(" · 击杀 ", " · Kills ") + P.kills +
+    L(" · 遗物 ", " · Relics ") + P.relics.length + " / " + relicCap() + L(" · 特殊 ", " · Special ") + P.special.length;
   $("infoStats").innerHTML =
-    st2("攻击", s.atk) + st2("生命", Math.ceil(P.hp) + " / " + s.maxHp) +
-    st2("护甲", s.armor) + st2("减伤", s.cutStatic + "%") +
-    st2("暴击", s.crit + "% ×" + s.critMult.toFixed(1)) + st2("移速", Math.round(s.spd)) +
-    st2("攻速", s.aspd.toFixed(2) + " 刀/秒") + st2("刀程", Math.round(s.range)) +
-    st2("张角", Math.round(s.arc) + "°") + st2("拾取", Math.round(s.pickup)) +
-    st2("连击", P.combo + "（+" + comboPct(s) + "%）") + st2("护盾", Math.round(P.shield));
+    st2(L("攻击", "ATK"), s.atk) + st2(L("生命", "HP"), Math.ceil(P.hp) + " / " + s.maxHp) +
+    st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic + "%") +
+    st2(L("暴击", "Crit"), s.crit + "% ×" + s.critMult.toFixed(1)) + st2(L("移速", "Move speed"), Math.round(s.spd)) +
+    st2(L("攻速", "Attack speed"), s.aspd.toFixed(2) + L(" 刀/秒", " swings/s")) + st2(L("刀程", "Blade reach"), Math.round(s.range)) +
+    st2(L("张角", "Swing arc"), Math.round(s.arc) + "°") + st2(L("拾取", "Pickup"), Math.round(s.pickup)) +
+    st2(L("连击", "Combo"), P.combo + L("（+" + comboPct(s) + "%）", " (+" + comboPct(s) + "%)")) + st2(L("护盾", "Shield"), Math.round(P.shield));
   /* 宝珠：点亮的效果 / 基础词缀 / 词条合计，一行一条 */
   var ob = P.orb || {on:{}, add:{}, base:{}}, lines = [];
   orbOnLines(ob).forEach(function(x){ lines.push("<b>" + ORB_CMAP[x.c].n + " " + x.t + "</b>" + x.s); });
   orbBaseLines(ob).forEach(function(t){ lines.push(t); });
   var al = orbAddLines(ob);
-  if(al.length) lines.push(al.join("　"));
+  if(al.length) lines.push(al.join(L("　", "  ")));
   $("infoOrb").hidden = !lines.length;
-  $("infoOrb").innerHTML = lines.length ? "<h3>宝珠</h3><p>" + lines.join("</p><p>") + "</p>" : "";
+  $("infoOrb").innerHTML = lines.length ? "<h3>" + L("宝珠", "Orbs") + "</h3><p>" + lines.join("</p><p>") + "</p>" : "";
   show("veilInfo");
 }
 function openBag(){
-  $("bagTitle").textContent = "遗物 " + P.relics.length + " / " + relicCap();
+  $("bagTitle").textContent = L("遗物 ", "Relics ") + P.relics.length + " / " + relicCap();
   fillCards("bagList", relicsByRar(),
             function(r){
               if(fuseMode) return "";
               return r.id === sellArmed
-                ? '<span class="cost">再点一下 · 分解 +' + sellPrice(r) + '</span>'
-                : '<span class="cost">分解 +' + sellPrice(r) + '</span>';
+                ? '<span class="cost">' + L('再点一下 · 分解 +', 'Tap again · salvage +') + sellPrice(r) + '</span>'
+                : '<span class="cost">' + L('分解 +', 'Salvage +') + sellPrice(r) + '</span>';
             },
             function(r){
               if(fuseSel.indexOf(r.id) >= 0) return "sel";
@@ -5467,7 +5471,7 @@ function spPool(){
 }
 function spCardHtml(d){
   return '<button class="card sp" data-id="' + d.id + '">' +
-         '<div class="cr">特殊</div><div class="cn">' + d.n + '</div>' +
+         '<div class="cr">' + L('特殊', 'Special') + '</div><div class="cn">' + d.n + '</div>' +
          '<div class="cp">' + d.pw + '</div>' +
          '<div class="cl">' + d.lore + '</div></button>';
 }
@@ -5511,10 +5515,10 @@ function doSpSwap(oldId){
   if(pendSpecial > 0) openSpecialPick();
 }
 function openSp(){
-  $("spTitle").textContent = "特殊遗物 " + P.special.length + " / " + BF.specialMax;
+  $("spTitle").textContent = L("特殊遗物 ", "Special relics ") + P.special.length + " / " + BF.specialMax;
   $("spList").innerHTML = P.special.length
     ? P.special.map(function(id){ return spCardHtml(spDef(id)); }).join("")
-    : '<p class="sub">还没有。每打倒一只 Boss（每 10 波）就能三选一拿一件。</p>';
+    : '<p class="sub">' + L("还没有。每打倒一只 Boss（每 10 波）就能三选一拿一件。", "None yet. Each Boss you defeat (every 10 waves) lets you pick 1 of 3.") + '</p>';
   show("veilSp");
 }
 
@@ -5529,12 +5533,14 @@ function fuseCost(){ return 0; }
 function fusePick(){ return FUSE_PICK + (has("recipe") ? 1 : 0); }
 function renderFuse(){
   $("fuseSub").textContent = fuseMode
-    ? "在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length
-    : fuseN() + " 件同品质 → 换一件高一档的，从 " + fusePick() + " 件里挑（不要金币）";
-  $("btnFuseMode").textContent = fuseMode ? "退出选择" : "选择材料";
+    ? L("在下面挑同品质的 " + fuseN() + " 件（神圣不能当材料）· 已选 " + fuseSel.length,
+        "Pick " + fuseN() + " of the same rarity below (Divine can't be used) · chosen " + fuseSel.length)
+    : L(fuseN() + " 件同品质 → 换一件高一档的，从 " + fusePick() + " 件里挑（不要金币）",
+        fuseN() + " of one rarity → one of the next rarity, chosen from " + fusePick() + " (no gold)");
+  $("btnFuseMode").textContent = fuseMode ? L("退出选择", "Cancel") : L("选择材料", "Pick materials");
   var ready = fuseSel.length === fuseN();
   $("btnFuseGo").disabled = !ready;
-  $("btnFuseGo").textContent = "合成";
+  $("btnFuseGo").textContent = L("合成", "Fuse");
   /* 选满了就把「合成」点亮（用户 2026-09-22）—— 不然要低头数选了几件才知道能不能点 */
   $("btnFuseGo").classList.toggle("hot", ready);
 }
@@ -5554,7 +5560,7 @@ function fuseGo(){
   while(picks.length < Math.min(fusePick(), pool.length) && t++ < 100){
     var r = pick(pool); if(picks.indexOf(r) < 0) picks.push(r); }
   if(picks.length === 1){ grantRelic(picks[0].id, openBag); return; }
-  $("gotTitle").textContent = "合成出了 " + RAR_CN[want] + " · 挑一件";
+  $("gotTitle").textContent = L("合成出了 " + RAR_CN[want] + " · 挑一件", "Fused into " + RAR_CN[want] + " · pick one");
   fillCards("gotList", picks);
   show("veilGot");                                  // ⚠️ 材料已经砸了，这个窗没有关闭钮
 }
@@ -5632,14 +5638,14 @@ function openShop(t){
 }
 function renderShop(){
   var t = curShop; if(!t) return;
-  $("shopSub").textContent = "金币 " + P.gold + " · 每五波换一批货";
+  $("shopSub").textContent = L("金币 " + P.gold + " · 每五波换一批货", "Gold " + P.gold + " · new stock every 5 waves");
   var h = "", i;
   for(i = 0; i < t.stock.length; i++){
     var row = t.stock[i], r = RMAP[row.id];
-    h += cardHtml(r, '<span class="cost">' + shopPrice(row) + ' 金</span>',
+    h += cardHtml(r, '<span class="cost">' + shopPrice(row) + L(' 金', ' gold') + '</span>',
                   row.sold || P.gold < shopPrice(row) ? "dim" : "");
   }
-  $("shopList").innerHTML = h || '<p class="sub">货架空了。</p>';
+  $("shopList").innerHTML = h || '<p class="sub">' + L("货架空了。", "Sold out.") + '</p>';
 }
 function buyShop(id){
   var t = curShop; if(!t) return;
@@ -5664,7 +5670,7 @@ var BF_KEY = "youxu.bf.v1";
 /* ⚠️ `tb` 是**每个难度层各自的最深波数**（用户 2026-09-22 的解锁条件要用它）——
    老存档没有这个字段，读处一律 `|| {}` / `|| 0` 兜底。 */
 function bfMeta(){ return load(BF_KEY, {best:0, kills:0, runs:0, tb:{}}); }
-function bfSave(m){ if(!save(BF_KEY, m) && window.showErr) showErr("存档写不进去"); }
+function bfSave(m){ if(!save(BF_KEY, m) && window.showErr) showErr(L("存档写不进去", "Can't save — local storage is blocked")); }
 
 /* ================================================================
    每一波存一次档（用户 2026-09-22：「战场每一波进行一次存档」）
@@ -5793,14 +5799,14 @@ function endRun(){
   m.runs = (m.runs || 0) + 1;
   bfSave(m);
   $("endTitle").textContent = P.wave > BF.lateFrom
-    ? "第 " + P.wave + " 波 · 已通关" : "倒在第 " + P.wave + " 波";
+    ? L("第 " + P.wave + " 波 · 已通关", "Wave " + P.wave + " · cleared") : L("倒在第 " + P.wave + " 波", "Fell on wave " + P.wave);
   $("endStats").innerHTML =
-    st2("到达波数", P.wave) + st2("历史最深", m.best) +
-    st2("击杀", P.kills) + st2("等级", P.lvl) +
-    st2("存活", Math.floor(P.time / 60) + " 分 " + Math.floor(P.time % 60) + " 秒") +
-    st2("最大连击", P.maxCombo) +
-    st2("遗物", P.relics.length) + st2("特殊遗物", P.special.length) +
-    st2("部署等级", P.dlvl) + st2("场上的塔", fieldTowers());
+    st2(L("到达波数", "Wave reached"), P.wave) + st2(L("历史最深", "Best ever"), m.best) +
+    st2(L("击杀", "Kills"), P.kills) + st2(L("等级", "Level"), P.lvl) +
+    st2(L("存活", "Survived"), Math.floor(P.time / 60) + L(" 分 ", "m ") + Math.floor(P.time % 60) + L(" 秒", "s")) +
+    st2(L("最大连击", "Max combo"), P.maxCombo) +
+    st2(L("遗物", "Relics"), P.relics.length) + st2(L("特殊遗物", "Special relics"), P.special.length) +
+    st2(L("部署等级", "Deploy level"), P.dlvl) + st2(L("场上的塔", "Towers on field"), fieldTowers());
   $("endRelics").innerHTML =
     P.special.map(function(id){ return spCardHtml(spDef(id)); }).join("") +
     relicsByRar().map(function(r){ return cardHtml(r); }).join("");
@@ -5825,21 +5831,24 @@ function renderTiers(){
     var t = BF_TIERS[i], open = tierOpen(i, m);
     h += '<button class="tier' + (t === TIER ? " on" : "") + '"' + (open ? "" : " disabled") +
          ' data-i="' + i + '"><b>' + t.name + '</b>' +
-         '<p>' + (open ? t.desc : "通过" + BF_TIERS[i - 1].name + "第 " + BF.tierClear + " 波解锁") +
-         '（怪血 ×' + t.hp.toFixed(2) + ' · 伤害 ×' + t.dmg.toFixed(2) +
-         ' · 密度 ×' + t.rate.toFixed(2) + '）</p></button>';
+         '<p>' + (open ? t.desc : L("通过" + BF_TIERS[i - 1].name + "第 " + BF.tierClear + " 波解锁",
+                                   "Clear wave " + BF.tierClear + " of " + BF_TIERS[i - 1].name + " to unlock")) +
+         L('（怪血 ×', ' (foe HP ×') + t.hp.toFixed(2) + L(' · 伤害 ×', ' · damage ×') + t.dmg.toFixed(2) +
+         L(' · 密度 ×', ' · density ×') + t.rate.toFixed(2) + L('）', ')') + '</p></button>';
   }
   $("tierList").innerHTML = h;
   /* 有没有没走完的那一趟（每一波存一次档）—— 有就露出「继续」*/
   var sr = savedRun(), rb = $("btnResume");
   if(rb){
     rb.hidden = !sr;
-    if(sr) rb.textContent = "继续 · 第 " + sr.wave + " 波";
+    if(sr) rb.textContent = L("继续 · 第 " + sr.wave + " 波", "Continue · wave " + sr.wave);
   }
   $("veilStart").querySelector(".sub").textContent =
-    "走位躲怪，刀会自己挥。升级挑遗物：50 级前每 2 级，之后每 5 级，80 级后每 10 级。第 " + BF.lateFrom +
-    " 波是终点，往后是 1–" + BF.lateFrom + " 波的怪混着出。" +
-    (m.best ? "　历史最深：第 " + m.best + " 波。" : "");
+    L("走位躲怪，刀会自己挥。升级挑遗物：50 级前每 2 级，之后每 5 级，80 级后每 10 级。第 " + BF.lateFrom +
+      " 波是终点，往后是 1–" + BF.lateFrom + " 波的怪混着出。",
+      "Dodge the horde — your blade swings on its own. Level-ups offer relics: every 2 levels up to 50, then every 5, and every 10 after 80. Wave " +
+      BF.lateFrom + " is the finish line; after it, foes from waves 1–" + BF.lateFrom + " come mixed.") +
+    (m.best ? L("　历史最深：第 " + m.best + " 波。", "  Best: wave " + m.best + ".") : "");
 }
 
 /* ================================================================
@@ -5847,7 +5856,7 @@ function renderTiers(){
    ================================================================ */
 function boot(){
   window.showErr = function(msg){ var b = $("errbar"); b.hidden = false; b.textContent = msg; };
-  window.addEventListener("error", function(e){ showErr("出错了：" + (e.message || e)); });
+  window.addEventListener("error", function(e){ showErr(L("出错了：", "Error: ") + (e.message || e)); });
 
   buildArt(); resize(); bindInput();
   addEventListener("resize", resize);

@@ -247,10 +247,15 @@
 
 </div>
 
+<!-- ⚠️ 顺序：i18n.js 紧跟 util.js（定界面语言 + T/L），i18n-en.js 在 content / orb 后面（换遗物、宝珠的英文），
+     i18n-bf.js 排在 battle.js **后面**（它要改 battle.js 的塔 / 怪 / 特殊遗物表）。中文界面下这三个文件什么都不做。 -->
 <script src="util.js"></script>
+<script src="i18n.js"></script>
 <script src="art.js"></script>
 <script src="content.js"></script>
 <script src="orb.js"></script>
+<script src="i18n-en.js"></script>
 <script src="battle.js"></script>
+<script src="i18n-bf.js"></script>
 </body>
 </html>

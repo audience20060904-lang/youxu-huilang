@@ -3,7 +3,8 @@
       改了那边的中文，这里对应那一条就失效（界面会退回显示中文，不会报错）。
       加新文案：game.js 里写 T("中文")，再到这里补一条；拼接顺序对不上英文的句子直接用 L("中文","English")。
    只在界面语言是英文时才生效（UI_EN），中文界面下这个文件什么都不做。
-   战场模式（battle.html）和宝珠**没有英文版**，英文界面下主城把入口藏起来了（game.js 的 showScene / renderTown）。*/
+   战场模式（battle.html）也加载这个文件（2026-09-23 战场英文版）：战场遗物的英文词条 BFW_EN、宝珠的英文 ORB_EN 在这里，
+   战场自己的界面文案和塔 / 怪 / 特殊遗物的英文在 i18n-bf.js。⚠️ 这个文件在战场里没有词库可读，碰 CAT_CN 这类全局先判 typeof。*/
 "use strict";
 Object.assign(I18N, {
 "这一层的怪还没清完 —— 两人先一起点「寻路」走。": "Monsters remain on this floor — both of you tap \"Path\" to move together.",
@@ -1797,6 +1798,177 @@ if(LANG_LEARN === "ja"){
   });
 }
 
+/* ===== 战场遗物的英文词条（2026-09-23，战场模式英文版）=====
+   content.js 的 bfWord() 在英文界面下读这张表：**跟 BFW / BFW_RE 换出来的中文一一对应**，
+   只收「战场里说法跟地牢不一样」的那 127 件；其余 82 件战场里原样照搬地牢词条，直接用 RELIC_EN。
+   ⚠️ 改了 content.js 的 BFW / BFW_RE（或者战场的实现），这里对应那一条要跟着改。*/
+var BFW_EN = {
+ gambler: "Close-range hits: damage +10",
+ salve: "Defeating an enemy: 40% chance to restore 2 HP",
+ echo: "First hit each wave costs no HP and restores 5% max HP",
+ drain: "Swing: 10% chance to restore 4 HP",
+ reap: "Defeating an enemy restores 1 more HP",
+ undying: "Once per wave: after lethal damage, restore 25% max HP",
+ thorns: "When hit: reflect 30 bonus damage to the enemy",
+ surge: "Swing: 25% chance for damage +25",
+ nerve: "Close-range hits: damage +30%; twice per wave, getting hit keeps your combo",
+ allin: "Close-range hits: 10% chance to restore 10% max HP",
+ dice: "Swing: 50% chance for crit rate +25% (max +150%), stacks this wave; resets when hit",
+ chain: "When hit, combo halves instead of resetting; damage taken −10%",
+ spark: "Combo bonus steps every 4 instead of every 10; crit rate +20%",
+ carve: "Crit rate +15%; crits: damage +90%",
+ recite: "Crit rate +30%; crits: bonus damage +35; once per wave, a hit costs no HP",
+ bind: "Nemesis mark cap doubled (5 → 10); killing a nemesis restores 2% max HP",
+ scent: "Hitting an elite or Boss: damage +60%",
+ rend: "Bonus damage +20; each swing costs 1 HP, up to 100 total (never lethal)",
+ midas: "Swing: 25% chance for +5 gold",
+ lamp: "Each new wave: restore 8% max HP",
+ purse: "Each new wave: +30 gold",
+ hold: "The first 2 hits each wave: damage taken halved",
+ chew: "The swing after you get hit restores 4% max HP",
+ slip: "When hit: 20% chance to lose no HP (combo still breaks)",
+ dig: "Each wave opens with 3 gold piles dropped",
+ tome: "Killing a foe type you've killed 20+ of this run: +8 gold",
+ recipe: "Fusing needs only 2 relics, and offers one more choice",
+ delve: "Each wave cleared: damage +0.5% (max +20%)",
+ boom: "Crit damage +120%; crits add +1 combo",
+ slay: "Damage +30%; +100% more against Bosses and elites",
+ restring: "Swing: 20% chance to restore this run's best combo and heal 5 HP",
+ whim: "Swing: one of — damage +8% this wave (max +80%) / heal 5% max HP / +15 gold",
+ hall: "Swing: 50% chance to strike again at once (the extra swing doesn't chain)",
+ lesson: "First kill of each foe type this wave: +10 gold",
+ chase: "Hitting an elite or Boss: combo +2 more; 3 times per wave, also heal 10% max HP",
+ synes: "Every hit counts as hitting an elite or Boss; damage +30%",
+ spare: "Tower damage +10%",
+ key: "The merchant stocks 2 more items",
+ opening: "First 5 swings each wave: damage +100%",
+ greet: "The first time you hit each enemy: damage +100%",
+ finale: "End of each wave: restore 30% max HP",
+ stroke: "Crit rate +8%",
+ clean: "Crit damage +40%",
+ glass: "Enemy projectiles cost no HP, but each one cuts attack speed 3% this wave",
+ shed: "Damage taken −14%",
+ vow: "Each new wave: shield refills to 20% of max HP",
+ aegis: "Every 10 swings: +10 shield (max 300)",
+ unchain: "Combo ≥ current wave: a hit costs no HP, combo −current wave",
+ build: "When hit: gain 2 shield",
+ thick: "Each new wave: gain 7 shield",
+ well: "Each new wave: restore 20% max HP; overflow healing turns into shield (2 → 1)",
+ water: "Each wave: restore 15% max HP; overflow turns into shield (2 → 1)",
+ mirror: "Each new wave: +30 shield; every 5 shield: damage +1 (max +200)",
+ breath: "Defeating an enemy restores 1% max HP",
+ burlap: "First hit each wave: damage taken −25%",
+ tough: "Each wave cleared: damage taken −1% (max −15%)",
+ phoenix: "Below 15% HP: swings restore 5% max HP",
+ mend: "Defeating an enemy restores 2% max HP",
+ pulse: "Swings restore 1% max HP",
+ deep: "From wave 30: damage taken −15%",
+ psyche: "Hit by a nemesis: damage taken −15%",
+ calm: "Non-projectile damage taken −7%",
+ caution: "Crit rate +2%; twice per wave, a projectile hit costs no HP",
+ cushion: "Hit by an enemy up close: damage taken −15%",
+ buffer: "Enemy projectile damage −55%",
+ grit: "Each hit this wave: damage taken −5% more (max −15%)",
+ familiar: "Each foe type killed this wave: damage taken −3% (max −9%)",
+ twice: "From a foe type's second hit on you this wave: damage taken −12%",
+ nemesis: "Each Boss fought this run: damage taken −10% (max −40%)",
+ corrode: "Swing: armor +1 (max +5); each hit taken: armor −2; resets each wave",
+ dawn: "First 20 swings each wave: armor +5",
+ stack: "Armor +5; after 2 waves in a row without losing HP: armor ×2",
+ atone: "Each wave: +12 shield",
+ borrow: "Each new wave: +20 shield; once per wave, a broken shield instantly refills",
+ cherish: "Each new wave: +10 shield; if your shield held last wave, +15% max HP more",
+ shatter: "Each new wave: +10 shield; 6 times per wave, after it breaks, next hit costs no HP",
+ brace: "The first hit each wave that drops you below 50% HP: damage taken −55%",
+ warmth: "After dropping below 50% HP or Undying Ember: next 5 hits deal half",
+ steady: "Below 25% HP: move speed +25%",
+ pace: "No damage taken this wave: heal 55% max HP when the next begins",
+ ascetic: "Never bought from the merchant: each wave, damage taken −5% (max −25%)",
+ foresight: "On a new wave: restore 3% max HP per 100 gold you carry (max 30%)",
+ veteran: "Each new wave: +15 shield; every 5 times your shield breaks: armor +2 (max +10)",
+ fullset: "Carrying one Common, one Rare and one Epic: one extra reroll per relic pick",
+ wellread: "Blade reach +10%",
+ inertia: "Combo ≥5: getting hit drops it to 5 instead of 0; combo ≥5: damage +40%",
+ rebound: "Once per wave: when a 10+ combo breaks, regain half of it and heal 20% max HP",
+ track: "Hit fewer times than last wave: start the next with 110 shield",
+ welfare: "End of each wave: gain gold equal to wave × 2",
+ clasp: "On a new wave: restore 2% max HP per 200 gold you carry (max 6%)",
+ needle: "4 times per wave: crits grant 3 shield",
+ oldrope: "6 times per wave: every 8 combo grants 2 shield",
+ shedge: "Each new wave: +8 shield; every 20 shield: damage +3% (max +12%)",
+ armpad: "Armor +1; each new wave: 4 shield per point of armor (max 20)",
+ towel: "Each wave: heal 5%; per 10% healed this wave: damage +2% (max +12%)",
+ cap: "4 times per wave: crits restore 3% max HP",
+ shieldheart: "Each new wave: +15 shield; shield ≥50: damage taken −18%",
+ underarmor: "Armor +2; each new wave: restore 2% max HP per point of armor (max 18%)",
+ spellblade: "4 times per wave: after a crit, the next 5 swings deal damage +80%",
+ critshield: "8 times per wave: crits grant 6 shield",
+ mirroredge: "Each new wave: +15 shield; every 15 shield: crit rate +4% (max +20%)",
+ glyph: "Crit: armor +2 this wave (max +6, resets each wave)",
+ bloodmaul: "Every 10 HP healed this wave: damage +3 (max +15); heal 10% on each new wave",
+ twin: "Each new wave: +25 shield; every 15 shield: armor +1 (max +8)",
+ shieldking: "Each wave: +30 shield; per 30 shield: damage +5%, armor +1 (max 4 tiers)",
+ longsong: "4 times per wave: every 10 combo: gain 15 shield and restore 3% max HP",
+ evervow: "Damage taken −6%; +20 shield per wave; per 8% reduction: armor +1 (max +6)",
+ swift: "Swinging while moving: damage +12%",
+ offbeat: "Swinging while moving: combo +1 more",
+ secondhand: "4 times per wave: swinging while moving grants 7 shield",
+ snap: "Swinging while moving: bonus damage +20",
+ poise: "Each full second of moving: damage +10% (max +60%)",
+ longword: "Hitting a large enemy: damage +15%",
+ volume: "Each large enemy hit: bonus damage +4",
+ ponder: "3 times per wave: hitting a large enemy grants 10 shield",
+ keenrise: "After leveling up, the next 5 swings deal damage +120%",
+ ascend: "Level up: armor +3 this wave (max +12) and restore 5% max HP",
+ exorcise: "3 times per wave: killing a nemesis restores 2% max HP",
+ calmsoul: "3 times per wave: killing a nemesis grants 5 shield",
+ feeddemon: "Each nemesis marked on you: damage +5% (max +40%)",
+ fearless: "3 times per wave, a nemesis hit costs no HP; hitting a nemesis: damage +80%",
+ prime: "At full HP: damage +85%; for 3 swings after losing HP: damage +40%",
+ reapfull: "Defeating an enemy restores 1.2% max HP",
+ gatewait: "Entering a Boss wave: gain 120 shield and restore 25% max HP",
+ knock: "In Boss waves: damage +50%, damage taken −20%",
+ instant: "Swinging while moving always crits; after 5 in a row, next swing +150%",
+ whole: "Full HP: damage +80%, armor +8; once per wave below 50% HP, heal back to 80%"
+};
+
+/* ===== 宝珠（orb.js）的英文 —— 只在战场生效，主城背包 / 商店和战场「信息」页共用 ===== */
+var ORB_EN = {
+  colors: {red:"Red", yellow:"Yellow", green:"Green", blue:"Blue", purple:"Purple", white:"White", black:"Black", rainbow:"Rainbow"},
+  sets: {
+    red:     {2:"Damage +25%", 3:"Crit rate +8%", 6:"Crit damage +50%"},
+    yellow:  {2:"Picking up gold: 30% chance to double it", 3:"+100 starting gold", 6:"On deploy, last round's unpicked gold is paid out at once"},
+    green:   {2:"Max HP +25%", 3:"Each wave: restore 10% max HP", 6:"Start with a free random healing tower"},
+    blue:    {2:"Tower damage +25%", 3:"1 free shop refresh each deploy", 6:"Start with two free random Rare towers"},
+    purple:  {2:"XP gain +25%", 3:"One extra \"Reroll\" on each level-up pick", 6:"Start with a random Epic relic"},
+    white:   {2:"Population cap +1", 3:"+50 starting gold", 6:"Start with two free random Common towers"},
+    black:   {2:"Relic slots +2", 3:"Start with a random Common relic", 6:"Start with two random Rare relics"},
+    rainbow: {2:"Counts as +1 of every color"}
+  },
+  base: {
+    temper: ["Tempered", "Each upgrade of this orb gives +1 extra point"],
+    steady: ["Steady Hand", "Each upgrade of this orb gives at least 9 points"],
+    thrift: ["Thrifty", "Upgrades of this orb cost −20%"],
+    ward:   ["First Move", "Invulnerable for the first 0.5s of each wave"],
+    dash:   ["Quick Start", "Move speed +30% for the first 3s of each wave"],
+    aegis:  ["Guard", "Each wave: gain a shield of 8% max HP"],
+    gasp:   ["Last Light", "Once per run: survive lethal damage with 1 HP"],
+    purse:  ["Private Purse", "+30 starting gold"],
+    hunter: ["Headhunter", "Boss waves: start with a shield of 20% max HP"]
+  },
+  affix: {atk:"ATK +{v}", atkPct:"Damage +{v}%", hp:"Max HP +{v}", hpPct:"Max HP +{v}%", spd:"Move speed +{v}",
+    spdPct:"Move speed +{v}%", aspd:"Attack speed +{v}%", crit:"Crit rate +{v}%", critDmg:"Crit damage +{v}%",
+    range:"Blade reach +{v}", armor:"Armor +{v}", cut:"Damage taken −{v}%", xp:"XP gain +{v}%", gold:"Gold gain +{v}%",
+    pickup:"Pickup range +{v}", tower:"Tower damage +{v}%"}
+};
+function i18nApplyOrb(){
+  if(!UI_EN || typeof ORB_COLORS === "undefined") return;
+  ORB_COLORS.forEach(function(c){ if(ORB_EN.colors[c.id]) c.n = ORB_EN.colors[c.id]; });
+  Object.keys(ORB_EN.sets).forEach(function(id){ if(ORB_SETS[id]) ORB_SETS[id] = ORB_EN.sets[id]; });
+  ORB_BASE.forEach(function(b){ var e = ORB_EN.base[b.id]; if(e){ b.n = e[0]; b.t = e[1]; } });
+  ORB_AFFIX.forEach(function(a){ if(ORB_EN.affix[a.id]) a.t = ORB_EN.affix[a.id]; });
+}
+
 var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spider", bone:"Bone Soldier",
   statue:"Gate Statue", ghost:"Whispering Ghost", clock:"Rusty Bell", warden2:"Wandering Shade",
   dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade",
@@ -1807,6 +1979,7 @@ var DIFF_EN = {A:["Tier A", "Original", "No ATK bonus", "The game as it was buil
   B:["Tier B", "A bit easier", "ATK +25%"], C:["Tier C", "Easier still", "ATK +50%"],
   D:["Tier D", "Easiest", "ATK +100%", "Exactly cancels out practice mode"]};
 function i18nApplyContent(){
+  i18nApplyOrb();
   /* 学中文时章节的 HSK 标签、多出来的「书冢」、无尽的 HSK 4~6 都在 content.js 末尾那段定（跟界面语言无关）*/
   if(!UI_EN) return;
   RELICS.forEach(function(r){ var e = RELIC_EN[r.id]; if(e){ r.n = e[0]; r.pw = e[1]; r.lore = e[2]; } });
@@ -1828,10 +2001,11 @@ function i18nApplyContent(){
     d.name = e[0]; d.tag = e[1]; d.desc = e[2]; if(e[3]) d.note = e[3];
   });
   RAR_CN = ["Common", "Rare", "Epic", "Legendary", "Divine"];
-  CAT_CN = {animal:"Animal", food:"Food", color:"Color", body:"Body", people:"People",
+  /* 战场（battle.html）也加载这个文件，但它不加载词库 —— CAT_CN / POS_CN 在那边不存在 */
+  if(typeof CAT_CN !== "undefined") CAT_CN = {animal:"Animal", food:"Food", color:"Color", body:"Body", people:"People",
     thing:"Thing", nature:"Nature", verb:"Action", adj:"Description",
     time:"Time", place:"Place", feel:"Feeling", num:"Number", adv:"Adverb"};
-  POS_CN = {n:"Noun", v:"Verb", adj:"Adjective", adv:"Adverb", num:"Numeral"};
+  if(typeof POS_CN !== "undefined") POS_CN = {n:"Noun", v:"Verb", adj:"Adjective", adv:"Adverb", num:"Numeral"};
 }
 function chapterById0(id){
   for(var i = 0; i < CHAPTERS.length; i++) if(CHAPTERS[i].id === id) return CHAPTERS[i];

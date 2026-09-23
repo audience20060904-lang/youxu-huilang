@@ -142,13 +142,16 @@ function orbFind(od, u){
   return null;
 }
 
-/* ---- 文案 ---- */
-function orbColorName(o){ return o.c ? ORB_CMAP[o.c].n + "珠" : "未鉴定"; }
+/* ---- 文案 ----
+   英文界面（i18n-en.js 的 i18nApplyOrb 把表里的中文换掉了）只剩这几个拼接用的字要分语言。*/
+function orbEn(){ return typeof UI_EN !== "undefined" && UI_EN; }
+function orbSep(){ return orbEn() ? ": " : "："; }
+function orbColorName(o){ return o.c ? ORB_CMAP[o.c].n + (orbEn() ? " orb" : "珠") : (orbEn() ? "Unidentified" : "未鉴定"); }
 function orbAffixText(x){
   var d = ORB_AMAP[x.k];
   return d ? d.t.replace("{v}", String(x.d ? x.v * 2 : x.v)) + (x.d ? " ×2" : "") : "";
 }
-function orbBaseText(id){ var b = ORB_BMAP[id]; return b ? b.n + "：" + b.t : ""; }
+function orbBaseText(id){ var b = ORB_BMAP[id]; return b ? b.n + orbSep() + b.t : ""; }
 
 /* ---- 数一数装备着的颜色，算出点亮了哪些效果 + 词条合计 ----
    返回 {cnt:{颜色:有效颗数}, on:{"red2":1, …}, add:{atk:3, …}, base:{ward:1, …}}。
@@ -204,7 +207,7 @@ function orbBaseLines(b){
   var out = [];
   for(var i = 0; i < ORB_BASE.length; i++){
     var k = ORB_BASE[i].id;
-    if(b.base[k] && !ORB_BASE[i].self) out.push(ORB_BASE[i].n + "：" + ORB_BASE[i].t);   // self 的只管强化，不进战场
+    if(b.base[k] && !ORB_BASE[i].self) out.push(ORB_BASE[i].n + orbSep() + ORB_BASE[i].t);   // self 的只管强化，不进战场
   }
   return out;
 }

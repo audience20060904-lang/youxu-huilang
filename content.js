@@ -399,7 +399,7 @@ var ROUTES = [
 /* ===== 学中文时的章节（2026-09-23，用户：「拓展 HSK5 关卡，无尽模式是 4~6 词库混出」）=====
    词难度 1~6 = HSK 1~6（words-zh.js）。前四章照旧一章一档（HSK 1~4），多出来的「书冢」是 HSK 5，
    **无尽改成 HSK 4 / 5 / 6 混出**。显示用的章号走 no（书冢第五章、无尽第六章），id 不动。
-   ⚠️ battle.html 不加载 i18n.js（没有 LANG_LEARN），所以要兜 typeof。*/
+   ⚠️ 兜 typeof 是历史写法（battle.html 以前不加载 i18n.js）；现在战场也加载了，这段在战场里跑一遍也无害。*/
 if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
   CHAPTERS.forEach(function(c){
     c.level = {1:"HSK 1", 2:"HSK 2", 3:"HSK 3", 4:"HSK 4", 5:"HSK 4–6", 6:"HSK 5"}[c.id] || c.level;
@@ -1349,6 +1349,8 @@ var BFW_RE = [
  [/宝箱/g,"石箱"], [/撤退/g,"受伤"], [/这一刀必定暴击/g,"这一刀必定暴击"]
 ];
 function bfWord(r){
+  /* 英文界面（i18n-en.js 已经把 r.pw 换成了英文）：战场说法不一样的查 BFW_EN，一样的就是地牢那条英文 */
+  if(typeof UI_EN !== "undefined" && UI_EN) return (typeof BFW_EN !== "undefined" && BFW_EN[r.id]) || r.pw;
   if(BFW[r.id]) return BFW[r.id];
   var s = r.pw;
   for(var i = 0; i < BFW_RE.length; i++) s = s.replace(BFW_RE[i][0], BFW_RE[i][1]);

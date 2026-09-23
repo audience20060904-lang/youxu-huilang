@@ -4743,8 +4743,6 @@ function showScene(){
     nb.dataset.view = want;
     nb.querySelector("i").textContent = inRun ? "✦" : "◎";
     nb.querySelector("span").textContent = inRun ? T("遗物") : T("背包");
-    /* 英文界面：宝珠只在战场生效，而战场还没有英文版 —— 主城里这个标签连同入口一起藏起来 */
-    nb.hidden = UI_EN && !inRun;
     if($(gone).classList.contains("on")) showView(want);
   }
   $("hChap").textContent = CH.name;
@@ -4759,7 +4757,6 @@ function renderTown(){
   if(bs) bs.textContent = blessSlots()
     ? (T("已开 ") + blessSlots() + T(" / 10 个槽位"))
     : (T("用宝石换永久的好处 · ") + BLESS_SLOT_COST + T(" 宝石一个槽位"));
-  if(UI_EN){ $("btnBattle").hidden = true; $("btnOrbShop").hidden = true; }
   const os = $("orbShopSub");
   if(os) os.textContent = T("宝珠 · ") + ORB_PRICE + T(" 宝石一颗，只在战场生效");
   $("tBest").textContent = M.best ? (T("第 ") + M.best + T(" 层")) : "—";
@@ -5309,10 +5306,6 @@ function codexFind(){
 }
 function openCodex(tab){
   cTab = tab || cTab;
-  if(UI_EN && cTab === "bf") cTab = "word";         // 战场没有英文版，那一页也藏起来
-  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
-    if(b.dataset.tab === "bf") b.hidden = UI_EN;
-  });
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
     b.classList.toggle("on", b.dataset.tab === cTab);
   });

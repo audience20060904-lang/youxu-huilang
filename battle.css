@@ -129,6 +129,8 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .btn{flex:1;min-width:104px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;
      border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer;
      text-align:center;text-decoration:none;display:block}
+/* .btn 的 display:block 会盖掉 [hidden] —— 开场的「继续」没存档时要真藏起来（2026-09-23 修）*/
+#btnResume[hidden]{display:none}
 .btn.ghost{background:var(--stone-2);color:var(--dim);border-color:var(--edge)}
 .btn:disabled{opacity:.4;cursor:default}
 /* 材料选满了，「合成」高亮提醒一下（用户 2026-09-22）——

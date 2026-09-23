@@ -137,7 +137,10 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 - **数据表的英文**（遗物 209 件的名字/效果/铭文、怪、章节、路线、难度、品质、类别名）在 `i18n-en.js` 里**按 id 覆盖**，
   `content.js` 一个字没动（战场还要读中文）。遗物英文效果**全表在 360 / 390 宽的五选一卡片上量过两行装得下**，
   改长了照 CLAUDE.md 第 8 条那个「全表量一遍」重测。
-- **战场模式和宝珠没有英文版**：英文界面下主城把「战场」「宝珠商店」、主城的「背包」标签、图鉴「战场遗物」页都藏了。
+- **战场模式和宝珠有英文版**（2026-09-23，原来英文界面下整块藏着，现在放出来了）：`battle.html` 加载 `i18n.js` / `i18n-en.js` / **`i18n-bf.js`**；
+  battle.js 里的界面文字一律 **`L("中文", "English")`**，塔 / 怪 / 特殊遗物 / 难度层的英文在 `i18n-bf.js` 的 `BF_EN`，
+  209 件遗物的战场英文词条在 `i18n-en.js` 的 **`BFW_EN`**（`bfWord()` 读它），宝珠的英文在 `i18n-en.js` 的 `ORB_EN`。
+  ⚠️ **往战场加文字 / 塔 / 怪 / 特殊遗物，英文要同时补**，细节在 `战场模式.md` 第十节「英文版」。
 - **中文词库 `words-zh.js`**：HSK 3.0（2021）**1~6 级 4817 个**（第一批 2682 + 同一天第二批补齐 HSK 1~5 漏掉的和整个 HSK 6，
   用户要「总量 5000 左右」），英文释义**逐条手写**（字典第一义常是冷门义）。难度 1~6 = HSK 1~6，`BYLV` 在学中文时多一个 6 号桶。
   学中文时它把 `WORDS / WMAP / BYCAT / BYPOS / BYLV / ALLW` 整套换掉；**词对象字段名不变**：
@@ -260,7 +263,8 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 | `style.css` | 全部样式，颜色变量在 `:root` |
 | `util.js` | 全局小工具（随机、localStorage 存档、语音朗读），必须最先加载 |
 | `i18n.js` | **多语言核心**（2026-09-23）：定 `LANG_UI` / `LANG_LEARN`、`T()` / `L()`、静态页面翻译 `i18nDom()`。排在 `util.js` 后面、词库前面（`words-zh.js` 要读它）。见「多语言与新手教程」 |
-| `i18n-en.js` | **英文界面的全部文案**：`I18N` 字典（键是中文原文）、整块替换 `I18N_BLOCKS`、遗物/怪/章节等按 id 覆盖。排在 `content.js` / `art.js` 后面、`game.js` 前面。**只有 index.html 加载**（联机固定中文） |
+| `i18n-en.js` | **英文界面的全部文案**：`I18N` 字典（键是中文原文）、整块替换 `I18N_BLOCKS`、遗物/怪/章节等按 id 覆盖。排在 `content.js` / `art.js` 后面、`game.js` 前面。index.html 和 **battle.html** 加载（联机固定中文，不加载）。战场遗物英文 `BFW_EN`、宝珠英文 `ORB_EN` 也在这里 |
+| `i18n-bf.js` | **战场模式的英文**（2026-09-23）：塔 / 怪 / Boss / 特殊遗物 / 难度层按 id 覆盖（`BF_EN`）+ battle.html 静态文案。**只有 battle.html 加载，排在 `battle.js` 后面** |
 | `words-es.js` | **西班牙语词库**（A1~C1，4968 词，名词带冠词）+ 学西语时换掉整套词库全局的那段。**是 `es-words/build.py` 生成的，别手改**（改 `es-words/g1~g5.txt`）。排在 `words-zh.js` 后面（index / coop 都加载 —— `makeCode()` 要读 `ES_WORDS`） |
 | `words-ja.js` | **日语词库**（JLPT N5~N1，4853 词，带假名读音）+ 学日语时换掉整套词库全局的那段。**是 `ja-words/build.py` 生成的，别手改**。排在 `words-es.js` 后面（index / coop 都加载 —— `makeCode()` 要读 `JA_WORDS`） |
 | `words-zh.js` | **中文词库**（HSK 1~6，4817 词，格式多一个拼音）+ 学中文时换掉整套词库全局的那段。生成脚本在 `zh-words/`（不上线） |
@@ -278,7 +282,7 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 | `联机方案.md` | **不上线**，**局域网双人联机的唯一交接文档**：当前进度、已定死的玩法规则、架构与踩过的坑。要做联机、或者用户提到联机，**先读它**；动了联机相关的任何东西，**必须回来改它** |
 | `start-coop.bat` | **不上线**（2026-09-20 加，跟 `server.js` 一个待遇），用户在自己电脑上双击用的：先 `git pull` 拉最新代码，再 `node server.js` 启动联机服务器。⚠️ **文件里必须全是 ASCII**，中文提示走 `type coop-msg-lan.txt`（见下面那条坑）。详见 `联机方案.md`「怎么自动更新到用户电脑」 |
 | `start-coop-fixed.bat` | **不上线**（2026-09-20 加）：**跨网络**联机的入口，跟 `start-coop.bat` **并列的两个入口**（同一个 WiFi 用那个，不同网络用这个）。走 **Tailscale Funnel**：`tailscale funnel --bg 8080` 把 8080 挂到一个**永远不变的** `https://<机器名>.<tailnet>.ts.net` 上，**队友什么都不用装**，地址不变所以**联机存档也不会再换**。⚠️ Funnel 在后台跑，**没有隧道窗口**，只有服务器一个窗口。⚠️ **serve 和 funnel 的域名一模一样**，但 serve 只有自己的设备能开 —— 脚本必须查 `funnel status` 里有没有 `Funnel on`，没有就报警，**别把这个检查去掉**（2026-09-21 踩过：地址框出来了，手机打不开）。⚠️ 跟 `start-coop.bat` 一样：**CRLF + 全 ASCII**，`echo` 里不许有半角括号。⚠️ **cloudflared 那套（`start-coop-online.bat` + `coop-msg-url.txt` + `coop-msg-install.txt`）2026-09-20 已经整套删掉，别重写，要找去 git 历史里翻**。详见 `联机方案.md`「固定地址路线」 |
-| `battle.html` | **战场模式入口**（2026-09-22 加）。独立页面，只加载 `util.js` / `art.js` / `content.js` / `orb.js` / `battle.js` —— **不加载 `game.js`、不加载 `style.css`**，跟地牢完全隔离 |
+| `battle.html` | **战场模式入口**（2026-09-22 加）。独立页面，只加载 `util.js` / `i18n.js` / `art.js` / `content.js` / `orb.js` / `i18n-en.js` / `battle.js` / `i18n-bf.js` —— **不加载 `game.js`、不加载 `style.css`**，跟地牢完全隔离 |
 | `battle.js` | **战场模式全部逻辑**（2026-09-22 加，约 1600 行）：canvas 渲染 + 实体 + 遗物引擎。**唯一说明书是 `战场模式.md`，碰它之前先读那一份** |
 | `battle.css` | 战场专属样式。故意不复用 `style.css`（互不干扰），需要的颜色变量抄了一份 |
 | `战场模式.md` | **不上线**（2026-09-22 加）：战场模式的唯一交接文档 —— 架构、操作、1–10 波怪物完整数值、Boss 技能、209 件遗物的映射表、难度层。**动了战场模式的任何数值，必须回来改它** |
