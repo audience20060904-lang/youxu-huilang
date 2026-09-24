@@ -1090,6 +1090,10 @@ body:has(.veil:not([hidden]):not(.ghost)) .coach{bottom:auto;top:calc(4px + env(
 /* 教程里用不上的两个开关先藏起来（占着位，不挪别的按钮） */
 body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.coach:not([hidden]){animation:none}}
+/* 第一趟的提示：要看的那颗按钮一圈火把色光一直闪（只动 box-shadow，不改尺寸） */
+.tipmark{animation:tipPulse .9s ease-in-out infinite alternate}
+@keyframes tipPulse{from{box-shadow:0 0 0 1px rgba(156,106,16,.35)}to{box-shadow:0 0 0 3px var(--torch)}}
+@media (prefers-reduced-motion:reduce){.tipmark{animation:none;box-shadow:0 0 0 3px var(--torch)}}
 /* 挑母语（第一步）：两颗大按钮并排；挑学习语言（第二步）：一列卡片，以后语言多了就在 .sx 里滚 */
 .nativepick{flex-direction:row;gap:10px}
 .lchip.big{flex:1;font-size:17px;padding:16px 10px}

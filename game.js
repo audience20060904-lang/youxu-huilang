@@ -562,6 +562,8 @@ function nextFloor(){
   if(P.tut){ tutBegin(); commitPerm(); return; }   // 教程关不写续玩档：半路关掉页面，下次重新走一遍
   sayFloorIntro();
   commit(true);          // 存档点之二：下一层
+  const lk = $("btnLockWager"); if(lk) lk.classList.remove("tipmark");   // 「锁定冒险」那一闪只留一层
+  if(G.floor === 1) tip("path");                   // 第一趟的提示：寻路
 }
 /* ===== 联机 · 世界包（第一期）=====
    房主 genFloor() 跑完之后，把这一层「布局共享」的那部分（地图/怪的初始状态/物件/楼梯/出生点）
@@ -1596,6 +1598,7 @@ function startBattle(m){
   renderBattleBars();
   if(P.tut) tutEvent("battle");
   nextQuestion();
+  if(!P.tut) tip("risk", "veilBattle");
 }
 /* Boss 的弱点是**词性**（POS_CN），普通怪的弱点是**类别**（CAT_CN）—— 看 m.weakPos */
 function showWeak(m){
@@ -4806,6 +4809,7 @@ function renderTown(){
 /* 回主城：身上的一切清空，重建一个空角色 */
 function goTown(){
   SCENE = "town";
+  tipOff();
   cancelWalk();
   autoOff();
   B = null; pendingLoot = null; pendingRoom = null; chestQ = null; reopenShop = null; pendingSwap = null;
@@ -4863,6 +4867,7 @@ function askDiff(routeId){
   if(sub) sub.textContent = r.name + " · " + r.tag;
   renderDiffList();
   $("veilDiff").hidden = false;
+  tip("diff", "veilDiff");
 }
 function closeDiff(){
   pendingRoute = null;
@@ -4932,6 +4937,7 @@ function chapterSeenPct(chId){
 }
 function openCave(){
   renderPractice();
+  setTimeout(function(){ tip(["route", "practice"], "veilCave"); }, 0);   // 卡片画完再闪
   const box = $("routeList");
   box.innerHTML = "";
   ROUTES.forEach(function(r){
@@ -5900,6 +5906,7 @@ function mergeData(o){
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
   if(im.tut) M.tut = 1;              // 新手教程：哪边走过都算走过（一个账号一次）
+  if(typeof im.tips === "number") M.tips = (M.tips | 0) | im.tips;   // 第一趟的提示：看过哪条取并集
   /* 每层答题记录（历史平均正确率用的）：两边**相加** ——
      它是「一共答过多少题」，不是进度，取大值会白丢一边的记录。*/
   if(!M.accF) M.accF = {};
@@ -6327,6 +6334,7 @@ function renderLock(){
   b.title = OPT.lock ? T("锁定冒险 · 开：每题自动押上") : T("锁定冒险 · 关");
 }
 $("btnLockWager").addEventListener("click", function(){
+  this.classList.remove("tipmark");
   OPT.lock = !OPT.lock;
   saveOpt();                       // 设置项，立刻落盘（不受三个存档点的限制）
   renderLock();
@@ -7170,6 +7178,7 @@ function coachEl(){
   el.innerHTML = "<div class=\"crow\"><i></i><p></p></div><button type=\"button\" class=\"btn primary\" hidden></button>";
   el.addEventListener("click", function(ev){
     if(ev.target.tagName === "BUTTON") return;
+    if(tipOn){ tipNext(); return; }                 // 第一趟的提示：点一下换下一条
     if(tutStep !== "done") el.hidden = true;       // 点一下收起（最后那一步必须点按钮）
   });
   document.body.appendChild(el);
@@ -7178,6 +7187,7 @@ function coachEl(){
 function coach(key, btn, onBtn){
   const el = coachEl(), t = TUT_TEXT[key];
   if(!t) return;
+  tipClear();
   tutStep = key;
   const i = el.querySelector("i");
   i.textContent = t[0] ? t[0] + "/" + TUT_STEPS : "✓";
@@ -7232,12 +7242,78 @@ function tutEvent(ev){
 }
 function tutFinish(skipped){
   MET.tut = 1;
+  if(typeof MET.tips !== "number") MET.tips = 0;   // 教程之后的第一趟提示：从这儿起才出（老账号没有这个字段，一条都不出）
   commitPerm();                          // 一个账号一次：马上落盘
   const leave = function(){ coachOff(); goTown(); tutChrome(false); };
   if(skipped){ leave(); return; }
   G.paused = true;
   coach("done", L("回到镇上", "Go to town"), leave);
 }
+/* ================= 第一趟的提示（用户 2026-09-24） =================
+   教程只教了打怪；走完以后第一次进洞窟 / 选难度 / 下第一层 / 打第一场，各补一句话。
+   复用教程那个气泡（不带步骤徽章，左边一个「!」），点一下收起或换下一条；要看的按钮跟着闪（.tipmark）。
+   **每条一个账号只出一次**：记在 MET.tips 的位上（跟 tut 一起落盘、合并取并集），
+   ⚠️ MET.tips 只有走过（或跳过）教程才会从 undefined 变成 0 —— 老账号一条都不出，别改成默认 0。
+   ⚠️ 存档码不带它（换设备后就当老账号，不再出提示），故意的。
+   加一条：TIP_TEXT 抄一行（位号往后排）+ 在该出的地方 tip("键")。一句话、别超过一行（390 宽中文 ≤ 18 字）。*/
+const TIP_TEXT = {
+  route:    [0, "第一次先走<b>「石廊」</b>，词最简单。",
+                "Start with <b>Stone Hall</b>: easiest words."],
+  practice: [1, "开<b>「练习模式」</b>几乎不掉血。",
+                "<b>Practice mode</b>: you barely lose HP."],
+  diff:     [2, "<b>A 最难，D 最松</b>，每次进洞都能重选。",
+                "<b>A is hardest, D easiest.</b> Pick each run."],
+  path:     [3, "点左下<b>「寻路」</b>，自动打怪捡钱。",
+                "Tap <b>Path</b> (bottom-left) to auto-fight."],
+  risk:     [4, "有把握再<b>「冒险」</b>，答错掉两倍血。",
+                "<b>Risk it</b> if sure: 2× damage, or 2× hurt."]
+};
+const TIP_MARK = { route:function(){ return document.querySelector("#routeList .route:not(.off)"); },
+                   practice:function(){ return $("btnPractice"); },
+                   path:function(){ return $("btnPathfind"); },
+                   risk:function(){ return $("btnWager"); } };
+let tipOn = "", tipQ = [], tipWatch = null;
+function tipSeen(k){ return typeof MET.tips !== "number" || !!(MET.tips & (1 << TIP_TEXT[k][0])); }
+function tipUnmark(){ document.querySelectorAll(".tipmark").forEach(function(e){ e.classList.remove("tipmark"); }); }
+function tipClear(){
+  tipOn = ""; tipQ = []; tipUnmark();
+  if(tipWatch){ tipWatch.disconnect(); tipWatch = null; }
+}
+/* 排一串提示；veilId 给了的话，那个弹层一关气泡就跟着收（选完路线、关掉洞窟都不该留着它）。*/
+function tip(keys, veilId){
+  if(COOP || (P && P.tut)) return;
+  keys = [].concat(keys).filter(function(k){ return !tipSeen(k); });
+  if(!keys.length) return;
+  tipClear();
+  tipQ = keys;
+  if(veilId && $(veilId) && window.MutationObserver){
+    tipWatch = new MutationObserver(function(){
+      if(!$(veilId).hidden) return;
+      const was = tipOn;
+      tipClear(); coachOff();
+      /* 讲完「冒险」，打完这一场让右下角的「锁定冒险」闪一下（不另出一条字，到下一层就停） */
+      if(was === "risk"){ const lk = $("btnLockWager"); if(lk) lk.classList.add("tipmark"); }
+    });
+    tipWatch.observe($(veilId), {attributes:true, attributeFilter:["hidden"]});
+  }
+  tipNext();
+}
+function tipNext(){
+  tipUnmark();
+  const k = tipQ.shift();
+  if(!k){ tipClear(); coachOff(); return; }
+  const el = coachEl(), t = TIP_TEXT[k];
+  tipOn = k; tutStep = "";
+  MET.tips |= 1 << t[0];
+  commitPerm();                          // 看过就算：马上落盘
+  el.querySelector("i").textContent = "!";
+  el.querySelector("p").innerHTML = UI_EN ? t[2] : t[1];
+  el.querySelector("button").hidden = true;
+  el.hidden = false;
+  const m = TIP_MARK[k] && TIP_MARK[k]();
+  if(m) m.classList.add("tipmark");
+}
+function tipOff(){ if(tipOn){ tipClear(); coachOff(); } }
 $("btnTutorial").addEventListener("click", function(){
   if(SCENE === "run" && G && !G.over){ toast(L("先回镇上再重走教程。", "Return to town to replay the tutorial.")); return; }
   startTutorial();
