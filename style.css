@@ -1067,14 +1067,28 @@ a.place{text-decoration:none}
 #rateRow .lchip{flex:1}
 
 /* 教程的小气泡：钉在屏幕顶上，压过所有弹层（战斗窗里也要看得见）。点一下收起。 */
-.coach{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);
+/* 新手教程的气泡（用户 2026-09-24 改成「一步一句」）：左边「2/5」，右边一句话。
+   地图上贴在底部（盖住日志栏，顶上的血量 / 金币照样看得见）；
+   战斗、挑遗物这些弹层开着时挪到顶上（底下是血条和按钮）。 */
+.coach{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
   width:min(calc(100% - 24px),420px);z-index:70;background:#FFFBF0;border:1px solid var(--torch-deep);
   border-left:4px solid var(--torch);border-radius:3px;padding:9px 12px;
-  box-shadow:0 6px 18px rgba(60,40,10,.18);font-size:13.5px;line-height:1.45;color:var(--bone);cursor:pointer}
-.coach p{margin:0}
+  box-shadow:0 6px 18px rgba(60,40,10,.18);font-size:14px;line-height:1.45;color:var(--bone);cursor:pointer}
+body:has(.veil:not([hidden]):not(.ghost)) .coach{bottom:auto;top:calc(4px + env(safe-area-inset-top,0px));padding:6px 10px;font-size:13px}
+.coach .crow{display:flex;align-items:center;gap:10px}
+.coach i{flex:none;font-style:normal;font-family:var(--mono);font-size:12px;font-weight:700;
+  color:#fff;background:var(--torch);border-radius:10px;padding:2px 7px;letter-spacing:.04em}
+.coach p{margin:0;flex:1}
 .coach .btn{margin-top:8px;width:100%}
 .coach:not([hidden]){animation:coachIn .22s ease-out}
-@keyframes coachIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes coachIn{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+/* 这一步要点的那一格：一圈火把色的框一直闪 */
+.c.tutmark::before{content:"";position:absolute;inset:3%;border:2px solid var(--torch);border-radius:5px;
+  background:rgba(156,106,16,.14);pointer-events:none;animation:tutPulse .9s ease-in-out infinite alternate}
+@keyframes tutPulse{from{opacity:.35;transform:scale(.9)}to{opacity:1;transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){.c.tutmark::before{animation:none}}
+/* 教程里用不上的两个开关先藏起来（占着位，不挪别的按钮） */
+body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.coach:not([hidden]){animation:none}}
 /* 挑母语（第一步）：两颗大按钮并排；挑学习语言（第二步）：一列卡片，以后语言多了就在 .sx 里滚 */
 .nativepick{flex-direction:row;gap:10px}

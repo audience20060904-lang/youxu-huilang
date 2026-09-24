@@ -1089,6 +1089,7 @@ function thingAt(x,y){
 }
 function render(){
   const cleared = G.mobs.length === 0;
+  const tutAt = (P && P.tut) ? tutTarget() : null;
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const c = cells[y*W + x];
     const isGoal = G.goal && G.goal.x === x && G.goal.y === y;
@@ -1134,6 +1135,7 @@ function render(){
     if(art) c.innerHTML = art; else c.textContent = glyph;
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
+    if(tutAt && tutAt.x === x && tutAt.y === y) c.classList.add("tutmark");   // 新手教程：这一步要点的那一格
   }
   // 联机：队友棋子（逻辑不占格子，纯视觉叠一层在队友最后上报的位置上，见 coopMateX/Y）
   if(COOP && coopMateX != null && coopMateY != null &&
@@ -6431,6 +6433,7 @@ $("btnCloseDiff").addEventListener("click", closeDiff);
 if(COOP) $("btnCaveConfirm").addEventListener("click", coopConfirmEnter);
 /* 取景框左下角的「放弃」：两步确认 —— 手滑点掉一趟很伤 */
 let abandonArmed = 0;
+function abandonText(){ return (P && P.tut && SCENE === "run") ? L("跳过教程", "Skip") : T("放弃"); }
 $("btnAbandon").addEventListener("click", function(){
   const b = this;
   if(Date.now() > abandonArmed){
@@ -6438,12 +6441,12 @@ $("btnAbandon").addEventListener("click", function(){
     b.textContent = T("再点一次");
     b.classList.add("armed");
     setTimeout(function(){
-      if(Date.now() > abandonArmed){ b.textContent = T("放弃"); b.classList.remove("armed"); }
+      if(Date.now() > abandonArmed){ b.textContent = abandonText(); b.classList.remove("armed"); }
     }, 4100);
     return;
   }
   abandonArmed = 0;
-  b.textContent = T("放弃");
+  b.textContent = abandonText();
   b.classList.remove("armed");
   autoOff();
   giveUpRun();       // 直接结算：算分、发宝石、弹结算窗
@@ -7128,36 +7131,43 @@ function tutQuestionType(asked){
   if(tutBattles >= 2 && asked === 1) return "spell";
   return (asked % 2 === 1) ? "en2zh" : "zh2en";
 }
+/* 五步，每一步只教一件事（用户 2026-09-24：「新手教程还是很模糊，keep simple and clear」）：
+   1 捡金币 → 2 打第一只怪 → 3 打第二只（先考一道拼写）→ 4 挑遗物 → 5 走上阶梯。
+   气泡左边一个「2/5」，写这一步要干什么；要点的那一格在地图上一直闪（tutTarget()）。
+   一句话一个意思，别再往一条提示里塞两件事（原来「连击 + 冒险」挤在一条里，读不完就被下一条顶掉了）。*/
 const TUT_TEXT = {
-  walk:  ["欢迎来到幽墟回廊。<b>点地图上的格子</b>就能走过去 —— 先去捡那堆金币。",
-          "Welcome to the Youxu Corridors. <b>Tap a tile on the map</b> to walk there — first grab the pile of gold."],
-  gold:  ["金币能在路上的游商那儿换遗物。现在<b>走到那只老鼠身上</b>，开打。",
-          "Gold buys relics from merchants along the way. Now <b>walk into the rat</b> to fight it."],
-  fight: ["每一回合一道题：<b>答对你砍它一刀，答错它咬你一口</b>。选出这个词的意思。",
-          "Each round is one question: <b>answer right and you strike, wrong and it bites</b>. Pick what the word means."],
-  right: ["连着答对会<b>攒连击</b>，伤害跟着涨。很有把握时点<b>「冒险」</b>：对了伤害翻倍，错了挨打也翻倍。",
-          "Right answers in a row build your <b>combo</b> for more damage. When you're sure, tap <b>Risk</b>: double damage if right, double hurt if wrong."],
-  wrong: ["答错不要紧 —— 这个词记进<b>心魔</b>，过一会儿还会回来考你。答对就能赶走它。",
-          "Wrong is fine — the word becomes a <b>haunt</b> and comes back later. Get it right to banish it."],
-  kill:  ["打倒怪物拿<b>经验和金币</b>。把这一层的怪全清掉，阶梯才会出现 —— 还剩一只。",
-          "Monsters give <b>XP and gold</b>. Clear every monster and the stairs appear — one left."],
-  spell: ["有时候要你<b>自己把词拼出来</b>：按顺序点下面的字母。拼对了连击 +10、经验翻倍。",
-          LEARN_ZH ? "Sometimes you <b>build the word yourself</b>: tap the characters in order (pinyin is the hint). Get it right for combo +10 and double XP."
-          : LEARN_JA ? "Sometimes you <b>spell the reading yourself</b>: tap the kana in order (the kanji is the hint). Get it right for combo +10 and double XP."
-                   : "Sometimes you <b>spell the word yourself</b>: tap the letters in order (accents count). Get it right for combo +10 and double XP."],
-  clear: ["这一层清空了！清完一层可以<b>挑一件遗物</b> —— 这一趟变强全靠它们。",
-          "Floor cleared! Each cleared floor lets you <b>pick a relic</b> — relics are how you grow stronger."],
-  relic: ["阶梯 <b>▼</b> 出现在最后一只怪倒下的地方。<b>走上去</b>就完成教程。",
-          "The stairs <b>▼</b> appeared where the last monster fell. <b>Step on them</b> to finish the tutorial."],
-  done:  ["教程完成！回镇上点<b>「洞窟」</b>，选第一章正式下去。遗物和金币只在一趟里有用，带回镇上的是<b>宝石</b>。",
-          "Tutorial complete! In town, tap <b>Caves</b> and pick Chapter 1 to begin for real. Relics and gold last one run; what you bring home is <b>gems</b>."]
+  walk:  [1, "点一下<b>金币</b>，走过去捡起来。",
+             "Tap the <b>gold</b> to walk over and pick it up."],
+  gold:  [2, "点一下<b>怪物</b>，开始战斗。",
+             "Tap a <b>monster</b> to fight it."],
+  fight: [2, "选出意思：<b>答对你砍它，答错它咬你</b>。",
+             "<b>Right</b>: you hit it. <b>Wrong</b>: it bites you."],
+  right: [2, "答对了！<b>连着答对</b>，伤害越来越高。",
+             "Correct! <b>Keep a streak</b> for more damage."],
+  wrong: [2, "答错会掉血。这个词<b>过一会儿还会再考</b>。",
+             "Wrong costs HP. This word <b>comes back later</b>."],
+  kill:  [3, "打倒一只！再去打<b>另一只</b>。",
+             "One down! Now fight <b>the other one</b>."],
+  spell: [3, LEARN_ZH ? "拼写题：<b>按顺序点汉字</b>，拼出这个词。"
+           : LEARN_JA ? "拼写题：<b>按顺序点假名</b>，拼出读音。"
+                      : "拼写题：<b>按顺序点字母</b>，拼出这个词。",
+          LEARN_ZH ? "Spelling: <b>tap the characters in order</b>."
+          : LEARN_JA ? "Spelling: <b>tap the kana in order</b>."
+                     : "Spelling: <b>tap the letters in order</b>."],
+  clear: [4, "清空了！<b>挑一件遗物</b>，让你变强。",
+             "Floor cleared! <b>Pick a relic</b> to get stronger."],
+  relic: [5, "阶梯 ▼ 出现了，<b>走上去</b>就完成教程。",
+             "Stairs ▼ appeared. <b>Step on them</b> to finish."],
+  done:  [0, "教程完成！回镇上点<b>「洞窟」</b>开始冒险。",
+             "All done! In town, tap <b>Caves</b> to start."]
 };
+const TUT_STEPS = 5;
 function coachEl(){
   let el = $("coach");
   if(el) return el;
   el = document.createElement("div");
   el.id = "coach"; el.className = "coach"; el.hidden = true;
-  el.innerHTML = "<p></p><button type=\"button\" class=\"btn primary\" hidden></button>";
+  el.innerHTML = "<div class=\"crow\"><i></i><p></p></div><button type=\"button\" class=\"btn primary\" hidden></button>";
   el.addEventListener("click", function(ev){
     if(ev.target.tagName === "BUTTON") return;
     if(tutStep !== "done") el.hidden = true;       // 点一下收起（最后那一步必须点按钮）
@@ -7169,18 +7179,43 @@ function coach(key, btn, onBtn){
   const el = coachEl(), t = TUT_TEXT[key];
   if(!t) return;
   tutStep = key;
-  el.querySelector("p").innerHTML = UI_EN ? t[1] : t[0];
+  const i = el.querySelector("i");
+  i.textContent = t[0] ? t[0] + "/" + TUT_STEPS : "✓";
+  el.querySelector("p").innerHTML = UI_EN ? t[2] : t[1];
   const b = el.querySelector("button");
   b.hidden = !btn;
   if(btn){ b.textContent = btn; b.onclick = onBtn; }
   el.hidden = false;
+  if(G && G.map) render();             // 地图上要点的那一格跟着这一步换
 }
 function coachOff(){ const el = $("coach"); if(el) el.hidden = true; }
+/* 这一步要点地图上哪一格（render() 给它挂 .tutmark，一直闪）：
+   捡金币 → 那堆金币；打怪 → 最近的一只；挑完遗物 → 阶梯。别的步骤不闪。*/
+function tutTarget(){
+  if(!P || !P.tut || !G || !G.mobs) return null;
+  if(tutStep === "walk"){
+    const g = G.things.find(function(t){ return t.kind === "gold"; });
+    if(g) return g;
+  }
+  if(tutStep === "walk" || tutStep === "gold" || tutStep === "kill"){
+    let best = null, bd = 1e9;
+    G.mobs.forEach(function(m){ const d = Math.abs(m.x - P.x) + Math.abs(m.y - P.y); if(d < bd){ bd = d; best = m; } });
+    return best;
+  }
+  if(tutStep === "relic" && !G.mobs.length) return G.stair;
+  return null;
+}
+function tutChrome(on){
+  document.body.classList.toggle("tutmode", !!on);
+  $("btnAbandon").textContent = abandonText();
+}
 function tutBegin(){
   say(L("—— 新手教程 ——", "— Tutorial —"), "crit");
+  tutChrome(true);
   coach("walk");
 }
-/* 按事件推进：每一条提示只出一次（先打第二只再回来捡钱也不会倒着冒出来）。*/
+/* 按事件推进：每一条提示只出一次（先打怪再回来捡钱也不会倒着冒出来）。
+   第一只怪只讲一次「答对 / 答错」—— 哪个先发生讲哪个，另一个不再讲，免得两条挨着互相顶掉。*/
 let tutShown = {};
 function tutEvent(ev){
   if(!P || !P.tut) return;
@@ -7190,8 +7225,7 @@ function tutEvent(ev){
     tutBattles++;
     once(tutBattles === 1 ? "fight" : "spell");
   }
-  else if(ev === "right"){ if(tutBattles === 1) once("right"); }
-  else if(ev === "wrong"){ if(tutBattles === 1) once("wrong"); }
+  else if((ev === "right" || ev === "wrong") && tutBattles === 1 && !tutShown.right && !tutShown.wrong) once(ev);
   else if(ev === "kill") once("kill");
   else if(ev === "clear") once("clear");
   else if(ev === "relic") once("relic");
@@ -7199,9 +7233,10 @@ function tutEvent(ev){
 function tutFinish(skipped){
   MET.tut = 1;
   commitPerm();                          // 一个账号一次：马上落盘
-  if(skipped){ coachOff(); goTown(); return; }
+  const leave = function(){ coachOff(); goTown(); tutChrome(false); };
+  if(skipped){ leave(); return; }
   G.paused = true;
-  coach("done", L("回到镇上", "Go to town"), function(){ coachOff(); goTown(); });
+  coach("done", L("回到镇上", "Go to town"), leave);
 }
 $("btnTutorial").addEventListener("click", function(){
   if(SCENE === "run" && G && !G.over){ toast(L("先回镇上再重走教程。", "Return to town to replay the tutorial.")); return; }
