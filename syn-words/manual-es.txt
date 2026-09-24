@@ -1,0 +1,28 @@
+# 西语：自动规则抓不到的近义词组（一行一组，空格隔开；跨难度的写了也无害，生成时会滤掉）
+bonito hermoso guapo precioso
+terminar acabar
+rápido veloz
+hablar decir charlar
+mirar ver observar
+grande enorme gigante
+pequeño chico diminuto
+contento feliz alegre
+triste deprimido
+enfadado furioso
+elegir escoger
+quizás acaso
+ayudar asistir
+casa hogar
+difícil duro
+fácil sencillo simple
+arreglar reparar
+viaje excursión
+error fallo
+piedra roca
+mar océano
+cansado agotado
+listo inteligente
+comprar adquirir
+contestar responder
+pedir solicitar
+camino calle carretera sendero

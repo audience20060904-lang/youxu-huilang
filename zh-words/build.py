@@ -108,7 +108,7 @@ def synonyms(rows):
     m=collections.defaultdict(set)
     for a,b in pairs: m[rows[min(a,b)][0]].add(rows[max(a,b)][0])          # 只存一个方向，game.js 读的时候两边都挂上
     print('近义词：', len(pairs), '对')
-    return {k:' '.join(sorted(v)) for k,v in sorted(m.items())}
+    return {k:'|'.join(sorted(v)) for k,v in sorted(m.items())}
 
 def read_past(rows):
     """replaced.txt：原位换掉的词（下标|旧词|新词）→ ZH_PAST（老存档码按旧词算校验，game.js 的 lexList() 读它）"""
@@ -129,7 +129,7 @@ def write_js(rows):
     past = read_past(rows)
     tail = tail.replace('\n];\n', '\n];\n\n/* 原位换掉过的词（下标 → 旧词，zh-words/replaced.txt 生成）：老存档码的校验按旧词算，game.js 的 lexList() 用它 */\n'
                         'var ZH_PAST = [' + json.dumps({str(k): v for k, v in sorted(past.items())}, ensure_ascii=False) + '];\n'
-                        '\n/* 近义词（下标无关，按词存；空格隔开）：四选一里不让它们同框，game.js 的 nearSyn() 读它。build.py 的 synonyms() 生成 */\n'
+                        '\n/* 近义词（下标无关，按词存；| 隔开）：四选一里不让它们同框，game.js 的 nearSyn() 读它。build.py 的 synonyms() 生成 */\n'
                         'var ZH_SYN = ' + json.dumps(synonyms(rows), ensure_ascii=False) + ';\n', 1)
     with open(os.path.join(HERE, '..', 'words-zh.js'), 'w', encoding='utf-8') as f:
         f.write(head + body + tail)

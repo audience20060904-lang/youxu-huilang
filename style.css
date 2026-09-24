@@ -409,8 +409,11 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   background:var(--stone);border:1px solid var(--edge);color:var(--frost);border-radius:50%;
   font-size:14px;cursor:pointer;font-family:var(--body);display:grid;place-items:center}
 .spk:hover{border-color:var(--frost)}
-/* 心魔标签也是半路才出现的，藏起来时照样占位 —— 免得每题窗高都在跳。别改回 display:none。 */
-.haunt[hidden]{display:block !important;visibility:hidden;pointer-events:none}
+/* 心魔标签是半路才出现的：**浮在题卡顶上、盖住「这个词是什么意思？」那一行**，不占纵向空间。
+   ⚠️ 以前这里写「藏起来时照样占位」，可后面（.haunt 那条旁边）又有一条 display:none 把它盖掉了 ——
+   心魔一出现题卡就长高一截，血条被挤出战斗窗（用户 2026-09-24 报的「血条显示不完整」）。
+   现在出心魔时 game.js 给 .qcard 挂 .haunted，把 qlabel 藏掉（visibility，照样占位），标签绝对定位压在它的位置上。 */
+.qcard.haunted .qlabel{visibility:hidden}
 
 /* 四个选项排成 2×2 的正方块。宽度用 vh 卡住，免得矮屏上两行方块把弹窗顶出去。
    ⚠️ 方块是正方形，所以**这条宽度上限就是选项区的高度上限** —— 它是战斗窗唯一的调节阀。
@@ -783,7 +786,8 @@ a.place{text-decoration:none}
 .fbar.mate{opacity:.5;margin-top:3px}
 .haunt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--blood);
   background:#F7E3DE;border:1px solid #E2BEB6;border-radius:2px;
-  padding:2px 7px;align-self:center;margin-bottom:2px}
+  padding:1px 7px;position:absolute;left:50%;transform:translateX(-50%);
+  top:calc(clamp(8px,1.6vh,16px) - 3px);white-space:nowrap;max-width:calc(100% - 80px);overflow:hidden;text-overflow:ellipsis;z-index:1}
 .haunt[hidden]{display:none !important}
 .wagerrow{display:flex;justify-content:center}
 .wager{width:100%;display:flex;flex-direction:column;align-items:center;gap:1px;

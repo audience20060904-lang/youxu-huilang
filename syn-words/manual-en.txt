@@ -1,0 +1,55 @@
+# 英语：WordNet 和中文释义都抓不到的近义词组（一行一组，空格隔开；跨难度的写了也无害，生成时会滤掉）
+road street way path
+pretty beautiful lovely
+speak talk say tell
+look see watch
+big large huge great
+small little tiny
+quick fast rapid
+happy glad cheerful
+sad unhappy upset
+angry mad cross
+start begin
+end finish stop
+shut close
+buy purchase
+sick ill
+smart clever bright
+rich wealthy
+shop store
+kid child
+choose pick select
+often frequently usually
+maybe perhaps possibly
+help assist aid
+scared afraid frightened
+gift present
+job work career
+house home
+answer reply
+ask question
+correct right
+wrong incorrect false
+hard difficult
+easy simple
+near close
+far distant
+fix repair mend
+trip journey travel
+enjoy like love
+hate dislike
+empty vacant
+fast rapid swift
+strong powerful mighty
+weak feeble
+sleepy tired
+cold chilly cool
+hot warm
+rubbish garbage waste
+film movie
+autumn fall
+holiday vacation
+shout yell scream cry
+rock stone
+sea ocean
+mistake error fault

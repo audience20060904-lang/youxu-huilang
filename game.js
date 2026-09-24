@@ -1850,20 +1850,24 @@ function timeUp(){
   if(P.hp <= 0){ B.locked = true; setTimeout(function(){ finishBattle(false); }, 480); return; }
   startQTimer();          // 题不换，读条重新开始
 }
-/* 四选一不让近义词同框（用户 2026-09-24）：学中文时查 words-zh.js 的 ZH_SYN（build.py 算的 + synonyms.txt 手写的）；
-   任何语言都再比一次释义主干（去掉括号和 to/a/the）—— "shirt" 和 "shirt (top)"、"生气" 和 "生气（的）" 这种。*/
+/* 四选一不让近义词同框（用户 2026-09-24：「词 4 选一时不要出现近义词」「所有语言都要优化近义词」）。
+   表是离线算好的：学中文查 words-zh.js 的 ZH_SYN（zh-words/build.py），英语 / 西语 / 日语查 syn.js 的 SYN_EN / SYN_ES / SYN_JA
+   （syn-words/build.py）。格式都是 {词: "近义词1|近义词2"}、只存一个方向，这里两边都挂上。
+   另外任何语言都再比一次释义主干（去掉括号和 to/a/the）—— "shirt" 和 "shirt (top)" 这种。*/
 let synMap = null;
 function synIndex(){
   if(synMap) return synMap;
   synMap = {};
-  if(LANG_LEARN === "zh" && typeof ZH_SYN !== "undefined"){
-    Object.keys(ZH_SYN).forEach(function(a){
-      ZH_SYN[a].split(" ").forEach(function(b){
-        (synMap[a] = synMap[a] || {})[b] = true;
-        (synMap[b] = synMap[b] || {})[a] = true;
-      });
+  const t = LANG_LEARN === "zh" ? (typeof ZH_SYN !== "undefined" ? ZH_SYN : null)
+          : LANG_LEARN === "es" ? (typeof SYN_ES !== "undefined" ? SYN_ES : null)
+          : LANG_LEARN === "ja" ? (typeof SYN_JA !== "undefined" ? SYN_JA : null)
+          : (typeof SYN_EN !== "undefined" ? SYN_EN : null);
+  if(t) Object.keys(t).forEach(function(a){
+    t[a].split("|").forEach(function(b){
+      (synMap[a] = synMap[a] || {})[b] = true;
+      (synMap[b] = synMap[b] || {})[a] = true;
     });
-  }
+  });
   return synMap;
 }
 function synHead(s){
@@ -1894,6 +1898,7 @@ function nextQuestion(){
   // 「锁定冒险」开着就每题自动押上（拼写题除外，那题本来就不给冒险）
   B.wager = !!OPT.lock && type !== "spell";
   $("qHaunt").hidden = !B.q.haunted;
+  $("qcard").classList.toggle("haunted", !!B.q.haunted);   // 标签浮在 qlabel 的位置上，不占高度（见 style.css）
   const wr = $("wagerRow"), wb = $("btnWager");
   wb.classList.toggle("on", B.wager);
   wb.disabled = false;
