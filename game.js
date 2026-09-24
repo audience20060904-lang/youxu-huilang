@@ -5460,6 +5460,21 @@ function wordsHash(n, list){
   for(let i=0;i<n;i++) a.push(list[i][0]);
   return hash16(a);
 }
+/* 读码时认哪一份词表：校验对上现在这份就用它；中文词库 2026-09-24 原位换过一批词（ZH_PAST，见 words-zh.js），
+   老码是按旧词算的校验 —— 拿旧词替回去再算一遍，对上了就按旧词当键读回来（旧词的熟练度留着不用，不会串到新词上）。
+   都对不上返回 null。*/
+function lexList(n, list, h){
+  if(n > list.length) return null;
+  if(wordsHash(n, list) === h) return list;
+  if(typeof ZH_WORDS !== "undefined" && list === ZH_WORDS && typeof ZH_PAST !== "undefined"){
+    for(let k=0;k<ZH_PAST.length;k++){
+      const past = ZH_PAST[k];
+      const alt = list.slice(0, n).map(function(w, i){ return past[i] ? [past[i]] : w; });
+      if(wordsHash(n, alt) === h) return alt;
+    }
+  }
+  return null;
+}
 function relicsHash(n){
   const a = [];
   for(let i=0;i<n;i++) a.push(RELICS[i].id);
@@ -5556,13 +5571,13 @@ function codeIO(io){
   /* 一门语言的熟练度：词数 + 前缀校验 + 哪些词有记录 + 每个词（见过几次 → 熟练度 → 上次错没错，前一个给后一个当上下文）*/
   function lex(list, pre){
     const n = io.num("wn", list.length), h = io.raw(E ? wordsHash(n, list) : 0, 16);
-    const ok = E || (n <= list.length && wordsHash(n, list) === h);
+    const got = E ? list : lexList(n, list, h), ok = !!got;
     io.set("w", n, E ? list.map(function(w){ return !!LEX[pre + w[0]]; }) : null).forEach(function(i){
       const rec = E ? LEX[pre + list[i][0]] : {};
       const seen = io.num("ws", rec.seen);
       const str = Math.min(5, io.sym("wt" + Math.min(seen, 4), Math.max(0, Math.min(5, rec.str || 0)), 3));
       const wrong = io.bit("wr" + str + (seen > 1 ? "+" : ""), (rec.wrong || 0) > 0);
-      if(!E && ok) out.lex[pre + list[i][0]] = {str:str, seen:seen, wrong:wrong};
+      if(!E && ok) out.lex[pre + got[i][0]] = {str:str, seen:seen, wrong:wrong};
     });
     if(!ok) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
   }
@@ -5720,13 +5735,13 @@ function getSet(r, n){
 /* 一门语言的熟练度：nWords + 前缀校验 + 稀疏表 + 每词 7 bit（熟练度 3 + 错没错 1 + 见过几次 3，7 = 逃逸）*/
 function getLex(r, list, out, pre, notes){
   const nW = r.vint(), wh = r.vint();
-  const ok = (nW <= list.length && wordsHash(nW, list) === wh);
+  const got = lexList(nW, list, wh), ok = !!got;
   const idx = getSet(r, nW);
   for(let k=0;k<idx.length;k++){
     const str = r.bits(3), wrong = r.bits(1);
     let seen = r.bits(3);
     if(seen === 7) seen = 7 + r.vint();
-    if(ok) out[(pre || "") + list[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
+    if(ok) out[(pre || "") + got[idx[k]][0]] = {str:str, seen:seen, wrong:wrong};
   }
   if(!ok) notes.push(T("词库变过了，这串码里的熟练度跳过了"));
 }

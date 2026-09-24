@@ -5,7 +5,7 @@
 定|to fix (decide)|ve
 首|first (head)|ad
 不管|no matter|av
-停下|to stop (halt)|ve
+戴|to wear (hat, glasses)|ve||dài
 共|together (total)|av
 机构|institution|pl
 型|model (type)|th
@@ -14,7 +14,7 @@
 牌|card (sign)|th
 俩|two (people)|nu
 投入|to put into|ve
-手里|in hand|pl
+阳台|balcony|pl||yángtái
 处于|to be in (a state)|ve
 人家|others (other people)|pe||rénjia
 在于|to lie in|ve
@@ -47,7 +47,7 @@
 末|end (tip)|ti
 大陆|mainland|pl||dàlù
 唱片|record (music)|th
-眼里|in one's eyes|bo
+辣|spicy|ad||là
 不在乎|to not care|fe|v
 多年|many years|ti
 多次|many times|av
@@ -62,7 +62,7 @@
 器官|organ (body)|bo
 前途|prospects|th
 被迫|to be forced|ve
-台上|on stage|pl
+咸|salty|ad||xián
 获取|to gain|ve
 担保|to guarantee (vouch)|ve
 品质|quality (character)|th
@@ -72,7 +72,7 @@
 含有|to contain (have)|ve
 收益|earnings|th
 潮|tide (damp)|na
-拉开|to pull open|ve
+晒|to dry in the sun|ve||shài
 大规模|large-scale (massive)|ad
 善于|to be good at|ve
 大多|mostly|av
@@ -117,7 +117,7 @@
 符号|symbol|th
 节省|to save (economize)|ve
 以内|within|pl
-多种|many kinds|nu
+厘米|centimeter|nu|num|límǐ
 型号|model number|th
 新型|new type|ad
 两边|both sides|pl
@@ -262,7 +262,7 @@
 纯净水|purified water|fo
 填空|to fill in the blank|ve
 学时|class hour|ti
-穿上|to put on|ve
+摇|to shake (wave)|ve||yáo
 翻译|to translate|ve
 高铁|high-speed rail|th
 模特儿|model (fashion)|pe

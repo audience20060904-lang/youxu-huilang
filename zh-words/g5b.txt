@@ -106,7 +106,7 @@
 外界|the outside world|pl
 带有|to bear (carry)|ve
 签约|to sign a contract|ve
-城里|in town|pl
+屋|house (room)|pl||wū
 职务|duties (post)|th
 深度|depth|th
 将要|going to|av
@@ -205,7 +205,7 @@
 周期|cycle (period)|ti
 直线|straight line|th
 拆除|to dismantle|ve
-递给|to pass to|ve
+剪|to cut (with scissors)|ve||jiǎn
 摩擦|friction|th
 形态|form (shape)|th
 不曾|never (have not)|av
@@ -355,7 +355,7 @@
 平坦|flat (level)|ad
 工艺品|handicraft|th
 天文|astronomy|th
-岸上|on shore|pl
+岸|shore (bank)|pl||àn
 朗读|to read aloud (recite)|ve
 大纲|outline (syllabus)|th
 胶水|glue|th
@@ -376,7 +376,7 @@
 池子|pond (pool)|na
 扇子|fan|th
 不免|unavoidably|av
-起到|to bring about (an effect)|ve
+滑|slippery|ad||huá
 虚心|modest (open-minded)|ad
 救灾|disaster relief|ve
 个儿|height (size)|bo

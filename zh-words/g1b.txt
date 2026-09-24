@@ -15,11 +15,11 @@
 一边|one side|pl
 进去|to go in|ve
 地点|location|pl
-车上|in the car|pl
+那边|over there|pl||nàbiān
 考|to take a test|ve
 记住|to memorize|ve
 学院|college|pl
-在家|to be at home|ve
+笑|to laugh|ve||xiào
 上次|last time|ti
 不大|not very|av
 门票|admission ticket|th

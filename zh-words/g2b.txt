@@ -5,8 +5,8 @@
 只能|can only|av
 离|to be away from|ve||lí
 就要|about to|av
-正是|precisely|av
-交给|to hand to|ve
+正好|just right (timely)|av||zhènghǎo
+怕|to fear|ve||pà
 接到|to receive (a call)|ve
 好多|a good many|nu
 多么|how (so very)|av
@@ -18,7 +18,7 @@
 多久|how long|ti
 好事|good deed|th
 提到|to mention|ve
-送给|to give (as a gift)|ve
+留|to stay (keep)|ve||liú
 接下来|next up|av
 以外|apart from|pl
 全体|all members|pe
@@ -26,7 +26,7 @@
 好人|good person|pe
 影片|film|th
 例如|for instance|av
-大大|greatly|av
+这么|so (like this)|av||zhème
 大小|size|th
 青少年|adolescents|pe
 姓名|full name|th
@@ -34,17 +34,17 @@
 一部分|a portion|nu
 多数|the greater number|nu
 教学|teaching|th|n|jiàoxué
-拿到|to get hold of|ve
+查|to look up (check)|ve||chá
 从小|since childhood|av
 不满|dissatisfied|fe
 快要|almost (soon)|av
 常见|commonly seen|ad
 少数|minority|nu
-走过|to walk past|ve
+碰|to touch (bump)|ve||pèng
 得出|to arrive at|ve
 出租|to rent out|ve
 老是|keeps on (always)|av
-天上|in the sky|na
+雪|snow|na||xuě
 路边|roadside|pl
 难题|tough question|th
 院长|dean|pe
@@ -57,12 +57,12 @@
 老朋友|old friend|pe
 笔记|notes|th
 休假|to take leave|ve
-送到|to deliver to|ve
+举|to hold up (lift)|ve||jǔ
 老年|old age|ti
 常用|in common use|ad
 里头|in there|pl
 日报|daily paper|th
-走进|to walk into|ve
+提|to carry (by hand)|ve||tí
 词语|words and phrases|th
 体育场|stadium|pl
 组长|group leader|pe
@@ -71,7 +71,7 @@
 站住|halt!|ve
 开机|to switch on|ve
 碰见|to bump into|ve
-拿出|to take out|ve
+占|to take up (occupy)|ve||zhàn
 中餐|Chinese food|fo
 全年|the whole year|ti
 球鞋|sneakers|th
@@ -114,5 +114,5 @@
 银行卡|bank card|th
 有点儿|a bit|av
 有意思|interesting|ad
-挺好|pretty good|ad
-找出|to find out|ve
+平|flat (level)|ad||píng
+背|to memorize (recite)|ve||bèi

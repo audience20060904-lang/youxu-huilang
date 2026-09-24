@@ -40,10 +40,25 @@ def pyof(w):
         return join_py(' '.join(x[0] for x in PY(w,style=Style.TONE)))
     return data_py(w)
 
+def read_past(rows):
+    """replaced.txt：原位换掉的词（下标|旧词|新词）→ ZH_PAST（老存档码按旧词算校验，game.js 的 lexList() 读它）"""
+    past = {}
+    for line in open(os.path.join(HERE, 'replaced.txt'), encoding='utf-8'):
+        line = line.strip()
+        if not line or line.startswith('#'): continue
+        i, old, new = line.split('|')
+        i = int(i)
+        if rows[i][0] != new: errs.append(f'replaced.txt: 下标 {i} 现在是 {rows[i][0]}，不是 {new}')
+        past[i] = old
+    return past
+
 def write_js(rows):
     head = open(os.path.join(HERE, 'header.txt'), encoding='utf-8').read()
     tail = open(os.path.join(HERE, 'footer.txt'), encoding='utf-8').read()
     body = ',\n'.join(json.dumps(r, ensure_ascii=False) for r in rows)
+    past = read_past(rows)
+    tail = tail.replace('\n];\n', '\n];\n\n/* 原位换掉过的词（下标 → 旧词，zh-words/replaced.txt 生成）：老存档码的校验按旧词算，game.js 的 lexList() 用它 */\n'
+                        'var ZH_PAST = [' + json.dumps({str(k): v for k, v in sorted(past.items())}, ensure_ascii=False) + '];\n', 1)
     with open(os.path.join(HERE, '..', 'words-zh.js'), 'w', encoding='utf-8') as f:
         f.write(head + body + tail)
     print('wrote words-zh.js,', len(rows), 'words')
@@ -76,5 +91,5 @@ for L in range(1,7):
     pc=collections.Counter(r[4] for r in out if r[3]==L)
     cc=collections.Counter(r[2] for r in out if r[3]==L)
     print(L,sum(pc.values()),dict(pc)); print('  ',dict(cc))
-print('\n'.join(errs))
 write_js(out)
+print('\n'.join(errs))
