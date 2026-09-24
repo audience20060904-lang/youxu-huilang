@@ -6149,6 +6149,42 @@ $("optSpeak").checked = OPT.speak !== false;
 $("optAuto").checked = OPT.auto !== false;
 $("optSpeak").addEventListener("change", function(){ OPT.speak = this.checked; saveOpt(); });
 $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; saveOpt(); });
+/* 发音（用户 2026-09-24：「浏览器的发音怪怪的」）：挑声音的逻辑在 util.js（voicesFor / pickVoice），这里只管设置页。
+   声音按学习语言分开记（OPT.voice.en / .zh …）—— 声音名是这台设备自己的，所以跟 OPT 走、不进存档码。 */
+const RATES = [0.7, 0.9, 1.05];
+function applySpeakPref(){
+  const vv = OPT.voice && OPT.voice[LANG_LEARN];
+  SPEAK_PREF.voice = typeof vv === "string" ? vv : "";
+  SPEAK_PREF.rate = RATES.indexOf(OPT.rate) >= 0 ? OPT.rate : 0.9;
+}
+function voiceLabel(v){ return v.name.replace(/\s+-\s+.*$/, "") + " · " + String(v.lang).replace(/_/g, "-"); }
+function renderVoiceSet(){
+  const sel = $("optVoice");
+  if(!CAN_SPEAK){ $("voiceSet").hidden = true; return; }
+  const list = voicesFor(), cur = SPEAK_PREF.voice;
+  sel.innerHTML = "";
+  const add = function(val, txt){ const o = document.createElement("option"); o.value = val; o.textContent = txt; sel.appendChild(o); };
+  if(!list.length){ add("", T("这台设备没有这门语言的语音")); sel.disabled = true; $("btnVoiceTry").disabled = true; }
+  else{
+    sel.disabled = false; $("btnVoiceTry").disabled = false;
+    add("", T("自动") + " · " + voiceLabel(pickVoice() || list[0]));
+    list.forEach(function(v){ add(v.name, voiceLabel(v)); });
+  }
+  sel.value = list.some(function(v){ return v.name === cur; }) ? cur : "";
+  $("rateRow").querySelectorAll(".lchip").forEach(function(b){ b.classList.toggle("on", +b.dataset.rate === SPEAK_PREF.rate); });
+}
+applySpeakPref(); renderVoiceSet(); onVoices(renderVoiceSet);
+$("optVoice").addEventListener("change", function(){
+  if(!OPT.voice || typeof OPT.voice !== "object") OPT.voice = {};
+  OPT.voice[LANG_LEARN] = this.value; saveOpt(); applySpeakPref();
+  speak(spellOf(pick(ALLW)));        // 换完当场念一个，省得再去点试听
+});
+$("btnVoiceTry").addEventListener("click", function(){ speak(spellOf(pick(ALLW))); });
+$("rateRow").addEventListener("click", function(e){
+  const b = e.target.closest(".lchip"); if(!b) return;
+  OPT.rate = +b.dataset.rate; saveOpt(); applySpeakPref(); renderVoiceSet();
+  speak(spellOf(pick(ALLW)));
+});
 /* 「清除全部存档」那个按钮**已经删掉了**（用户 2026-09）——
    连同它两步确认的那一段。要再开一个抹档的口子，记得内存里的
    LEX / CODEX / MET / TOWN 得跟 localStorage 一起清，

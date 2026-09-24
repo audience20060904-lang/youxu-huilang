@@ -1055,6 +1055,12 @@ a.place{text-decoration:none}
   background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);min-width:86px}
 .lchip.on{background:var(--torch);border-color:var(--torch-deep);color:#FFF8E8;font-weight:600}
 .lchip:disabled{opacity:.4;cursor:default}
+/* 设置页的发音：下拉框吃掉剩下的宽度，语速三颗钮收窄一点，390 宽上一行摆得下 */
+.voiceset{margin-top:10px;padding-top:10px;border-top:1px solid var(--edge)}
+.vsel{flex:1;min-width:0;font-family:var(--body);font-size:13.5px;padding:7px 8px;border-radius:2px;
+  background:var(--stone-2);border:1px solid var(--edge);color:var(--bone)}
+.voiceset .lchip{min-width:0;padding:7px 12px}
+#rateRow .lchip{flex:1}
 
 /* 教程的小气泡：钉在屏幕顶上，压过所有弹层（战斗窗里也要看得见）。点一下收起。 */
 .coach{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);

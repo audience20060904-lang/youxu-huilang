@@ -217,6 +217,11 @@
         <div class="phead">设置 Settings</div>
         <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>答完自动朗读</b><i>每题答完念一遍这个词；也能自己点题面右上角的 🔊</i></span></label>
         <label class="setopt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
+        <!-- 发音（2026-09-24）：挑声音 + 语速，game.js 的 renderVoiceSet()。浏览器不支持朗读就整块藏掉 -->
+        <div class="langset voiceset" id="voiceSet">
+          <div class="langrow"><span class="lk">声音</span><select class="vsel" id="optVoice"></select><button class="lchip vtry" id="btnVoiceTry" type="button">试听</button></div>
+          <div class="langrow" id="rateRow"><span class="lk">语速</span><button class="lchip" data-rate="0.7" type="button">慢</button><button class="lchip" data-rate="0.9" type="button">标准</button><button class="lchip" data-rate="1.05" type="button">快</button></div>
+        </div>
       </div>
       <!-- 语言（2026-09-23）：母语 = 界面语言，学习 = 背哪门的词。换了就重载页面（game.js 的 setLang）-->
       <div class="panel" id="panelLang">
