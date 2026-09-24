@@ -399,7 +399,7 @@
 伤亡|casualties|th
 歌词|lyrics|th
 缺陷|defect|th
-拖|to drag (mop)|ve||tuō
+查出|to find out|ve
 阴影|shadow (shade)|na
 炮|cannon|th||pào
 仪器|instrument (apparatus)|th
@@ -444,7 +444,7 @@
 贫困|poverty-stricken|ad
 家园|homeland (home)|pl
 清洗|to rinse (clean)|ve
-踩|to step on|ve||cǎi
+传出|to spread out (leak)|ve
 上台|to go on stage|ve
 不仅仅|not only|av
 对外|external (foreign)|ad
@@ -469,7 +469,7 @@
 病房|ward (hospital)|pl
 研发|research and development|ve
 吸毒|to take drugs|ve
-煮|to boil (cook)|ve||zhǔ
+拿走|to take away|ve
 过后|afterwards (later)|ti
 墓|tomb|pl
 传输|to transmit|ve
@@ -866,7 +866,7 @@
 看管|to look after (guard)|ve
 时时|often (constantly)|av
 只管|by all means|av
-要不然|or else (otherwise)|av||yàobùrán
+更是|even more so|av
 忠心|loyalty|fe|n
 公鸡|rooster|an
 军舰|warship|th
@@ -978,10 +978,10 @@
 卧铺|sleeping berth|th
 道教|Taoism|th||dàojiào
 司长|department director|pe
-寺|temple|pl||sì
+园地|garden plot (field)|pl
 让座|to give up one's seat|ve
-粥|congee (porridge)|fo||zhōu
-壶|kettle (pot)|th||hú
+文娱|recreation|th
+车号|vehicle number|th
 口试|oral exam|th
 写字台|writing desk|th
 必修|compulsory (course)|ad

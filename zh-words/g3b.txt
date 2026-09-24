@@ -68,7 +68,7 @@
 领先|to lead (be ahead)|ve
 声明|statement|th
 较|comparatively (rather)|av
-管|to be in charge of|ve||guǎn
+赶到|to rush to|ve
 当初|at first (back then)|ti
 相比|to compare|ve
 称为|to be known as|ve
@@ -76,7 +76,7 @@
 把握|to grasp|ve
 看起来|seemingly|av
 发动|to start (launch)|ve
-救|to save (rescue)|ve||jiù
+放到|to put in|ve
 转变|to transform (shift)|ve
 上来|to come up|ve
 才能|talent (ability)|th
@@ -165,7 +165,7 @@
 歌声|singing|th
 否定|to negate|ve
 主张|to advocate|ve
-修|to repair|ve||xiū
+认出|to recognize|ve
 规范|standard (norm)|th
 近期|near future|ti
 自主|autonomous|ad
@@ -173,7 +173,7 @@
 民间|folk (among the people)|ad
 解开|to untie|ve
 将近|nearly|av
-谈|to talk about|ve||tán
+建成|to complete (building)|ve
 定期|regular (periodic)|ad
 一方面|on one hand|av
 动人|moving (touching)|fe
@@ -194,7 +194,7 @@
 表格|form (table)|th
 功课|schoolwork|th
 认得|to know (recognize)|ve
-祝|to wish (someone well)|ve||zhù
+推开|to push open|ve
 广大|vast|ad
 收听|to listen in|ve
 初级|elementary|ad

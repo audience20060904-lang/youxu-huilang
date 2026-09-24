@@ -1850,6 +1850,31 @@ function timeUp(){
   if(P.hp <= 0){ B.locked = true; setTimeout(function(){ finishBattle(false); }, 480); return; }
   startQTimer();          // 题不换，读条重新开始
 }
+/* 四选一不让近义词同框（用户 2026-09-24）：学中文时查 words-zh.js 的 ZH_SYN（build.py 算的 + synonyms.txt 手写的）；
+   任何语言都再比一次释义主干（去掉括号和 to/a/the）—— "shirt" 和 "shirt (top)"、"生气" 和 "生气（的）" 这种。*/
+let synMap = null;
+function synIndex(){
+  if(synMap) return synMap;
+  synMap = {};
+  if(LANG_LEARN === "zh" && typeof ZH_SYN !== "undefined"){
+    Object.keys(ZH_SYN).forEach(function(a){
+      ZH_SYN[a].split(" ").forEach(function(b){
+        (synMap[a] = synMap[a] || {})[b] = true;
+        (synMap[b] = synMap[b] || {})[a] = true;
+      });
+    });
+  }
+  return synMap;
+}
+function synHead(s){
+  return String(s).toLowerCase().replace(/[（(][^）)]*[）)]/g, "").replace(/^\s*(to|a|an|the)\s+/, "").replace(/\s+/g, " ").trim();
+}
+function nearSyn(a, b){
+  const m = synIndex();
+  if(m[a.en] && m[a.en][b.en]) return true;
+  const x = synHead(a.cn);
+  return !!x && x === synHead(b.cn);
+}
 function nextQuestion(){
   clearQTimer();
   const m = B.mob;
@@ -1907,7 +1932,7 @@ function nextQuestion(){
     const src = bag.length ? bag : others;
     const c = src.splice(Math.floor(Math.random()*src.length),1)[0];
     if(!c) break;
-    if(opts.some(function(o){ return o.en === c.en || o.cn === c.cn; })) continue;
+    if(opts.some(function(o){ return o.en === c.en || o.cn === c.cn || nearSyn(o, c); })) continue;
     opts.push(c);
   }
   opts.sort(function(){ return Math.random() - .5; });
