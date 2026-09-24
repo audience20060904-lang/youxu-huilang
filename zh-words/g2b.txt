@@ -82,7 +82,7 @@
 药水|liquid medicine|th||yàoshuǐ
 坏处|downside|th
 前年|year before last|ti
-词典|lexicon|th
+词典|dictionary|th
 问路|to ask the way|ve
 叫作|to be called|ve
 凉快|nice and cool|ad

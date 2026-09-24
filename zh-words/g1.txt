@@ -71,7 +71,7 @@
 问|to ask|ve
 告诉|to tell|ve||gàosu
 出来|to come out|ve
-地方|place|pl
+地方|place|pl||dìfang
 最后|finally|av
 老|old|ad
 放|to put|ve

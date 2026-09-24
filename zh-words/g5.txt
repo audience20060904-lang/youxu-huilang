@@ -35,7 +35,7 @@
 估计|to estimate|ve
 意味着|to signify|ve
 俱乐部|club|pl
-建筑|architecture|pl
+建筑|building (architecture)|pl
 丢|to lose (misplace)|ve
 疯狂|insane|ad
 舞|dance|th
@@ -56,7 +56,7 @@
 接触|to contact|ve
 聪明|clever|ad
 皮肤|skin|bo
-厉害|formidable|ad
+厉害|awesome (fierce)|ad
 尊重|to respect|ve
 损失|loss|th
 骗|to deceive|ve
@@ -178,7 +178,7 @@
 软|soft|ad
 签名|signature|th|n
 摄影|photography|th
-今日|this day|ti
+今日|today (formal)|ti
 偶像|idol|pe
 挡|to block|ve
 尝|to taste|ve
@@ -355,7 +355,7 @@
 转换|to convert|ve
 逻辑|logic|th
 脸色|complexion|bo
-宾馆|guesthouse|pl
+宾馆|hotel (guesthouse)|pl
 保卫|to defend|ve
 眼光|vision (eye)|th
 一流|first-class|ad
@@ -501,7 +501,7 @@
 摔倒|to fall down|ve
 活泼|lively (vivacious)|ad
 诗歌|poetry|th
-热量|heat|na
+热量|heat (calories)|na
 签证|visa|th
 亏|to lose (deficit)|ve
 口号|slogan|th
@@ -513,7 +513,7 @@
 高大|tall and big|ad
 草原|grassland|na
 无奈|helpless|ad
-煤气|coal gas|na
+煤气|cooking gas|na
 印刷|to print (press)|ve
 舍不得|to hate to part with|fe|v
 台风|typhoon|na
@@ -572,7 +572,7 @@
 狼|wolf|an
 熊|bear|an
 鲸鱼|whale|an
-狐狸|fox|an
+狐狸|fox|an||húli
 粉红|rosy pink|co
 雪白|snow-white|co
 金黄|golden yellow|co

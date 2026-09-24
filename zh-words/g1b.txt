@@ -39,7 +39,7 @@
 谁|who|pe||shéi
 哪儿|where|pl
 怎么|how|av
-多少|how much (many)|nu
+多少|how much (many)|nu||duōshao
 这|this|th||zhè
 那|that|th||nà
 这儿|here|pl

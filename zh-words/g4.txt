@@ -1,6 +1,6 @@
 担心|to worry|fe|v
 之后|after|ti
-了解|to find out|ve
+了解|to understand (know about)|ve
 选择|to choose (select)|ve
 甚至|even|av
 之前|prior to|ti
@@ -76,7 +76,7 @@
 挑战|challenge|th|n
 秘密|secret|th
 失败|to fail|ve
-抽|to draw out|ve
+抽|to draw out (smoke)|ve
 想象|to imagine|ve
 教授|professor|pe
 吸引|to attract|ve
@@ -333,7 +333,7 @@
 技巧|technique|th
 名人|celebrity|pe
 电梯|elevator|th
-抓紧|to hold tight|ve
+抓紧|to hurry (hold tight)|ve
 相处|to get along|ve
 反映|to reflect|ve
 植物|plant|na
@@ -396,7 +396,7 @@
 嘴巴|mouth (jaw)|bo
 扫|to sweep|ve
 秘书|secretary|pe
-燃烧|to combust|ve
+燃烧|to burn (blaze)|ve
 极其|extremely (utterly)|av
 日记|diary|th
 同情|to sympathize|fe|v
@@ -408,7 +408,7 @@
 季节|season|ti
 布置|to decorate|ve
 灯光|lighting|th
-色彩|tint|co|n
+色彩|coloring|co|n
 健身|to work out|ve
 事先|beforehand|av
 失业|to be unemployed|ve
@@ -532,7 +532,7 @@
 种类|variety|th
 默默|silently|av
 未必|not necessarily|av
-大方|generous|ad
+大方|generous|ad||dàfang
 奖学金|scholarship|th
 英勇|heroic|ad
 加油站|gas station|pl
@@ -595,7 +595,7 @@
 语法|grammar|th
 日历|calendar|th
 红包|red envelope|th
-轮船|steamship|th
+轮船|ship (steamer)|th
 寒假|winter vacation|ti
 粗心|careless|ad
 尺子|ruler|th

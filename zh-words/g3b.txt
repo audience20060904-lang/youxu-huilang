@@ -13,7 +13,7 @@
 派|to send (dispatch)|ve
 约|to make an appointment|ve||yuē
 下去|to go down|ve
-城|city wall (town)|pl
+城|town (city)|pl
 报|to report|ve
 挂|to hang|ve
 难道|could it be that|av
@@ -64,7 +64,7 @@
 造|to make (build)|ve
 指出|to point out|ve
 看上去|it looks like|av
-动力|motive power|th
+动力|motivation (drive)|th
 领先|to lead (be ahead)|ve
 声明|statement|th
 较|comparatively (rather)|av
@@ -199,11 +199,11 @@
 收听|to listen in|ve
 初级|elementary|ad
 听力|listening|th
-衬衣|blouse|th
+衬衣|shirt (top)|th
 班级|class (grade)|pe
 现代化|modernization|th
 专题|special topic|th
-工夫|time (effort)|ti
+工夫|time (effort)|ti||gōngfu
 创业|to start a business|ve
 本领|skill (capability)|th
 话剧|stage play|th
@@ -231,7 +231,7 @@
 交费|to pay fees|ve
 凉水|cold water|na
 衣架|clothes hanger|th
-外文|foreign text|th
+外文|foreign language (text)|th
 短处|weakness|th
 空儿|free time|ti||kòngr
 跳远|long jump|th

@@ -16,7 +16,7 @@
 价|price (value)|th
 证实|to confirm (verify)|ve
 只不过|only (just)|av
-弹|bullet (to shoot)|th||dàn
+弹|to play (piano/guitar)|ve|v|tán
 必|must (certainly)|av
 所在|location (whereabouts)|pl
 害|to harm|ve
@@ -48,7 +48,7 @@
 出于|to stem from|ve
 买卖|business (trade)|th
 分离|to separate (part)|ve
-扇|to fan|ve
+扇|to fan|ve||shān
 寻求|to seek (look for)|ve
 提起|to bring up|ve
 不许|not allowed|av
@@ -288,7 +288,7 @@
 原有|original (existing)|ad
 雨水|rainwater|na||yǔshuǐ
 地形|terrain|na
-比方|analogy|th
+比方|for instance (analogy)|th
 风度|poise (bearing)|th
 乘车|to ride (a vehicle)|ve
 振动|to vibrate|ve
@@ -303,7 +303,7 @@
 为期|to last (a period of)|ve
 面貌|appearance (face)|th
 法制|legal system|th
-团长|regimental commander|pe
+团长|head of a group|pe
 正如|just as|av
 考核|to evaluate (performance)|ve
 物业|property management|th
@@ -314,7 +314,7 @@
 酒鬼|drunkard|pe
 博览会|exposition|th
 处分|disciplinary action|th
-长寿|longevity|ad||chángshòu
+长寿|long-lived|ad||chángshòu
 接连|in a row (successively)|av
 修养|self-cultivation|th
 慰问|to express sympathy|ve
@@ -403,11 +403,11 @@
 彼此|each other|pe
 出汗|to sweat|ve
 二维码|QR code|th
-胡同儿|alley (hutong)|pl
+胡同儿|alley (hutong)|pl||hútòngr
 寿司|sushi|fo
 酸甜苦辣|ups and downs|fe|n
 微博|Weibo|th
-小偷儿|thief|pe
+小偷儿|thief|pe||xiǎotōur
 不得了|terrible (extremely)|ad
 此刻|this moment|ti
 大伙儿|everybody (folks)|pe

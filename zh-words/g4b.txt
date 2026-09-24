@@ -12,11 +12,11 @@
 盘|plate (dish)|th
 极|extreme (pole)|ad
 牌|card (sign)|th
-俩|the two of us|nu
+俩|two (people)|nu
 投入|to put into|ve
 手里|in hand|pl
 处于|to be in (a state)|ve
-人家|others (other people)|pe
+人家|others (other people)|pe||rénjia
 在于|to lie in|ve
 针对|to target|ve
 宝宝|baby|pe
@@ -232,7 +232,7 @@
 摆动|to swing|ve
 开水|boiled water|fo
 充电器|charger|th
-倒车|to reverse (a car)|ve
+倒车|to reverse (a car)|ve||dàochē
 后头|at the rear|pl
 片面|one-sided|ad
 本科|undergraduate|th
@@ -277,5 +277,5 @@
 著名|renowned|ad
 著作|writings|th
 之一|one of|nu
-受不了|can't stand|ve
+受不了|can't stand|ve||shòubuliǎo
 没想到|didn't expect|ve

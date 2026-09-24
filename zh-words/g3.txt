@@ -80,7 +80,7 @@
 负责|to be in charge|ve
 首先|first of all|av
 交易|deal (trade)|th
-理解|to comprehend|ve
+理解|to understand|ve
 报道|to report (news)|ve
 父母|parents|pe
 安排|to arrange|ve
@@ -225,7 +225,7 @@
 大概|probably|av
 共同|common (shared)|ad
 杂志|magazine|th
-停止|to cease|ve
+停止|to stop (halt)|ve
 文化|culture|th
 具体|specific|ad
 演员|actor|pe
@@ -292,7 +292,7 @@
 科技|science and technology|th
 印象|impression|th
 烟|smoke (cigarette)|th
-生意|business|th
+生意|business|th||shēngyi
 赶|to hurry|ve
 存|to deposit (save)|ve
 评价|to evaluate|ve
@@ -516,7 +516,7 @@
 预防|to take precautions|ve
 写作|writing|th
 手续|procedures|th
-本事|skill (ability)|th
+本事|skill (ability)|th||běnshi
 高速公路|expressway|pl
 种子|seed|na
 录音|to record (audio)|ve
@@ -526,7 +526,7 @@
 服务员|waiter|pe
 工程师|engineer|pe
 优点|strong point|th
-旅馆|hostel|pl
+旅馆|inn (hotel)|pl
 志愿者|volunteer|pe
 普遍|universal|ad
 形状|shape|th

@@ -124,7 +124,7 @@
 偏|slanting (biased)|ad
 主持人|host (presenter)|pe
 涉及|to involve|ve
-炸|to fry (explode)|ve
+炸|to explode (blow up)|ve
 策略|tactics (strategy)|th||cèlüè
 牺牲|to sacrifice|ve
 选举|election|th
@@ -617,7 +617,7 @@
 陪同|to accompany (escort)|ve
 中等|medium|ad
 一道|together (a line)|av
-番茄|tomato (Western)|fo
+番茄|tomato|fo
 精美|exquisite|ad
 储存|to store|ve
 到期|to expire|ve
@@ -779,7 +779,7 @@
 构建|to construct (build)|ve
 解说|to explain (commentary)|ve
 儿科|pediatrics|th
-看得见|visible|ad
+看得见|visible|ad||kàndejiàn
 歌星|singing star|pe
 网吧|Internet cafe|pl
 游戏机|game console|th
@@ -992,7 +992,7 @@
 望见|to catch sight of (see from afar)|ve
 考题|exam question|th
 戏曲|traditional opera|th
-好学|studious|ad
+好学|studious|ad||hàoxué
 开夜车|to burn the midnight oil|ve
 初等|elementary (primary)|ad
 慢车|slow train|th

@@ -55,7 +55,7 @@
 能够|to be able to|ve
 拉|to pull|ve
 完成|to complete|ve
-求|to beg|ve
+求|to ask for (beg)|ve
 帮助|to help|ve
 变|to change|ve
 加|to add|ve||jiā
@@ -67,7 +67,7 @@
 特别|especially|av
 真正|genuine|ad
 掉|to drop|ve
-改变|to transform|ve
+改变|to change (alter)|ve
 讲|to speak (tell)|ve
 离开|to leave|ve
 生|to give birth|ve
@@ -118,12 +118,12 @@
 音乐|music|th
 感谢|to thank|fe|v
 眼|eye|bo
-感到|to sense|fe|v
+感到|to feel|fe|v
 清楚|clear|ad
 照片|photo|th
 停|to stop|ve
 银行|bank|pl
-故事|story|th
+故事|story|th||gùshi
 气|air (gas)|na
 倒|to fall over|ve||dǎo
 酒|alcohol|fo
@@ -149,7 +149,7 @@
 低|low|ad
 节目|program (show)|th
 健康|healthy|ad
-弄|to fiddle with|ve||nòng
+弄|to do (make)|ve||nòng
 作用|effect|th
 满|full|ad||mǎn
 说明|to explain|ve
@@ -173,7 +173,7 @@
 改|to correct|ve
 加油|come on! (cheer)|ve
 省|province|pl
-十分|fully|av
+十分|very (totally)|av
 年轻|young|ad
 条件|condition|th
 晚安|good night|ve
@@ -321,7 +321,7 @@
 道理|reason (logic)|th
 公里|kilometer|nu
 好处|benefit|th
-旅游|tourism|ve
+旅游|to go on a trip|ve
 作业|homework|th
 家长|parent|pe
 重复|to repeat|ve
@@ -392,18 +392,18 @@
 大门|main gate|pl||dàmén
 晚会|evening party|th
 少年|teenager|pe
-计算机|computer (calculator)|th
+计算机|computer|th
 难受|unwell|fe
 刻|quarter (hour)|ti
 参观|to visit (tour)|ve
 太太|wife (Mrs.)|pe
-笔记本|notebook computer|th
+笔记本|notebook (laptop)|th
 对面|opposite|pl
 信用卡|credit card|th
 特点|feature|th
 笑话|joke|th
 凉|cool|ad||liáng
-平常|ordinary times|ad
+平常|ordinary (usual)|ad
 半夜|midnight|ti
 商量|to consult|ve
 黄|yellow|co
@@ -493,7 +493,7 @@
 个子|height (build)|bo
 难看|ugly|ad
 饺子|dumplings|fo
-字典|dictionary|th
+字典|character dictionary|th
 排球|volleyball|th
 干杯|cheers!|ve
 过年|to celebrate New Year|ve
