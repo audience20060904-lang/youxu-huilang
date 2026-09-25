@@ -364,7 +364,7 @@ function bossFor(w){
 /* ===== 特殊遗物（Boss 掉落，用户 2026-09-22）=====
    打倒每 10 波一只的 Boss 之后，从这个池子里**三选一**。
    ⚠️ **不占那 15 个遗物位**，也不能分解、不能当合成材料 —— 纯增益，没有取舍。
-   ⚠️ **它们跟那 209 件是两套东西**：id 全部带 `sp_` 前缀，存在 `P.special` 上，
+   ⚠️ **它们跟那 228 件是两套东西**：id 全部带 `sp_` 前缀，存在 `P.special` 上，
       判定走 `hasSp()` 不走 `has()`。别混进 RELICS。
 
    设计口径（用户原话：「现在的遗物数值都太保守了，要有割草的爽感」）：
@@ -956,7 +956,7 @@ var RMAP = {};                                   // id -> relic def
 var REDUCE_MOTION = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function has(id){ return P && P.rset[id] === 1; }
-/* 特殊遗物（Boss 掉的）跟那 209 件是**两套**，别混：判定走 hasSp，不走 has。 */
+/* 特殊遗物（Boss 掉的）跟那 228 件是**两套**，别混：判定走 hasSp，不走 has。 */
 function hasSp(id){ return P && P.sset[id] === 1; }
 /* ================================================================
    宝珠（局外养成，用户 2026-09-23）—— 配置和纯函数在 orb.js，主城那边买 / 鉴定 / 强化 / 装备。
@@ -1017,7 +1017,8 @@ function newWave(w, quiet){
        swings:0, wrongN:0, hurt:false, kindsSeen:{}, catSeen:{}, hauntN:0, bossAdds:0,
        fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false, magnetN:0, chapelUsed:false,
        cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0,
-       chaseN:0, fearN:0, bled:false};
+       chaseN:0, fearN:0, bled:false,
+       deflectN:0, gaspUsed:false, bwallGot:0, bwallBank:0, sipBank:0, riverBank:0};   // 第十一批
   P.wave = w;
   /* ⚠️ 仇敌是**跨波**的（波是定时切的，场上的怪不清），所以计数要按场上现数一遍 ——
      以前直接清零，上一波标记的怪这一波死掉就把它减成负数，养魔跟着变成负的伤害加成。 */
@@ -1060,10 +1061,12 @@ function bstats(){
   if(has("pad"))         s.maxHp += 8;
   if(has("paperweight")) s.maxHp += 6;
   if(has("engrave"))     s.maxHp += Math.min(30, 3 * lv);
+  if(has("loam"))        s.maxHp += 2 * P.lvl;                     // 厚土（第十一批）：战场每级 +9 血，所以 +2（地牢是每 2 级 +1）
   /* 宝珠：绿 2 + 生命百分比词条，排在加法件之后、铁躯之前 */
   var ohp = orbAdd("hpPct") + (orbOn("green2") ? 25 : 0);
   if(ohp) s.maxHp = s.maxHp * (1 + ohp / 100);
   if(has("titan"))       s.maxHp = Math.round(s.maxHp * 1.5);      // 铁躯
+  if(has("colossus"))    s.maxHp = Math.round(s.maxHp * 1.3);      // 巨骨（第十一批）：跟铁躯连乘
   if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
   s.maxHp = Math.max(1, Math.round(s.maxHp));
   var hpPct = s.maxHp > 0 ? P.hp / s.maxHp : 1;
@@ -1077,6 +1080,10 @@ function bstats(){
   if(has("paperweight")) s.atk += Math.min(8, Math.floor(s.maxHp / 40));
   if(has("moltengold")) s.atk += 2 * Math.min(12, Math.floor(g / 100));
   if(has("triplecut") && P.killStreak >= 3) s.atk += 10;
+  /* 第十一批：年轮 / 淬血按战场的面板折过（战场每级 +1.5 攻击、+9 血，攻击 / 生命的比例只有地牢的四成）*/
+  if(has("rings"))       s.atk += Math.floor(P.lvl / 3);           // 年轮：地牢是每 5 级 +1
+  if(has("bloodtemper")) s.atk += Math.floor(s.maxHp * 0.05);      // 淬血：地牢是最大生命的 12%
+  if(has("noedge"))      s.atk *= 1.6;                             // 无锋：攻击加完了再乘，暴击在 swing() 里关掉
 
   /* --- ③ 加法：暴击 --- */
   if(has("keen"))      s.crit += 5;
@@ -1088,6 +1095,8 @@ function bstats(){
   if(has("recite"))    s.crit += 30;
   if(has("caution"))   s.crit += 2;
   if(has("stroke"))    s.crit += 8;                                 // 战场改写
+  if(has("overcrit"))  s.crit += 20;                                // 溢锋（第十一批）：溢出那一半在 swing()
+  if(has("bloodmoon")) s.crit += 15;                                // 血月（第十一批）：回血那一半在 swing()
   if(has("tempo") && cb >= 5)  s.crit += 25;
   if(has("charge"))    s.crit += 5 * P.charge;
   if(has("dice"))      s.crit += G.dice;
@@ -1128,9 +1137,12 @@ function bstats(){
   s.armor += G.stepArmor + G.glyphArmor + G.corrodeArmor;
   s.armor += orbAdd("armor");                                       // 宝珠词条（加法，排在乘法件之前）
   if(has("dawn") && G.swings < 20) s.armor += 5;
+  if(has("silt"))   s.armor += 1 + Math.floor(w / 10);                // 沉积（第十一批）：每过 10 波 +1
+  if(has("layers")) s.armor += Math.floor(P.lvl / 10);                // 千层（第十一批）的底数
   /* 乘法几件，位置写死 */
   if(has("heavy"))  s.armor = (s.armor + 1) * 4;
   if(has("callus")) s.armor = Math.floor((s.armor + 3) * 1.2);
+  if(has("layers")) s.armor = s.armor * 1.25;                         // 千层：护甲 ×1.25
   if(has("stack")){ s.armor += 5; if(P.noHitWaves >= 2) s.armor *= 2; }
   s.armor = Math.max(0, Math.round(s.armor));
   /* 甲刃：护甲 → 暴击率（2026-09-23 补：以前只给了护甲 +2，后半句是空的） */
@@ -1407,6 +1419,7 @@ function swing(mult){
   if(has("offer"))    pct += 100;                                   // 献身（2026-09-23 补：以前只减了血，伤害那半句是空的）
   if(has("whim"))     pct += G.whim;
   if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
+  if(has("billow"))   pct += 20;                                    // 叠浪（第十一批）：换暴击伤害那一半在下面
   pct += orbAdd("atkPct") + (orbOn("red2") ? 25 : 0);               // 宝珠：② 层，跟别的百分比同一个桶
   if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
   if(hasSp("sp_magnet")){ pct += 3 * G.magnetN; G.magnetN = 0; }
@@ -1419,15 +1432,19 @@ function swing(mult){
   if(has("bloodmaul"))flat += Math.min(15, 3 * Math.floor(G.healed / 10));
   if(has("flash") && cb > 0 && cb % 5 === 0) forceCrit = true;
   if(has("instant") && moving) forceCrit = true;
+  if(has("fate")) forceCrit = true;                                 // 定数（第十一批）：每一刀都暴击
 
   /* ---- 暴击 ---- */
   var cr = s.crit, cm = s.critMult;
-  if(cr > 100) cm += 0.1 * Math.floor((cr - 100) / 5);
-  var crit = forceCrit || burst || (Math.random() * 100 < cr);
+  if(cr > 100) cm += (has("overcrit") ? 0.2 : 0.1) * Math.floor((cr - 100) / 5);   // 溢锋：溢出那一档翻倍
+  if(has("fate")) cm -= 0.4;                                        // 定数：倍率 ×2 → ×1.6
+  /* 无锋（第十一批）：不再暴击 —— 灵光 / 刹那 / 定数 / 狂刃的「必定暴击」也一起哑掉 */
+  var crit = !has("noedge") && (forceCrit || burst || (Math.random() * 100 < cr));
   if(crit && has("crush")) noArmor = true;
   /* 刻字 / 默诵的「暴击时」那半句（2026-09-23 补：以前只给了暴击率）*/
   if(crit && has("carve"))  pct += 90;
   if(crit && has("recite")) extra += 35;
+  if(has("billow")) cm += 0.2 * Math.floor(pct / 100);             // 叠浪：② 层每满 100% 暴击倍率 +0.2（读这一刀算完的 pct）
 
   var pre = (s.atk + base + extra) * (1 + pct / 100) + flat;
   /* ⚠️ 塔的伤害跟玩家挂钩（用户 2026-09-22）：把**没吃暴击的那一下**平滑记下来，
@@ -1443,7 +1460,7 @@ function swing(mult){
   }
 
   /* ---- 落到每一只身上 ---- */
-  var leechN = 0, skullN = 0;
+  var leechN = 0, skullN = 0, landBest = 0;
   for(i = 0; i < hits.length; i++){
     f = hits[i]; if(f.dead) continue;
     /* 处决：残血直接抹掉（Boss 除外）*/
@@ -1455,7 +1472,11 @@ function swing(mult){
     if(has("greet") && !f.greeted){ f.greeted = true; rr = rawGreet; }
     var d2 = Math.max(1, rr - (noArmor ? 0 : f.armor));
     if(slowed) d2 *= 2;                                   // 冰裂：对被减速的翻倍
+    var hpWas = f.hp;
     hurtFoe(f, d2, s, crit);
+    /* 吸血（第十一批）只算真的打进血条的量，而且**一刀只算打得最重的那一只** ——
+       一刀扫五只的话按五只算，地牢「答一题回一次」的频率就对不上了。*/
+    landBest = Math.max(landBest, Math.max(0, hpWas - Math.max(0, f.hp)));
     /* 余烬：点燃（刷新时长，伤害取高的那一次）*/
     if(hasSp("sp_ember")){
       f.burnT = SP_BURN_SEC;
@@ -1475,6 +1496,33 @@ function swing(mult){
       aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12"); }
   }
   if(leechN > 0) healUp(s.maxHp * 0.004 * leechN);        // 饮刃：攒完一次回
+  /* ===== 第十一批：按「这一刀」长的四件 =====
+     healUp 里有 Math.round，小数会被抹掉，所以按小数攒在 G 上、攒满 1 点给 1 点（每波清零）。*/
+  var sipPct = (has("thirst") ? 1.5 : 0) + ((crit && has("bloodmoon")) ? 4 : 0);
+  if(sipPct > 0 && landBest > 0 && mult === 1){                       // 渴刃 / 血月
+    G.sipBank += landBest * sipPct / 100;
+    var sipN = Math.floor(G.sipBank);
+    if(sipN > 0){ G.sipBank -= sipN; healUp(sipN); }
+  }
+  if(has("bloodriver") && landBest > 0 && mult === 1){                // 血河：溢出的一半转盾，最多补到上限的 50%
+    G.riverBank += landBest * 0.03;
+    var rvN = Math.floor(G.riverBank);
+    if(rvN > 0){
+      G.riverBank -= rvN;
+      var shWas = P.shield;
+      healUp(rvN, true);
+      if(P.shield > shWas) P.shield = shWas + Math.max(0, Math.min(P.shield - shWas, Math.round(s.maxHp * 0.5) - shWas));
+    }
+  }
+  /* 刃壁：按这一刀打出去的数（溢出的也算），每波累计封在上限的 50% */
+  if(has("bladewall") && mult === 1){
+    var capW = Math.round(s.maxHp * 0.5);
+    if(G.bwallGot < capW){
+      G.bwallBank += raw * 0.015;
+      var bwN = Math.min(Math.floor(G.bwallBank), capW - G.bwallGot);
+      if(bwN > 0){ G.bwallBank -= bwN; G.bwallGot += bwN; addShield(bwN); }
+    }
+  }
   /* 残影：身后那个影子跟着来一下（圆形，不再算一次扇形 —— 便宜且够用）*/
   if(hasSp("sp_clone") && mult === 1){
     var cx = me.x - Math.cos(aim) * SP_CLONE_D, cy = me.y - Math.sin(aim) * SP_CLONE_D;
@@ -1567,6 +1615,7 @@ function mitigate(dmg, s, o){
 
   if(has("hold") && G.holdUsed < 2){ G.holdUsed++; out = Math.floor(out / 2); }
   if(has("warmth") && P.warmthLeft > 0){ P.warmthLeft--; out = Math.floor(out / 2); }
+  if(o.deflect) out = Math.floor(out / 2);                  // 卸力（第十一批）
   var capPct = 0;
   if(has("blunt")) capPct = 16;
   if(has("womb"))  capPct = capPct ? Math.min(capPct, 12) : 12;
@@ -1576,6 +1625,7 @@ function mitigate(dmg, s, o){
     G.braceUsed = true; out = Math.floor(out * 0.45); }
   out = Math.max(0, out - s.armor);
   if(has("slip") && luck(0.20)) out = 0;
+  if(out > 0 && has("glimmer") && luck(0.12)) out = 0;     // 浮光（第十一批）：跟错身各掷各的
   return Math.max(out > 0 ? 1 : 0, out);
 }
 
@@ -1614,6 +1664,8 @@ function takeHit(dmg, foe, o){
 
   if(free){ fxText(L("免伤", "No damage"), "#47702F"); return; }
 
+  /* 卸力（第十一批）：每只敌人**第一次**打中你，这一下减半（每波最多 4 次）—— 地牢的「每场第一次」*/
+  if(has("deflect") && foe && !foe.deflected && G.deflectN < 4){ foe.deflected = true; G.deflectN++; o.deflect = true; }
   var out = mitigate(dmg, s, o);
   if(out <= 0){ fxText("0", "#47702F"); return; }
 
@@ -1656,6 +1708,9 @@ function onShieldBroken(){
 
 /* 「打完发现血 ≤ 0」的唯一入口 */
 function deathSave(s){
+  /* 一息（第十一批）：排在最前面 —— 先用最便宜的这一次，薪火和回魂留给下一下 */
+  if(has("lastgasp") && !G.gaspUsed){ G.gaspUsed = true; P.hp = 1;
+    fxText(L("一息", "Last Gasp"), "#E3B23C"); return; }
   if(has("undying") && !G.undyingUsed){ G.undyingUsed = true; P.hp = Math.round(s.maxHp * 0.25);
     if(has("warmth")) P.warmthLeft = 5;                      // 余温：薪火触发后也算（2026-09-23 补）
     fxText(L("薪火", "Undying Ember"), "#E3B23C"); return; }
@@ -1730,6 +1785,7 @@ function onWaveRelics(w){
   if(has("atone"))   addShield(12);                            // 战场改写
   if(has("armpad"))  addShield(Math.min(20, 4 * s.armor));
   if(has("vow"))     P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.20));  // 取大值，别按回去
+  if(has("citywall")) P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.50));  // 城垣（第十一批）：地牢的「每场补到 5%」在战场里没有，并进这一口
   if(has("track") && P.wrong2 !== undefined && P.wrong1 < P.wrong2) addShield(110);
   if(has("gatewait") && isBossWave(w)){ addShield(120); healUp(s.maxHp * 0.25); }
   /* 宝珠：绿 3 回血、「护身」「猎首」给盾 */
@@ -1920,6 +1976,7 @@ function killFoe(f){
   if(has("breath"))   healUp(s.maxHp * 0.01);
   if(has("mend"))     healUp(s.maxHp * 0.02);
   if(has("reapfull")) healUp(s.maxHp * 0.012);
+  if(has("disarm"))   addShield(s.maxHp * 0.01);                   // 缴械（第十一批）：地牢是 2%，战场一波杀得多，减半
   if(has("lesson") && !G.kindsSeen[f.id]) addGold(10);
   if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
   G.kindsSeen[f.id] = 1;
@@ -6214,7 +6271,7 @@ function updateSites(dt){
     if(Math.hypot(me.x - t.x, me.y - t.y) > BF.site.r) continue;
     var got = rollRelics(1, P.wave + 6)[0];
     E.sites.splice(i, 1);
-    if(!got) continue;                        // 209 件全带齐了（理论上到不了）
+    if(!got) continue;                        // 228 件全带齐了（理论上到不了）
     fxText(got.n, "#8A6A3A"); fxRing(t.x, t.y, 34, "#8A6A3A");
     grantRelic(got.id, null);                 // 带满了 grantRelic 自己会弹取舍窗
     return;

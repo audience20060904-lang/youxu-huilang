@@ -181,6 +181,10 @@ Object.assign(I18N, {
 " 点生命，本局还剩 ": " HP, ",
 " 次）。": " left this run).",
 " <span class=\"sys\">(屏息卸掉一半，这一层还剩 ": " <span class=\"sys\">(Held Breath halves it; left this floor: ",
+" <span class=\"sys\">(卸力卸掉一半，这一层还剩 ": " <span class=\"sys\">(Deflect halves it; left this floor: ",
+"<span class=\"big no\">浮光 —— 刀穿过去了</span>": "<span class=\"big no\">Glimmer — the blade passed through</span>",
+"一息 —— 还剩一口气，你没倒下（这一层就这一次）。": "Last Gasp — one breath left, you're still standing (once this floor).",
+"城垣补齐了 —— 护盾 <b>": "City Wall is rebuilt — shield <b>",
 " <span class=\"sys\">(余温还护着你，减半，剩 ": " <span class=\"sys\">(Lingering Warmth halves it; left: ",
 "石胎": "Stone Womb",
 "钝痛": "Dull Ache",
@@ -1781,6 +1785,102 @@ var RELIC_EN = {
 "Wholeness",
 "Full HP: damage +80%, armor +8; once per floor below 50% HP, heal back to 80%",
 "A thing in one piece can't be shattered."
+],
+/* 第十一批（2026-09-25）：19 件史诗以上 */
+"rings": [
+"Tree Rings",
+"Every 5 levels: ATK +1 (no cap)",
+"The tree never counts how much it has grown. The rings do."
+],
+"bloodtemper": [
+"Blood Temper",
+"ATK + 12% of max HP",
+"Only those with blood to spare dare quench a blade in it."
+],
+"noedge": [
+"No Edge",
+"ATK ×1.6; you can no longer crit",
+"The edge is ground away. What's left is all weight."
+],
+"billow": [
+"Billow",
+"Damage +20%; every full 100% damage bonus: crit damage +20%",
+"Wave upon wave — the last one hits the shore hardest."
+],
+"overcrit": [
+"Overflow",
+"Crit rate +20%; beyond 100%, every 5 points: crit damage +20%",
+"What spills over isn't allowed to hit the floor."
+],
+"fate": [
+"Fate",
+"Always crit; crit damage −40% (×2 → ×1.6)",
+"The dice were cast long ago. They just never told you."
+],
+"silt": [
+"Silt",
+"Armor +1; +1 more every 10 floors deeper (no cap)",
+"Every floor's dust settles on the armor and never lifts."
+],
+"layers": [
+"Thousand Layers",
+"Every 10 levels: armor +1 (no cap); armor ×1.25",
+"Level pressed on level, until it's one solid block."
+],
+"disarm": [
+"Disarm",
+"Defeating an enemy: gain shield equal to 2% max HP",
+"What you tore from its hands now stands in front of you."
+],
+"bladewall": [
+"Blade Wall",
+"Right answer: 1.5% of the hit becomes shield (max 50% max HP per floor)",
+"Every strike sends a shard of light back in front of you."
+],
+"citywall": [
+"City Wall",
+"Each new floor: shield refills to 30% of max HP; each fight: at least 5%",
+"A wall needn't be tall — only mended every day."
+],
+"loam": [
+"Loam",
+"Every 2 levels: max HP +1 (no cap)",
+"Soil piles up layer by layer, and you stand a little higher."
+],
+"colossus": [
+"Colossus",
+"Max HP ×1.3",
+"The bones grow faster than the man; the flesh can only chase them."
+],
+"thirst": [
+"Thirsty Blade",
+"Restore HP equal to 1.5% of the damage you deal",
+"Blades get thirsty too — and they drink from the wound."
+],
+"bloodmoon": [
+"Blood Moon",
+"Crit rate +15%; on crit, restore HP equal to 4% of that hit",
+"On the night of the red moon, every strike echoes."
+],
+"bloodriver": [
+"River of Blood",
+"Heal 3% of damage dealt; half of any overflow becomes shield (≤50% max HP)",
+"The blood that flows out circles round and flows back in."
+],
+"glimmer": [
+"Glimmer",
+"Wrong answer: 12% chance to lose no HP (combo still breaks)",
+"When the blade passed through, only a glimmer was left."
+],
+"deflect": [
+"Deflect",
+"First hit each fight: damage taken halved (max 4 times per floor)",
+"Send the force back to where it came from."
+],
+"lastgasp": [
+"Last Gasp",
+"Once per floor: after lethal damage, keep 1 HP",
+"While there's one breath left, the Hall has to wait for one more answer."
 ]
 };
 
@@ -1823,6 +1923,20 @@ if(LANG_LEARN === "ja"){
    只收「战场里说法跟地牢不一样」的那 127 件；其余 82 件战场里原样照搬地牢词条，直接用 RELIC_EN。
    ⚠️ 改了 content.js 的 BFW / BFW_RE（或者战场的实现），这里对应那一条要跟着改。*/
 var BFW_EN = {
+ /* 第十一批（2026-09-25）：战场说法跟地牢不一样的那几件（中文在 content.js 的 BFW）*/
+ rings: "Every 3 levels: ATK +1 (no cap)",
+ bloodtemper: "ATK + 5% of max HP",
+ silt: "Armor +1; +1 more every 10 waves (no cap)",
+ disarm: "Defeating an enemy: gain shield equal to 1% max HP",
+ bladewall: "On hit: 1.5% of that swing's damage becomes shield (max 50% of max HP per wave)",
+ citywall: "Each new wave: shield refills to 50% of max HP",
+ loam: "Each level: max HP +2 (no cap)",
+ thirst: "On hit: restore HP equal to 1.5% of that swing's damage (one enemy per swing)",
+ bloodmoon: "Crit rate +15%; on crit, restore HP equal to 4% of that swing (one enemy per swing)",
+ bloodriver: "On hit: restore 3% of that swing's damage (one enemy per swing); half the overflow becomes shield (up to 50% max HP)",
+ glimmer: "When hit: 12% chance to lose no HP (combo still breaks)",
+ deflect: "The first time each enemy hits you: damage taken halved (max 4 times per wave)",
+ lastgasp: "Once per wave: after lethal damage, keep 1 HP",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",

@@ -283,6 +283,8 @@ function stats(){
   if(hasRelic("vigor")){ s.maxHp += 17; s.atk -= 4; }         // 血囊：同上
   if(hasRelic("pad"))   s.maxHp += 8;                        // 棉衬
   if(hasRelic("keen"))  s.crit += 5;
+  if(hasRelic("overcrit"))  s.crit += OVERCRIT_CRIT;         // 溢锋（第十一批）：溢出那一半在 answer() 的 critMult
+  if(hasRelic("bloodmoon")) s.crit += MOON_CRIT;             // 血月（第十一批）：回血那一半在 answer()
   /* 薄刃 2026-09-21 从「暴击率 +8%」改成「暴击伤害 +50%」——
      暴击率那一档普通品质已经有锐眼和刻痕了，这一件挪去填暴击伤害。加成在 answer() 的 critMult。*/
   if(hasRelic("rustplate")){ s.def += 2; s.crit -= 6; }      // 生锈重甲：带负面权衡的合成燃料
@@ -329,8 +331,13 @@ function stats(){
      基准层（56 级）就是「攻击 +56 / 生命上限 +168」，把面板整个翻一倍，无尽章还会继续长。*/
   if(hasRelic("brand"))   s.atk   += Math.min(BRAND_MAX, P.lvl);          // 烙印
   if(hasRelic("engrave")) s.maxHp += Math.min(ENGRAVE_MAX, P.lvl * 3);    // 铭心
+  /* 第十一批（2026-09-25）：年轮 / 厚土也按等级现算，但**不封顶** —— 每 5 级 / 每 2 级才 +1，
+     占面板的比例基本不变（第 31 层和无尽第 200 层都是两成上下），不会像不封顶的烙印那样把面板翻倍。*/
+  if(hasRelic("rings")) s.atk   += Math.floor(P.lvl / RINGS_PER);        // 年轮
+  if(hasRelic("loam"))  s.maxHp += Math.floor(P.lvl / LOAM_EVERY);       // 厚土
   // 铁躯：最大生命 ×1.8 —— 放在所有加血遗物之后、献身之前（两件一起就是 ×0.9）
   if(hasRelic("titan")) s.maxHp = Math.max(1, Math.round(s.maxHp * TITAN_MULT));
+  if(hasRelic("colossus")) s.maxHp = Math.max(1, Math.round(s.maxHp * COLOSSUS_MULT));   // 巨骨：跟铁躯连乘（第十一批）
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
@@ -353,10 +360,15 @@ function stats(){
     s.def += Math.min(SKING_TIERS, Math.floor((P.shield || 0) / SKING_PER));
   }
   if(hasRelic("evervow")) s.def += Math.min(EVERVOW_MAX, Math.floor(cutStatic() / EVERVOW_PER)); // 恒甲：减伤→护甲
+  /* 第十一批：两件「会长的底数」—— 护甲的乘法件（重装 / 硬茧 / 叠甲）早就够了，缺的是跟着长的底数。
+     放在乘法之前，会被 ×4 ×1.2 放大。*/
+  if(hasRelic("silt"))   s.def += SILT_ARMOR + Math.floor((G ? G.floor : 0) / SILT_EVERY);  // 沉积：按层数
+  if(hasRelic("layers")) s.def += Math.floor(P.lvl / LAYERS_EVERY);                       // 千层：按等级（×1.25 在下面）
   // 重装：护甲 ×3（平减的护甲在深层等于没有，乘一下才跟得上。练习模式那 +50 不在里面）
   if(hasRelic("heavy")) s.def = (s.def + HEAVY_ARMOR) * HEAVY_MULT;   // 重装：自带底数 + 乘法
   // 硬茧：护甲 +20%（乘法档，跟重装/叠甲排在一起；取整放到最后由 defGear 那一步兜）
   if(hasRelic("callus")) s.def = Math.round((s.def + CALLUS_ARMOR) * CALLUS_MULT);  // 硬茧：同上
+  if(hasRelic("layers")) s.def = Math.round(s.def * LAYERS_MULT);                       // 千层：护甲 ×1.25（跟硬茧同一档）
   // 破晓甲：这一层前 DAWN_ASKED 题（G.floorAsked 在 answer() 里累，nextFloor() 里清零）额外给护甲
   if(hasRelic("dawn") && G && (G.floorAsked || 0) < DAWN_ASKED) s.def += DAWN_ARMOR;
   // 叠甲：连续两层都没掉过血（P.noHitStreak 在 nextFloor() 里按上一层的 G.tookDamage 累），护甲 ×2
@@ -375,6 +387,11 @@ function stats(){
   /* 砺石（生命 −5）和血囊（攻击 −4）可能在 1 级把面板压穿，这里兜一下底。*/
   // 镇纸：生命上限→攻击。放在这儿 —— 铁躯/献身/铭心全算完了，按**最终**上限折算
   if(hasRelic("paperweight")) s.atk += Math.min(PAPER_MAX, Math.floor(s.maxHp / PAPER_PER));
+  if(hasRelic("bloodtemper")) s.atk += Math.floor(s.maxHp * TEMPER_PCT);   // 淬血（第十一批）：同理按最终上限，不封顶
+  /* 无锋（神圣，第十一批）：所有攻击都加完了再 ×1.6，暴击在 answer() 里整个关掉 ——
+     拿暴击乘区换一个攻击乘区，伤害公式里还是两个乘区；面板上显示的就是乘完的攻击。
+     放在练习 / 难度那一刀之前（那一刀是「这一趟」的设定，不是遗物）。*/
+  if(hasRelic("noedge")) s.atk = Math.round(s.atk * NOEDGE_MULT);
   s.atk = Math.max(1, s.atk);
   s.maxHp = Math.max(1, s.maxHp);
   s.defGear = s.def;
@@ -440,6 +457,13 @@ function nextFloor(){
   G.fastRun = 0;           // 刹那：连着几次速答
   G.instantReady = false;  // 刹那：攒满了，下一刀吃加成
   G.wholeUsed = false;     // 圆满：每层一次的那次拉回
+  /* 第十一批（2026-09-25）每层的次数和小数存钱罐 */
+  G.deflectN = 0;          // 卸力：这一层减半过几次
+  G.gaspUsed = false;      // 一息：每层一次
+  G.bwallGot = 0;          // 刃壁：这一层已经转了多少护盾（封在上限的 BWALL_MAX）
+  G.bwallBank = 0;         // 刃壁 / 渴刃·血月 / 血河：按小数攒、攒满 1 点给 1 点
+  G.sipBank = 0;
+  G.riverBank = 0;
   G.catSeen = {};          // 「面熟」这一层各类别的怪遇到过几只，startBattle() 里累
   G.floorAsked = 0;        // 「破晓甲」这一层已经答过几题（不分对错），answer() 里累
   /* 第九批「跨流派组合」每层的次数上限和本层攒的东西（2026-09-21）*/
@@ -496,6 +520,10 @@ function nextFloor(){
   if(hasRelic("vow")){
     const want = Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT));
     if((P.shield || 0) < want){ P.shield = want; say(T("盾誓在身前合拢 —— 护盾 <b>") + want + T("</b>。"), "good"); }
+  }
+  if(hasRelic("citywall")){                                                // 城垣（第十一批）：同样取大值
+    const want = Math.max(1, Math.ceil(stats().maxHp * CITY_FLOOR));
+    if((P.shield || 0) < want){ P.shield = want; say(T("城垣补齐了 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
   /* 2026-09-21：这五件原来「独立价值恒为 0」——它们要么按护甲算（自己不产护甲），
@@ -893,6 +921,17 @@ function endlessRamp(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
   return 1 + Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_RAMP;
 }
+/* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的深渊压迫往上抬（用户 2026-09-25 选的方案 B）：
+   第 50 层 ×1（12%）、第 200 层 ×1.75（21%）、第 300 层 ×2.25（27%）。别的章恒为 1。*/
+function capRamp(){
+  return G ? 1 + (endlessRamp(G.floor) - 1) * CAP_RAMP_SHARE : 1;
+}
+/* 这一刀真的打进怪血条的量（吸血那几件按它算）：普通怪按剩下的血封顶，深渊那只血是一层层的，打多少算多少 */
+function landedOn(m, n){
+  if(!(n > 0)) return 0;
+  if(m.def && m.def.abyss) return n;
+  return Math.max(0, Math.min(n, m.hp));
+}
 /* 一只怪在第 floor 层的数值：基础 + 层数成长 + 章节 foeBonus，**最后**再乘一次分段倍率。
    抽出来是因为 Boss 房要「参照上一层的小怪」现算一遍（refFoe）。 */
 function foeNums(def, floor){
@@ -1271,7 +1310,7 @@ function paintMateHp(fill, txt, hp, max){
 }
 function renderSheets(s){
   $("stats").innerHTML =
-    st(T("攻击"), s.atk) + st(T("护甲"), s.def) + st(T("暴击"), s.crit + "%");
+    st(T("攻击"), s.atk) + st(T("护甲"), s.def) + st(T("暴击"), hasRelic("noedge") ? "—" : hasRelic("fate") ? "100%" : s.crit + "%");
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
   const keys = Object.keys(LEX).filter(function(k){ return !!lexWord(k); });
   let mastered = 0;
@@ -1599,7 +1638,12 @@ function startBattle(m){
      只有答错、倒下、回主城才断。赌骰攒的暴击率挂在 G.dice 上，每层清零。 */
   B = {mob:m, q:null, locked:false, asked:0,
        wager:false, optCount:4,
-       wrongTimes:0, shatterUsed:false, shatterFree:false};
+       wrongTimes:0, shatterUsed:false, shatterFree:false, deflectUsed:false};
+  /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
+  if(hasRelic("citywall")){
+    const w = Math.max(1, Math.ceil(stats().maxHp * CITY_FIGHT));
+    if((P.shield || 0) < w) P.shield = w;
+  }
   /* 面熟：这一层同一类别的怪，每次真的撞上（不是路过）就记一次，nextFloor() 里清零。
      老对手：这一趟同名 Boss/层间守者第几次遇到，P 上跟着续玩档，不清零（整趟累计）。*/
   if(m.cat){
@@ -2484,6 +2528,7 @@ function answer(btn, ok){
     if(hasRelic("keenrise") && (P.riseLeft || 0) > 0){ pct += RISE_PCT; P.riseLeft--; }
     /* 刹那（神圣）：上一轮攒满 INSTANT_RUN 次速答，这一刀就是那一刀。先吃、再数这一题。*/
     if(hasRelic("instant") && G.instantReady){ pct += INSTANT_PCT; G.instantReady = false; }
+    if(hasRelic("billow")) pct += BILLOW_PCT;                               // 叠浪（第十一批）：换暴击伤害那一半在下面
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
@@ -2518,12 +2563,18 @@ function answer(btn, ok){
     if(hasRelic("dice")) critRate += (G.dice || 0) * DICE_CRIT;             // 赌骰：本层内叠加
     if(hasRelic("spark")) critRate += SPARK_CRIT;                           // 火星：档位变密 + 暴击率
     if(hasRelic("charge")) critRate += (P.charge || 0) * CHARGE_CRIT;       // 蓄势：攒了几刀没暴就叠几档
-    if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * 0.1; critRate = 100; }
+    /* 溢锋（第十一批）：溢出那一档从 +10% 换成 +20% */
+    if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * (hasRelic("overcrit") ? OVERCRIT_STEP : 0.1); critRate = 100; }
+    /* 叠浪（第十一批）：②层那个百分比桶每满 100%，暴击倍率 +0.2 —— ②层是加法、堆得越高越不值钱，
+       这件把溢出来的那部分挪进暴击乘区。读的是**这一刀全部算完**的 pct（冒险那 +100% 也算）。*/
+    if(hasRelic("billow")) critMult += Math.floor(pct / BILLOW_PER) * BILLOW_CRIT;
+    if(hasRelic("fate")) critMult -= FATE_CUT;                              // 定数：必定暴击，倍率 ×2 → ×1.6
     // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
     // 刹那（神圣）：答得快的那一刀也必定暴击 —— 走同一个 forceCrit，还是那一个乘区
     const forceCrit = (hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0) ||
-                      (fast && hasRelic("instant"));
-    const crit = forceCrit || Math.random() * 100 < critRate;
+                      (fast && hasRelic("instant")) || hasRelic("fate");   // 定数（第十一批）：每一刀都暴击
+    /* 无锋（第十一批）：不再暴击 —— 灵光 / 刹那 / 定数的「必定暴击」也一起哑掉（两件都带时按无锋算）*/
+    const crit = !hasRelic("noedge") && (forceCrit || Math.random() * 100 < critRate);
     // 蓄势：暴了就清零，没暴就再攒一层（跨怪物保留，跟连击一个道理）
     if(hasRelic("charge")) P.charge = crit ? 0 : (P.charge || 0) + 1;
 
@@ -2541,17 +2592,55 @@ function answer(btn, ok){
     if(crit && hasRelic("vamp")) healUp(VAMP_HEAL, s);                      // 饮血
     // 记仇看的是"连续挨你打了几刀"——每一次真的落下的攻击都算一刀，跟这次是不是暴击/额外伤害无关
     if(hasRelic("grudge")) m.hitsLanded = (m.hitsLanded || 0) + 1;
+    /* 吸血（第十一批）只算**真的打进血条**的那部分：一刀 2 万打一只剩 1600 血的怪，按 1600 算 ——
+       所以一层能回多少有天然封顶（一层怪的血就那么多）。深渊那只血是一层层的，打进去多少就算多少。*/
+    let landed = landedOn(m, dmg);
     coopDealDamage(m, dmg);
     /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
        （不重新掷暴击、不再算额外伤害、不加连击），所以还是那两个乘区。*/
     let hall = 0;
     if(hasRelic("hall") && luck(0.5)){
       hall = dmg;
+      landed += landedOn(m, hall);
       coopDealDamage(m, hall);
       setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
       relicLog += T(" <span class=\"sys\">(回响之厅又补了 ") + hall + T(" 点)</span>");
     }
     if(recoil){ P.recoil = 0; relicLog += T(" <span class=\"sys\">(反震 +") + recoil + T("% 打了出去)</span>"); }
+    /* ===== 第十一批：按「这一刀」长的四件（2026-09-25）=====
+       前期一刀只值零点几点，每刀取整会全被吃掉，所以都按小数攒在 G 上、攒满 1 点给 1 点（每层清零）。*/
+    const sipPct = (hasRelic("thirst") ? THIRST_PCT : 0) + ((crit && hasRelic("bloodmoon")) ? MOON_PCT : 0);
+    if(sipPct > 0 && landed > 0){                                            // 渴刃 / 血月：吸血
+      G.sipBank = (G.sipBank || 0) + landed * sipPct / 100;
+      const n = Math.floor(G.sipBank);
+      if(n > 0){ G.sipBank -= n; healUp(n, s); }
+    }
+    if(hasRelic("bloodriver") && landed > 0){                                // 血河：吸血，溢出的一半转盾
+      G.riverBank = (G.riverBank || 0) + landed * RIVER_PCT / 100;
+      const n = Math.floor(G.riverBank);
+      if(n > 0){
+        G.riverBank -= n;
+        const before = P.shield || 0;
+        const rv = healUp(n, s, true);
+        /* 转出来的盾最多补到上限的 RIVER_SHIELD —— 只封这一笔（别的件给的盾不管，所以按「转之前」的盾量算）*/
+        if(rv.sh > 0) P.shield = before + Math.max(0, Math.min(rv.sh, Math.ceil(s.maxHp * RIVER_SHIELD) - before));
+      }
+    }
+    /* 刃壁：按这一刀**打出去的数**（溢出的也算 —— 它就是给后期「一刀几万、怪一千多血」那部分溢出找的出口），
+       每层累计封在上限的 BWALL_MAX。刹车踩在产量上，跟凝盾那条规矩一样。回响之厅补的那一刀不算。*/
+    if(hasRelic("bladewall")){
+      const capW = Math.ceil(s.maxHp * BWALL_MAX);
+      if((G.bwallGot || 0) < capW){
+        G.bwallBank = (G.bwallBank || 0) + dmg * BWALL_PCT;
+        let n = Math.floor(G.bwallBank);
+        if(n > 0){
+          G.bwallBank -= n;
+          n = Math.min(n, capW - (G.bwallGot || 0));
+          G.bwallGot = (G.bwallGot || 0) + n;
+          P.shield = (P.shield || 0) + n;
+        }
+      }
+    }
     if(hasRelic("drain") && luck(DRAIN_RATE)) healUp(DRAIN_HEAL, s);  // 吞噬
     // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
     if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
@@ -2772,7 +2861,8 @@ function answer(btn, ok){
         const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted});
         dmg = mit.dmg;
         if(mit.dodged){
-          head = T("<span class=\"big no\">错身 —— 没碰到你</span>");
+          head = mit.by === "glimmer" ? T("<span class=\"big no\">浮光 —— 刀穿过去了</span>")
+                                      : T("<span class=\"big no\">错身 —— 没碰到你</span>");
           note = T("你侧了半步，这一下落空了（连击照断）。");
         } else {
           head = "<span class=\"big no\">" + (B.wager ? T("冒险失手") : T("失手")) + "</span>";
@@ -2837,6 +2927,12 @@ function answer(btn, ok){
    返回要显示的那句话；没救下来就是空字符串。*/
 function deathSave(){
   if(P.hp > 0) return "";
+  /* 一息（第十一批）：排在**最前面** —— 先用最便宜的这一次（只留 1 点），薪火和回魂留给下一下。*/
+  if(hasRelic("lastgasp") && G && !G.gaspUsed){
+    G.gaspUsed = true;
+    P.hp = 1;
+    return T("一息 —— 还剩一口气，你没倒下（这一层就这一次）。");
+  }
   if(hasRelic("undying") && !P.undying){
     P.undying = true;
     /* 2026-09-21：原来是把血钉在 1 点 —— 钉在 1 点等于下一下还是死，
@@ -3018,6 +3114,14 @@ function mitigate(dmg, s0, opt){
     out = Math.max(1, Math.ceil(out / 2));
     why += T(" <span class=\"sys\">(屏息卸掉一半，这一层还剩 ") + (HOLD_FREE - G.holdUsed) + T(" 次)</span>");
   }
+  /* 卸力（第十一批）：每场第一次**真的要掉血**的那一下减半，每层最多 DEFLECT_N 次。
+     跟屏息 / 余温各减各的（同一下能被减两次半）。B.deflectUsed 跟着 B 一场一清。*/
+  if(hasRelic("deflect") && B && !B.deflectUsed && (G.deflectN || 0) < DEFLECT_N){
+    B.deflectUsed = true;
+    G.deflectN = (G.deflectN || 0) + 1;
+    out = Math.max(1, Math.ceil(out / 2));
+    why += T(" <span class=\"sys\">(卸力卸掉一半，这一层还剩 ") + (DEFLECT_N - G.deflectN) + T(" 次)</span>");
+  }
   /* 余温：不灭薪火触发之后才有 P.warmthLeft（在 deathSave() 里发），接下来这几次答错单独再减半，
      不占粗布/屏息的名额——放在它们后面，是"薪火给的额外缓冲"，不是替代它们。*/
   /* 余温 2026-09-21 补了自带触发源：每层第一次跌破半血也发一轮 ——
@@ -3036,10 +3140,12 @@ function mitigate(dmg, s0, opt){
   if(hasRelic("blunt")) capPct = BLUNT_PCT;
   if(hasRelic("womb")) capPct = capPct ? Math.min(capPct, WOMB_PCT) : WOMB_PCT;
   if(capPct){
-    const cap = Math.max(1, Math.ceil(s.maxHp * capPct));
+    const byWomb = capPct === WOMB_PCT;
+    /* 无尽深处封顶线跟着一半的深渊压迫往上抬（方案 B，capRamp()）—— 不抬的话它是全游戏唯一越深越强的东西 */
+    const cap = Math.max(1, Math.ceil(s.maxHp * capPct * capRamp()));
     if(out > cap){
       out = cap;
-      why += " <span class=\"sys\">(" + (capPct === WOMB_PCT ? T("石胎") : T("钝痛")) + T("把这一下压到 ") + cap + T(" 点)</span>");
+      why += " <span class=\"sys\">(" + (byWomb ? T("石胎") : T("钝痛")) + T("把这一下压到 ") + cap + T(" 点)</span>");
     }
   }
   /* 尚存：单次伤害超过生命上限 ENDURE_PCT 就砍半，放在所有其它减伤算完之后判 ——
@@ -3050,7 +3156,8 @@ function mitigate(dmg, s0, opt){
     why += T(" <span class=\"sys\">(尚存削掉了这记重击的 ") + ENDURE_CUT + "%)</span>";
   }
   out = Math.max(1, out);
-  if(hasRelic("slip") && luck(SLIP_RATE)) return {dmg:0, dodged:true, why:""};   // 错身
+  if(hasRelic("slip") && luck(SLIP_RATE)) return {dmg:0, dodged:true, why:"", by:"slip"};   // 错身
+  if(hasRelic("glimmer") && luck(GLIMMER_RATE)) return {dmg:0, dodged:true, why:"", by:"glimmer"};   // 浮光：各掷各的
   return {dmg:out, dodged:false, why:why};
 }
 /* ---- 挨一下：先扣护盾、剩下的才扣血，跳数字，返回写进 verdict 的那句话 ----
@@ -3152,6 +3259,7 @@ function closeBattleWin(){
   if(hasRelic("mend")) heal += Math.max(1, Math.ceil(s0.maxHp * MEND_PCT));      // 归血：收割的百分比版
   if(hasRelic("reapfull")) heal += Math.max(1, Math.ceil(s0.maxHp * REAPF_PCT)); // 收势：收割的百分比版（第十批）
   const got = healUp(heal, s0);                                           // 泉涌要收溢出，所以走 healUp
+  if(hasRelic("disarm")) P.shield = (P.shield || 0) + Math.max(1, Math.round(s0.maxHp * DISARM_PCT));   // 缴械（第十一批）
   const gained = got.hp;
   say(m.name + T(" 化成了灰。<span class=\"sys\">(+") + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
       T("，+") + g + T(" 金") +
@@ -5226,6 +5334,13 @@ function resumeRun(s){
   G.fastRun = 0;
   G.instantReady = false;
   G.wholeUsed = false;
+  /* 第十一批的每层计数，同理按新一层初始化 */
+  G.deflectN = 0;
+  G.gaspUsed = false;
+  G.bwallGot = 0;
+  G.bwallBank = 0;
+  G.sipBank = 0;
+  G.riverBank = 0;
   /* 第九批「跨流派组合」的每层计数，同理按新一层初始化。
      ⚠️ G.healed（本层回了多少血）补成 0 —— 进层那几笔种子回血是**上一次**发的、
      血量已经存在档里了，这里重发就成了读档回血外挂。代价是读档那一层的
@@ -5427,7 +5542,7 @@ function openCodex(tab){
   const box = $("codexList");
   box.innerHTML = "";
   if(cTab === "bf"){
-    /* 战场遗物：**同一批 209 件**，只是把词条换成战场里的说法（content.js 的 bfWord）。
+    /* 战场遗物：**同一批 228 件**，只是把词条换成战场里的说法（content.js 的 bfWord）。
        战场模式不写 CODEX，所以这一页没有「拿过几次」—— 别去蹭地牢那份计数，会看混。*/
     $("codexTitle").textContent = T("战场遗物");
     const q = codexFind();
