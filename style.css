@@ -264,6 +264,7 @@ body{
 .c.shop{color:var(--torch)}   /* 商摊的棚子和柜台 */
 .c.chest{color:var(--torch-deep)}  /* 木箱 */
 .c.altar{color:var(--r3)}     /* 坛上悬的那颗宝石 —— 用遗物紫，好跟箱子分开 */
+.c.altar.gild{color:var(--coin)}  /* 金坛（无尽章 Boss 房）：同一张坛，染成金色 */
 /* 画出来的那几样走出视野后整张淡下去 ——
    它们内部有写死的固定色（石头、描边、金锁），只调 color 淡不下来。
    阶梯不在这里：它清空后才出现，是玩家要去的地方，淡了反而找不着。 */
@@ -645,6 +646,14 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .ledger .li:first-child{border-top:0}
 .ledger .li .lb{color:var(--dim)}
 .ledger .li .am{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--bone)}
+/* 金坛：六项 × 「这一次 / 已得到」两列，行数永远是 7 行 —— 投完只换数字，窗不变形 */
+.gildtab{display:grid;grid-template-columns:1fr auto auto;gap:0 14px;margin-top:10px;padding:6px 11px;
+  border:1px solid var(--edge-soft);border-radius:2px;background:#FFFDF7;font-size:13px;line-height:1.9}
+.gildtab .gh{color:var(--dim);font-size:11px;text-align:right}
+.gildtab .gn{color:var(--dim)}
+.gildtab .gv{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--bone);text-align:right;min-width:4.5em}
+.gildtab .got{color:var(--torch-deep);font-weight:700}
+#btnGildPay{min-width:12.5em;white-space:nowrap}
 .rules{font-size:13px;color:var(--dim);display:flex;flex-direction:column;gap:8px}
 .rules b{color:var(--bone)}
 .rules ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:6px}

@@ -236,6 +236,9 @@ function newRun(){
         /* 深渊（用户 2026-09-22）：cleared = 走过章末 Boss 那一层了（通关照记），
            abyss = 在深渊里打穿了无终之影几层（结算按层给宝石）。两个都跟着续玩档。*/
         cleared:false, abyss:0,
+        /* 金坛（无尽章，2026-09-25）：gild 是投出来的属性加成 {atk,hp,def,crit,pct,cut}，
+           gildN 是这一趟投过几次（价格和档位都按它算）。本局有效，跟着续玩档。*/
+        gild:{}, gildN:0,
         /* 新手教程（2026-09-23）：这一趟是教程关 —— 只有一层、不写续玩档、不结算（见「新手教程」一节）*/
         tut: !!tutPending };
   tutPending = false;
@@ -271,6 +274,9 @@ function stats(){
   const pb = CHAPTER.playerBase, pl = CHAPTER.perLevel;
   const s = {atk: pb.atk + (P.lvl-1) * pl.atk, def:0, crit:pb.crit,
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
+  /* 金坛（无尽章 50 层往下的 Boss 房，2026-09-25）：投金币换的加成跟等级同一档，是**底子** ——
+     它不是遗物，本局一直有效；放在最前面，后面铁躯 / 重装那些乘法件照样放大它。*/
+  s.atk += gildGet("atk"); s.maxHp += gildGet("hp"); s.def += gildGet("def"); s.crit += gildGet("crit");
   // 普通品质：纯数值，全部在这儿结清
   if(hasRelic("whet"))  s.atk += 3;
   if(hasRelic("grind")){ s.atk += 5; s.maxHp -= 5; }          // 砺石：带负面权衡的合成燃料
@@ -1171,6 +1177,7 @@ function render(){
       if(th.kind === "gold"){ content = "gold"; art = COIN; }
       else if(th.kind === "feat"){ content = "feat"; art = SPRING; }
       else if(th.kind === "altar"){ content = "altar"; art = ALTAR; }
+      else if(th.kind === "gild"){ content = "altar gild"; art = ALTAR; }   // 金坛：同一张图，染成金色
       else if(th.kind === "chest"){ content = "chest"; art = CHEST; }
       else if(th.kind === "shop"){ content = "shop"; art = SHOP; }
     }
@@ -1563,6 +1570,7 @@ function onEnter(){
       fxGold(P.x, P.y);                     // 碎屑飞向顶上的「金」
     } else if(th.kind === "feat"){ noteRoomUsed(); coopNoteUsed(T("泉")); openSpring(th); return; }
     else if(th.kind === "altar"){ noteRoomUsed(); coopNoteUsed(T("坛")); openAltar(th); return; }
+    else if(th.kind === "gild"){ openGild(th); return; }
     else if(th.kind === "chest"){ noteRoomUsed(); coopNoteUsed(T("箱")); openChest(th); return; }
     else if(th.kind === "shop"){ noteRoomUsed(); coopNoteUsed(T("商")); openShop(th); return; }
   }
@@ -2465,6 +2473,7 @@ function answer(btn, ok){
     if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * EMPTY_PCT;  // 空手
     if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
     if(hasRelic("offer")) pct += OFFER_PCT;                                 // 献身（生命减半在 stats() 里）
+    pct += gildGet("pct");                                                  // 金坛：本局攒下的伤害 %
     if(hasRelic("slay")){ pct += SLAY_ALL; if(m.boss) pct += SLAY_PCT; }    // 弑主：对谁都加，对 Boss 再加
     if(hasRelic("delve")) pct += Math.min(DELVE_MAX, G.floor * 0.5);        // 踏层：每下一层 +0.5%
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
@@ -3016,6 +3025,7 @@ function cutStatic(){
   if(hasRelic("linked")){                                                 // 连环：连击→减伤
     cut += LINKED_CUT + Math.min(LINKED_MAX, Math.floor((P.combo || 0) / LINKED_AT) * LINKED_STEP);
   }
+  cut += gildGet("cut");                                                  // 金坛：本局攒下的减伤
   return cut;
 }
 /* 万流归宗（神圣）：护盾／护甲／连击三条线各数几档（各最多 CONF_TIERS 档），
@@ -3271,6 +3281,7 @@ function closeBattleWin(){
     G.seen[m.y][m.x] = true;
     say(T("这一层清空了。") + m.name + T(" 倒下的地方裂开了 —— 阶梯 ▼ 就在那儿。"), "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
+    spawnGild();          // 无尽章 50 层往下的 Boss 房：阶梯旁边立起金坛
     if(hasRelic("finale")){                       // 收尾：清完一层回 FINALE_PCT 的上限
       const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
@@ -3467,6 +3478,87 @@ function resolveAltar(pay){
     return;
   }
   say(T("你收回手，绕开了石台。"), "sys");
+  lockInput(200);
+  renderHud(); render();
+}
+
+/* ---- 金坛（无尽章，用户 2026-09-25）----
+   无尽章第 ENDLESS_FROM 层**往下**的每一间 Boss 房（60 / 70 / 80 …），守者倒下之后阶梯旁边立起一座金坛：
+   投金币换一项随机的属性加成，**本局一直有效**（记在 P.gild 上，不是遗物 —— 卖不掉、换不掉，也不占格子）。
+   价格按这一趟投过几次（P.gildN）翻倍，加成按同一个次数 ×GILD_GROW 往上涨（数值表在 content.js 的 GILD_STATS）。
+   一座坛能连着投，钱够就行；走开再回来还能接着投，下一层它就没了。
+   ⚠️ 它不写进续玩档：存档点是「刚踏进这一层」，那时候守者还站着、坛还没立起来 —— 读档重打一遍就又有了。*/
+var gildLast = null;           // 刚投中的那一项（窗里那一行亮一下），纯界面状态
+function gildOn(){ return !!(G && isEndless() && isBossFloor(G.floor) && G.floor > ENDLESS_FROM); }
+function gildGet(k){ return (P && P.gild && P.gild[k]) || 0; }
+function gildCost(){ return Math.round(GILD_COST0 * Math.pow(GILD_COST_X, P.gildN || 0)); }
+/* 第 (n+1) 次献祭那一档的数值（n = 已经投过几次）*/
+function gildAmt(st, n){ return Math.max(1, Math.round(st.base * Math.pow(GILD_GROW, n))); }
+function gildVal(st, v){ return (st.neg ? "−" : "+") + v + (st.pc ? "%" : ""); }
+function gildText(st, v){ return T(st.n) + " " + gildVal(st, v); }
+/* 守者倒下、这一层清空的那一下调（单人 closeBattleWin / 联机 coopHandleDead 两处）。
+   摆在阶梯的四邻里：上 → 下 → 左 → 右，跳过人站的那一格。*/
+function spawnGild(){
+  if(!gildOn() || !P || P.tut || !G.stair) return;
+  if(G.things.some(function(th){ return th.kind === "gild"; })) return;
+  const dirs = [[0,-1], [0,1], [-1,0], [1,0]];
+  for(let i=0;i<dirs.length;i++){
+    const nx = G.stair.x + dirs[i][0], ny = G.stair.y + dirs[i][1];
+    if(nx < 0 || ny < 0 || nx >= W || ny >= H || !G.map[ny][nx]) continue;
+    if((nx === P.x && ny === P.y) || mobAt(nx, ny) || thingAt(nx, ny)) continue;
+    G.things.push({x:nx, y:ny, kind:"gild"});
+    say(T("阶梯旁边升起一座<b>金坛</b> —— 投进金币，换一项本局有效的属性加成。"), "crit");
+    return;
+  }
+}
+function openGild(th){
+  G.paused = true;
+  pendingRoom = th;
+  gildLast = null;
+  renderGild();
+  hideAll();
+  $("veilGild").hidden = false;
+}
+function renderGild(){
+  const n = P.gildN || 0, cost = gildCost(), enough = (P.gold || 0) >= cost;
+  $("gildLedger").innerHTML =
+    li(T("你有"), (P.gold || 0) + T(" 金")) +
+    li(T("这一次"), cost + T(" 金") + L("（第 " + (n + 1) + " 次）", " (offering #" + (n + 1) + ")"));
+  let h = "<span class=\"gh\"></span><span class=\"gh\">" + T("这一次") + "</span><span class=\"gh\">" + T("已得到") + "</span>";
+  GILD_STATS.forEach(function(st){
+    const have = gildGet(st.id), on = gildLast === st.id ? " got" : "";
+    h += "<span class=\"gn" + on + "\">" + T(st.n) + "</span>" +
+         "<span class=\"gv" + on + "\">" + gildVal(st, gildAmt(st, n)) + "</span>" +
+         "<span class=\"gv" + on + "\">" + (have ? gildVal(st, have) : "—") + "</span>";
+  });
+  $("gildTable").innerHTML = h;
+  const b = $("btnGildPay");
+  b.disabled = !enough;
+  b.textContent = enough ? L("投入 " + cost + " 金", "Offer " + cost + " gold") : T("金币不够");
+}
+function payGild(){
+  const th = pendingRoom;
+  if(!th || th.kind !== "gild") return;
+  const cost = gildCost();
+  if((P.gold || 0) < cost) return;
+  P.gold -= cost;
+  P.spent = (P.spent || 0) + cost;              // 散财：投进坛里的也算花出去了
+  const st = pick(GILD_STATS), v = gildAmt(st, P.gildN || 0);
+  withMaxHp(function(){ P.gild[st.id] = (P.gild[st.id] || 0) + v; });   // 生命上限涨了，当前血跟着补
+  P.gildN = (P.gildN || 0) + 1;
+  gildLast = st.id;
+  say(T("金坛吞下了 <b>") + cost + T("</b> 金 —— <b>") + gildText(st, v) + T("</b>（本局有效）。"), "crit");
+  toast(gildText(st, v));
+  renderGild();
+  renderHud();
+}
+function closeGild(){
+  pendingRoom = null;
+  $("veilGild").hidden = true;
+  G.paused = false;
+  const th = thingAt(P.x, P.y);
+  if(th && th.kind === "gild") stepAside();     // 跟游商一样退开一格，想再投就再踩上去
+  say(T("金坛还立在阶梯旁边。这一层走之前，随时能回来再投。"), "sys");
   lockInput(200);
   renderHud(); render();
 }
@@ -5295,6 +5387,8 @@ function resumeRun(s){
   P.relics = P.relics.filter(function(id){ return !!relicById(id); });   // 遗物被删掉的老档
   if(!P.haunt) P.haunt = [];
   if(!P.hauntAt) P.hauntAt = {};                 // 老档没记心魔的答错时间，hauntReady 会当成熬到了
+  if(!P.gild || typeof P.gild !== "object") P.gild = {};   // 金坛（2026-09-25），老档没有
+  if(typeof P.gildN !== "number") P.gildN = 0;
   if(typeof P.combo !== "number") P.combo = 0;   // 连击现在存在 P 上，老档没有这个字段
   if(typeof P.shield !== "number") P.shield = 0; // 护盾（第四批），老档没有
   if(typeof P.aegisN !== "number") P.aegisN = 0;
@@ -5628,12 +5722,12 @@ function openCodex(tab){
 }
 function hideAll(){
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -6519,6 +6613,8 @@ $("btnStairStay").addEventListener("click", function(){
   closeStair(false);
 });
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
+$("btnGildPay").addEventListener("click", payGild);
+$("btnGildSkip").addEventListener("click", closeGild);
 $("btnAltarSkip").addEventListener("click", function(){ resolveAltar(false); });
 /* 熔炉：点身上的一件遗物就是把它扔进去 */
 $("forgeList").addEventListener("click", function(ev){
@@ -6936,6 +7032,7 @@ function coopHandleDead(cid){
     G.seen[m.y][m.x] = true;
     say(T("这一层清空了 —— 阶梯 ▼ 出现了。"), "crit");
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
+    spawnGild();          // 金坛各人一座（金币和加成本来就是各算各的）
     if(hasRelic("finale")){    // 收尾：清完一层回 FINALE_PCT 的上限——清场是共识事件，没亲手补最后一刀也该有
       const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
       const r = healUp(back);
