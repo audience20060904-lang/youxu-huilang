@@ -1351,6 +1351,7 @@ function renderSheets(s){
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
   $("panelRun").hidden = !inRun;
+  $("panelStats").hidden = !inRun;      // 「属性」也一样：镇上没有这一趟，面板上全是 1 级的底子，没意义（用户 2026-09-25）
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
   $("runStats").innerHTML = st(T("答对"), P.right) + st(T("答错"), P.wrong) +
     st(T("正确率"), acc) + st(T("击杀"), P.kills) +
