@@ -23,9 +23,8 @@ function abyssFloor(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : 
 function isAbyssFloor(f, ch){ return f === abyssFloor(ch); }
 function inAbyss(){ return !!(G && isAbyssFloor(G.floor)); }
 /* 「没有庇护」的地方（用户 2026-09-25）：无尽章第 ENDLESS_FROM(50) 层往下 + 深渊（前四章第 51 层）。
-   这里**练习模式那 +50 护甲不给**、**减伤百分比那一桶（受到的伤害 −N%）整个作废** ——
-   前者在 stats() 里、后者在 mitigate() 里各判一次。练习模式的攻击减半照旧（用户只点了护甲和减伤）。
-   护盾、屏息/余温减半、钝痛/石胎封顶、错身这些不是「减伤百分比」，照常生效。*/
+   这里**练习模式整个不算**：+50 护甲不给、攻击减半也不减（stats() 最后那一步判）。
+   遗物的「受到的伤害 −N%」照常生效（用户明确说的），别在 mitigate() 里动它。*/
 function noShelterAt(f){ return !!(CH && ((CH.endless && f > ENDLESS_FROM) || isAbyssFloor(f))); }
 function noShelter(){ return !!(G && noShelterAt(G.floor)); }
 /* 无终之影第 n 层的血量和攻击：血量翻倍，攻击跟着血量走（10%，最少 1）——两条线是同一条。 */
@@ -391,8 +390,9 @@ function stats(){
      ⚠️ **两个倍率先乘起来、只取整一次** —— 分两步各 round 的话
      D 级（×2）+ 练习（×0.5）会因为中间那次取整漂掉一两点，而用户要的是
      「练习 + D 级正好抵消，等于白拿 50 护甲」，必须严格等于原攻击。*/
-  const dmul = diffMult(P.diff) * (P.practice ? CHAPTER.practiceAtkMult : 1);
-  if(P.practice && !noShelter()) s.def += CHAPTER.practiceDef;    // 无尽 50 层往下 / 深渊不给
+  const practice = P.practice && !noShelter();     // 无尽 50 层往下 / 深渊：练习模式整个不算（见 noShelterAt）
+  const dmul = diffMult(P.diff) * (practice ? CHAPTER.practiceAtkMult : 1);
+  if(practice) s.def += CHAPTER.practiceDef;
   if(dmul !== 1) s.atk = Math.max(1, Math.round(s.atk * dmul));
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
@@ -561,8 +561,8 @@ function nextFloor(){
     }
     if(!isAbyssFloor(G.floor)){ chapterClear(); return; }
   }
-  if(noShelter() && !noShelterAt(from) && !P.tut){
-    say(T("从这里往下，<b>练习模式的护甲</b>和<b>所有减伤</b>都不再生效。"), "hurt");
+  if(P.practice && noShelter() && !noShelterAt(from) && !P.tut){
+    say(T("从这里往下，<b>练习模式</b>不再生效：没有 +50 护甲，攻击也不再减半。"), "hurt");
   }
   // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
   // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
@@ -3012,7 +3012,6 @@ function mitigate(dmg, s0, opt){
      ⚠️ 先乘后除，**别写成 `out * (1 - cut/100)`** —— 那样 55% 会算成
      `1 - 0.55 = 0.44999999999999996`，floor 之后白多掉 1 点（实测 100 点打成 44 而不是 45）。*/
   if(cut > MIT_CUT_MAX) cut = MIT_CUT_MAX;
-  if(noShelter()) cut = 0;         // 无尽 50 层往下 / 深渊：减伤百分比整桶作废（见 noShelterAt）
   if(cut) out = Math.floor(out * (100 - cut) / 100);
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
