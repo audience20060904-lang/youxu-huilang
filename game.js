@@ -22,6 +22,12 @@ function isEndless(){ return !!(CH && CH.endless); }
 function abyssFloor(ch){ return ((ch || CH) && (ch || CH).endless) ? Infinity : FLOORS + 1; }
 function isAbyssFloor(f, ch){ return f === abyssFloor(ch); }
 function inAbyss(){ return !!(G && isAbyssFloor(G.floor)); }
+/* 「没有庇护」的地方（用户 2026-09-25）：无尽章第 ENDLESS_FROM(50) 层往下 + 深渊（前四章第 51 层）。
+   这里**练习模式那 +50 护甲不给**、**减伤百分比那一桶（受到的伤害 −N%）整个作废** ——
+   前者在 stats() 里、后者在 mitigate() 里各判一次。练习模式的攻击减半照旧（用户只点了护甲和减伤）。
+   护盾、屏息/余温减半、钝痛/石胎封顶、错身这些不是「减伤百分比」，照常生效。*/
+function noShelterAt(f){ return !!(CH && ((CH.endless && f > ENDLESS_FROM) || isAbyssFloor(f))); }
+function noShelter(){ return !!(G && noShelterAt(G.floor)); }
 /* 无终之影第 n 层的血量和攻击：血量翻倍，攻击跟着血量走（10%，最少 1）——两条线是同一条。 */
 function abyssHp(layer){ return ABYSS_HP0 * Math.pow(ABYSS_X, Math.max(0, layer - 1)); }
 function abyssDmg(layer){ return Math.max(1, Math.round(abyssHp(layer) * ABYSS_DMG_PCT)); }
@@ -386,7 +392,7 @@ function stats(){
      D 级（×2）+ 练习（×0.5）会因为中间那次取整漂掉一两点，而用户要的是
      「练习 + D 级正好抵消，等于白拿 50 护甲」，必须严格等于原攻击。*/
   const dmul = diffMult(P.diff) * (P.practice ? CHAPTER.practiceAtkMult : 1);
-  if(P.practice) s.def += CHAPTER.practiceDef;
+  if(P.practice && !noShelter()) s.def += CHAPTER.practiceDef;    // 无尽 50 层往下 / 深渊不给
   if(dmul !== 1) s.atk = Math.max(1, Math.round(s.atk * dmul));
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
   return s;
@@ -554,6 +560,9 @@ function nextFloor(){
       say(T("章末的门在身后合上 —— <b>第") + chNo() + T("章通关</b>。这一趟的通关已经记下了。"), "crit");
     }
     if(!isAbyssFloor(G.floor)){ chapterClear(); return; }
+  }
+  if(noShelter() && !noShelterAt(from) && !P.tut){
+    say(T("从这里往下，<b>练习模式的护甲</b>和<b>所有减伤</b>都不再生效。"), "hurt");
   }
   // 联机 · 非房主：地图由房主生成广播，这里只等 world 消息（见 NET.on("world", ...)）。
   // G 上面那些每层清零的字段已经在上面设好了，world 到了之后 applyCoopWorld() 接着往下走
@@ -1551,7 +1560,11 @@ function askStair(){
    上下都不行才左右兜一下；四个方向都走不了（阶梯在死胡同尽头）就留在原地。
    ⚠️ 只落到**空地板**上：有怪会开打、有泉/坛/箱/商会弹窗 —— 刚说了「再待一会儿」，
    不该顺手把人推进另一个弹层里。金币也跳过，省得白捡一笔说不清。*/
-function stepOffStair(){
+function stepOffStair(){ return stepAside(); }
+/* 从脚下这一格退开一步，落到四邻里第一块**空地板**上（阶梯、游商共用）。
+   游商（用户 2026-09-25）：关掉商店之后人不再站在商人头上，同样的规矩退开一格。
+   清空之后的阶梯那一格也跳过 —— 从商人身上退到阶梯上等于又被问一次「下不下去」。*/
+function stepAside(){
   const dirs = [[0,1], [0,-1], [-1,0], [1,0]];   // 下 → 上 → 左 → 右
   for(let i=0;i<dirs.length;i++){
     const nx = P.x + dirs[i][0], ny = P.y + dirs[i][1];
@@ -1559,6 +1572,7 @@ function stepOffStair(){
     if(!G.map[ny][nx]) continue;                 // 墙
     if(mobAt(nx, ny)) continue;
     if(thingAt(nx, ny)) continue;
+    if(G.mobs.length === 0 && G.stair && nx === G.stair.x && ny === G.stair.y) continue;
     P.x = nx; P.y = ny;
     fov();
     return true;
@@ -2033,72 +2047,91 @@ function renderSpell(word){
   /* 笔顺：随机挑一格白送。轮到那一格时 giftFill() 自己填上，玩家不用按也退不掉。
      没有这件遗物就是 null。*/
   B.gift = hasRelic("stroke") ? ri(0, target.length - 1) : null;
+  B.slots = slotNew(target.length);
   const box = $("letters");
   box.innerHTML = "";
   letters.forEach(function(ch){
     const b = document.createElement("button");
     b.type = "button"; b.className = "lbtn" + (LEARN_CJK ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
-      if(B.locked || B.spell.length >= target.length) return;
-      B.spell += ch; b.disabled = true; b.dataset.used = "1";
-      spellStep(word, box);
+      if(B.locked || B.slots.done || !slotFill(B.slots, ch, b)) return;
+      spellStep(word);
     });
     box.appendChild(b);
   });
   const back = document.createElement("button");
   back.type = "button"; back.className = "lbtn"; back.textContent = "⌫";
   back.addEventListener("click", function(){
-    if(B.locked || !B.spell.length) return;
-    spellPop(box);
-    /* 笔顺送的那一格不能挡着退格：退到它头上就连它一起退掉，
-       不然它下一拍又被自动填回来，前面那个字母就永远改不了了。*/
-    if(typeof B.gift === "number" && B.spell.length === B.gift && B.spell.length > 0) spellPop(box);
-    if(typeof B.gift === "number" && B.spell.length === B.gift) giftFill(word, box);  // 第 0 格那种：马上补回来
-    drawSpell(word);
+    if(B.locked || B.slots.done || !slotLast(B.slots)) return;
+    spellStep(word);
   });
   box.appendChild(back);
-  spellStep(word, box);        // 「笔顺」可能就送在第一格，进来先走一拍
+  /* 笔顺：随机挑一格白送 —— 一进来就填上、按掉对应的字母键，那一格退不掉也点不掉 */
+  if(typeof B.gift === "number") slotGift(B.slots, B.gift, spellOf(word)[B.gift], box);
+  spellStep(word);
 }
-/* 拼写题走一步：先补上「笔顺」送的那一格，再重画；填满了就判这一题 */
-function spellStep(word, box){
-  giftFill(word, box);
+/* ---- 拼写字格（用户 2026-09-25）：宝箱和战斗里的拼写题共用 ----
+   点键盘：填进**最左边的空格**。点一个已经放上去的字母：把它取下来还回键盘，
+   **那一格就空着，后面的字母不往前挪**（下一次点键盘先补这个空）。⌫ 退掉最右边那一个。
+   笔顺送的那格是 fixed，退格和点字格都拿不掉。填满就 done，判题前那 180ms 里什么都动不了。*/
+function slotNew(n){ const a = []; for(let i=0;i<n;i++) a.push(null); a.done = false; return a; }
+function slotWord(st){ return st.map(function(x){ return x ? x.ch : ""; }).join(""); }
+function slotFull(st){ return st.indexOf(null) < 0; }
+function slotFill(st, ch, btn){
+  const i = st.indexOf(null);
+  if(i < 0) return false;
+  st[i] = {ch:ch, btn:btn};
+  btn.disabled = true; btn.dataset.used = "1";
+  return true;
+}
+function slotTake(st, i){
+  const x = st[i];
+  if(!x || x.fixed || st.done) return false;
+  st[i] = null;
+  if(x.btn){ x.btn.disabled = false; delete x.btn.dataset.used; }
+  return true;
+}
+function slotLast(st){
+  for(let i=st.length-1;i>=0;i--) if(st[i] && !st[i].fixed) return slotTake(st, i);
+  return false;
+}
+function slotGift(st, i, ch, box){
+  const btn = Array.prototype.filter.call(box.children, function(b){
+    return !b.disabled && b.textContent === ch;
+  })[0] || null;
+  if(btn){ btn.disabled = true; btn.dataset.used = "1"; }
+  st[i] = {ch:ch, btn:btn, fixed:true};
+}
+/* 画字格：放了字母的格子能点（取下来），空格子挂 .empty，笔顺送的挂 .gift */
+function slotDraw(row, st, onTake){
+  row.innerHTML = "";
+  st.forEach(function(x, i){
+    const d = document.createElement("div");
+    d.className = "sbox" + (x ? (x.fixed ? " gift" : " take") : "");
+    d.textContent = x ? x.ch : "";
+    if(x && !x.fixed) d.addEventListener("click", function(){ onTake(i); });
+    row.appendChild(d);
+  });
+}
+/* 拼写题走一步：重画；填满了就判这一题 */
+function spellStep(word){
+  B.spell = slotWord(B.slots);
   drawSpell(word);
   const target = spellOf(word);
-  if(B.spell.length && B.spell.length === target.length){
+  if(slotFull(B.slots)){
+    B.slots.done = true;
     setTimeout(function(){ answer(null, B.spell === target); }, 180);
   }
-}
-/* 笔顺：轮到 B.gift 那一格就自动填上，并把对应的字母键按掉（键盘上的字母数要对得上） */
-function giftFill(word, box){
-  if(typeof B.gift !== "number" || B.spell.length !== B.gift) return;
-  const ch = spellOf(word)[B.gift];
-  B.spell += ch;
-  Array.prototype.some.call(box.children, function(b){
-    if(!b.disabled && b.textContent === ch){ b.disabled = true; b.dataset.used = "1"; return true; }
-    return false;
-  });
-}
-/* 退一格：把最后那个字母还回键盘 */
-function spellPop(box){
-  const ch = B.spell.slice(-1);
-  B.spell = B.spell.slice(0, -1);
-  Array.prototype.some.call(box.children, function(b){
-    if(b.disabled && b.textContent === ch){ b.disabled = false; delete b.dataset.used; return true; }
-    return false;
-  });
 }
 function drawSpell(word){
   const row = $("spellRow");
   /* 词长到 9 个字母以上，字格要缩一号，否则一行摆不下会折行、把战斗窗顶高 */
   const target = spellOf(word);
   row.className = "spellrow" + (target.length >= (LEARN_JA ? 7 : 9) ? " long" : "") + (LEARN_CJK ? " zh" : "");
-  row.innerHTML = "";
-  for(let i=0;i<target.length;i++){
-    const d = document.createElement("div");
-    d.className = "sbox";
-    d.textContent = B.spell[i] || "";
-    row.appendChild(d);
-  }
+  slotDraw(row, B.slots, function(i){
+    if(B.locked || !slotTake(B.slots, i)) return;
+    spellStep(word);
+  });
 }
 /* ================= 粒子反馈 =================
    捡到东西时，从东西所在的位置甩出几点碎屑，飞到它「进了哪儿」的那个数字上：
@@ -2224,11 +2257,23 @@ function fxRelic(r){
   fxFly(from, tab, "gem", 6, color);
 }
 function floatNum(where, txt, cls){
-  const host = where === "foe" ? document.querySelector(".foe") : document.querySelector(".mybar");
   const s = document.createElement("span");
   s.className = "float " + cls;
   s.textContent = txt;
-  host.appendChild(s);
+  if(where === "foe"){
+    document.querySelector(".foe").appendChild(s);
+  } else {
+    /* 玩家这边（用户 2026-09-25）：「-4」直接压在**玩家血条**上 —— 战斗窗开着就是战斗里那条，
+       不然是地图顶上那条（祭坛献血这种）。血条自己 overflow:hidden，字往上飘会被切掉，
+       所以挂在 body 上按血条的位置 fixed 定位，不占任何布局。*/
+    const bar = $("veilBattle").hidden ? $("hpBar") : $("bHpBar");
+    const r = bar && bar.getBoundingClientRect();
+    if(!r || !r.width){ return; }
+    s.className += " onbar";
+    s.style.right = Math.max(0, window.innerWidth - r.right + 8) + "px";
+    s.style.top = (r.top + r.height / 2 - 11) + "px";
+    document.body.appendChild(s);
+  }
   setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 900);
 }
 function answer(btn, ok){
@@ -2967,6 +3012,7 @@ function mitigate(dmg, s0, opt){
      ⚠️ 先乘后除，**别写成 `out * (1 - cut/100)`** —— 那样 55% 会算成
      `1 - 0.55 = 0.44999999999999996`，floor 之后白多掉 1 点（实测 100 点打成 44 而不是 45）。*/
   if(cut > MIT_CUT_MAX) cut = MIT_CUT_MAX;
+  if(noShelter()) cut = 0;         // 无尽 50 层往下 / 深渊：减伤百分比整桶作废（见 noShelterAt）
   if(cut) out = Math.floor(out * (100 - cut) / 100);
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
@@ -3391,7 +3437,7 @@ function openChest(th){
   G.paused = true;
   pendingRoom = th;
   const word = pickQuizWord("all");
-  chestQ = {word:word, spell:"", done:false};
+  chestQ = {word:word, spell:"", done:false, slots:slotNew(spellOf(word).length)};
   $("chestTitle").textContent = T("锁上刻着一个词");
   $("chestHint").textContent = T("拼出「") + word.cn + T("」");
   $("chestClue").innerHTML = word.cn + hintTag(word);
@@ -3406,12 +3452,18 @@ function openChest(th){
 function drawChestSpell(){
   const row = $("chestRow"), en = spellOf(chestQ.word);
   row.className = "spellrow" + (LEARN_CJK ? " zh" : "") + (LEARN_JA && en.length >= 7 ? " long" : "");
-  row.innerHTML = "";
-  for(let i=0;i<en.length;i++){
-    const d = document.createElement("div");
-    d.className = "sbox";
-    d.textContent = chestQ.spell[i] || "";
-    row.appendChild(d);
+  slotDraw(row, chestQ.slots, function(i){
+    if(!chestQ || chestQ.done || !slotTake(chestQ.slots, i)) return;
+    chestStep();
+  });
+}
+/* 宝箱拼写走一步：跟战斗里的 spellStep() 一个路子（字格规矩见 slotNew 那一段） */
+function chestStep(){
+  chestQ.spell = slotWord(chestQ.slots);
+  drawChestSpell();
+  if(slotFull(chestQ.slots)){
+    chestQ.slots.done = true;
+    setTimeout(function(){ judgeChest(); }, 180);
   }
 }
 function buildChestLetters(word){
@@ -3432,26 +3484,16 @@ function buildChestLetters(word){
     const b = document.createElement("button");
     b.type = "button"; b.className = "lbtn" + (LEARN_CJK ? " zh" : ""); b.textContent = ch;
     b.addEventListener("click", function(){
-      if(!chestQ || chestQ.done || chestQ.spell.length >= target.length) return;
-      chestQ.spell += ch; b.disabled = true;
-      drawChestSpell();
-      if(chestQ.spell.length === target.length){
-        setTimeout(function(){ judgeChest(); }, 180);
-      }
+      if(!chestQ || chestQ.done || chestQ.slots.done || !slotFill(chestQ.slots, ch, b)) return;
+      chestStep();
     });
     box.appendChild(b);
   });
   const back = document.createElement("button");
   back.type = "button"; back.className = "lbtn back"; back.textContent = "←";
   back.addEventListener("click", function(){
-    if(!chestQ || chestQ.done || !chestQ.spell.length) return;
-    const ch = chestQ.spell.slice(-1);
-    chestQ.spell = chestQ.spell.slice(0,-1);
-    const b = Array.prototype.filter.call(box.children, function(x){
-      return x.disabled && x.textContent === ch;
-    })[0];
-    if(b) b.disabled = false;
-    drawChestSpell();
+    if(!chestQ || chestQ.done || !slotLast(chestQ.slots)) return;
+    chestStep();
   });
   box.appendChild(back);
 }
@@ -3625,6 +3667,10 @@ function closeShop(){
   pendingRoom = null;
   $("veilShop").hidden = true;
   G.paused = false;
+  /* 出了店自己往旁边空地退一格（用户 2026-09-25），别一直站在商人头上。
+     四邻都没有空地板就留在原地。*/
+  const shop = thingAt(P.x, P.y);
+  if(shop && shop.kind === "shop") stepAside();
   lockInput(200);
   renderHud(); render();
 }

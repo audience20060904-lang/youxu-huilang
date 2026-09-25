@@ -505,6 +505,10 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .float.dmg{color:#8A5A0B;text-shadow:0 1px 0 rgba(255,255,255,.7)}
 .float.ouch{color:#A32E1E;text-shadow:0 1px 0 rgba(255,255,255,.7)}
 .float.heal{color:#3E7A2E;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+/* 玩家挨打 / 回血的数字压在玩家血条的右半截上（挂在 body 上 fixed，位置由 floatNum() 量血条算），
+   要压过 veil（30），跟升级光圈一档 */
+.float.onbar{position:fixed;left:auto;z-index:61;font-size:18px;line-height:22px;
+  text-shadow:0 0 3px #FFFDF7,0 1px 0 #FFFDF7}
 
 /* ===== 捡东西的碎屑 =====
    挂在 body 上飞，飞完就删。纯装饰，一律不挡点击。 */
@@ -551,6 +555,9 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   border:1px solid var(--edge);border-bottom:2px solid var(--torch-deep);
   background:#FFFDF7;display:grid;place-items:center;font-family:var(--mono);
   font-size:clamp(18px,3.2vh,25px);color:var(--torch)}
+/* 放了字母的格子点一下就取下来（那一格空着，后面的不往前挪）；笔顺送的那格点不掉 */
+.sbox.take{cursor:pointer}
+.sbox.gift{color:var(--frost)}
 /* 长词（grandmother / comfortable 这种 11 个字母的）字格缩一号，保证还是一行 */
 .spellrow.long .sbox{width:clamp(18px,3.2vh,23px);height:clamp(26px,4.8vh,35px);
   font-size:clamp(14px,2.6vh,20px)}

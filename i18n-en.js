@@ -72,6 +72,7 @@ Object.assign(I18N, {
 "下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。": "Once you go down, <b>you can't come back to this floor</b>. The game saves when you enter the next floor.",
 "下去 ▼": "Go down ▼",
 "你从阶梯上退开一步。想走的时候，再点一下那个 ▼。": "You step off the stairs. When you're ready, tap the ▼ again.",
+"从这里往下，<b>练习模式的护甲</b>和<b>所有减伤</b>都不再生效。": "From here on down, <b>practice-mode armor</b> and <b>all damage reduction</b> no longer apply.",
 "你在阶梯口停住了。想走的时候，再点一下脚下那格。": "You stop at the top of the stairs. When you're ready, tap your own tile again.",
 "深渊 · 血量无限，打穿一层还有一层": "Abyss · infinite HP — break one layer and there's another",
 "章节首领 · 全部词类": "Chapter boss · all word types",
@@ -853,7 +854,7 @@ var RELIC_EN = {
 ],
 "spark": [
 "Spark",
-"Combo bonus steps every 2 instead of every 5; crit rate +20%",
+"Combo bonus steps every 4 instead of every 5; crit rate +20%",
 "A fire doesn't start at once. It gathers spark by spark."
 ],
 "carve": [
