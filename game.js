@@ -2402,12 +2402,13 @@ function answer(btn, ok){
   const isSpell = B.q.type === "spell";
   /* ===== 速答线（第十批）=====
      从摆题到作答花了几秒（B.qAt 在 nextQuestion() 里记），FAST_SEC 秒之内算「快」。
-     ⚠️ **拼写题一律不算快**（它不限时，字母要一个一个点，还自带连击 +10 / 经验 ×2 的奖励），
-     「从容」在拼写题上按**剩 0 秒**算 —— 不然那条线在拼写题上白拿满额。*/
-  const usedSec = (Date.now() - (B.qAt || Date.now())) / 1000;
-  const fastAns = !isSpell && usedSec <= FAST_SEC;    // 答得快（不分对错，「刹那」数的是这个）
+     ⚠️ **拼写题拼对算「0 秒内答对」**（用户 2026-09-25）：它不限时、字母要一个一个点，按真实用时算永远快不了，
+     所以拼对一律当成 0 秒 —— 速答线那五件全吃、「从容」按读条满格算、「刹那」照样记一次速答。
+     拼错就不算快（跟选择题答错一样）。*/
+  const usedSec = isSpell ? 0 : (Date.now() - (B.qAt || Date.now())) / 1000;
+  const fastAns = isSpell ? ok : usedSec <= FAST_SEC;  // 答得快（不分对错，「刹那」数的是这个）
   const fast = fastAns && ok;                          // 「3 秒内答对」——速答线那五件看的都是它
-  const leftSec = isSpell ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
+  const leftSec = (isSpell && !ok) ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
   let head, note = "";
   /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
      接到底下那条 say() 后面 —— 想让玩家在战斗窗里当场看见，就只能写进 head。*/
