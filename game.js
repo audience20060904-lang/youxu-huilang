@@ -1791,12 +1791,19 @@ function clearQTimer(){
 /* 这一题的读条有几秒：底子 QUIZ_TIME，「沙漏」每替你挡一次超时就短 GLASS_CUT 秒
    （只在这一层有效，nextFloor 里清零），最短 QUIZ_TIME_MIN 秒。*/
 function qSeconds(){
-  return Math.max(QUIZ_TIME_MIN, QUIZ_TIME - (G && G.glassCut ? G.glassCut : 0));
+  const base = qBase();
+  return Math.max(Math.min(QUIZ_TIME_MIN, base), base - (G && G.glassCut ? G.glassCut : 0));
 }
+/* 自定义答题时间（用户 2026-09-25）：粘贴存档码「snow」解锁（OPT.snow），设置页里自己填秒数（OPT.qtime）。
+   OPT.qtime = 1~999 秒；0 = 不限时（读条整个不出，跟拼写题一样）；没填 = 默认 QUIZ_TIME。
+   它是「这台设备」的设置，跟 OPT 走、不进存档码。不限时时 qBase() 仍返回 QUIZ_TIME ——「从容」要拿它算剩几秒。*/
+function qCustom(){ return OPT.snow && typeof OPT.qtime === "number" ? OPT.qtime : -1; }
+function qBase(){ const c = qCustom(); return c > 0 ? c : QUIZ_TIME; }
 function startQTimer(){
   clearQTimer();
   if(!B || !B.q || B.q.type === "spell") return;
   if(P && P.tut) return;          // 教程关不限时 —— 先把规矩看明白
+  if(qCustom() === 0) return;     // 设置里选了「不限时」
   const t = $("qTimer"), fill = $("qTimerFill");
   if(!t || !fill) return;
   let secs = qSeconds();
@@ -5855,6 +5862,11 @@ function applyCode(txt){
   if(!txt) return T("剪贴板里没有存档码。");
   /* 测试口令（用户 2026-09-23 要的）：粘贴「audience2006」直接 +10000 宝石，次数不限 */
   if(txt === "audience2006"){ addGems(10000); return T("测试口令：宝石 +10000（现在 ") + TOWN.gem + T(" 颗）。"); }
+  /* 特殊口令（用户 2026-09-25）：粘贴「snow」解锁设置页的「答题时间」，自己填秒数 */
+  if(txt.toLowerCase() === "snow"){
+    OPT.snow = true; saveOpt(); renderQTimeSet();
+    return T("口令输入成功：设置页多了「答题时间」，可以自己填秒数。");
+  }
   let o;
   const code = txt.replace(/[\s\u200B-\u200D\uFEFF]+/g, "");   // 聊天软件会插空格 / 换行 / 零宽字符
   if(txt.charAt(0) === "{"){
@@ -6203,6 +6215,34 @@ $("optSpeak").checked = OPT.speak !== false;
 $("optAuto").checked = OPT.auto !== false;
 $("optSpeak").addEventListener("change", function(){ OPT.speak = this.checked; saveOpt(); });
 $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; saveOpt(); });
+/* 答题时间（「snow」口令解锁，见 qCustom()）。输入框失焦 / 回车才生效，空着或乱填就退回当前值 */
+function renderQTimeSet(){
+  const box = $("qtimeSet");
+  if(!box) return;
+  box.hidden = !OPT.snow;
+  const c = qCustom(), inp = $("optQTime");
+  if(document.activeElement !== inp) inp.value = c > 0 ? c : (c === 0 ? "" : QUIZ_TIME);
+  inp.placeholder = c === 0 ? "∞" : "";
+  $("btnQTimeOff").classList.toggle("on", c === 0);
+  $("btnQTimeReset").classList.toggle("on", c < 0);
+}
+$("optQTime").addEventListener("change", function(){
+  const v = Math.round(Number(this.value));
+  if(this.value !== "" && v >= 1){
+    OPT.qtime = Math.min(999, v); saveOpt();
+    toast(L("答题时间：", "Answer time: ") + OPT.qtime + L(" 秒", "s"));
+  }
+  renderQTimeSet();
+});
+$("optQTime").addEventListener("keydown", function(e){ if(e.key === "Enter") this.blur(); });
+$("btnQTimeOff").addEventListener("click", function(){
+  OPT.qtime = 0; saveOpt(); renderQTimeSet(); toast(T("答题不限时"));
+});
+$("btnQTimeReset").addEventListener("click", function(){
+  delete OPT.qtime; saveOpt(); renderQTimeSet();
+  toast(L("答题时间恢复默认 ", "Answer time reset to ") + QUIZ_TIME + L(" 秒", "s"));
+});
+renderQTimeSet();
 /* 发音（用户 2026-09-24：「浏览器的发音怪怪的」）：挑声音的逻辑在 util.js（voicesFor / pickVoice），这里只管设置页。
    声音按学习语言分开记（OPT.voice.en / .zh …）—— 声音名是这台设备自己的，所以跟 OPT 走、不进存档码。 */
 const RATES = [0.7, 0.9, 1.05];
