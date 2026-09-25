@@ -83,6 +83,14 @@ let CODEX = load(CODEX_KEY, {});
    它是 MET 里的一个字段，跟着四个永久键一起落盘，不用新开 localStorage 键。*/
 let MET = load(META_KEY, {best:0, runs:0, clears:0, t:0, accF:{}});
 if(!MET.accF || typeof MET.accF !== "object") MET.accF = {};   // 老档没有这个字段
+/* 今日学习（用户 2026-09-25，信息页「词汇记录」头一行）：MET.day = {d:"本地日期", r:答对, w:答错, ws:{词键:1}}。
+   跨天就整份换新（todayRec()）；跟着 MET 落盘 / 进存档文件，**不进存档码**（它只管今天）。*/
+function dayKey(){ const t = new Date(); return t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate(); }
+function todayRec(){
+  const d = dayKey();
+  if(!MET.day || MET.day.d !== d || !MET.day.ws) MET.day = {d:d, r:0, w:0, ws:{}};
+  return MET.day;
+}
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
 let lastAct = 0, lockUntil = 0;
 var OPT_KEY = "youxu.opt.v1";
@@ -1264,7 +1272,13 @@ function renderSheets(s){
      跨存档一直累加，是这块面板从「本章词汇」改叫「词汇记录」之后加的那一项（用户 2026-09）。*/
   let studied = 0;
   keys.forEach(function(k){ studied += (LEX[k].seen || 0); });
-  $("vocab").innerHTML = st(T("已掌握"), mastered) + st(T("已遇见"), keys.length) +
+  /* 今日：已学 = 今天答过的不同的词（只数正在学的这门语言），正确率 = 今天全部答题 */
+  const today = todayRec(), tn = today.r + today.w;
+  let todayWords = 0;
+  for(const k in today.ws) if(lexWord(k)) todayWords++;
+  $("vocab").innerHTML = st(T("今日已学"), todayWords + T(" 词")) +
+                         st(T("今日正确率"), tn ? Math.round(today.r / tn * 100) + "%" : "—") +
+                         st(T("已掌握"), mastered) + st(T("已遇见"), keys.length) +
                          st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
@@ -2239,6 +2253,9 @@ function answer(btn, ok){
   const fk = String(G.floor);
   if(!P.accF[fk]) P.accF[fk] = {r:0, w:0};
   if(ok) P.accF[fk].r++; else P.accF[fk].w++;
+  const today = todayRec();                      // 今日已学 / 今日正确率（信息页）
+  today.ws[lexKey(word)] = 1;
+  if(ok) today.r++; else today.w++;
 
   if(B.q.type !== "spell"){
     /* 答错了就把**每个选项的中英两边都摊开**（用户 2026-09）——
@@ -5917,6 +5934,16 @@ function mergeData(o){
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
+  /* 今日学习：同一天取并集 / 取大值，不同天留日期新的那边（日期串按数字比）*/
+  if(im.day && im.day.d && im.day.ws){
+    const dn = function(x){ return x.split("-").map(Number).reduce(function(a, v){ return a * 100 + v; }, 0); };
+    const cur = M.day;
+    if(!cur || !cur.d || dn(im.day.d) > dn(cur.d)) M.day = {d:im.day.d, r:im.day.r || 0, w:im.day.w || 0, ws:Object.assign({}, im.day.ws)};
+    else if(cur.d === im.day.d){
+      cur.r = Math.max(cur.r || 0, im.day.r || 0); cur.w = Math.max(cur.w || 0, im.day.w || 0);
+      cur.ws = Object.assign(cur.ws || {}, im.day.ws);
+    }
+  }
   if(im.tut) M.tut = 1;              // 新手教程：哪边走过都算走过（一个账号一次）
   if(typeof im.tips === "number") M.tips = (M.tips | 0) | im.tips;   // 第一趟的提示：看过哪条取并集
   /* 每层答题记录（历史平均正确率用的）：两边**相加** ——
