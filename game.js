@@ -1316,8 +1316,21 @@ function paintMateHp(fill, txt, hp, max){
   txt.textContent = v + " / " + max;
 }
 function renderSheets(s){
+  /* 「属性」（用户 2026-09-25 要补全）：伤害公式里每一桶都摆出来。
+     数字全走 answer() / mitigate() 用的同一套函数（pctSteady / flatSteady / extraSteady / critSteady / cutState），
+     只算**常驻**的那部分 —— 拼对、打中弱点、冒险、答得快这种「这一刀才有」的不算。
+     减伤按「答错挨一口」算（绝大多数挨打都是它），封在 MIT_CUT_MAX。 */
+  const pct = pctSteady(s), cc = critSteady(s, pct);
+  const noCrit = hasRelic("noedge");
+  const pm = function(v, u){ return (v < 0 ? "−" + (-v) : "+" + v) + (u || ""); };
   $("stats").innerHTML =
-    st(T("攻击"), s.atk) + st(T("护甲"), s.def) + st(T("暴击"), hasRelic("noedge") ? "—" : hasRelic("fate") ? "100%" : s.crit + "%");
+    st(T("攻击"), s.atk) + st(T("伤害加成"), pm(pct, "%")) +
+    st(T("额外伤害"), pm(extraSteady(s))) + st(T("点伤"), pm(flatSteady())) +
+    st(T("暴击率"), noCrit ? "—" : hasRelic("fate") ? "100%" : Math.round(cc.rate) + "%") +
+    st(T("暴击伤害"), noCrit ? "—" : "×" + (Math.round(cc.mult * 100) / 100)) +
+    st(T("生命"), Math.max(0, P.hp) + " / " + s.maxHp) + st(T("护甲"), s.def) +
+    st(T("护盾"), P.shield || 0) + st(T("受到的伤害"), "−" + Math.min(MIT_CUT_MAX, cutState(s, true)) + "%") +
+    st(T("连击"), P.combo || 0) + st(T("拼写题"), Math.round(spellChance() * 100) + "%");
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
   const keys = Object.keys(LEX).filter(function(k){ return !!lexWord(k); });
   let mastered = 0;
@@ -2457,50 +2470,18 @@ function answer(btn, ok){
 
     // 第二层 · 百分比（全部相加，最后只乘一次）
     // 连击也在这一桶里：每 comboStep 次 +comboPct%，不封顶（火星让 step 少 1）
+    /* 不看这一题、不看这只怪的那些（连击 / 金币 / 血量 / 护甲 / 护盾换的 …）全在 pctSteady() 里 ——
+       信息页「属性」那一格读的是同一个函数，两边口径只有一个。这里只加**这一刀才有**的。*/
     const cbo = comboPct();
-    let pct = cbo;
-    if(hasRelic("quick")) pct += Math.min(QUICK_MAX, Math.floor(P.combo / 5) * QUICK_PER); // 速记
+    let pct = pctSteady(s);
+    const recoil = hasRelic("recoil") ? (P.recoil || 0) * RECOIL_PCT : 0;   // 反震：已经算在 pctSteady 里了，这里只留着给下面打完清零、写日志
     if(isSpell && hasRelic("carve")) pct += CARVE_PCT;                      // 刻字：拼对的那一刀
     if(isSpell && hasRelic("boom"))  pct += BOOM_PCT;                       // 破音：同上（连击翻倍在上面）
-    if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += EMBER_PCT;          // 残焰
-    if(hasRelic("hoard")) pct += Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT;  // 守财：不封顶
     if(hasRelic("nerve") && B.wager) pct += NERVE_PCT;                      // 铁胆：冒险答对的加码
     if(hitWeak && hasRelic("scent")) pct += SCENT_PCT;                      // 嗅迹
     if(hitWeak && hasRelic("synes")) pct += SYNES_PCT;                      // 通感
-    if(hasRelic("flaw"))  pct += FLAW_PCT;                                  // 破绽（无视护甲在下面）
-    if(hasRelic("inertia") && P.combo >= INERTIA_AT) pct += INERTIA_PCT;    // 惯性
-    // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
-    if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * EMPTY_PCT;  // 空手
-    if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
-    if(hasRelic("offer")) pct += OFFER_PCT;                                 // 献身（生命减半在 stats() 里）
-    pct += gildGet("pct");                                                  // 金坛：本局攒下的伤害 %
-    if(hasRelic("slay")){ pct += SLAY_ALL; if(m.boss) pct += SLAY_PCT; }    // 弑主：对谁都加，对 Boss 再加
-    if(hasRelic("delve")) pct += Math.min(DELVE_MAX, G.floor * 0.5);        // 踏层：每下一层 +0.5%
+    if(hasRelic("slay") && m.boss) pct += SLAY_PCT;                         // 弑主：对 Boss 再加（对谁都加的那一档在 pctSteady）
     if(B.whim) pct += B.whim;                                               // 无常：本场攒下的
-    // 铁壁：每 1 点护甲 +3%。用 defGear —— 练习模式那 +50 不算数（见 stats()）
-    if(hasRelic("bastion")) pct += (s.defGear || 0) * BASTION_PER;
-    const recoil = hasRelic("recoil") ? (P.recoil || 0) * RECOIL_PCT : 0;   // 反震：挨几下就攒几层
-    pct += recoil;
-    /* ===== 第九批「跨流派组合」落在②层的六件（2026-09-21）=====
-       全部照旧摊进这一个百分比桶，**没有新乘区**。*/
-    if(hasRelic("shedge")){                                                 // 盾锋：护盾→伤害%
-      pct += Math.min(SHEDGE_MAX, Math.floor((P.shield || 0) / SHEDGE_PER) * SHEDGE_PCT);
-    }
-    if(hasRelic("towel")){                                                  // 汗巾：本层回血→伤害%
-      const per = Math.max(1, Math.ceil(s.maxHp * TOWEL_PER / 100));
-      pct += Math.min(TOWEL_MAX, Math.floor((G.healed || 0) / per) * TOWEL_PCT);
-    }
-    if(hasRelic("bile")) pct += Math.min(BILE_MAX, Math.floor(cutStatic() / BILE_PER) * BILE_PCT);  // 苦胆：减伤→伤害%
-    if(hasRelic("shieldking")){                                             // 盾王：护盾→伤害%（护甲在 stats）
-      pct += Math.min(SKING_TIERS, Math.floor((P.shield || 0) / SKING_PER)) * SKING_PCT;
-    }
-    if(hasRelic("ironvow")){                                                // 铁誓：护甲→伤害%（减伤在 mitigate）
-      pct += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_PCT;
-    }
-    if(hasRelic("confluence")) pct += confTiers(s) * CONF_PCT;              // 万流归宗
-    if(hasRelic("janus")){                                                  // 双面：常驻减伤→伤害%
-      pct += JANUS_PCT + Math.min(JANUS_C_TIERS, Math.floor(cutStatic() / JANUS_C_PER)) * JANUS_C_STEP;
-    }
     /* 拼刃：拼对之后的 SBLADE_Q 题各 +SBLADE_PCT%。窗口记在 P.bladeLeft 上（跟着续玩档），
        **这里消耗一格**；答错那条分支也会消耗一格（"接下来 5 题"，不分对错）。*/
     if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0){ pct += SBLADE_PCT; P.bladeLeft--; }
@@ -2519,25 +2500,18 @@ function answer(btn, ok){
     if(fast && hasRelic("swift")) pct += SWIFT_PCT;                         // 疾思：答得快
     if(hasRelic("poise")) pct += Math.min(POISE_MAX, leftSec * POISE_PCT);  // 从容：读条每剩 1 秒
     if(hasRelic("longword") && wordLen(word) >= LONGW_AT) pct += LONGW_PCT;   // 长句：长词
-    if(hasRelic("feeddemon")) pct += Math.min(FEED_MAX, readyHaunts().length * FEED_PCT);  // 养魔：身上的心魔
     if(B.q.haunted && hasRelic("fearless")) pct += FEARLESS_PCT;            // 无惧：答对心魔词
-    if(hasRelic("full") && P.hp > s.maxHp * FULL_AT) pct += FULL_PCT;       // 饱满：血还满着
-    if(hasRelic("whole") && P.hp >= s.maxHp) pct += WHOLE_PCT;              // 圆满：满血（护甲那半在 stats）
     /* 全盛：满血给大的，刚掉血的几题给个缓冲 —— 不然一被咬就整件失效，体感太脆。
        P.primeLeft 跟着续玩档（读处 || 0）。*/
     if(hasRelic("prime")){
       if(P.hp >= s.maxHp){ pct += PRIME_PCT; P.primeLeft = PRIME_Q; }
       else if((P.primeLeft || 0) > 0){ pct += PRIME_AFTER; P.primeLeft--; }
     }
-    if(hasRelic("bamboo")) pct += Math.min(BAMBOO_MAX, (P.killStreak || 0) * BAMBOO_PCT);   // 势如破竹
-    if(hasRelic("stockpile")) pct += Math.min(STOCK_MAX, (P.bought || 0) * STOCK_PCT);      // 囤货：本局买过几件
-    if(hasRelic("knock") && isBossFloor(G.floor)) pct += KNOCK_PCT;         // 叩关：Boss 层（减伤那半在 mitigate）
     /* 锐进：升级之后的 RISE_Q 题各 +RISE_PCT%（跟「拼刃」一个写法，窗口记在 P.riseLeft 上，
        **答错那条分支也消耗一格** —— 写的是「升级后的 5 题」，不分对错）。*/
     if(hasRelic("keenrise") && (P.riseLeft || 0) > 0){ pct += RISE_PCT; P.riseLeft--; }
     /* 刹那（神圣）：上一轮攒满 INSTANT_RUN 次速答，这一刀就是那一刀。先吃、再数这一题。*/
     if(hasRelic("instant") && G.instantReady){ pct += INSTANT_PCT; G.instantReady = false; }
-    if(hasRelic("billow")) pct += BILLOW_PCT;                               // 叠浪（第十一批）：换暴击伤害那一半在下面
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
@@ -2545,39 +2519,18 @@ function answer(btn, ok){
     if(B.wager && hasRelic("gambler")) flat += GAMBLER_FLAT;                // 赌徒：冒对了再加一笔点伤
     let surge = false;
     if(hasRelic("surge") && luck(.25)){ flat += SURGE_FLAT; surge = true; } // 潮汐
-    /* 镜盾：每 MIRROR_PER 点护盾 +1 点伤（③层：吃暴击、被护甲减，不被百分比放大）。
-       ⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
-       凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
-    if(hasRelic("mirror")) flat += Math.min(MIRROR_MAX, Math.floor((P.shield || 0) / MIRROR_PER));
-    // 血锤：**这一层**回了多少血就换多少点伤（G.healed 在 healUp() 里累，nextFloor() 清零）
-    if(hasRelic("bloodmaul")) flat += Math.min(BMAUL_MAX, Math.floor((G.healed || 0) / BMAUL_PER) * BMAUL_FLAT);
+    flat += flatSteady();                                                   // 镜盾 / 血锤（信息页同一个口径）
 
     /* 第四层 · 额外伤害：跟基础点伤同一个桶（用户 2026-09 改的公式），
        所以它照样吃下面的百分比和暴击 —— 数字给得比①层大得多，品质也都在传奇以上。*/
-    let extra = 0;
-    if(hasRelic("rend")) extra += REND_EXTRA;                               // 割裂（自伤在上面，每题一次）
+    let extra = extraSteady(s);                                             // 割裂 / 滚雪球 / 锋满（信息页同一个口径）
     if(isSpell && hasRelic("recite")) extra += RECITE_EXTRA;                // 默诵：拼对才给
-    if(hasRelic("snow")) extra += Math.floor(P.combo / SNOW_PER) * SNOW_EXTRA;  // 滚雪球：连击每满 10 一档，不封顶
-    /* 第十批落在④层的三件 */
     if(fast && hasRelic("snap")) extra += SNAP_EXTRA;                       // 抢答：答得快
     if(hasRelic("volume")) extra += Math.max(0, wordLen(word) - VOLUME_FROM) * VOLUME_EXTRA;  // 累牍：每超一个字母
-    if(hasRelic("keenfull") && P.hp > s.maxHp * KEENF_AT) extra += KEENF_EXTRA;   // 锋满：血过半
 
     // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
-    let critRate = s.crit, critMult = 2;
-    if(hasRelic("maul")){ critMult += MAUL_MULT; critRate += MAUL_CRIT; }   // 重锤：暴击率 + 暴击伤害
-    if(hasRelic("edge")) critMult += EDGE_MULT;                             // 薄刃：暴击伤害 ×2 → ×2.5
-    if(hasRelic("crush")) critMult += CRUSH_MULT;                           // 碎颅：暴击伤害（无视护甲在下面）
-    if(hasRelic("tempo") && P.combo >= TEMPO_AT) critRate += TEMPO_CRIT;    // 节拍
-    if(hasRelic("dice")) critRate += (G.dice || 0) * DICE_CRIT;             // 赌骰：本层内叠加
-    if(hasRelic("spark")) critRate += SPARK_CRIT;                           // 火星：档位变密 + 暴击率
-    if(hasRelic("charge")) critRate += (P.charge || 0) * CHARGE_CRIT;       // 蓄势：攒了几刀没暴就叠几档
-    /* 溢锋（第十一批）：溢出那一档从 +10% 换成 +20% */
-    if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * (hasRelic("overcrit") ? OVERCRIT_STEP : 0.1); critRate = 100; }
-    /* 叠浪（第十一批）：②层那个百分比桶每满 100%，暴击倍率 +0.2 —— ②层是加法、堆得越高越不值钱，
-       这件把溢出来的那部分挪进暴击乘区。读的是**这一刀全部算完**的 pct（冒险那 +100% 也算）。*/
-    if(hasRelic("billow")) critMult += Math.floor(pct / BILLOW_PER) * BILLOW_CRIT;
-    if(hasRelic("fate")) critMult -= FATE_CUT;                              // 定数：必定暴击，倍率 ×2 → ×1.6
+    const cc = critSteady(s, pct);                                          // 暴击率 / 倍率全是常驻的，信息页同一个口径
+    const critRate = cc.rate, critMult = cc.mult;
     // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
     // 刹那（神圣）：答得快的那一刀也必定暴击 —— 走同一个 forceCrit，还是那一个乘区
     const forceCrit = (hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0) ||
@@ -3000,6 +2953,132 @@ function luck(p){
   if(hasRelic("reshake") && Math.random() < RESHAKE_P) return Math.random() < q;   // 再摇：再掷一次
   return false;
 }
+/* ===== 常驻的那几档（信息页「属性」和 answer() / mitigate() 共用，2026-09-25）=====
+   只收**不看这一题、不看这只怪**的加成：连击、金币、血量、护甲、护盾、本层回血、金坛 …
+   拼对 / 打中弱点 / 冒险 / 答得快 / 对 Boss / 每层前几次 这类「这一刀才有」的留在 answer() 里现加。
+   ⚠️ 这几个函数**不许有副作用**（信息页一刷新就要调一次）——会扣次数的（开场 / 拼刃 / 锐进 / 全盛）别搬进来。
+   ⚠️ 新加一件「常驻」的伤害 / 暴击 / 减伤遗物，加在这里，信息页自动就显示了。 */
+function pctSteady(s){
+  let pct = comboPct();                                                   // 连击：每 comboStep 次一档
+  if(hasRelic("quick")) pct += Math.min(QUICK_MAX, Math.floor(P.combo / 5) * QUICK_PER); // 速记
+  if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += EMBER_PCT;          // 残焰
+  if(hasRelic("hoard")) pct += Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT;  // 守财：不封顶
+  if(hasRelic("flaw"))  pct += FLAW_PCT;                                  // 破绽（无视护甲在 answer）
+  if(hasRelic("inertia") && P.combo >= INERTIA_AT) pct += INERTIA_PCT;    // 惯性
+  // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球
+  if(hasRelic("empty")) pct += Math.max(0, RELIC_MAX - P.relics.length) * EMPTY_PCT;  // 空手
+  if(hasRelic("spend")) pct += Math.min(40, Math.floor((P.spent || 0) / 300) * 2); // 散财：每花 300 金 +2%
+  if(hasRelic("offer")) pct += OFFER_PCT;                                 // 献身（生命减半在 stats() 里）
+  pct += gildGet("pct");                                                  // 金坛：本局攒下的伤害 %
+  if(hasRelic("slay")) pct += SLAY_ALL;                                   // 弑主：对谁都加的那一档（对 Boss 再加在 answer）
+  if(G && hasRelic("delve")) pct += Math.min(DELVE_MAX, G.floor * 0.5);   // 踏层：每下一层 +0.5%
+  // 铁壁：每 1 点护甲 +3%。用 defGear —— 练习模式那 +50 不算数（见 stats()）
+  if(hasRelic("bastion")) pct += (s.defGear || 0) * BASTION_PER;
+  if(hasRelic("recoil")) pct += (P.recoil || 0) * RECOIL_PCT;             // 反震：挨几下就攒几层
+  /* ===== 第九批「跨流派组合」落在②层的六件（2026-09-21）=====
+     全部照旧摊进这一个百分比桶，**没有新乘区**。*/
+  if(hasRelic("shedge")){                                                 // 盾锋：护盾→伤害%
+    pct += Math.min(SHEDGE_MAX, Math.floor((P.shield || 0) / SHEDGE_PER) * SHEDGE_PCT);
+  }
+  if(G && hasRelic("towel")){                                             // 汗巾：本层回血→伤害%
+    const per = Math.max(1, Math.ceil(s.maxHp * TOWEL_PER / 100));
+    pct += Math.min(TOWEL_MAX, Math.floor((G.healed || 0) / per) * TOWEL_PCT);
+  }
+  if(hasRelic("bile")) pct += Math.min(BILE_MAX, Math.floor(cutStatic() / BILE_PER) * BILE_PCT);  // 苦胆：减伤→伤害%
+  if(hasRelic("shieldking")){                                             // 盾王：护盾→伤害%（护甲在 stats）
+    pct += Math.min(SKING_TIERS, Math.floor((P.shield || 0) / SKING_PER)) * SKING_PCT;
+  }
+  if(hasRelic("ironvow")){                                                // 铁誓：护甲→伤害%（减伤在 cutState）
+    pct += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_PCT;
+  }
+  if(hasRelic("confluence")) pct += confTiers(s) * CONF_PCT;              // 万流归宗
+  if(hasRelic("janus")){                                                  // 双面：常驻减伤→伤害%
+    pct += JANUS_PCT + Math.min(JANUS_C_TIERS, Math.floor(cutStatic() / JANUS_C_PER)) * JANUS_C_STEP;
+  }
+  /* 第十批 */
+  if(hasRelic("feeddemon")) pct += Math.min(FEED_MAX, readyHaunts().length * FEED_PCT);  // 养魔：身上的心魔
+  if(hasRelic("full") && P.hp > s.maxHp * FULL_AT) pct += FULL_PCT;       // 饱满：血还满着
+  if(hasRelic("whole") && P.hp >= s.maxHp) pct += WHOLE_PCT;              // 圆满：满血（护甲那半在 stats）
+  if(hasRelic("bamboo")) pct += Math.min(BAMBOO_MAX, (P.killStreak || 0) * BAMBOO_PCT);   // 势如破竹
+  if(hasRelic("stockpile")) pct += Math.min(STOCK_MAX, (P.bought || 0) * STOCK_PCT);      // 囤货：本局买过几件
+  if(G && hasRelic("knock") && isBossFloor(G.floor)) pct += KNOCK_PCT;    // 叩关：Boss 层（减伤那半在 cutState）
+  if(hasRelic("billow")) pct += BILLOW_PCT;                               // 叠浪（第十一批）：换暴击伤害那一半在 critSteady
+  return pct;
+}
+/* ③点伤里常驻的两件（不被百分比放大，吃暴击、被护甲减）*/
+function flatSteady(){
+  let flat = 0;
+  /* 镜盾：每 MIRROR_PER 点护盾 +1 点伤。⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
+     凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
+  if(hasRelic("mirror")) flat += Math.min(MIRROR_MAX, Math.floor((P.shield || 0) / MIRROR_PER));
+  // 血锤：**这一层**回了多少血就换多少点伤（G.healed 在 healUp() 里累，nextFloor() 清零）
+  if(G && hasRelic("bloodmaul")) flat += Math.min(BMAUL_MAX, Math.floor((G.healed || 0) / BMAUL_PER) * BMAUL_FLAT);
+  return flat;
+}
+/* ④额外伤害里常驻的三件（跟攻击同一个桶，吃百分比、吃暴击）*/
+function extraSteady(s){
+  let extra = 0;
+  if(hasRelic("rend")) extra += REND_EXTRA;                               // 割裂（自伤在 answer，每题一次）
+  if(hasRelic("snow")) extra += Math.floor(P.combo / SNOW_PER) * SNOW_EXTRA;  // 滚雪球：连击每满 10 一档，不封顶
+  if(hasRelic("keenfull") && P.hp > s.maxHp * KEENF_AT) extra += KEENF_EXTRA;   // 锋满：血过半
+  return extra;
+}
+/* 暴击率 / 暴击倍率：整段都是常驻的。pct 传「这一刀算完的百分比」（叠浪要读它），信息页传 pctSteady()。
+   返回的 rate 已经封在 100（溢出的部分换成了倍率）。*/
+function critSteady(s, pct){
+  let critRate = s.crit, critMult = 2;
+  if(hasRelic("maul")){ critMult += MAUL_MULT; critRate += MAUL_CRIT; }   // 重锤：暴击率 + 暴击伤害
+  if(hasRelic("edge")) critMult += EDGE_MULT;                             // 薄刃：暴击伤害 ×2 → ×2.5
+  if(hasRelic("crush")) critMult += CRUSH_MULT;                           // 碎颅：暴击伤害（无视护甲在 answer）
+  if(hasRelic("tempo") && P.combo >= TEMPO_AT) critRate += TEMPO_CRIT;    // 节拍
+  if(G && hasRelic("dice")) critRate += (G.dice || 0) * DICE_CRIT;        // 赌骰：本层内叠加
+  if(hasRelic("spark")) critRate += SPARK_CRIT;                           // 火星：档位变密 + 暴击率
+  if(hasRelic("charge")) critRate += (P.charge || 0) * CHARGE_CRIT;       // 蓄势：攒了几刀没暴就叠几档
+  /* 溢锋（第十一批）：溢出那一档从 +10% 换成 +20% */
+  if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * (hasRelic("overcrit") ? OVERCRIT_STEP : 0.1); critRate = 100; }
+  /* 叠浪（第十一批）：②层那个百分比桶每满 100%，暴击倍率 +0.2 —— ②层是加法、堆得越高越不值钱，
+     这件把溢出来的那部分挪进暴击乘区。读的是**这一刀全部算完**的 pct（冒险那 +100% 也算）。*/
+  if(hasRelic("billow")) critMult += Math.floor(pct / BILLOW_PER) * BILLOW_CRIT;
+  if(hasRelic("fate")) critMult -= FATE_CUT;                              // 定数：必定暴击，倍率 ×2 → ×1.6
+  return {rate: critRate, mult: critMult};
+}
+/* 「受到的伤害 −N%」里按**当前状态**算的那部分：cutStatic() + 看血量 / 护甲 / 护盾 / Boss 层的几件，
+   wrong = true 时再加上「答错挨打」都有的几件（长链 / 后劲 / 老对手 / 苦行）。
+   每层一次的（粗布 / 缓坠）、看这只怪的（镇压 / 记仇 / 面熟）、看这道题的（稳答 / 心镜 / 二见）留在 mitigate() 里。*/
+function cutState(s, wrong){
+  let cut = cutStatic();
+  if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
+  /* 第十批：余裕跟逆鳞正好相反（血还满着才有）；叩关只在 Boss 层生效（那一层的容错是全游戏最低的）。*/
+  if(hasRelic("ease") && P.hp > s.maxHp * EASE_AT) cut += EASE_CUT;       // 余裕：血还在八成以上
+  if(hasRelic("knock") && G && isBossFloor(G.floor)) cut += KNOCK_CUT;    // 叩关：Boss 层（伤害那半在 pctSteady）
+  /* ===== 第九批「跨流派组合」里依赖护甲／护盾的三件（不能进 cutStatic，那儿不许调 stats）===== */
+  if(hasRelic("shieldheart") && (P.shield || 0) >= SHEART_AT) cut += SHEART_CUT;   // 盾心：护盾够厚
+  if(hasRelic("ironvow")){                                                // 铁誓：护甲→减伤
+    cut += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_CUT;
+  }
+  if(hasRelic("confluence")) cut += confTiers(s) * CONF_CUT;              // 万流归宗：三条线的档数
+  /* 双面：拿**上一刀真的打出去的伤害加成**（G.lastPct，answer() 里记）换减伤 ——
+     它自己那一档是「减伤→伤害」，方向相反，所以不会跟 cutStatic() 绕成死循环。*/
+  if(hasRelic("janus") && G){
+    cut += Math.min(JANUS_P_TIERS, Math.floor((G.lastPct || 0) / JANUS_P_PER)) * JANUS_P_STEP;
+  }
+  if(!wrong) return cut;
+  if(hasRelic("chain")) cut += CHAIN_CUT;                                 // 长链：答错时的减伤
+  /* 后劲 2026-09-21 从「同一场」改成「同一层」、并且**第 1 次答错就起算** ——
+     一场平均只答错 0.52 次，原来那条「同场第二次起」一层只发生 1.3 次。
+     ⚠️ mitigate() 调的时候 G.floorWrong 已经把这一下 +1 过了；信息页读到的是「下一次答错」之前的数，差一档，无所谓。*/
+  if(G && hasRelic("grit")) cut += Math.min(GRIT_MAX, (G.floorWrong || 0) * GRIT_STEP);
+  /* 老对手：本局**每遇到过一次** Boss/层间守者就再减 NEMESIS_CUT%（2026-09-21 改成对所有敌人生效）。
+     P.bossSeen 在 startBattle() 里累，整趟不清零。*/
+  if(hasRelic("nemesis") && P.bossSeen){
+    let met = 0;
+    for(const k in P.bossSeen) met += P.bossSeen[k] || 0;
+    cut += Math.min(NEMESIS_MAX, met * NEMESIS_CUT);
+  }
+  // 苦行：这一趟没喝过泉（P.everDrankSpring 在 resolveSpring()/drinkAll() 里置真），跟老茧同一个公式
+  if(G && hasRelic("ascetic") && !P.everDrankSpring) cut += Math.min(ASCETIC_MAX, G.floor * ASCETIC_PER);
+  return cut;
+}
 /* ---- 常驻减伤合计（第九批「跨流派组合」用）----
    只装**跟这一下无关**的那几项：装备、层数、金币、连击决定，每一下都生效。
    「苦胆」「恒甲」「双面」读的就是它，mitigate() 也从它起算 —— 全局只有这一个口径，
@@ -3045,30 +3124,13 @@ function mitigate(dmg, s0, opt){
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
   /* 常驻那一档（软甲／皮甲／脱壳／老茧／不动／深潜／镇压的全局档 + 第九批的五件）
      统一从 cutStatic() 起算 —— 「苦胆」「双面」「恒甲」要读同一个数，口径只能有一个。*/
-  let cut = cutStatic();
+  let cut = cutState(s, wrong);      // 常驻 + 看血量/护甲/护盾 + 答错都有的几件（信息页同一个口径）
   /* 粗布 2026-09-21 从「每场一次减半」改成「**每层**一次 −BURLAP_CUT%」，并挪进 cut 桶 ——
      一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
      一件**普通**品质比传奇「不动」还强，是全表最大的一处定价事故。*/
   if(wrong && hasRelic("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += BURLAP_CUT; }
-  if(wrong && hasRelic("chain")) cut += CHAIN_CUT;                        // 长链：答错时的减伤
-  if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
-  /* 第十批：余裕跟逆鳞正好相反（血还满着才有），所以也留在这儿按当前血量现算；
-     叩关只在 Boss 层生效（那一层的容错是全游戏最低的）。*/
-  if(hasRelic("ease") && P.hp > s.maxHp * EASE_AT) cut += EASE_CUT;       // 余裕：血还在八成以上
-  if(hasRelic("knock") && G && isBossFloor(G.floor)) cut += KNOCK_CUT;    // 叩关：Boss 层（伤害那半在 answer）
   // 镇压：只挡 Boss 那一口（全局那一档在 cutStatic() 里；Boss 层的容错只有 3 下出头）
   if(hasRelic("quell") && B && B.mob && B.mob.boss) cut += QUELL_CUT;
-  /* ===== 第九批「跨流派组合」里依赖护甲／护盾的三件（不能进 cutStatic，那儿不许调 stats）===== */
-  if(hasRelic("shieldheart") && (P.shield || 0) >= SHEART_AT) cut += SHEART_CUT;   // 盾心：护盾够厚
-  if(hasRelic("ironvow")){                                                // 铁誓：护甲→减伤
-    cut += Math.min(IRONVOW_TIERS, Math.floor((s.defGear || 0) / IRONVOW_PER)) * IRONVOW_CUT;
-  }
-  if(hasRelic("confluence")) cut += confTiers(s) * CONF_CUT;              // 万流归宗：三条线的档数
-  /* 双面：拿**上一刀真的打出去的伤害加成**（G.lastPct，answer() 里记）换减伤 ——
-     它自己那一档是「减伤→伤害」，方向相反，所以不会跟 cutStatic() 绕成死循环。*/
-  if(hasRelic("janus") && G){
-    cut += Math.min(JANUS_P_TIERS, Math.floor((G.lastPct || 0) / JANUS_P_PER)) * JANUS_P_STEP;
-  }
   /* 稳答／慎笔：按题型分——mitigate() 只有两个调用点（timeUp() 不传 wrong，answer() 的答错分支传
      {wrong:true}），所以这里的 wrong 已经排除了超时；题型看 B.q.type（此时题目还没被清掉）。*/
   if(wrong && hasRelic("calm") && B && B.q && B.q.type !== "spell") cut += CALM_CUT;
@@ -3076,10 +3138,6 @@ function mitigate(dmg, s0, opt){
   if(wrong && hasRelic("psyche") && opt && opt.haunted) cut += PSYCHE_CUT;
   // 缓冲：!wrong 就是超时那条路（唯二两个调用点之一），跟沙漏是两条路——沙漏会在 timeUp() 里提前返回
   if(!wrong && hasRelic("buffer")) cut += BUFFER_CUT;
-  // 后劲：B.wrongTimes 在 answer() 的答错分支里、调 mitigate() 之前就先 +1 了，这里读到的已经是"这一下是第几次"
-  /* 后劲 2026-09-21 从「同一场」改成「同一层」、并且**第 1 次答错就起算** ——
-     一场平均只答错 0.52 次，原来那条「同场第二次起」一层只发生 1.3 次。*/
-  if(wrong && hasRelic("grit")) cut += Math.min(GRIT_MAX, (G.floorWrong || 0) * GRIT_STEP);
   // 记仇：连续挨你打到第 GRUDGE_AT 刀起——m.hitsLanded 在 answer() 答对分支里累加，只属于这一只怪
   if(wrong && hasRelic("grudge") && B && B.mob && (B.mob.hitsLanded || 0) >= GRUDGE_AT) cut += GRUDGE_CUT;
   // 面熟：这一层同类别的怪见过几只——G.catSeen 在 startBattle() 里累，nextFloor() 清零
@@ -3089,15 +3147,6 @@ function mitigate(dmg, s0, opt){
   }
   // 二见：同一个词连续第二次答错——由 answer() 通过 opt.repeatWord 告诉这里（rec.wrong 是答题函数本地变量）
   if(wrong && hasRelic("twice") && opt && opt.repeatWord) cut += TWICE_CUT;
-  /* 老对手：本局**每遇到过一次**同名 Boss/层间守者就再减 NEMESIS_CUT%（用户 2026-09 改成叠加）。
-     P.bossSeen 在 startBattle() 里累（这一次也已经记进去了，所以第一次遇到就是 1 档），整趟不清零。*/
-  /* 老对手 2026-09-21 改成**对所有敌人**生效：原来只减那一只 Boss 的伤害，
-     而 Boss 只占全部挨打量的 6%，一件传奇摊下来只值 0.5。*/
-  if(wrong && hasRelic("nemesis") && P.bossSeen){
-    let met = 0;
-    for(const k in P.bossSeen) met += P.bossSeen[k] || 0;   // 本局一共撞见过几次 Boss（不分是哪一只）
-    cut += Math.min(NEMESIS_MAX, met * NEMESIS_CUT);
-  }
   // 缓坠：这一层第一次跌破半血的那一下——用这一下"挨完之后会不会跌破半血"当判定，每层限一次
   if(wrong && hasRelic("brace") && !G.braceUsed && P.hp >= s.maxHp / 2 && (P.hp - out) < s.maxHp / 2){
     cut += BRACE_CUT;
@@ -3110,8 +3159,6 @@ function mitigate(dmg, s0, opt){
     else if(P.hp >= s.maxHp * 0.50) P.rampartOn = false;
     if(wrong && P.rampartOn) cut += RAMPART_CUT;
   }
-  // 苦行：这一趟没喝过泉（P.everDrankSpring 在 resolveSpring()/drinkAll() 里置真），跟老茧同一个公式
-  if(wrong && hasRelic("ascetic") && !P.everDrankSpring) cut += Math.min(ASCETIC_MAX, G.floor * ASCETIC_PER);
   /* ⚠️ 这一步**向下取整**（玩家占便宜）：向上取整的话 5% 在小数字上等于没有 ——
      早期怪只打 5~6 点，ceil(6×0.95)=6，皮甲就成了一件骗人的遗物。最低仍然掉 1 点（下面兜）。*/
   /* 减伤总和封顶（`MIT_CUT_MAX`）—— 不封的话堆七八件就是「每次只掉 1 点」，那是练习模式不是构筑。
