@@ -971,6 +971,13 @@ function orbBaseOn(k){ return !!(P && P.orb && P.orb.base && P.orb.base[k]); }
 function spDef(id){ for(var i = 0; i < BF_SPECIAL.length; i++) if(BF_SPECIAL[i].id === id) return BF_SPECIAL[i]; return null; }
 function reindex(){ P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1; }
 function nRar(r){ var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r === r) n++; return n; }
+/* 群星（第十二批）：身上史诗以上的遗物几件，最多 20 */
+function starN(){ return Math.min(20, nRar(2) + nRar(3) + nRar(4)); }
+/* 花金币记一笔（散财 / 千金读 P.spent）。带着千金时生命上限跟着涨，从 withMaxHp() 过，当前血跟着补。*/
+function paySpend(c){
+  if(has("spendlife")) withMaxHp(function(){ P.gold -= c; P.spent += c; });
+  else { P.gold -= c; P.spent += c; }
+}
 
 function newRun(){
   P = {hp:0, lvl:1, xp:0, gold:0, relics:[], rset:{}, special:[], sset:{}, combo:0, maxCombo:0, shield:0,
@@ -1067,6 +1074,8 @@ function bstats(){
   if(ohp) s.maxHp = s.maxHp * (1 + ohp / 100);
   if(has("titan"))       s.maxHp = Math.round(s.maxHp * 1.5);      // 铁躯
   if(has("colossus"))    s.maxHp = Math.round(s.maxHp * 1.3);      // 巨骨（第十一批）：跟铁躯连乘
+  if(has("spendlife"))   s.maxHp = Math.round(s.maxHp * (1 + Math.min(40, Math.floor(P.spent / 150)) / 100));   // 千金（第十二批）
+  if(has("constellation")) s.maxHp = Math.round(s.maxHp * (1 + 0.05 * starN()));                               // 群星（第十二批）
   if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
   s.maxHp = Math.max(1, Math.round(s.maxHp));
   var hpPct = s.maxHp > 0 ? P.hp / s.maxHp : 1;
@@ -1420,6 +1429,8 @@ function swing(mult){
   if(has("whim"))     pct += G.whim;
   if(has("instant") && G.instantReady){ pct += 150; G.instantReady = false; G.fastRun = 0; }
   if(has("billow"))   pct += 20;                                    // 叠浪（第十一批）：换暴击伤害那一半在下面
+  if(has("constellation")) pct += 5 * starN();                      // 群星（第十二批）
+  if(has("wildfire")) pct += Math.floor(Math.max(0, 1 - hp1) * 150);  // 燎原（第十二批）：每少 1% 生命 +1.5%
   pct += orbAdd("atkPct") + (orbOn("red2") ? 25 : 0);               // 宝珠：② 层，跟别的百分比同一个桶
   if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
   if(hasSp("sp_magnet")){ pct += 3 * G.magnetN; G.magnetN = 0; }
@@ -1474,6 +1485,9 @@ function swing(mult){
     if(slowed) d2 *= 2;                                   // 冰裂：对被减速的翻倍
     var hpWas = f.hp;
     hurtFoe(f, d2, s, crit);
+    /* 凿骨（第十二批）：另外扣这只最大生命的 4%（精英 / Boss 1.5%）—— 一刀扫好几只，所以是地牢的一半。
+       单独一笔，不吃百分比和暴击。*/
+    if(has("chisel") && !f.dead) hurtFoe(f, Math.max(1, Math.round(f.maxHp * (f.boss || f.elite ? 0.015 : 0.04))), s, false);
     /* 吸血（第十一批）只算真的打进血条的量，而且**一刀只算打得最重的那一只** ——
        一刀扫五只的话按五只算，地牢「答一题回一次」的频率就对不上了。*/
     landBest = Math.max(landBest, Math.max(0, hpWas - Math.max(0, f.hp)));
@@ -1560,6 +1574,7 @@ function onSwingRelics(s, c){
   if(has("pulse")) healUp(s.maxHp * 0.01);
   if(has("midas") && luck(0.25)) addGold(5);                        // 战场改写：10 → 5（一波挥 37 刀）
   if(has("phoenix") && P.hp / s.maxHp < 0.15) healUp(s.maxHp * 0.05);
+  if(has("wildfire") && P.hp / s.maxHp < 0.30) healUp(s.maxHp * 0.03);     // 燎原（第十二批）
   if(has("allin") && c.wager && luck(0.10)) healUp(s.maxHp * 0.10);
   if(has("restring") && luck(0.20)){ P.combo = Math.max(P.combo, P.maxCombo); healUp(5); }
   if(has("chew") && P.chew){ P.chew = 0; healUp(s.maxHp * 0.04); }
@@ -1977,6 +1992,8 @@ function killFoe(f){
   if(has("mend"))     healUp(s.maxHp * 0.02);
   if(has("reapfull")) healUp(s.maxHp * 0.012);
   if(has("disarm"))   addShield(s.maxHp * 0.01);                   // 缴械（第十一批）：地牢是 2%，战场一波杀得多，减半
+  /* 无瑕（第十二批）：地牢是「一题没错打倒一只」，战场改成「没挨打连杀每满 10 只」（killStreak 挨打清零）*/
+  if(has("flawless") && P.killStreak % 10 === 0){ healUp(s.maxHp * 0.04); addShield(s.maxHp * 0.03); }
   if(has("lesson") && !G.kindsSeen[f.id]) addGold(10);
   if(has("tome") && (P.kinds[f.id] || 0) >= 20) addGold(8);
   G.kindsSeen[f.id] = 1;
@@ -2641,7 +2658,7 @@ function buyCard(i){
   if(P.gold < c) return;
   if(benchFree() <= 0 && !wouldCombine(tid)) return;
   if(!poolTake(tid)) return;
-  P.gold -= c; P.spent += c;
+  paySpend(c);
   shopCards[i] = null;
   P.bench.push({k:"tower", tid:tid, star:1});
   combineAll();
@@ -2655,7 +2672,7 @@ function rerollShop(){
   if(P.freeRe > 0){ P.freeRe--; rollShopCards(); renderDeploy(); renderTwShop(); return; }
   var c = rerollCost();
   if(P.gold < c) return;
-  P.gold -= c; P.spent += c;
+  paySpend(c);
   rollShopCards(); renderDeploy(); renderTwShop();
 }
 /* 白送一张牌（金库三星）：照样走牌库，备战区满了就作罢 */
@@ -2670,7 +2687,7 @@ function levelUp(){
   if(P.dlvl >= BF.deploy.lvlMax) return;
   var c = DLVL_COST[P.dlvl + 1];
   if(!c || P.gold < c) return;
-  P.gold -= c; P.spent += c; P.dlvl++;
+  paySpend(c); P.dlvl++;
   renderDeploy(); renderTwShop();
 }
 function sellBench(i){
@@ -5700,7 +5717,12 @@ function step(dt){
   CAM.x = me.x; CAM.y = me.y;                      // 相机永远居中，不夹边界
 
   maybeFullBag();
-  if(G.bossDown){ G.bossDown = false; nextWave(); openSpecialPick(); return; }
+  if(G.bossDown){
+    G.bossDown = false; nextWave(); openSpecialPick();
+    /* 战利品（第十二批）：Boss 的三选一之外，再给一次升级四选一（已经开着就排在后面）*/
+    if(has("spoils")){ pendPicks++; if(!$("veilPick").classList.contains("on")) openPick(); }
+    return;
+  }
   if(!isBossWave(P.wave) && G.t >= BF.waveSec) nextWave();
 }
 /* 特殊遗物里那几个「一直在跑」的：悬刃 / 践踏 / 荆棘 / 漩涡 / 狂暴的计时 */
@@ -5983,19 +6005,20 @@ function relicPool(rar){
     out.push(r); }
   return out;
 }
-function rollRar(w){
+function rollRar(w, up){
   var ws = rarityWeights(w), t = 0, i;
   for(i = 0; i < 5; i++) t += ws[i];
   var x = Math.random() * t;
   for(i = 0; i < 5; i++){ x -= ws[i]; if(x <= 0) break; }
   var want = Math.min(4, i);
   if(has("omen") && want < 3 && luck(0.15)) want++;      // 吉兆：抬不到神圣
+  if(up && want < 3) want++;                              // 秘匣（第十二批）：同样抬不到神圣
   return want;
 }
-function rollRelics(n, w){
+function rollRelics(n, w, up){
   var out = [], tries = 0;
   while(out.length < n && tries++ < 200){
-    var rar = rollRar(w), pool = relicPool(rar);
+    var rar = rollRar(w, up), pool = relicPool(rar);
     while(!pool.length && rar > 0){ rar--; pool = relicPool(rar); }
     if(!pool.length) break;
     var r = pick(pool);
@@ -6016,6 +6039,13 @@ function openPick(){
 function rollPick(){
   pickOffer = rollRelics(BF.pickN, P.wave);
   if(!pickOffer.length){ pendPicks = 0; hide("veilPick"); return; }
+  /* 慧眼（第十二批）：四件里一件史诗以上都没有，就把最后一件换成史诗（没货退到传奇）*/
+  if(has("keeneye") && !pickOffer.some(function(r){ return r.r >= 2; })){
+    for(var kt = 2; kt <= 3; kt++){
+      var kp = relicPool(kt).filter(function(r){ return pickOffer.indexOf(r) < 0; });
+      if(kp.length){ pickOffer[pickOffer.length - 1] = pick(kp); break; }
+    }
+  }
   $("pickTitle").textContent = L("升到 " + P.lvl + " 级 · 挑一件遗物", "Level " + P.lvl + " · pick a relic") +
     (pendPicks > 1 ? L("（还有 " + (pendPicks - 1) + " 次）", " (" + (pendPicks - 1) + " more)") : "");
   fillCards("pickList", pickOffer);
@@ -6151,7 +6181,8 @@ function openSpecialPick(){
   var pool = spPool();
   if(!pool.length){ pendSpecial = 0; return; }            // 18 件全拿齐了
   spOffer = []; var t = 0;
-  while(spOffer.length < Math.min(SPECIAL_PICK, pool.length) && t++ < 100){
+  var spN = SPECIAL_PICK + (has("shrine") ? 1 : 0);        // 神龛（第十二批）：三选一 → 四选一
+  while(spOffer.length < Math.min(spN, pool.length) && t++ < 100){
     var d = pick(pool); if(spOffer.indexOf(d) < 0) spOffer.push(d);
   }
   $("spPickList").innerHTML = spOffer.map(spCardHtml).join("");
@@ -6249,13 +6280,14 @@ function dropSite(kind, x, y){
   while(E.sites.length > BF.site.max) E.sites.shift();
 }
 /* 这一轮（每 every 波一轮）还能不能掉箱 */
-function chestLeft(){ return BF.site.chest.max - P.chestN; }
+function chestLeft(){ return BF.site.chest.max * (has("hoardbox") ? 2 : 1) - P.chestN; }   // 秘匣（第十二批）：一轮能掉的也翻倍
 /* 每次击杀掷一次。⚠️ 这不是遗物效果，所以用 Math.random() 不走 luck()。 */
 function maybeSite(f){
   if(chestLeft() <= 0) return;
   if(f.boss){ dropSite("chest", f.x - 40, f.y); dropSite("chest", f.x + 40, f.y); return; }
-  if(f.elite){ if(Math.random() < BF.site.eliteRate) dropSite("chest", f.x, f.y); return; }
-  if(Math.random() < BF.site.chest.p) dropSite("chest", f.x, f.y);
+  var bx = has("hoardbox") ? 2 : 1;                         // 秘匣（第十二批）：掉率 ×2
+  if(f.elite){ if(Math.random() < BF.site.eliteRate * bx) dropSite("chest", f.x, f.y); return; }
+  if(Math.random() < BF.site.chest.p * bx) dropSite("chest", f.x, f.y);
 }
 /* 每波保底一个箱：一整波一个都没掉的话，进下一波时在玩家边上补一个。
    ⚠️ 别把保底删了 —— 早期一波只杀 20 来只，不兜底经常整波空手。 */
@@ -6269,7 +6301,7 @@ function updateSites(dt){
   for(var i = E.sites.length - 1; i >= 0; i--){
     var t = E.sites[i]; t.t += dt;
     if(Math.hypot(me.x - t.x, me.y - t.y) > BF.site.r) continue;
-    var got = rollRelics(1, P.wave + 6)[0];
+    var got = rollRelics(1, P.wave + 6, has("hoardbox") ? 1 : 0)[0];   // 秘匣：箱里的高一档
     E.sites.splice(i, 1);
     if(!got) continue;                        // 228 件全带齐了（理论上到不了）
     fxText(got.n, "#8A6A3A"); fxRing(t.x, t.y, 34, "#8A6A3A");
@@ -6323,7 +6355,7 @@ function buyShop(id){
   var row = null, i;
   for(i = 0; i < t.stock.length; i++) if(t.stock[i].id === id && !t.stock[i].sold) row = t.stock[i];
   if(!row || P.gold < shopPrice(row)) return;
-  P.gold -= shopPrice(row); P.spent += shopPrice(row); P.bought++; P.everBought = true;
+  paySpend(shopPrice(row)); P.bought++; P.everBought = true;
   row.sold = true;
   grantRelic(id, renderShop);
 }

@@ -128,6 +128,12 @@ Object.assign(I18N, {
 " <span class=\"sys\">(反震 +": " <span class=\"sys\">(Recoil +",
 "% 打了出去)</span>": "% unleashed)</span>",
 " <span class=\"sys\">(不死鸟回了 ": " <span class=\"sys\">(Phoenix healed ",
+" <span class=\"sys\">(凿骨 +": " <span class=\"sys\">(Chisel +",
+" <span class=\"sys\">(燎原 · 回 ": " <span class=\"sys\">(Wildfire · healed ",
+"战利品 · 再挑一件": "Spoils · pick one more",
+"神龛 · 石台上摆着三件": "Shrine · three on the altar",
+"神龛 · 炉子里有三件": "Shrine · three in the forge",
+"。神龛让你挑一件。": ". The Shrine lets you choose.",
 " <span class=\"sys\">(学徒帽 · 回 ": " <span class=\"sys\">(Apprentice Cap · healed ",
 " <span class=\"sys\">(长歌 · 护盾 +": " <span class=\"sys\">(Long Song · shield +",
 " <span class=\"sys\">(驱邪 · 回 ": " <span class=\"sys\">(Exorcism · healed ",
@@ -1904,6 +1910,52 @@ var RELIC_EN = {
 "Last Gasp",
 "Once per floor: after lethal damage, keep 1 HP",
 "While there's one breath left, the Hall has to wait for one more answer."
+],
+/* 第十二批（2026-09-25）*/
+"flawless": [
+"Flawless",
+"Defeat an enemy with no wrong answers: heal 4% max HP, gain 3% shield",
+"The page with no mistakes is the one whose ink dries fastest."
+],
+"chisel": [
+"Chisel",
+"Right answer: also deal 8% of the enemy's max HP (Boss 3%)",
+"Don't fight the flesh — chip away at the bone."
+],
+"spendlife": [
+"Thousand Gold",
+"Every 150 gold spent this run: max HP +1% (max +40%)",
+"Every coin you spend buys back a breath."
+],
+"hoardbox": [
+"Hidden Coffer",
+"Every floor has a chest; its relic is one rarity higher",
+"The heavier the lock, the more the contents are worth."
+],
+"shrine": [
+"Shrine",
+"From floor 10, an altar on every floor; altars and forges let you pick 1 of 3",
+"The gods have finally learned to let you choose."
+],
+"spoils": [
+"Spoils",
+"Defeating a Boss or Floor Warden: pick one more relic",
+"Under the crown there's always more than one thing."
+],
+"keeneye": [
+"Keen Eye",
+"Floor-clear picks always include an Epic or better",
+"One glance, and you know which one is genuine."
+],
+"constellation": [
+"Constellation",
+"Each Epic+ relic you carry: damage +5%, max HP +5% (max 20)",
+"One star is dim; a field of stars becomes a road."
+],
+"wildfire": [
+"Wildfire",
+"Damage +1.5% per 1% HP missing; below 30% HP, right answers heal 3% max HP",
+"A fire burns fiercest on its last stretch."
 ]
 };
 
@@ -1943,7 +1995,7 @@ if(LANG_LEARN === "ja"){
 
 /* ===== 战场遗物的英文词条（2026-09-23，战场模式英文版）=====
    content.js 的 bfWord() 在英文界面下读这张表：**跟 BFW / BFW_RE 换出来的中文一一对应**，
-   只收「战场里说法跟地牢不一样」的那 127 件；其余 82 件战场里原样照搬地牢词条，直接用 RELIC_EN。
+   只收「战场里说法跟地牢不一样」的那 147 件；其余 90 件战场里原样照搬地牢词条，直接用 RELIC_EN。
    ⚠️ 改了 content.js 的 BFW / BFW_RE（或者战场的实现），这里对应那一条要跟着改。*/
 var BFW_EN = {
  /* 第十一批（2026-09-25）：战场说法跟地牢不一样的那几件（中文在 content.js 的 BFW）*/
@@ -1960,6 +2012,14 @@ var BFW_EN = {
  glimmer: "When hit: 12% chance to lose no HP (combo still breaks)",
  deflect: "The first time each enemy hits you: damage taken halved (max 4 times per wave)",
  lastgasp: "Once per wave: after lethal damage, keep 1 HP",
+ /* 第十二批（2026-09-25）*/
+ flawless: "Defeat 10 enemies in a row without getting hit: heal 4% max HP, gain 3% shield",
+ chisel: "On hit: also deal 4% of the enemy's max HP (elites / Bosses 1.5%)",
+ hoardbox: "Stone chest drop rate ×2; their relics are one rarity higher",
+ shrine: "Boss special-relic drops: pick 1 of 4 instead of 1 of 3",
+ spoils: "Defeating a Boss: one extra level-up relic pick",
+ keeneye: "Level-up picks always include an Epic or better",
+ wildfire: "Damage +1.5% per 1% HP missing; below 30% HP, each swing heals 3% max HP",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",
