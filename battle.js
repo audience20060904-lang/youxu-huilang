@@ -133,6 +133,17 @@ function waveRate(w){ return 0.75 + 0.22 * (w - 1); }
 function waveCap(w){  return Math.min(70, 22 + 4 * w); }
 function hpMul(w){    return (1 + 0.20 * (w - 1)) * lateRamp(w); }
 function dmgMul(w){   return (1 + 0.09 * (w - 1)) * lateRamp(w); }
+/* 第十五批（2026-09-26）：「这一波敌人的攻击」= BF_FOES 里非 Boss 的平均攻击 × 这一波的倍率 × 难度层。
+   量敌 / 映甲 / 磨盾 / 镇岳按它算（地牢那边是 floorFoeDmg()）。按波数 + 难度层缓存，bstats() 每帧都调。*/
+var _wfd = {w:-1, t:null, v:1};
+function waveFoeDmg(){
+  var w = P && P.wave || 1;
+  if(_wfd.w === w && _wfd.t === TIER) return _wfd.v;
+  var sum = 0, n = 0;
+  for(var k in BF_FOES){ if(!BF_FOES[k].boss){ sum += BF_FOES[k].dmg; n++; } }
+  _wfd = {w:w, t:TIER, v:Math.max(1, (n ? sum / n : 1) * dmgMul(w) * TIER.dmg)};
+  return _wfd.v;
+}
 function spdMul(w){   return Math.min(1.35, 1 + 0.015 * (w - 1)); }
 function xpMul(w){    return 1 + 0.12 * (w - 1); }
 
@@ -1050,6 +1061,7 @@ function newWave(w, quiet){
        cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0,
        chaseN:0, fearN:0, bled:false,
        deflectN:0, gaspUsed:false, bwallGot:0, bwallBank:0, sipBank:0, riverBank:0,    // 第十一批
+       wshGot:0, wshBank:0,                                                              // 第十五批：磨盾
        honeN:0, waveKills:0};                                                            // 第十四批：磨砺 / 摧枯
   P.wave = w;
   /* ⚠️ 仇敌是**跨波**的（波是定时切的，场上的怪不清），所以计数要按场上现数一遍 ——
@@ -1103,6 +1115,7 @@ function bstats(){
   if(has("spendlife"))   s.maxHp = Math.round(s.maxHp * (1 + Math.min(40, Math.floor(P.spent / 150)) / 100));   // 千金（第十二批）
   if(has("constellation")) s.maxHp = Math.round(s.maxHp * (1 + 0.05 * starN()));                               // 群星（第十二批）
   if(has("erudite"))     s.maxHp = Math.round(s.maxHp * (1 + 0.01 * Math.floor(P.kills / 200)));             // 积学（第十三批）：每杀 200 只
+  if(has("mountain"))    s.maxHp = Math.round(s.maxHp * (1 + Math.min(400, 8 * Math.floor(w / 10)) / 100));   // 山岳（第十五批）：每过 10 波
   if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
   s.maxHp = Math.max(1, Math.round(s.maxHp));
   var hpPct = s.maxHp > 0 ? P.hp / s.maxHp : 1;
@@ -1180,6 +1193,7 @@ function bstats(){
   if(has("callus")) s.armor = Math.floor((s.armor + 3) * 1.2);
   if(has("layers")) s.armor = s.armor * 1.25;                         // 千层：护甲 ×1.25
   if(has("stack")){ s.armor += 5; if(P.noHitWaves >= 2) s.armor *= 2; }
+  if(has("mirrorplate")) s.armor += waveFoeDmg() * 0.20;             // 映甲（第十五批）：排在乘法件之后，不被放大
   s.armor = Math.max(0, Math.round(s.armor));
   /* 甲刃：护甲 → 暴击率（2026-09-23 补：以前只给了护甲 +2，后半句是空的） */
   if(has("armblade")) s.crit += Math.min(ABLADE_MAX, Math.floor(s.armor / ABLADE_PER) * ABLADE_STEP);
@@ -1190,6 +1204,8 @@ function bstats(){
   if(has("hide"))  c += 3;
   if(has("shed"))  c += 14;                                          // 战场改写（撤退那半句在战场里不存在）
   if(has("still")) c += 20;
+  if(has("boldheart")) c += 10;                                     // 壮胆（第十五批）：Boss 那一档在 mitigate()
+  if(has("goldbody"))  c += 15;                                     // 金身（第十五批）：上限那半在 cutMaxB()
   if(has("quell")) c += 20;
   if(has("bile"))  c += 5;
   if(has("janus")) c += 8;
@@ -1593,6 +1609,15 @@ function swing(mult){
       if(bwN > 0){ G.bwallBank -= bwN; G.bwallGot += bwN; addShield(bwN); }
     }
   }
+  /* 磨盾（第十五批）：跟刃壁一个写法，每波封在「这一波敌人攻击 ×3」*/
+  if(has("whetshield") && mult === 1){
+    var capWs = Math.round(waveFoeDmg() * 3);
+    if(G.wshGot < capWs){
+      G.wshBank += raw * 0.005;
+      var wsN = Math.min(Math.floor(G.wshBank), capWs - G.wshGot);
+      if(wsN > 0){ G.wshBank -= wsN; G.wshGot += wsN; addShield(wsN); }
+    }
+  }
   /* 残影：身后那个影子跟着来一下（圆形，不再算一次扇形 —— 便宜且够用）*/
   if(hasSp("sp_clone") && mult === 1){
     var cx = me.x - Math.cos(aim) * SP_CLONE_D, cy = me.y - Math.sin(aim) * SP_CLONE_D;
@@ -1683,7 +1708,8 @@ function mitigate(dmg, s, o){
   if(has("cushion") && o.touch) cut += 15;                   // 战场改写：贴身受伤不翻倍，所以换成接触伤害 −15%
   if(has("janus")) cut += Math.min(JANUS_P_TIERS, Math.floor((G.lastPct || 0) / JANUS_P_PER)) * JANUS_P_STEP;
   if(has("rampart") && P.rampartOn) cut += 50;
-  cut = Math.min(BF.cutMax, cut);
+  if(has("boldheart") && o.boss) cut += 20;                  // 壮胆（第十五批）：战场没有冒险，换成 Boss 的伤害再 −20%
+  cut = Math.min(cutMaxB(), cut);
   var out = Math.floor(dmg * (100 - cut) / 100);            // ⚠️ 先乘后除，别写成 ×(1−cut/100)
 
   if(has("hold") && G.holdUsed < 2){ G.holdUsed++; out = Math.floor(out / 2); }
@@ -1701,6 +1727,8 @@ function mitigate(dmg, s, o){
   return Math.max(out > 0 ? 1 : 0, out);
 }
 
+/* 减伤上限：BF.cutMax(75)，金身（第十五批）抬到 85 */
+function cutMaxB(){ return has("goldbody") ? 85 : BF.cutMax; }
 /* 每一条「怪打你」的路都必须接到这儿，否则护盾会被绕过去 */
 function takeHit(dmg, foe, o){
   if(OVER) return;
@@ -1891,7 +1919,8 @@ function onWaveRelics(w){
   if(has("atone"))   addShield(12);                            // 战场改写
   if(has("armpad"))  addShield(Math.min(20, 4 * s.armor));
   if(has("vow"))     P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.20));  // 取大值，别按回去
-  if(has("citywall")) P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.50));  // 城垣（第十一批）：地牢的「每场补到 5%」在战场里没有，并进这一口
+  if(has("citywall")) P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.50));
+  if(has("gauge"))   addShield(waveFoeDmg() * 3);                  // 量敌（第十五批）  // 城垣（第十一批）：地牢的「每场补到 5%」在战场里没有，并进这一口
   if(has("track") && P.wrong2 !== undefined && P.wrong1 < P.wrong2) addShield(110);
   if(has("gatewait") && isBossWave(w)){ addShield(120); healUp(s.maxHp * 0.25); }
   /* 宝珠：绿 3 回血、「护身」「猎首」给盾 */
@@ -2084,6 +2113,11 @@ function killFoe(f){
   if(has("reap"))     healUp(1);
   if(has("breath"))   healUp(s.maxHp * 0.01);
   if(has("mend"))     healUp(s.maxHp * 0.02);
+  if(has("drinkwar")) healUp((f.dmg || 0) * 0.05);                 // 饮战（第十五批）：按这个敌人的攻击
+  if(has("anchor") && P.kills % 10 === 0){                          // 镇岳（第十五批）：每 10 只补一次（取大值）
+    var anc = Math.round(waveFoeDmg() * 0.60);
+    if(P.shield < anc) addShield(anc - P.shield);
+  }
   if(has("reapfull")) healUp(s.maxHp * 0.012);
   if(has("disarm"))   addShield(s.maxHp * 0.01);                   // 缴械（第十一批）：地牢是 2%，战场一波杀得多，减半
   /* 无瑕（第十二批）：地牢是「一题没错打倒一只」，战场改成「没挨打连杀每满 10 只」（killStreak 挨打清零）*/
@@ -6245,7 +6279,7 @@ function openInfo(){
     L(" · 遗物 ", " · Relics ") + relicLoad() + " / " + relicCap() + L(" · 特殊 ", " · Special ") + P.special.length;
   $("infoStats").innerHTML =
     st2(L("攻击", "ATK"), s.atk) + st2(L("生命", "HP"), Math.ceil(P.hp) + " / " + s.maxHp) +
-    st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic > BF.cutMax ? BF.cutMax + '/<span class="over">' + s.cutStatic + "</span>%" : s.cutStatic + "%") +
+    st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic > cutMaxB() ? cutMaxB() + '/<span class="over">' + s.cutStatic + "</span>%" : s.cutStatic + "%") +
     st2(L("暴击", "Crit"), s.crit + "% ×" + s.critMult.toFixed(1)) + st2(L("移速", "Move speed"), Math.round(s.spd)) +
     st2(L("攻速", "Attack speed"), s.aspd.toFixed(2) + L(" 刀/秒", " swings/s")) + st2(L("刀程", "Blade reach"), Math.round(s.range)) +
     st2(L("张角", "Swing arc"), Math.round(s.arc) + "°") + st2(L("拾取", "Pickup"), Math.round(s.pickup)) +

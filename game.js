@@ -350,6 +350,7 @@ function stats(){
   if(hasRelic("spendlife")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + spendLifePct() / 100)));
   if(hasRelic("constellation")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + starCount() * STARS_HP)));
   if(hasRelic("erudite")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + eruditeTier() * ERUDITE_HP)));   // 积学（第十三批）
+  if(hasRelic("mountain") && G) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + mountainPct() / 100)));   // 山岳（第十五批）
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
@@ -393,6 +394,9 @@ function stats(){
      ⚠️ 放在 defGear 快照**之前**——护甲被磨掉的时候，铁壁靠护甲换的伤害也该跟着掉，
      不然"甲都快被磨没了"却还在吃满额的铁壁伤害，逻辑对不上。*/
   if(hasRelic("corrode") && G) s.def += (G.corrodeArmor || 0);
+  /* 映甲（第十五批）：护甲 +这一层怪物攻击的 MPLATE_PCT —— 排在重装 / 硬茧 / 千层 / 叠甲的乘法**之后**，
+     不被放大（放进去的话 20% × 3 × 1.25 × 2 就是怪一口的 150%，一下都挨不到）。铁壁 / 甲刃照样读得到（defGear 在下面）。*/
+  if(hasRelic("mirrorplate") && G) s.def += Math.round(floorFoeDmg() * MPLATE_PCT);
   /* 「铁壁」只认**装备和等级来的**护甲，所以在练习模式那 +50 之前先记一笔。
      ⚠️ 不这么分开的话，练习模式 +50 护甲 = 铁壁 +150% 伤害，
      「纯背词的简单模式」反而成了全游戏输出最高的玩法。*/
@@ -475,6 +479,8 @@ function nextFloor(){
   G.deflectN = 0;          // 卸力：这一层减半过几次
   G.gaspUsed = false;      // 一息：每层一次
   G.bwallGot = 0;          // 刃壁：这一层已经转了多少护盾（封在上限的 BWALL_MAX）
+  G.wshGot = 0;            // 磨盾（第十五批）：这一层已经转了多少护盾
+  G.wshBank = 0;
   G.bwallBank = 0;         // 刃壁 / 渴刃·血月 / 血河：按小数攒、攒满 1 点给 1 点
   G.sipBank = 0;
   G.riverBank = 0;
@@ -545,6 +551,11 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say(T("城垣补齐了 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
+  if(hasRelic("gauge")){                                              // 量敌（第十五批）：按这一层怪物的攻击给
+    const add = Math.max(1, Math.ceil(floorFoeDmg() * GAUGE_X));
+    P.shield = (P.shield || 0) + add;
+    say(T("量敌 —— 看清了这一层的牙口，护盾 +<b>") + add + T("</b>。"), "good");
+  }
   /* 2026-09-21：这五件原来「独立价值恒为 0」——它们要么按护甲算（自己不产护甲），
      要么等着「护盾被打穿」（自己不产护盾），单带时永远触发不了。这一批各补了一条
      **每进一层自带的护盾**当种子。⚠️ 别把种子删掉，删了它们就又回到白板。*/
@@ -948,6 +959,15 @@ function endlessSurge(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
   return ENDLESS_SURGE_X;
 }
+/* 第十五批（2026-09-26）：「这一层怪物的攻击」—— 这一层会出的小怪的平均伤害（refFoe，吃分段倍率 / 深渊压迫 / 深渊狂潮）。
+   量敌 / 映甲 / 磨盾按它算，怪涨多少这几件就跟多少。饮战 / 镇岳看的是眼前这一只（m.dmg）。*/
+function floorFoeDmg(){ return G ? Math.max(1, Math.round(refFoe(G.floor).dmg)) : 1; }
+/* 山岳：每深入 MOUNT_EVERY 层最大生命 +MOUNT_PCT%，最多 MOUNT_MAX% */
+function mountainPct(){ return G ? Math.min(MOUNT_MAX, Math.floor(G.floor / MOUNT_EVERY) * MOUNT_PCT) : 0; }
+/* 减伤上限：底子 MIT_CUT_MAX(75)，金身抬到 GBODY_CAP(85) */
+function cutMax(){ return hasRelic("goldbody") ? GBODY_CAP : MIT_CUT_MAX; }
+/* 冒险失手的倍率：底子 ×2，托底 ×1.8，壮胆 ×1（不翻倍） */
+function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? CUSHION_MULT : 2; }
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
    第 50 层 ×1（12%）、第 51 层 ×5.5（66%）、第 100 层 ×7（84%）、第 110 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
@@ -1416,8 +1436,9 @@ function renderParts(){
 }
 /* 减伤超过上限时写成「−75/125%」，后面那个是堆出来的总数、标红（用户 2026-09-26：看得出堆超了多少）*/
 function cutShow(cut){
-  if(cut <= MIT_CUT_MAX) return "−" + cut + "%";
-  return "−" + MIT_CUT_MAX + "/<span class=\"over\">" + cut + "</span>%";
+  const cap = cutMax();
+  if(cut <= cap) return "−" + cut + "%";
+  return "−" + cap + "/<span class=\"over\">" + cut + "</span>%";
 }
 function renderSheets(s){
   /* 「属性」（用户 2026-09-25 要补全）：伤害公式里每一桶都摆出来。
@@ -1768,6 +1789,11 @@ function startBattle(m){
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
   if(hasRelic("citywall")){
     const w = Math.max(1, Math.ceil(stats().maxHp * CITY_FIGHT));
+    if((P.shield || 0) < w) P.shield = w;
+  }
+  /* 镇岳（神圣，第十五批）：每场开始护盾补到这只怪攻击的 ANCHOR_PCT（同样取大值）*/
+  if(hasRelic("anchor")){
+    const w = Math.max(1, Math.ceil((m.dmg || 0) * ANCHOR_PCT));
     if((P.shield || 0) < w) P.shield = w;
   }
   /* 面熟：这一层同一类别的怪，每次真的撞上（不是路过）就记一次，nextFloor() 里清零。
@@ -2770,6 +2796,20 @@ function answer(btn, ok){
         }
       }
     }
+    /* 磨盾（第十五批）：跟刃壁一个写法，封顶换成「这一层怪物攻击 ×WSHIELD_CAP」—— 怪越凶封得越高，不跟着生命上限卡死 */
+    if(hasRelic("whetshield")){
+      const capM = Math.ceil(floorFoeDmg() * WSHIELD_CAP);
+      if((G.wshGot || 0) < capM){
+        G.wshBank = (G.wshBank || 0) + dmg * WSHIELD_PCT;
+        let n = Math.floor(G.wshBank);
+        if(n > 0){
+          G.wshBank -= n;
+          n = Math.min(n, capM - (G.wshGot || 0));
+          G.wshGot = (G.wshGot || 0) + n;
+          P.shield = (P.shield || 0) + n;
+        }
+      }
+    }
     if(hasRelic("drain") && luck(DRAIN_RATE)) healUp(DRAIN_HEAL, s);  // 吞噬
     // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
     if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
@@ -2955,10 +2995,10 @@ function answer(btn, ok){
       hurtBegin(m, s, true);                   // 「构成」：从怪物的攻击起算（护甲那一截在里面记）
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
       // 冒险失手 —— 按钮写的是「错了受伤翻倍」；托底把这个倍率从 ×2 降到 ×1.5
-      if(B.wager){ const d0 = dmg; dmg = Math.round(dmg * (hasRelic("cushion") ? CUSHION_MULT : 2)); hurtRow("@wager", dmg - d0); }
+      if(B.wager){ const d0 = dmg; dmg = Math.round(dmg * wagerX()); hurtRow("@wager", dmg - d0); }   // 托底 ×1.8 / 壮胆 ×1
       if(wasHaunted){ dmg += 1; hurtRow("@haunt", 1); }   // 心魔又答错
       /* 化劲：这一口「本来」有多重（护甲之前）—— 最后真落到血上的少了多少，就是挡掉的 */
-      const rawHit = (B.wager ? Math.round(m.dmg * (hasRelic("cushion") ? CUSHION_MULT : 2)) : m.dmg) + (wasHaunted ? 1 : 0);
+      const rawHit = (B.wager ? Math.round(m.dmg * wagerX()) : m.dmg) + (wasHaunted ? 1 : 0);
       hitLost = 0;
       /* 心镜 2026-09-21 从「完全免伤」改成减伤 —— 加成挪进了 mitigate() 的 cut 桶
          （靠 opt.haunted 传进去），所以它现在跟别的百分比减伤一起相加、一起吃 MIT_CUT_MAX。*/
@@ -3320,6 +3360,8 @@ function cutStatic(){
   cut += gildGet("cut");                                                  // 金坛：本局攒下的减伤
   if(hasRelic("redirect")) cut += REDIRECT_CUT;                           // 化劲（第十三批）：挡掉的那部分在 redirectStore()
   if(G && hasRelic("lunar") && G.floor % 2 === 0) cut += LUNAR_CUT;       // 朔望：偶数层（伤害那半在 pctSteady）
+  if(hasRelic("boldheart")) cut += BOLD_CUT;                              // 壮胆（第十五批）：冒险不翻倍那半在 wagerX()
+  if(hasRelic("goldbody")) cut += GBODY_CUT;                              // 金身（第十五批）：上限那半在 cutMax()
   return cut;
 }
 /* 万流归宗（神圣）：护盾／护甲／连击三条线各数几档（各最多 CONF_TIERS 档），
@@ -3484,7 +3526,7 @@ function mitigate(dmg, s0, opt){
   /* 减伤总和封顶（`MIT_CUT_MAX`）—— 不封的话堆七八件就是「每次只掉 1 点」，那是练习模式不是构筑。
      ⚠️ 先乘后除，**别写成 `out * (1 - cut/100)`** —— 那样 55% 会算成
      `1 - 0.55 = 0.44999999999999996`，floor 之后白多掉 1 点（实测 100 点打成 44 而不是 45）。*/
-  if(cut > MIT_CUT_MAX) cut = MIT_CUT_MAX;
+  if(cut > cutMax()) cut = cutMax();          // 金身把上限从 75 抬到 85（第十五批）
   if(cut){ const o0 = out; out = Math.floor(out * (100 - cut) / 100); hurtSplit("cut", out - o0, cin); }
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
@@ -3678,6 +3720,7 @@ function closeBattleWin(){
   if(hasRelic("salve") && luck(SALVE_RATE)) heal += SALVE_HEAL;
   if(hasRelic("breath")) heal += Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT));  // 喘息：每打倒一只
   if(hasRelic("mend")) heal += Math.max(1, Math.ceil(s0.maxHp * MEND_PCT));      // 归血：收割的百分比版
+  if(hasRelic("drinkwar")) heal += Math.max(1, Math.ceil((m.dmg || 0) * DRINK_PCT)); // 饮战（第十五批）：按这只怪的攻击
   if(hasRelic("reapfull")) heal += Math.max(1, Math.ceil(s0.maxHp * REAPF_PCT)); // 收势：收割的百分比版（第十批）
   const got = healUp(heal, s0);                                           // 泉涌要收溢出，所以走 healUp
   if(hasRelic("disarm")) P.shield = (P.shield || 0) + Math.max(1, Math.round(s0.maxHp * DISARM_PCT));   // 缴械（第十一批）
@@ -6050,6 +6093,8 @@ function resumeRun(s){
   G.gaspUsed = false;
   G.bwallGot = 0;
   G.bwallBank = 0;
+  G.wshGot = 0;            // 磨盾（第十五批）
+  G.wshBank = 0;
   G.sipBank = 0;
   G.riverBank = 0;
   G.spoils = 0;            // 战利品（第十二批）

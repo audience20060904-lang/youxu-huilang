@@ -198,6 +198,7 @@ Object.assign(I18N, {
 "<span class=\"big no\">浮光 —— 刀穿过去了</span>": "<span class=\"big no\">Glimmer — the blade passed through</span>",
 "一息 —— 还剩一口气，你没倒下（这一层就这一次）。": "Last Gasp — one breath left, you're still standing (once this floor).",
 "城垣补齐了 —— 护盾 <b>": "City Wall is rebuilt — shield <b>",
+"量敌 —— 看清了这一层的牙口，护盾 +<b>": "Sizing Up — you've read this floor's teeth. Shield +<b>",
 " <span class=\"sys\">(余温还护着你，减半，剩 ": " <span class=\"sys\">(Lingering Warmth halves it; left: ",
 "石胎": "Stone Womb",
 "钝痛": "Dull Ache",
@@ -2071,6 +2072,46 @@ var RELIC_EN = {
 "Rout",
 "Each kill this floor: extra damage + 10% of your level",
 "When one falls, the rest start to shake."
+],
+"gauge": [
+"Sizing Up",
+"Each new floor: gain shield = 1.5× this floor's monster attack",
+"Before he walks in, he checks how long the teeth are."
+],
+"mirrorplate": [
+"Mirror Plate",
+"Armor + 20% of this floor's monster attack",
+"What shines on the plate is the mouth across from it."
+],
+"mountain": [
+"Mountain",
+"Every 10 floors deeper: max HP +10% (max +400%)",
+"The deeper he goes, the more he looks like the mountain."
+],
+"boldheart": [
+"Bold Heart",
+"Damage taken −10%; failed risks no longer deal double damage",
+"Losing a bet is losing once. No need to lose twice."
+],
+"whetshield": [
+"Whetted Shield",
+"Right answer: 2% of the hit becomes shield (max 2× monster attack per floor)",
+"The filings off the blade all went into the shield."
+],
+"drinkwar": [
+"War Draught",
+"Defeating a monster: restore HP = 25% of its attack",
+"All the force in its bite ends up in his blood."
+],
+"goldbody": [
+"Golden Body",
+"Damage taken −15%; the damage-taken cap loosens from −75% to −85%",
+"Blades leave only a white line on it."
+],
+"anchor": [
+"Mountain Stance",
+"Each fight starts: shield tops up to 40% of this monster's attack",
+"He plants his feet, and the other side shrinks by half."
 ]
 };
 
@@ -2152,6 +2193,13 @@ var BFW_EN = {
  hone: "Each swing that lands this wave: extra damage +1 (max +35)",
  repay: "Extra damage + 100% of the enemy's attack",
  crumble: "Every 10 kills this wave: extra damage + 10% of your level",
+ gauge: "Each new wave: gain shield = 3× this wave's enemy attack",
+ mirrorplate: "Armor + 20% of this wave's enemy attack",
+ mountain: "Every 10 waves: max HP +8% (max +400%)",
+ boldheart: "Damage taken −10%; damage taken from bosses another −20%",
+ whetshield: "Swing hits: 0.5% of the hit becomes shield (max 3× enemy attack per wave)",
+ drinkwar: "Defeating an enemy: restore HP = 5% of its attack",
+ anchor: "Every 10 kills: shield tops up to 60% of this wave's enemy attack",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",
