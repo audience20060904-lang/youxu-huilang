@@ -2744,15 +2744,14 @@ function answer(btn, ok){
       G.critShN = (G.critShN || 0) + 1;
       P.shield = (P.shield || 0) + CRITSH_SHIELD;
     }
-    /* 凝盾：每答对 AEGIS_EVERY 题给最大生命 AEGIS_PCT 的护盾，攒到最大生命的 AEGIS_MAXX 倍封顶
-       （用户 2026-09-26 从「10 点 / 最多 300」改成按比例）。
-       ⚠️ 封顶只管这一笔：别的件已经把盾堆过线了就不给，但**不往回压**。*/
+    /* 凝盾：每答对 AEGIS_EVERY 题给最大生命 AEGIS_PCT 的护盾，**不封顶**
+       （用户 2026-09-26：先从「10 点 / 最多 300」改成按比例，又把上限整个拿掉了）。*/
     if(hasRelic("aegis")){
       P.aegisN = (P.aegisN || 0) + 1;
       if(P.aegisN >= AEGIS_EVERY){
         P.aegisN = 0;
-        const before = P.shield || 0, capA = Math.ceil(s.maxHp * AEGIS_MAXX);
-        if(before < capA) P.shield = Math.min(capA, before + Math.max(1, Math.round(s.maxHp * AEGIS_PCT)));
+        const before = P.shield || 0;
+        P.shield = before + Math.max(1, Math.round(s.maxHp * AEGIS_PCT));
         if(P.shield > before) relicLog += T(" <span class=\"sys\">(凝盾 · 护盾 ") + P.shield + ")</span>";
       }
     }
@@ -3776,11 +3775,20 @@ function closeGild(){
 function openForge(th){
   G.paused = true;
   pendingRoom = th;
+  forgeFilter = -1;
+  renderForge();
+  hideAll();
+  $("veilForge").hidden = false;
+}
+/* 熔炉的列表单独拆出来：品质筛选（超过 20 件才露出来）点一下只重画这一块 */
+function renderForge(){
   const box = $("forgeList");
   box.innerHTML = "";
-  P.relics.forEach(function(id){
+  const own = P.relics.filter(function(id){ return !!relicById(id); });
+  forgeFilter = rarChips($("forgeFilter"), own, forgeFilter);
+  own.forEach(function(id){
     const r = relicById(id);
-    if(!r) return;
+    if(forgeFilter >= 0 && (r.r || 0) !== forgeFilter) return;
     const d = document.createElement("button");
     d.type = "button"; d.className = "relic"; d.dataset.id = id;
     d.innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
@@ -3789,8 +3797,6 @@ function openForge(th){
                   T("<span class=\"rl\">点它 → 扔进炉子</span>");
     box.appendChild(d);
   });
-  hideAll();
-  $("veilForge").hidden = false;
 }
 /* 献祭一件。掷一次：1 升一档 / 2 同档 / 3 降一档。
    那一档已经没有还没拿过的遗物了，就按 想要的 → 原档 → 更高 → 更低 的顺序找个有货的档；
@@ -4456,15 +4462,31 @@ function offerSwap(r, how, barter){
     "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>" +
     (barter ? T("<span class=\"rl\">点它 → 算了，不换</span>")
             : T("<span class=\"rl\">点它 → 直接卖掉，换 ") + sellPrice(r) + T(" 金</span>"));
+  swapFilter = -1;
+  renderSwapList();
+  hideAll();
+  $("veilSwap").hidden = false;
+}
+/* 取舍窗的列表（品质筛选点一下只重画这一块）*/
+function renderSwapList(){
+  const ps = pendingSwap;
+  if(!ps) return;
+  const r = ps.relic, barter = ps.barter;
   const box = $("swapList");
   box.innerHTML = "";
   /* 百纳：普通 / 稀有不占格子，换下它们腾不出位置 —— 带满时只摆史诗以上的 */
   const onlyHi = !barter && hasRelic("patchwork");
-  P.relics.forEach(function(id){
+  const list = P.relics.filter(function(id){
     const old = relicById(id);
-    if(!old) return;
-    if(barter && ((old.r || 0) !== (r.r || 0) || id === "barter")) return;   // 易货自己不拿去换
-    if(onlyHi && (old.r || 0) < 2) return;
+    if(!old) return false;
+    if(barter && ((old.r || 0) !== (r.r || 0) || id === "barter")) return false;   // 易货自己不拿去换
+    if(onlyHi && (old.r || 0) < 2) return false;
+    return true;
+  });
+  swapFilter = rarChips($("swapFilter"), list, swapFilter);
+  list.forEach(function(id){
+    const old = relicById(id);
+    if(swapFilter >= 0 && (old.r || 0) !== swapFilter) return;
     const d = document.createElement("button");
     d.type = "button"; d.className = "relic"; d.dataset.id = id;
     d.innerHTML = "<span class=\"rt q" + (old.r||0) + "\">" + RAR_CN[old.r||0] + "</span>" +
@@ -4473,8 +4495,6 @@ function offerSwap(r, how, barter){
                   T("<span class=\"rl\">点它 → 换成「") + r.n + T("」</span>");
     box.appendChild(d);
   });
-  hideAll();
-  $("veilSwap").hidden = false;
 }
 function doSwap(dropId){
   const ps = pendingSwap; pendingSwap = null;
@@ -4601,26 +4621,28 @@ function maybeRelic(){
 }
 /* 遗物页的品质筛选（用户 2026-09-26：「遗物数量大于 20，遗物栏上方添加筛选，按品质分类显示」）。
    -1 = 全部。纯界面状态，不进存档；件数掉回 20 以下筛选条收起、自动回到「全部」。*/
-let relicFilter = -1;
+let relicFilter = -1, forgeFilter = -1, swapFilter = -1, codexFilter = -1;
 var RELIC_FILTER_AT = 20;
-function renderRelicFilter(own, ghosts){
-  const bar = $("relicFilter");
-  if(!bar) return;
-  const n = own.length + ghosts.length;
-  if(n <= RELIC_FILTER_AT){ bar.hidden = true; relicFilter = -1; return; }
+/* 品质筛选条（遗物页 / 熔炉 / 取舍窗 / 图鉴共用，用户 2026-09-26）：ids 超过 RELIC_FILTER_AT 件才露出来
+   （图鉴传 always，一直露），只列有的品质、带件数。返回「这一次实际用哪一档」（那一档没货了就退回全部）。*/
+function rarChips(bar, ids, cur, always){
+  if(!bar) return -1;
+  if(!always && ids.length <= RELIC_FILTER_AT){ bar.hidden = true; return -1; }
   const cnt = [0, 0, 0, 0, 0];
-  own.concat(ghosts).forEach(function(id){ cnt[relicRar(id)]++; });
-  if(relicFilter >= 0 && !cnt[relicFilter]) relicFilter = -1;
-  let h = "<button type=\"button\" class=\"rfchip" + (relicFilter < 0 ? " on" : "") + "\" data-q=\"-1\">" +
-          T("全部") + "<em>" + n + "</em></button>";
+  ids.forEach(function(id){ cnt[relicRar(id)]++; });
+  if(cur >= 0 && !cnt[cur]) cur = -1;
+  let h = "<button type=\"button\" class=\"rfchip" + (cur < 0 ? " on" : "") + "\" data-q=\"-1\">" +
+          T("全部") + "<em>" + ids.length + "</em></button>";
   for(let q = 0; q < 5; q++){
     if(!cnt[q]) continue;
-    h += "<button type=\"button\" class=\"rfchip q" + q + (relicFilter === q ? " on" : "") + "\" data-q=\"" + q + "\">" +
+    h += "<button type=\"button\" class=\"rfchip q" + q + (cur === q ? " on" : "") + "\" data-q=\"" + q + "\">" +
          RAR_CN[q] + "<em>" + cnt[q] + "</em></button>";
   }
   bar.innerHTML = h;
   bar.hidden = false;
+  return cur;
 }
+function renderRelicFilter(own, ghosts){ relicFilter = rarChips($("relicFilter"), own.concat(ghosts), relicFilter); }
 function renderRelics(){
   const own = (P && P.relics) || [];
   /* 千面借来的两件（只在这一层）画成虚影卡：不能分解、不能当合成材料 */
@@ -6003,6 +6025,10 @@ function openCodex(tab){
   }
   const box = $("codexList");
   box.innerHTML = "";
+  /* 遗物 / 战场遗物两页顶上一排品质筛选（用户 2026-09-26，一直露），词库那页收起来 */
+  if(cTab === "word"){ $("codexFilter").hidden = true; codexFilter = -1; }
+  else codexFilter = rarChips($("codexFilter"), RELICS.map(function(R){ return R.id; }), codexFilter, true);
+  const rarOk = function(R){ return codexFilter < 0 || (R.r || 0) === codexFilter; };
   if(cTab === "bf"){
     /* 战场遗物：**同一批 228 件**，只是把词条换成战场里的说法（content.js 的 bfWord）。
        战场模式不写 CODEX，所以这一页没有「拿过几次」—— 别去蹭地牢那份计数，会看混。*/
@@ -6012,6 +6038,7 @@ function openCodex(tab){
       .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
       .map(function(x){ return x.r; })
       .filter(function(R){
+        if(!rarOk(R)) return false;
         if(!q) return true;
         return (R.n + bfWord(R) + R.lore + (RAR_CN[R.r||0] || "")).toLowerCase().indexOf(q) >= 0;
       })
@@ -6036,6 +6063,7 @@ function openCodex(tab){
       .sort(function(a, b){ return ((a.r.r||0) - (b.r.r||0)) || (a.i - b.i); })
       .map(function(x){ return x.r; })
       .filter(function(R){
+        if(!rarOk(R)) return false;
         if(!q) return true;
         return (R.n + R.pw + R.lore + (RAR_CN[R.r||0] || "")).toLowerCase().indexOf(q) >= 0;
       })
@@ -6934,7 +6962,7 @@ $("rateRow").addEventListener("click", function(e){
    不然紧接着的 goTown() 会把旧数据原样写回去。 */
 $("btnAgain").addEventListener("click", goTown);
 /* 图鉴的搜索框：边打边筛。⚠️ 从按钮进来的时候先清空，别让上次的搜索词把图鉴筛成空的 */
-$("btnCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
+$("btnCodex").addEventListener("click", function(){ $("codexFind").value = ""; codexFilter = -1; openCodex(); });
 var findTimer = null;
 $("codexFind").addEventListener("input", function(){
   // 词库有四千多张卡，每敲一下都重画会卡 —— 停手 150ms 再筛
@@ -7057,6 +7085,18 @@ $("relicFilter").addEventListener("click", function(ev){
   relicFilter = +c.dataset.q;
   renderRelics();
 });
+$("forgeFilter").addEventListener("click", function(ev){
+  const c = ev.target.closest(".rfchip");
+  if(c){ forgeFilter = +c.dataset.q; renderForge(); }
+});
+$("swapFilter").addEventListener("click", function(ev){
+  const c = ev.target.closest(".rfchip");
+  if(c){ swapFilter = +c.dataset.q; renderSwapList(); }
+});
+$("codexFilter").addEventListener("click", function(ev){
+  const c = ev.target.closest(".rfchip");
+  if(c){ codexFilter = +c.dataset.q; openCodex(); }
+});
 $("btnFusePick").addEventListener("click", fuseToggleMode);
 $("btnFuseGo").addEventListener("click", function(){ if(!this.disabled) askFuse(); });
 $("btnFuseNo").addEventListener("click", closeFuseAsk);
@@ -7092,7 +7132,7 @@ $("btnRelicRedraw").addEventListener("click", function(){
 /* ---- 主城 与 洞窟 ---- */
 $("btnCave").addEventListener("click", openCave);
 $("btnCloseCave").addEventListener("click", function(){ closeDiff(); $("veilCave").hidden = true; });
-$("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; openCodex(); });
+$("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = ""; codexFilter = -1; openCodex(); });
 
 /* ---- 祝福 ---- */
 $("btnBless").addEventListener("click", openBless);

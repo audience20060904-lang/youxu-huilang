@@ -1209,7 +1209,7 @@ var RELIC_EN = {
 ],
 "aegis": [
 "Aegis",
-"Every 10 correct answers: shield +30% max HP (max 2× max HP)",
+"Every 10 correct answers: gain a shield of 30% max HP",
 "Every word she remembers forms another layer on her."
 ],
 "unchain": [

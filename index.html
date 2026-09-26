@@ -442,6 +442,7 @@
     <div class="eyebrow">石台 · 炉膛还热着</div>
     <h2>把一件遗物扔进去？</h2>
     <p class="note">三分之一<b>升一档</b>，三分之一<b>换一件同档的</b>，三分之一<b>降一档</b>。扔进去就收不回来了。</p>
+    <div class="rfilt" id="forgeFilter" hidden></div>
     <div class="relics sx" id="forgeList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnForgeSkip" type="button">什么也不扔</button></div>
   </div>
@@ -488,6 +489,7 @@
     <div class="relic hot" id="swapNew"></div>
     <p class="note" id="swapBarterNote" hidden>只能拿<b>同品质</b>的换；换下来的那件留在货架上。</p>
     <p class="note" id="swapNote">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
+    <div class="rfilt" id="swapFilter" hidden></div>
     <div class="relics sx" id="swapList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
   </div>
@@ -620,6 +622,7 @@
     <div class="tally" id="codexTally"></div>
     <input class="findbox" id="codexFind" type="search" autocomplete="off"
            placeholder="搜索：英文 / 中文 / 遗物名">
+    <div class="rfilt" id="codexFilter" hidden></div>
     <div class="codex sx" id="codexList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseCodex" type="button">关闭</button></div>
   </div>
