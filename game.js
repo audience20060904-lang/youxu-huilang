@@ -351,6 +351,13 @@ function stats(){
   if(hasRelic("constellation")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + starCount() * STARS_HP)));
   if(hasRelic("erudite")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + eruditeTier() * ERUDITE_HP)));   // 积学（第十三批）
   if(hasRelic("mountain") && G) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + mountainPct() / 100)));   // 山岳（第十五批）
+  /* 不坏（神圣，第十六批）：+ADAMANT_BASE%，再按「受到的伤害 −N%」（堆超 75% 的那截也算）每 1% +1%，最多 ADAMANT_MAX%。
+     ⚠️ cutState() 不调 stats()，但它要读 defGear（铁誓 / 万流归宗）—— 这时护甲还没算，传一个临时对象进去，那两档按 0 算。*/
+  if(hasRelic("adamant")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + adamantPct(s) / 100)));
+  /* 厚血 / 不周（第十六批）：按这一层怪物的攻击直接加，排在所有生命乘法**之后** —— 不被铁躯 / 巨骨 / 山岳 / 不坏放大。
+     放大了就是「怪涨多少、生命翻几倍地涨多少」，无尽就没有底了。献身照样减半（在下面）。*/
+  if(hasRelic("thickblood") && G) s.maxHp += Math.round(floorFoeDmg() * THICKB_X);
+  if(hasRelic("pillar") && G)     s.maxHp += Math.round(floorFoeDmg() * PILLAR_X);
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
   if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
@@ -408,6 +415,9 @@ function stats(){
      拿暴击乘区换一个攻击乘区，伤害公式里还是两个乘区；面板上显示的就是乘完的攻击。
      放在练习 / 难度那一刀之前（那一刀是「这一趟」的设定，不是遗物）。*/
   if(hasRelic("noedge")) s.atk = Math.round(s.atk * NOEDGE_MULT);
+  /* 血肉（第十六批）：最大生命 +攻击的 FLESH_PCT —— 攻击全算完之后折（淬血 / 镇纸在上面，读的是折之前的上限，不会绕圈）。
+     练习模式 / 难度倍率那一刀在下面，不算进来。*/
+  if(hasRelic("flesh")) s.maxHp += Math.round(Math.max(0, s.atk) * FLESH_PCT);
   s.atk = Math.max(1, s.atk);
   s.maxHp = Math.max(1, s.maxHp);
   s.defGear = s.def;
@@ -435,7 +445,11 @@ function nextFloor(){
   cancelWalk();
   autoOff();       // 下一层要重新手动开寻路（用户 2026-09），别自己接着冲
   const from = G.floor;
+  /* 生命上限跟着层数长的那几件（山岳 / 厚血 / 不周 / 映甲不算）：换层时上限涨了多少，当前血也跟着补多少 ——
+     跟 withMaxHp() 一个规矩，不然第 50 → 51 层怪 ×10 的那一下，厚血的上限翻几倍、血却还是原来那么多。*/
+  const hpCap0 = stats().maxHp;
   G.floor = from + 1;
+  { const hpCap1 = stats().maxHp; if(hpCap1 > hpCap0) P.hp += hpCap1 - hpCap0; }
   /* 汗巾／血锤要按「**这一层**回了多少血」给加成 —— 清零放在最前面，
      这样连油灯那一笔进层回血也算进这一层（G.healed 在 healUp() 里累）。*/
   G.healed = 0;
@@ -551,6 +565,7 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say(T("城垣补齐了 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
+  if(hasRelic("pillar")) healUp(Math.max(1, Math.ceil(stats().maxHp * PILLAR_HEAL)));   // 不周（第十六批）：进层回血
   if(hasRelic("gauge")){                                              // 量敌（第十五批）：按这一层怪物的攻击给
     const add = Math.max(1, Math.ceil(floorFoeDmg() * GAUGE_X));
     P.shield = (P.shield || 0) + add;
@@ -966,6 +981,11 @@ function floorFoeDmg(){ return G ? Math.max(1, Math.round(refFoe(G.floor).dmg)) 
 function mountainPct(){ return G ? Math.min(MOUNT_MAX, Math.floor(G.floor / MOUNT_EVERY) * MOUNT_PCT) : 0; }
 /* 减伤上限：底子 MIT_CUT_MAX(75)，金身抬到 GBODY_CAP(85) */
 function cutMax(){ return hasRelic("goldbody") ? GBODY_CAP : MIT_CUT_MAX; }
+/* 不坏：+ADAMANT_BASE% + 「答错挨一口」时的减伤合计（不封顶那个数），最多 ADAMANT_MAX% */
+function adamantPct(s){
+  const cut = Math.max(0, cutState({maxHp:s.maxHp, def:s.def, defGear:s.def}, true));
+  return Math.min(ADAMANT_MAX, ADAMANT_BASE + cut);
+}
 /* 冒险失手的倍率：底子 ×2，托底 ×1.8，壮胆 ×1（不翻倍） */
 function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? CUSHION_MULT : 2; }
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：

@@ -2112,6 +2112,26 @@ var RELIC_EN = {
 "Mountain Stance",
 "Each fight starts: shield tops up to 40% of this monster's attack",
 "He plants his feet, and the other side shrinks by half."
+],
+"thickblood": [
+"Thick Blood",
+"Max HP + 2× this floor's monster attack",
+"However much it bites, he keeps twice that in reserve."
+],
+"flesh": [
+"Flesh and Bone",
+"Max HP + 80% of your attack",
+"Half the strength he trained went into his bones."
+],
+"adamant": [
+"Unbreakable",
+"Max HP +20%; each −1% damage taken: max HP another +1% (max +200%)",
+"Every blow he stops makes him a little sturdier."
+],
+"pillar": [
+"Sky Pillar",
+"Max HP + 2.5× this floor's monster attack; each new floor: restore 15% max HP",
+"The pillar holding up the sky doesn't fall first."
 ]
 };
 
@@ -2200,6 +2220,9 @@ var BFW_EN = {
  whetshield: "Swing hits: 0.5% of the hit becomes shield (max 3× enemy attack per wave)",
  drinkwar: "Defeating an enemy: restore HP = 5% of its attack",
  anchor: "Every 10 kills: shield tops up to 60% of this wave's enemy attack",
+ thickblood: "Max HP + 3× this wave's enemy attack",
+ flesh: "Max HP + 200% of your attack",
+ pillar: "Max HP + 4× this wave's enemy attack; each new wave: restore 15% max HP",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",

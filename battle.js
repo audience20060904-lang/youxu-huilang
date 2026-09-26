@@ -1228,6 +1228,12 @@ function bstats(){
   c += orbAdd("cut");                                               // 宝珠词条
   s.cutStatic = c;
   s.cut = c;
+  /* 第十六批（2026-09-26）：生命那四件放在减伤算完之后（不坏要读减伤）。厚血 / 不周 / 血肉是加法、排在乘法之后，不被放大。
+     ⚠️ 上面按 hpPct / 生命上限算的那几件（背水 / 血甲 / 淬血…）读的是这之前的上限，差一截，无所谓。*/
+  if(has("adamant"))    s.maxHp *= 1 + Math.min(200, 20 + Math.max(0, c)) / 100;   // 不坏
+  if(has("thickblood")) s.maxHp += waveFoeDmg() * 3;                // 厚血
+  if(has("pillar"))     s.maxHp += waveFoeDmg() * 4;                // 不周（回血那半在 onWaveRelics）
+  if(has("flesh"))      s.maxHp += Math.max(0, s.atk) * 2;          // 血肉：战场攻击 / 生命的比例只有地牢的四成
   /* 恒甲：常驻减伤 → 护甲（2026-09-23 补：以前只有减伤和护盾，这半句是空的）。
      ⚠️ 排在减伤算完之后，所以铁誓那一档读到的护甲**不含**这一笔 —— 反过来就是死循环。 */
   if(has("evervow")) s.armor += Math.min(EVERVOW_MAX, Math.floor(c / EVERVOW_PER));
@@ -1920,7 +1926,8 @@ function onWaveRelics(w){
   if(has("armpad"))  addShield(Math.min(20, 4 * s.armor));
   if(has("vow"))     P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.20));  // 取大值，别按回去
   if(has("citywall")) P.shield = Math.max(P.shield, Math.round(s.maxHp * 0.50));
-  if(has("gauge"))   addShield(waveFoeDmg() * 3);                  // 量敌（第十五批）  // 城垣（第十一批）：地牢的「每场补到 5%」在战场里没有，并进这一口
+  if(has("gauge"))   addShield(waveFoeDmg() * 3);                  // 量敌（第十五批）
+  if(has("pillar"))  healUp(s.maxHp * 0.15);                        // 不周（第十六批）  // 城垣（第十一批）：地牢的「每场补到 5%」在战场里没有，并进这一口
   if(has("track") && P.wrong2 !== undefined && P.wrong1 < P.wrong2) addShield(110);
   if(has("gatewait") && isBossWave(w)){ addShield(120); healUp(s.maxHp * 0.25); }
   /* 宝珠：绿 3 回血、「护身」「猎首」给盾 */
