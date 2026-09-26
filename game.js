@@ -942,15 +942,14 @@ function endlessRamp(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
   return 1 + Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_RAMP;
 }
-/* 无尽章的**深渊狂潮**（用户 2026-09-26）：第 ENDLESS_FROM 层往下每 ENDLESS_EVERY 层 ×1.26，
-   第 150 层正好 ×10（ENDLESS_SURGE_X ^ ((层数 − 50) ÷ ENDLESS_SURGE_SPAN)）。**血量和伤害都乘**。别的章恒为 1。*/
+/* 无尽章的**深渊狂潮**（用户 2026-09-26）：第 ENDLESS_FROM 层往后（第 51 层起）**每一层**的怪
+   血量和伤害都 ×ENDLESS_SURGE_X(10)，一个平的倍率。别的章恒为 1。*/
 function endlessSurge(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
-  const k = Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_EVERY;
-  return Math.pow(ENDLESS_SURGE_X, k / ENDLESS_SURGE_SPAN);
+  return ENDLESS_SURGE_X;
 }
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
-   第 50 层 ×1（12%）、第 100 层 ×2.9（35%）、第 150 层 ×10.5（一口就过上限）。别的章恒为 1。*/
+   第 50 层 ×1（12%）、第 51 层 ×5.5（66%）、第 100 层 ×7（84%）、第 110 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
   return G ? 1 + (endlessRamp(G.floor) * endlessSurge(G.floor) - 1) * CAP_RAMP_SHARE : 1;
 }
@@ -970,7 +969,7 @@ function foeNums(def, floor){
   const band = def.fixed ? {hp:1, dmg:1} : foeBand(floor);
   // 无尽章第 50 层往下的深渊压迫（别的章恒为 1）。只乘在伤害上 —— 见 endlessRamp
   const deep = def.fixed ? 1 : endlessRamp(floor);
-  // 深渊狂潮（2026-09-26）：血量和伤害一起乘，第 150 层 ×10 —— 见 endlessSurge
+  // 深渊狂潮（2026-09-26）：第 51 层起血量和伤害一起 ×10 —— 见 endlessSurge
   const surge = def.fixed ? 1 : endlessSurge(floor);
   /* 怪物全局倍率（content.js 的 FOE_MULT，用户 2026-09-21）——**所有怪都吃，章末 Boss 也吃**。
      放在最后一步乘，取整、最低 1，跟 FOE_BANDS / endlessRamp 一个待遇。
