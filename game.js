@@ -3146,7 +3146,7 @@ function pctSteady(s){
   let pct = comboPct();                                                   // 连击：每 comboStep 次一档
   if(hasRelic("quick")) pct += Math.min(QUICK_MAX, Math.floor(P.combo / 5) * QUICK_PER); // 速记
   if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += EMBER_PCT;          // 残焰
-  if(hasRelic("hoard")) pct += Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT;  // 守财：不封顶
+  if(hasRelic("hoard")) pct += Math.min(HOARD_MAX, Math.floor((P.gold || 0) / HOARD_PER) * HOARD_PCT);  // 守财：最多 +200%
   if(hasRelic("flaw"))  pct += FLAW_PCT;                                  // 破绽（无视护甲在 answer）
   if(hasRelic("inertia") && P.combo >= INERTIA_AT) pct += INERTIA_PCT;    // 惯性
   // 以 RELIC_MAX（15）为准，不跟着「行囊」的上限走，免得两件叠成滚雪球

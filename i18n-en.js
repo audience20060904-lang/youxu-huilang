@@ -957,7 +957,7 @@ var RELIC_EN = {
 ],
 "hoard": [
 "Miser",
-"Every 100 gold you carry: damage +2%",
+"Every 100 gold you carry: damage +2% (max +200%)",
 "He never spends — money weighs more in the pocket than in the hand."
 ],
 "midas": [

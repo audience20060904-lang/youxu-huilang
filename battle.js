@@ -1429,7 +1429,7 @@ function swing(mult){
   if(has("synes"))   pct += 30;
   if(has("flaw")){   pct += 30; noArmor = true; }
   if(has("ember") && hp1 < 0.33) pct += 95;
-  if(has("hoard"))   pct += 2 * Math.floor(g / 100);
+  if(has("hoard"))   pct += Math.min(200, 2 * Math.floor(g / 100));
   if(has("spend"))   pct += Math.min(40, 2 * Math.floor(P.spent / 300));
   if(has("delve"))   pct += Math.min(20, 0.5 * (w - 1));
   if(has("slay")){   pct += 30; if(weak) pct += 100; }
