@@ -83,6 +83,12 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .fb{position:relative;flex:none;font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;
     border:1px solid var(--edge);background:var(--stone);color:var(--dim);cursor:pointer}
 /* 遗物只剩 1 格时的红点（用户 2026-09-22）：再捡就要弹取舍窗了 */
+/* 托管：定宽（「托管」↔「托管中」换字不跳位），开着就亮成主色 */
+.fb.auto{width:5.8em;padding-left:0;padding-right:0;text-align:center;white-space:nowrap}
+.fb.auto.on{background:var(--hero);border-color:var(--hero);color:#fff}
+.card .aitag{position:absolute;right:8px;bottom:6px;font-style:normal;font-size:11px;line-height:1;
+  padding:3px 6px;border-radius:6px;background:var(--hero);color:#fff;pointer-events:none}
+.card.aipick{outline:2px dashed var(--hero);outline-offset:1px}
 .fb.warn::after{content:"";position:absolute;right:-3px;top:-3px;width:9px;height:9px;
                 border-radius:50%;background:var(--blood);border:1.5px solid var(--stone)}
 

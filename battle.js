@@ -1292,7 +1292,7 @@ function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0) + (orbOn("black2
       而且挂在 step() 里（暂停时不跑），所以不会打断别的弹层。 */
 function maybeFullBag(){
   if(relicLoad() >= relicCap()){
-    if(!P.bagAlerted && !anyVeil() && !OVER){
+    if(!P.bagAlerted && !anyVeil() && !OVER && !autoLive()){      // 托管时不弹，autoTick 会自己合掉
       P.bagAlerted = true;
       fuseMode = false; fuseSel = []; sellArmed = null;
       openBag();
@@ -1366,6 +1366,7 @@ function resoFire(){
 }
 
 function aimDir(s){
+  if(autoLive()){ var aa = autoAim(s); if(aa !== null) return aa; }    // 托管：朝砍得最多的方向
   var me = E.me, best = null, bd = 1e9, i, f, d;
   var reach = s.range * 2.4;
   for(i = 0; i < E.foes.length; i++){
@@ -1423,10 +1424,8 @@ function swing(mult){
   /* 共鸣：离你最近的那座塔跟着开一次火 */
   if(hasSp("sp_reso") && mult === 1) resoFire();
   if(!hits.length){
-    /* 连击 = **没挨打之前挥了几刀**（用户 2026-09-23 定的口径）—— 空刀也算一刀，受伤才清零。
-       ⚠️ 空刀不触发「挥刀时」的遗物（onSwingRelics），只涨这个数。 */
-    P.combo += 1;
-    if(P.combo > P.maxCombo) P.maxCombo = P.combo;
+    /* 连击 = **没挨打之前砍中了几刀**（用户 2026-09-26 改口径：打中怪物才涨）——
+       ⚠️ 空刀**不涨连击**，也不触发「挥刀时」的遗物（onSwingRelics）。别把 P.combo += 1 加回来。 */
     if(hasSp("sp_flurry") && !P.flurryReady) P.flurryN = 0;   // 空刀断掉「连续命中」
     /* 空刀也记一笔出手伤害（只算等级和连击）——「玩家一刀不砍、全靠塔」的打法里，
        不补这一句的话 towerPower() 会永远停在初始值。 */
@@ -5818,7 +5817,9 @@ function bindInput(){
 var last = 0, rafOn = false;
 function frame(ts){
   requestAnimationFrame(frame);
-  var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
+  var rdt = last ? Math.min(0.25, (ts - last) / 1000) : 0;
+  var dt = Math.min(0.05, rdt); last = ts;
+  autoTick(rdt);                                    // 托管：挑遗物的倒计时走真实时间（窗开着就是暂停）
   if(!PAUSED && !OVER && P) step(dt);
   if(P) draw();
   if(P) renderHud();
@@ -5828,8 +5829,9 @@ function step(dt){
   P.time += dt; G.t += dt;
   if(me.invT > 0) me.invT -= dt;                   // 宝珠「先机」
 
-  /* 移动 */
+  /* 移动（托管时：手没碰摇杆 / 方向键就交给 autoMove，一碰就听你的）*/
   var v = inputVec(), sp = s.spd;
+  if(autoLive() && Math.hypot(v.x, v.y) < 0.05) v = autoMove(s, dt);
   if(me.slowT > 0){ me.slowT -= dt; sp *= (1 - me.slowPct); }
   var mag = Math.hypot(v.x, v.y);
   me.moving = mag;
@@ -6001,6 +6003,454 @@ function onBossDown(b){
     killFoe(f);
   }
   E.shots.length = 0; E.zones.length = 0;      // 地上的火场 / 尸块跟着一起收
+}
+
+/* ================================================================
+   托管（用户 2026-09-26：「战场新增托管按钮，托管的 AI 要特别聪明，
+   选择遗物如果托管状态下 5s 会自动选择遗物，满了会自动合成，托管到休整点停止，进入后恢复」）
+   - 走位：每 AUTO_RETHINK 秒把 30 来个方向各推演一遍（怪会追上来的位置、弹丸的最近距离、
+     地面危险区、Boss 抬手锁死的落点、爆囊的引信），扣掉危险分、加上「刀够得着几只 / 捡钱 / 捡箱 /
+     低血去喝泉 / 别离营地太远」的分，挑最高的那个方向走。**手一碰摇杆 / 方向键就听你的**，松手接着托管。
+   - 出刀：托管时刀不再只朝最近的那只，而是朝**这一刀能砍中最多（按优先级加权）**的方向。
+   - 挑遗物：升级四选一 / Boss 三选一 / 合成挑一件，等 AUTO_PICK_SEC 秒（这几秒里自己点也行），
+     卡片上挂一个倒计时标出它要挑哪件；取舍窗等 AUTO_SWAP_SEC 秒。**游商 / 暂停 / 信息 / 遗物页开着就不动**。
+   - 满了自动合成：身上带满、没有弹窗时，挑一档「砸掉最不亏」的三件合掉。
+   - **部署阶段（休整点）托管停下**，按钮还亮着；点「开战」之后自己接着托管。
+   ⚠️ 纯界面状态：不进存档（开关只在这一页里记着，「再来一次」还开着）。
+   ⚠️ 它**只读不改**游戏规则 —— 走位走的是摇杆那条路（inputVec 的替身），选遗物走的是按钮那几个函数。
+   ================================================================ */
+var AUTO = {on:false, v:{x:0, y:0}, reT:0, veil:null, first:null, vt:0, act:null, tagEl:null, fusing:false};
+var AUTO_PICK_SEC = 5;       // 挑遗物的窗：等几秒再替你挑
+var AUTO_SWAP_SEC = 2;       // 取舍窗：等几秒
+var AUTO_RETHINK = 0.06;     // 走位几秒重想一次
+var RAR_V = [3, 6, 12, 20, 30];   // 各品质的价值基准线（跟 遗物数据表.md 那把尺子同一套）
+function autoLive(){ return AUTO.on && P && !OVER && !DEPLOY; }
+function setAuto(on){
+  AUTO.on = on; AUTO.veil = null; AUTO.first = null; AUTO.v = {x:0, y:0}; AUTO.reT = 0;
+  autoUntag();
+  $("btnAuto").classList.toggle("on", on);
+  $("btnAuto").textContent = on ? L("托管中", "Auto on") : L("托管", "Auto");
+}
+
+/* ---------- 走位 ---------- */
+function autoPri(f){
+  var d = f.def, p = 1;
+  if(f.boss) p += 2; else if(f.elite) p += 0.8;
+  if(d.heal) p += 1.6;                              // 缝合者：留着它别的全满血
+  if(d.hatch) p += 1;                               // 母巢
+  if(d.guard) p += 0.8;                             // 拒马
+  if(d.silence) p += 0.6;                           // 缚锁者
+  if(d.shot || d.storm) p += 0.5;                   // 远程：贴上去就不会再挨它的弹
+  if(f.haunt) p += 0.4;
+  p += 0.6 * (1 - f.hp / f.maxHp);                  // 快死的先补掉
+  if(f.immuneT > 0) p *= 0.15;                      // 相位兽无敌的那一下砍了也白砍
+  return p;
+}
+function autoCtx(s){
+  var me = E.me, i, f, pool = Math.max(8, P.hp + P.shield), hpF = P.hp / s.maxHp;
+  var c = {me:me, s:s, hpF:hpF, foes:[], shots:[], zones:[], casts:[], drops:[], sites:[], spring:null, shops:[],
+           camp:null, reach:s.range, pick:s.pickup};
+  for(i = 0; i < E.foes.length; i++){
+    f = E.foes[i]; if(f.dead) continue;
+    var dx = f.x - me.x, dy = f.y - me.y, d = Math.hypot(dx, dy);
+    if(d > 900) continue;
+    var dfn = f.def, touch = (!dfn.shot && !dfn.heal && !dfn.boom) || f.boss;
+    var sp = f.spd;
+    if(f.dashT > 0 && dfn.dash) sp *= dfn.dash.mult;
+    else if(dfn.dash && f.dashCd <= 0.3) sp *= 1 + (dfn.dash.mult - 1) * 0.5;   // 快冲了，按一半算
+    if(f.stunT > 0 || f.castT > 0 || f.blockBy || f.cast || f.fuse > 0) sp = 0;
+    if(dfn.shot || dfn.storm || dfn.heal) sp = 0;     // 远程会自己保持距离，不会贴上来
+    var w = Math.min(6, 0.4 + 6 * f.dmg / pool);
+    if(f.boss) w = Math.min(10, w * 1.6 + 1);
+    var o = {f:f, x:f.x, y:f.y, r:f.r, sp:sp, w:w, pri:autoPri(f), touch:touch,
+             tr: f.r + 12 + (f.touch > 0.3 ? -4 : 0)};
+    if(dfn.boom){                                     // 爆囊：贴到 at 以内就点火，所以把它当成「接触半径 = at」
+      o.touch = f.fuse <= 0; o.tr = dfn.boom.at + 6; o.w = Math.max(o.w, 1.5);
+      if(f.fuse > 0) c.casts.push({k:"boom", x:f.x, y:f.y, r:dfn.boom.r, t:f.fuse, w:Math.min(8, 1 + 8 * f.boomDmg / pool)});
+    }
+    if(dfn.leech && P.shield > 0) o.leech = dfn.leech.r;
+    /* 穿刺手：抬手那一下方向就锁死了 —— 当成一发「晚 castT 秒才出膛」的弹来躲 */
+    if(dfn.shot && f.castT > 0){
+      var sd = dfn.shot, a0 = sd.lock ? f.aimDir : Math.atan2(me.y - f.y, me.x - f.x);
+      for(var k = 0; k < sd.n; k++){
+        var off = sd.n > 1 ? (k - (sd.n - 1) / 2) * sd.spread * Math.PI / 180 : 0;
+        c.shots.push({x:f.x, y:f.y, vx:Math.cos(a0 + off) * sd.speed, vy:Math.sin(a0 + off) * sd.speed,
+                      r:sd.r, t0:f.castT, w:Math.min(6, 0.6 + 6 * f.dmg / pool) * (sd.lock ? 1.2 : 0.6)});
+      }
+    }
+    if(f.boss && f.cast) c.casts.push({k:f.cast, f:f, t:f.castT, w:Math.min(12, 2 + 10 * f.dmg / pool)});
+    c.foes.push(o);
+  }
+  for(i = 0; i < E.shots.length; i++){
+    var sh = E.shots[i];
+    if(Math.hypot(sh.x - me.x, sh.y - me.y) > 700) continue;
+    c.shots.push({x:sh.x, y:sh.y, vx:sh.vx, vy:sh.vy, r:sh.r, t0:0, w:Math.min(6, 0.6 + 6 * sh.dmg / pool) + (sh.slow ? 0.8 : 0)});
+  }
+  for(i = 0; i < E.zones.length; i++){
+    var z = E.zones[i];
+    c.zones.push({x:z.x, y:z.y, r:z.r, a:Math.max(0, z.warn), b:Math.max(0, z.warn) + z.life, w:Math.min(6, 0.8 + 5 * z.dmg / pool)});
+  }
+  for(i = 0; i < E.drops.length; i++){
+    var dr = E.drops[i];
+    if(Math.hypot(dr.x - me.x, dr.y - me.y) > 700) continue;
+    c.drops.push({x:dr.x, y:dr.y, g:1 + Math.min(3, dr.n / (4 + P.wave))});
+  }
+  for(i = 0; i < E.sites.length; i++) c.sites.push({x:E.sites[i].x, y:E.sites[i].y});
+  var tx = 0, ty = 0, tn = 0;
+  for(i = 0; i < E.builds.length; i++){
+    var b = E.builds[i];
+    if(b.k === "tower"){ tx += b.x; ty += b.y; tn++; }
+    else if(b.k === "shop") c.shops.push(b);
+    else if(b.k === "spring" && !b.used && hpF < 0.75) c.spring = b;
+  }
+  if(tn) c.camp = {x:tx / tn, y:ty / tn};
+  if(E.boss && !E.boss.dead) c.boss = E.boss;
+  return c;
+}
+/* Boss 抬手锁死的那一下，p 点吃不吃得到（m 是留的余量）*/
+function autoInCast(cs, px, py, m){
+  var f = cs.f, def = f && f.def, i, dx, dy;
+  switch(cs.k){
+    case "boom":  return Math.hypot(px - cs.x, py - cs.y) < cs.r + m;
+    case "sweep":
+      dx = px - f.x; dy = py - f.y;
+      var dd = Math.hypot(dx, dy); if(dd > def.sweep.range + m) return false;
+      var ad = Math.atan2(dy, dx) - f.castDir;
+      while(ad >  Math.PI) ad -= Math.PI * 2;
+      while(ad < -Math.PI) ad += Math.PI * 2;
+      return Math.abs(ad) <= def.sweep.arc * Math.PI / 360 + m / Math.max(30, dd);
+    case "quake": return Math.hypot(px - f.qx, py - f.qy) < def.quake.r + m;
+    case "nails": case "pyre":
+      if(!f.nails) return false;
+      var rr = cs.k === "nails" ? def.nails.r : def.pyre.r;
+      for(i = 0; i < f.nails.length; i++) if(Math.hypot(px - f.nails[i].x, py - f.nails[i].y) < rr + m) return true;
+      return false;
+    case "chain":
+      var ax = Math.cos(f.castDir), ay = Math.sin(f.castDir);
+      dx = px - f.x; dy = py - f.y;
+      var al = dx * ax + dy * ay, pp = Math.abs(-dx * ay + dy * ax);
+      return al > -m && al < def.chain.len + m && pp < def.chain.w / 2 + m;
+    case "ring":
+      var rd = Math.hypot(px - f.x, py - f.y);
+      return rd >= def.ring.inner - m && rd <= def.ring.outer + m;
+    case "nova":  return Math.hypot(px - f.x, py - f.y) < def.nova.r + m;
+  }
+  return false;
+}
+var AUTO_TS = [0.2, 0.45, 0.8], AUTO_TW = [1, 0.75, 0.45];
+function autoScore(c, vx, vy, ux, uy){
+  var me = c.me, s = c.s, i, j, o, t, px, py, dx, dy, d, mv, fx, fy, gap;
+  var danger = 0, gain = 0, hit = 0, nearD = 1e9, near = null;
+  var M = 26;
+  /* ---- 怪：推演它追上来的位置 ---- */
+  for(i = 0; i < c.foes.length; i++){
+    o = c.foes[i];
+    for(j = 0; j < AUTO_TS.length; j++){
+      t = AUTO_TS[j]; px = me.x + vx * t; py = me.y + vy * t;
+      dx = px - o.x; dy = py - o.y; d = Math.hypot(dx, dy) || 1;
+      mv = Math.min(d, o.sp * t); fx = o.x + dx / d * mv; fy = o.y + dy / d * mv;
+      var dd = Math.hypot(px - fx, py - fy);
+      if(o.touch){
+        gap = dd - o.tr;
+        if(gap < M){ var q = (M - gap) / M; danger += o.w * AUTO_TW[j] * q * q * 90; }
+      }
+      if(j === 1){
+        /* 刀够得着：reach 以内、又不贴到被咬的距离 —— 这就是「放风筝」的那一圈 */
+        var rch = c.reach + o.r - 4;
+        if(dd <= rch) hit += o.pri;
+        var gd = dd - rch;
+        if(gd < nearD){ nearD = gd; near = o; }
+        if(o.leech && dd < o.leech) danger += 6;
+      }
+    }
+    /* 被围：离得近的怪越多，越往空的方向挪 */
+    px = me.x + vx * 0.6; py = me.y + vy * 0.6;
+    d = Math.hypot(px - o.x, py - o.y);
+    if(o.touch && d < 190) danger += o.w * (1 - d / 190) * 4;
+  }
+  /* ---- 弹丸：两条直线的最近距离（出膛晚的那种从 t0 起算）---- */
+  for(i = 0; i < c.shots.length; i++){
+    var sh = c.shots[i];
+    var rx = sh.x - sh.vx * sh.t0 - me.x, ry = sh.y - sh.vy * sh.t0 - me.y;
+    var wx = sh.vx - vx, wy = sh.vy - vy, ww = wx * wx + wy * wy;
+    var ts = ww > 0 ? -(rx * wx + ry * wy) / ww : 0;
+    ts = Math.max(sh.t0, Math.min(sh.t0 + 1.0, ts));
+    var mx = rx + wx * ts, my = ry + wy * ts, dm = Math.hypot(mx, my), rad = sh.r + 11 + 12;
+    if(dm < rad) danger += sh.w * (1.3 - Math.min(1, ts / 1.4)) * (0.5 + (rad - dm) / rad) * 120;
+  }
+  /* ---- 地面危险区（预警的、正在烧的）---- */
+  for(i = 0; i < c.zones.length; i++){
+    var z = c.zones[i];
+    for(j = 0; j < 4; j++){
+      t = j === 3 ? 1.2 : AUTO_TS[j];
+      if(t < z.a - 0.05 || t > z.b) continue;
+      px = me.x + vx * t; py = me.y + vy * t;
+      d = Math.hypot(px - z.x, py - z.y);
+      if(d < z.r + 14) danger += z.w * 45 * (1 + (z.r + 14 - d) / (z.r + 14));
+    }
+    /* 预警还早：停在里面等它落下来也要扣 */
+    if(z.a > 1.2){ px = me.x + vx * 1.2; py = me.y + vy * 1.2;
+      if(Math.hypot(px - z.x, py - z.y) < z.r + 10) danger += z.w * 30; }
+  }
+  /* ---- Boss 抬手 / 爆囊引信：按它落下来那一刻你站哪儿算 ---- */
+  for(i = 0; i < c.casts.length; i++){
+    var cs = c.casts[i], tc = Math.min(cs.t + 0.05, 1.6);
+    px = me.x + vx * tc; py = me.y + vy * tc;
+    if(autoInCast(cs, px, py, 20)) danger += cs.w * 110;
+    if(cs.k === "pyre"){                               // 火场会留在地上 6 秒
+      px = me.x + vx * 1.2; py = me.y + vy * 1.2;
+      if(autoInCast(cs, px, py, 10)) danger += cs.w * 30;
+    }
+  }
+  /* ---- 奖励 ---- */
+  var hpS = 0.35 + 0.65 * Math.min(1, c.hpF);
+  var score = -danger * (1 + 1.4 * Math.max(0, 1 - c.hpF));
+  score += hpS * 16 * (hit > 4 ? 4 + 0.4 * (hit - 4) : hit);
+  if(hit <= 0 && near && near.f.immuneT <= 0) score -= hpS * 0.12 * Math.max(0, nearD);   // 刀够不着就往最近的那只挪
+  /* Boss 波：Boss 比你慢，光顾着躲会把它甩到天边、这一波永远打不完 —— 它才是这一波的目标 */
+  if(c.boss){
+    px = me.x + vx * 0.5; py = me.y + vy * 0.5;
+    score -= (0.1 + 0.25 * hpS) * Math.max(0, Math.hypot(px - c.boss.x, py - c.boss.y) - (c.reach + c.boss.r - 6));
+  }
+  /* 捡钱 / 捡箱 / 低血去喝泉：按「走这 0.5 秒势能涨了多少」给分 */
+  px = me.x + vx * 0.5; py = me.y + vy * 0.5;
+  var pot0 = 0, pot1 = 0;
+  for(i = 0; i < c.drops.length; i++){
+    var dr = c.drops[i];
+    pot0 += dr.g * Math.exp(-Math.max(0, Math.hypot(me.x - dr.x, me.y - dr.y) - c.pick) / 220);
+    pot1 += dr.g * Math.exp(-Math.max(0, Math.hypot(px - dr.x, py - dr.y) - c.pick) / 220);
+  }
+  for(i = 0; i < c.sites.length; i++){
+    var st = c.sites[i];
+    pot0 += 14 * Math.exp(-Math.hypot(me.x - st.x, me.y - st.y) / 380);
+    pot1 += 14 * Math.exp(-Math.hypot(px - st.x, py - st.y) / 380);
+  }
+  if(c.spring){
+    var sw = 30 * (1 - c.hpF);
+    pot0 += sw * Math.exp(-Math.hypot(me.x - c.spring.x, me.y - c.spring.y) / 420);
+    pot1 += sw * Math.exp(-Math.hypot(px - c.spring.x, py - c.spring.y) / 420);
+  }
+  score += 34 * (pot1 - pot0);
+  /* 游商：一踩进去就弹窗、整局停下 —— 托管时绕开它 */
+  for(i = 0; i < c.shops.length; i++){
+    var sb = c.shops[i];
+    if(Math.hypot(me.x - sb.x, me.y - sb.y) <= BF.site.r + 2) continue;
+    for(j = 0; j < 2; j++){
+      t = j ? 0.4 : 0.15;
+      if(Math.hypot(me.x + vx * t - sb.x, me.y + vy * t - sb.y) < BF.site.r + 14){ score -= 400; break; }
+    }
+  }
+  /* 营地：塔打得到的地方才是主场，别把怪引到天边去 */
+  if(c.camp){
+    px = me.x + vx * 0.6; py = me.y + vy * 0.6;
+    score -= 0.05 * Math.max(0, Math.hypot(px - c.camp.x, py - c.camp.y) - 240);
+  }
+  /* 别来回抖 */
+  score += 5 * (ux * AUTO.v.x + uy * AUTO.v.y);
+  return score;
+}
+function autoMove(s, dt){
+  AUTO.reT -= dt;
+  if(AUTO.reT > 0) return AUTO.v;
+  AUTO.reT = AUTO_RETHINK;
+  var me = E.me, sp = s.spd * (me.slowT > 0 ? 1 - me.slowPct : 1);
+  var c = autoCtx(s), best = {x:0, y:0}, bs = autoScore(c, 0, 0, 0, 0), N = 24, k, a, sc;
+  for(k = 0; k < N * 1.5; k++){
+    var full = k < N, m = full ? 1 : 0.5;
+    a = (full ? k / N : (k - N + 0.5) / (N / 2)) * Math.PI * 2;
+    var ux = Math.cos(a) * m, uy = Math.sin(a) * m;
+    sc = autoScore(c, ux * sp, uy * sp, ux, uy);
+    if(sc > bs){ bs = sc; best = {x:ux, y:uy}; }
+  }
+  AUTO.v = best;
+  return best;
+}
+/* 托管时的出刀方向：这一刀能砍中的（按优先级加权）最多 */
+function autoAim(s){
+  var me = E.me, i, j, f, g, cand = [], best = null, bs = 0;
+  if(s.arc >= 360) return null;
+  var ha = s.arc * Math.PI / 360;
+  for(i = 0; i < E.foes.length; i++){
+    f = E.foes[i]; if(f.dead) continue;
+    var d = Math.hypot(f.x - me.x, f.y - me.y);
+    if(d <= s.range + f.r) cand.push({f:f, a:Math.atan2(f.y - me.y, f.x - me.x), p:autoPri(f)});
+  }
+  for(i = 0; i < cand.length; i++){
+    var sum = 0;
+    for(j = 0; j < cand.length; j++){
+      g = cand[j];
+      var ad = g.a - cand[i].a;
+      while(ad >  Math.PI) ad -= Math.PI * 2;
+      while(ad < -Math.PI) ad += Math.PI * 2;
+      if(Math.abs(ad) <= ha) sum += g.p;
+    }
+    if(sum > bs){ bs = sum; best = cand[i].a; }
+  }
+  return best;
+}
+
+/* ---------- 遗物估值 ---------- */
+function autoPow(s){
+  var cr = Math.min(1, s.crit / 100);
+  var off = s.atk * (1 + cr * (s.critMult - 1)) * s.aspd * Math.sqrt(Math.min(360, s.arc) / 120) * Math.sqrt(s.range / 78);
+  var cut = Math.min(cutMaxB(), s.cutStatic || 0);
+  var def = s.maxHp * (1 + s.armor / Math.max(4, waveFoeDmg())) / Math.max(0.25, 1 - cut / 100) * Math.sqrt(s.spd / 155);
+  return {off:off, def:def};
+}
+var AUTO_TAGS = [["sh", /护盾|shield/i], ["cb", /连击|combo/i], ["cr", /暴击|crit/i], ["hl", /回复|回血|heal|restore/i],
+                 ["gd", /金币|gold/i], ["ar", /护甲|armor/i], ["ct", /受到的伤害|damage taken/i],
+                 ["lo", /生命低于|below \d+% HP|HP below/i], ["hi", /满血|full HP|above \d+% HP/i]];
+function relicTags(r){
+  var txt = bfWord(r) + " " + r.pw, out = {};
+  for(var i = 0; i < AUTO_TAGS.length; i++) if(AUTO_TAGS[i][1].test(txt)) out[AUTO_TAGS[i][0]] = 1;
+  return out;
+}
+/* 一件遗物值多少（owned = 已经在身上：拿掉它算差；不然：带上它算差）。
+   底子是品质基准线，面板上真涨了更多的按面板算（铁躯、重装这种会随构筑放大的），带负面的扣掉；
+   再按「身上有几件同一条线的」给一点协同。 */
+function relicValue(id, owned){
+  var r = RMAP[id]; if(!r) return 0;
+  var s0, s1, k;
+  if(owned){
+    s1 = bstats(); k = P.relics.indexOf(id);
+    if(k >= 0){ P.relics.splice(k, 1); reindex(); s0 = bstats(); P.relics.splice(k, 0, id); reindex(); } else s0 = s1;
+  } else {
+    s0 = bstats(); P.relics.push(id); reindex(); s1 = bstats(); P.relics.pop(); reindex();
+  }
+  var a = autoPow(s0), b = autoPow(s1);
+  var dv = 61 * Math.log(b.off / a.off) + 49 * Math.log(b.def / a.def);
+  var v = RAR_V[r.r];
+  if(dv > v) v = dv; else if(dv < -0.5) v += dv;
+  var tg = relicTags(r), n = 0, t, cnt = {}, i;
+  for(i = 0; i < P.relics.length; i++){
+    if(P.relics[i] === id) continue;
+    var ot = relicTags(RMAP[P.relics[i]]);
+    for(t in ot) cnt[t] = (cnt[t] || 0) + 1;
+  }
+  for(t in tg) if(t !== "lo" && t !== "hi") n += Math.min(3, cnt[t] || 0);
+  v *= 1 + Math.min(0.5, 0.05 * n);
+  if((tg.lo && cnt.hi) || (tg.hi && cnt.lo)) v *= 0.6;    // 低血流跟满血流互斥
+  return v;
+}
+/* 特殊遗物：手排的底子 + 跟身上的配不配 */
+var SP_V = {sp_whirl:9, sp_reach:8, sp_haste:9, sp_second:8, sp_burst:8, sp_chain:7, sp_wave:7, sp_orbit:7,
+            sp_trample:5, sp_thorn:8, sp_exec:6, sp_vortex:5, sp_frost:8, sp_horde:6, sp_rampage:7, sp_skull:5,
+            sp_magnet:5, sp_feast:7, sp_ember:6, sp_deflect:6, sp_rain:7, sp_clone:6, sp_spike:6, sp_ice:5,
+            sp_quake:7, sp_flurry:6, sp_blink:6, sp_reso:4, sp_leech:7, sp_tide:7};
+function spValue(id, owned){
+  var v = SP_V[id] || 5, s = bstats(), tw = 0, i;
+  for(i = 0; i < E.builds.length; i++) if(E.builds[i].k === "tower") tw++;
+  if(id === "sp_ice" && hasSp("sp_frost")) v += 3;
+  if(id === "sp_frost" && hasSp("sp_ice")) v += 2;
+  if(id === "sp_skull") v += Math.min(4, s.crit / 20);
+  if(id === "sp_reso") v += Math.min(4, tw * 0.6);
+  if(id === "sp_whirl" && s.arc >= 360) v = 1;
+  return v;
+}
+
+/* ---------- 满了自动合成 ---------- */
+function autoFuse(){
+  if(relicLoad() < relicCap()) return false;
+  var n = fuseN(), best = null, bs = -1e9, r;
+  for(r = has("patchwork") ? 2 : 0; r < 4; r++){          // 百纳：普通 / 稀有不占格子，合了也腾不出位置
+    var list = P.relics.filter(function(id){ return RMAP[id].r === r; });
+    if(list.length < n) continue;
+    var vals = list.map(function(id){ return {id:id, v:relicValue(id, true)}; })
+                   .sort(function(a, b){ return a.v - b.v; }).slice(0, n);
+    var lost = 0; vals.forEach(function(x){ lost += x.v; });
+    var net = RAR_V[r + 1] - lost;
+    if(net > bs){ bs = net; best = vals.map(function(x){ return x.id; }); }
+  }
+  if(!best) return false;
+  fuseSel = best; fuseMode = true; AUTO.fusing = true;
+  fuseGo();
+  AUTO.fusing = false;
+  return true;
+}
+
+/* ---------- 弹窗 ---------- */
+var AUTO_VEILS = {veilPick:"pickList", veilSpPick:"spPickList", veilGot:"gotList", veilSwap:"swapOld", veilSpSwap:"spSwapOld"};
+function autoUntag(){
+  if(AUTO.tagEl && AUTO.tagEl.parentNode) AUTO.tagEl.parentNode.removeChild(AUTO.tagEl);
+  AUTO.tagEl = null;
+  var old = document.querySelectorAll(".card.aipick");
+  for(var i = 0; i < old.length; i++) old[i].classList.remove("aipick");
+}
+function autoCard(listId, id){
+  var cs = $(listId).querySelectorAll(".card");
+  for(var i = 0; i < cs.length; i++) if(cs[i].dataset.id === id) return cs[i];
+  return null;
+}
+/* 这个窗托管要做什么：返回 {card, fn}（card 是要挂倒计时的那张卡）*/
+function autoDecide(vid){
+  var i, best = null, bv = -1e9, v;
+  if(vid === "veilPick"){
+    for(i = 0; i < pickOffer.length; i++){ v = relicValue(pickOffer[i].id, false); if(v > bv){ bv = v; best = pickOffer[i].id; } }
+    /* 四件里最好的都低于这一波最常见的品质 → 换一批（还有次数的话）*/
+    var ws = rarityWeights(P.wave), mode = 0;
+    for(i = 1; i < 5; i++) if(ws[i] > ws[mode]) mode = i;
+    var top = 0; for(i = 0; i < pickOffer.length; i++) top = Math.max(top, pickOffer[i].r);
+    if(rerollLeft > 0 && top < mode) return {card:null, fn:function(){ rerollLeft--; rollPick(); }};
+    if(!best) return {card:null, fn:function(){ pendPicks--; hide("veilPick"); openPick(); }};
+    return {card:autoCard("pickList", best), fn:function(){ takePick(best); }};
+  }
+  if(vid === "veilGot"){
+    var ids = []; $("gotList").querySelectorAll(".card").forEach(function(c){ ids.push(c.dataset.id); });
+    for(i = 0; i < ids.length; i++){ v = relicValue(ids[i], false); if(v > bv){ bv = v; best = ids[i]; } }
+    return {card:autoCard("gotList", best), fn:function(){ hide("veilGot"); grantRelic(best, gotAfter); }};
+  }
+  if(vid === "veilSpPick"){
+    for(i = 0; i < spOffer.length; i++){ v = spValue(spOffer[i].id); if(v > bv){ bv = v; best = spOffer[i].id; } }
+    return {card:autoCard("spPickList", best), fn:function(){ takeSpecial(best); }};
+  }
+  if(vid === "veilSwap"){
+    if(swapBarter || !swapNewId) return null;          // 易货是你自己在游商里点的，托管不插手
+    var nv = relicValue(swapNewId, false), worst = null, wv = 1e9;
+    $("swapOld").querySelectorAll(".card").forEach(function(c){
+      var x = relicValue(c.dataset.id, true); if(x < wv){ wv = x; worst = c.dataset.id; } });
+    if(worst && nv > wv) return {card:autoCard("swapOld", worst), fn:function(){ doSwap(worst); }};
+    return {card:autoCard("swapNew", swapNewId), fn:function(){ doSwap(null); }};
+  }
+  if(vid === "veilSpSwap"){
+    if(!spSwapNew) return null;
+    var sv = spValue(spSwapNew), sw = null, swv = 1e9;
+    for(i = 0; i < P.special.length; i++){ v = spValue(P.special[i], true); if(v < swv){ swv = v; sw = P.special[i]; } }
+    if(sw && sv > swv) return {card:autoCard("spSwapOld", sw), fn:function(){ doSpSwap(sw); }};
+    return {card:null, fn:function(){ doSpSwap(null); }};
+  }
+  return null;
+}
+/* 每一帧都跑（暂停时也跑 —— 挑遗物的窗开着就是暂停），用的是真实时间 */
+function autoTick(rdt){
+  if(!AUTO.on || !P || OVER || DEPLOY){ if(AUTO.veil){ AUTO.veil = null; autoUntag(); } return; }
+  var on = document.querySelectorAll(".veil.on"), top = on.length ? on[on.length - 1] : null;
+  if(!top){
+    if(AUTO.veil){ AUTO.veil = null; autoUntag(); }
+    autoFuse();                                         // 满了就合掉（fuseGo 可能会开「挑一件」的窗，下一帧接着管）
+    return;
+  }
+  var vid = top.id, lid = AUTO_VEILS[vid];
+  if(!lid){ if(AUTO.veil){ AUTO.veil = null; autoUntag(); } return; }   // 暂停 / 信息 / 遗物页 / 游商：你自己在操作
+  var first = $(lid).firstElementChild;
+  if(AUTO.veil !== vid || AUTO.first !== first){
+    autoUntag();
+    AUTO.veil = vid; AUTO.first = first;
+    AUTO.vt = (vid === "veilSwap" || vid === "veilSpSwap") ? AUTO_SWAP_SEC : AUTO_PICK_SEC;
+    AUTO.act = autoDecide(vid);
+    if(AUTO.act && AUTO.act.card){
+      AUTO.act.card.classList.add("aipick");
+      AUTO.tagEl = document.createElement("i"); AUTO.tagEl.className = "aitag";
+      AUTO.act.card.appendChild(AUTO.tagEl);
+    }
+  }
+  if(!AUTO.act) return;
+  AUTO.vt -= rdt;
+  if(AUTO.tagEl) AUTO.tagEl.textContent = L("托管 · ", "Auto · ") + Math.max(1, Math.ceil(AUTO.vt));
+  if(AUTO.vt <= 0){
+    var fn = AUTO.act.fn;
+    AUTO.act = null; autoUntag(); AUTO.veil = null; AUTO.first = null;
+    fn();
+  }
 }
 
 /* ================================================================
@@ -6404,6 +6854,7 @@ function openSp(){
 
 /* ---- 合成（面板在遗物页上，随时能开）---- */
 var fuseMode = false, fuseSel = [];
+var gotAfter = null;          // 合成挑完之后回哪儿（手动 = 回遗物页；托管合的 = 哪儿都不回，接着打）
 function fuseN(){ return has("recipe") ? 2 : FUSE_N; }
 /* ⚠️ **战场模式的合成不要金币**（用户 2026-09-22）——
    金币现在只有游商一个去处。别把 FUSE_COST 加回来。
@@ -6433,13 +6884,14 @@ function fuseGo(){
     reindex();
   });
   fuseSel = []; fuseMode = false;
+  gotAfter = AUTO.fusing ? null : openBag;
   var want = Math.min(4, rar + 1), pool = relicPool(want);
   while(!pool.length && want > 0){ want--; pool = relicPool(want); }
-  if(!pool.length){ openBag(); return; }
+  if(!pool.length){ if(gotAfter) gotAfter(); return; }
   var picks = [], t = 0;
   while(picks.length < Math.min(fusePick(), pool.length) && t++ < 100){
     var r = pick(pool); if(picks.indexOf(r) < 0) picks.push(r); }
-  if(picks.length === 1){ grantRelic(picks[0].id, openBag); return; }
+  if(picks.length === 1){ grantRelic(picks[0].id, gotAfter); return; }
   $("gotTitle").textContent = L("合成出了 " + RAR_CN[want] + " · 挑一件", "Fused into " + RAR_CN[want] + " · pick one");
   fillCards("gotList", picks);
   show("veilGot");                                  // ⚠️ 材料已经砸了，这个窗没有关闭钮
@@ -6837,7 +7289,10 @@ function boot(){
     }
     openBag();
   });
-  onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, openBag); });
+  onCards("gotList", function(id){ hide("veilGot"); grantRelic(id, gotAfter); });
+
+  /* ---- 托管（用户 2026-09-26）---- */
+  $("btnAuto").addEventListener("click", function(){ setAuto(!AUTO.on); });
 
   $("btnPause").addEventListener("click", function(){ show("veilPause"); });
   $("btnUnpause").addEventListener("click", function(){ hide("veilPause"); });

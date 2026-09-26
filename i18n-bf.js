@@ -120,6 +120,7 @@ Object.assign(I18N, {
   "信息": "Info",
   "遗物": "Relics",
   "特殊": "Special",
+  "托管": "Auto",
   "部署": "Deploy",
   "0 金": "0 gold",
   "等级 1 · 人口 0/1": "Lv 1 · Pop 0/1",
