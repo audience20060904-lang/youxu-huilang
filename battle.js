@@ -6067,6 +6067,8 @@ var AUTO = {on:false, v:{x:0, y:0}, reT:0, veil:null, first:null, vt:0, act:null
 var AUTO_PICK_SEC = 5;       // 挑遗物的窗：一开始等几秒再替你挑
 var AUTO_PICK_MIN = 1;       // 每托管挑一次就少等 1 秒（用户 2026-09-26），最少等这么久；进部署（休整点）回到 AUTO_PICK_SEC
 var AUTO_SWAP_SEC = 2;       // 取舍窗：等几秒（跟挑遗物的倒计时取小的那个）
+var AUTO_DEPLOY_FROM = 80;   // 第 80 波往后：托管开着、部署阶段 5 秒没人碰，就自己点「开战」（用户 2026-09-26）
+var AUTO_DEPLOY_IDLE = 5;
 var AUTO_LEASH = 140;        // 离基地（营地中心）超过这么远就往回拉，越远拉得越狠
 var AUTO_REACH = 300;        // 离基地超过这么远的钱 / 箱不去捡
 var AUTO_RETHINK = 0.06;     // 走位几秒重想一次
@@ -6465,8 +6467,8 @@ function autoDecide(vid){
   if(vid === "veilSwap"){
     if(swapBarter || !swapNewId) return null;          // 易货是你自己在游商里点的，托管不插手
     var nv = relicValue(swapNewId, false), worst = null, wv = 1e9;
-    $("swapOld").querySelectorAll(".card").forEach(function(c){
-      var x = relicValue(c.dataset.id, true); if(x < wv){ wv = x; worst = c.dataset.id; } });
+    swapList.forEach(function(r){                     // 看全部（筛选条只是界面）
+      var x = relicValue(r.id, true); if(x < wv){ wv = x; worst = r.id; } });
     if(worst && nv > wv) return {card:autoCard("swapOld", worst), fn:function(){ doSwap(worst); }};
     return {card:autoCard("swapNew", swapNewId), fn:function(){ doSwap(null); }};
   }
@@ -6479,9 +6481,27 @@ function autoDecide(vid){
   }
   return null;
 }
+/* 第 80 波往后的休整点：托管开着、5 秒没有任何操作（点 / 拖 / 滚轮 / 按键都算）就自己「开战」。
+   挑遗物的窗开着也照数（没人在，就等开战后托管替你挑）；开着别的窗（商店 / 信息 / 遗物页…）说明有人在看，不数。
+   「开战」按钮上跟着倒数（定宽，换字不跳）。 */
+function autoDeployTick(rdt){
+  var btn = $("btnDeployGo");
+  var live = DEPLOY && AUTO.on && P && !OVER && P.wave > AUTO_DEPLOY_FROM;
+  if(!live){ AUTO.idle = 0; if(btn.dataset.cd){ delete btn.dataset.cd; btn.textContent = L("开战", "Fight"); } return; }
+  var on = document.querySelectorAll(".veil.on"), top = on.length ? on[on.length - 1] : null;
+  if(top && !AUTO_VEILS[top.id]){ AUTO.idle = 0; }
+  else AUTO.idle = (AUTO.idle || 0) + rdt;
+  var left = Math.max(0, Math.ceil(AUTO_DEPLOY_IDLE - AUTO.idle));
+  if(btn.dataset.cd !== String(left)){ btn.dataset.cd = left; btn.textContent = L("开战 · ", "Fight · ") + left; }
+  if(AUTO.idle >= AUTO_DEPLOY_IDLE){
+    AUTO.idle = 0; delete btn.dataset.cd; btn.textContent = L("开战", "Fight");
+    closeDeploy();
+  }
+}
 /* 每一帧都跑（暂停时也跑 —— 挑遗物的窗开着就是暂停），用的是真实时间 */
 function autoTick(rdt){
   if(DEPLOY) AUTO.wait = AUTO_PICK_SEC;                  // 到了休整点：倒计时回到 5 秒
+  autoDeployTick(rdt);
   if(!AUTO.on || !P || OVER || DEPLOY){ if(AUTO.veil){ AUTO.veil = null; autoUntag(); } return; }
   var on = document.querySelectorAll(".veil.on"), top = on.length ? on[on.length - 1] : null;
   if(!top){
@@ -6723,9 +6743,16 @@ function grantRelic(id, after){
   swapChrome(false);
   fillCards("swapNew", [RMAP[id]], function(r){ return '<span class="cost">' + L('卖 ', 'Sell ') + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
   /* 百纳：普通 / 稀有不占格子，换下它们腾不出位置 —— 带满时只摆史诗以上的 */
-  fillCards("swapOld", relicsByRar().filter(function(r){ return !has("patchwork") || r.r >= 2; }),
-            function(r){ return '<span class="cost">+' + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
+  swapList = relicsByRar().filter(function(r){ return !has("patchwork") || r.r >= 2; });
+  swapCost = function(r){ return '<span class="cost">+' + sellPrice(r) + L(' 金', ' gold') + '</span>'; };
+  swapFilter = -1; renderSwapOld();
   show("veilSwap");
+}
+/* 取舍窗下半截「身上的」：按品质筛（用户 2026-09-26「战场也加入遗物分类」）*/
+var swapList = [], swapCost = null, swapFilter = -1;
+function renderSwapOld(){
+  swapFilter = rarChips($("swapFilter"), swapList, swapFilter);
+  fillCards("swapOld", swapList.filter(function(r){ return swapFilter < 0 || r.r === swapFilter; }), swapCost);
 }
 /* 取舍窗的标题 / 说明 / 「算了」钮：易货借这个窗时换一套 */
 function swapChrome(barter){
@@ -6743,8 +6770,9 @@ function openBarter(t, row){
   swapChrome(true);
   fillCards("swapNew", [r], function(){ return '<span class="cost">' + price + L(' 金', ' gold') + '</span>'; },
             function(){ return P.gold < price ? "dim" : ""; });
-  fillCards("swapOld", relicsByRar().filter(function(x){ return x.r === r.r && x.id !== "barter"; }),
-            function(){ return '<span class="cost">' + L('拿它换', 'Trade') + '</span>'; });
+  swapList = relicsByRar().filter(function(x){ return x.r === r.r && x.id !== "barter"; });
+  swapCost = function(){ return '<span class="cost">' + L('拿它换', 'Trade') + '</span>'; };
+  swapFilter = -1; renderSwapOld();
   show("veilSwap");
 }
 function barterDone(oldId){
@@ -6818,7 +6846,9 @@ function openBag(){
     (has("patchwork") ? L(" · 共 " + P.relics.length + " 件", " · " + P.relics.length + " total") : "") +
     (P.face && P.face.w === P.wave && has("thousandface") && P.face.ids.length
       ? L(" · 借来：", " · Borrowed: ") + P.face.ids.map(function(id){ return RMAP[id].n; }).join(L("、", ", ")) : "");
-  fillCards("bagList", relicsByRar(),
+  var all = relicsByRar();
+  bagFilter = rarChips($("bagFilter"), all, bagFilter);
+  fillCards("bagList", all.filter(function(r){ return bagFilter < 0 || r.r === bagFilter; }),
             function(r){
               if(fuseMode) return "";
               return r.id === sellArmed
@@ -6834,6 +6864,30 @@ function openBag(){
   show("veilBag");
 }
 function st2(k, v){ return '<div><span>' + k + '</span><b>' + v + '</b></div>'; }
+/* ---- 品质筛选条（用户 2026-09-26「战场也加入遗物分类」，跟地牢 game.js 的 rarChips 同一个样子）----
+   全部 / 普通 / 稀有 / 史诗 / 传奇 / 神圣，只列身上有的、带件数；**只有一种品质时整条收起**（只剩「全部」没意义）。
+   返回修正后的当前档（那一档一件都没了就退回「全部」）。纯界面状态，不进存档。 */
+var bagFilter = -1;
+function rarChips(bar, list, cur){
+  var cnt = [0, 0, 0, 0, 0], kinds = 0, q, h;
+  list.forEach(function(r){ cnt[r.r]++; });
+  for(q = 0; q < 5; q++) if(cnt[q]) kinds++;
+  if(kinds < 2){ bar.hidden = true; bar.innerHTML = ""; return -1; }
+  if(cur >= 0 && !cnt[cur]) cur = -1;
+  h = '<button type="button" class="rfchip' + (cur < 0 ? " on" : "") + '" data-q="-1">' + L("全部", "All") + "<em>" + list.length + "</em></button>";
+  for(q = 0; q < 5; q++){
+    if(!cnt[q]) continue;
+    h += '<button type="button" class="rfchip q' + q + (cur === q ? " on" : "") + '" data-q="' + q + '">' + RAR_CN[q] + "<em>" + cnt[q] + "</em></button>";
+  }
+  bar.innerHTML = h; bar.hidden = false;
+  return cur;
+}
+function onChips(bar, fn){
+  $(bar).addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".rfchip") : null;
+    if(b) fn(+b.dataset.q);
+  });
+}
 
 /* 分解是**两步确认**的（第一下只是亮起来，第二下才真卖）——
    遗物卡上本来就写着「分解 +N」，点了没反应更糟；一步到位又太容易误触。 */
@@ -7323,6 +7377,8 @@ function boot(){
 
   onCards("swapNew", function(){ doSwap(null); });
   onCards("swapOld", function(id){ doSwap(id); });
+  onChips("swapFilter", function(q){ swapFilter = q; renderSwapOld(); });
+  onChips("bagFilter", function(q){ bagFilter = q; sellArmed = null; openBag(); });
   $("btnSwapCancel").addEventListener("click", function(){ if(swapBarter) barterDone(null); });
 
   /* ---- 信息 / 特殊遗物 ---- */
@@ -7355,6 +7411,10 @@ function boot(){
 
   /* ---- 托管（用户 2026-09-26）---- */
   $("btnAuto").addEventListener("click", function(){ setAuto(!AUTO.on); });
+  /* 部署阶段的「有没有人在操作」：任何按下 / 按键 / 滚轮都把托管的开战倒数拨回去 */
+  ["pointerdown", "keydown", "wheel"].forEach(function(ev){
+    document.addEventListener(ev, function(){ AUTO.idle = 0; }, true);
+  });
 
   $("btnPause").addEventListener("click", function(){ show("veilPause"); });
   $("btnUnpause").addEventListener("click", function(){ hide("veilPause"); });

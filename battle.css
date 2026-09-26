@@ -137,6 +137,8 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
      text-align:center;text-decoration:none;display:block}
 /* .btn 的 display:block 会盖掉 [hidden] —— 开场的「继续」没存档时要真藏起来（2026-09-23 修）*/
 #btnResume[hidden]{display:none}
+/* 同一个坑：.rowb 的 display:flex 盖掉 [hidden] —— 取舍窗的「算了」（只给易货用）平时一直露着、点了没反应（2026-09-26 修）*/
+.rowb[hidden]{display:none}
 .btn.ghost{background:var(--stone-2);color:var(--dim);border-color:var(--edge)}
 .btn:disabled{opacity:.4;cursor:default}
 /* 材料选满了，「合成」高亮提醒一下（用户 2026-09-22）——
@@ -210,6 +212,8 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 #dPop{margin-left:auto}
 .dgo{flex:none;font:inherit;font-size:13px;padding:6px 16px;border-radius:9px;
      border:1px solid var(--bone);background:var(--bone);color:var(--stone);cursor:pointer}
+/* 托管第 80 波往后会在「开战」上倒数（开战 · 5）：定宽，换字不跳 */
+#btnDeployGo{width:6.6em;padding-left:0;padding-right:0;text-align:center;white-space:nowrap}
 .dhint{flex:none;margin:5px 0 7px;font-size:11.5px;color:var(--faint);line-height:1.5;
        min-height:2.9em}
 
@@ -300,3 +304,14 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
   .veil.on,.veil.on > .box,.deploy:not([hidden]){animation:none}
   .veil.ghost{display:none}
 }
+
+/* ===== 品质筛选条（用户 2026-09-26「战场也加入遗物分类」，跟主城 style.css 的 .rfilt 同一个样子）=====
+   遗物页 #bagFilter / 取舍窗 #swapFilter。类名带 rf 前缀，别撞短名。 */
+.rfilt{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px;flex:none}
+.rfilt[hidden]{display:none}
+.rfchip{font:inherit;font-size:11.5px;padding:3px 7px;border-radius:12px;cursor:pointer;
+  background:var(--stone-2);color:var(--dim);border:1px solid var(--edge);white-space:nowrap}
+.rfchip em{font-style:normal;font-variant-numeric:tabular-nums;font-size:10.5px;margin-left:3px;opacity:.75}
+.rfchip.on{background:var(--stone-3);color:var(--bone);border-color:var(--torch)}
+.rfchip.q0{color:var(--q0)} .rfchip.q1{color:var(--q1)} .rfchip.q2{color:var(--q2)}
+.rfchip.q3{color:var(--q3)} .rfchip.q4{color:var(--q4)}

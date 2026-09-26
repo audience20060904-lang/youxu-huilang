@@ -124,6 +124,7 @@
       <p class="sub" id="swapSub">换掉一件，换下来的当场分解成金币</p>
       <div id="swapNew" class="cards"></div>
       <div class="hr">身上的</div>
+      <div class="rfilt" id="swapFilter" hidden></div>
       <div class="scroll"><div id="swapOld" class="cards"></div></div>
       <!-- 易货（第十三批）借这个窗时才露出来 -->
       <div class="rowb" id="swapCancelRow" hidden><button class="btn ghost" id="btnSwapCancel">算了</button></div>
@@ -188,6 +189,7 @@
     <div class="box wide col tall">
       <h2 id="bagTitle">遗物 0 / 15</h2>
       <p class="sub" id="fuseSub"></p>
+      <div class="rfilt" id="bagFilter" hidden></div>
       <div class="scroll"><div id="bagList" class="cards"></div></div>
       <!-- ⚠️ 这三个钉在遗物栏下面（用户 2026-09-22）：带满 15 件时列表很长，
            按钮跟着滚下去就找不着了。别把它们塞回 .scroll 里面。 -->
