@@ -942,10 +942,17 @@ function endlessRamp(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
   return 1 + Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_RAMP;
 }
-/* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的深渊压迫往上抬（用户 2026-09-25 选的方案 B）：
-   第 50 层 ×1（12%）、第 200 层 ×1.75（21%）、第 300 层 ×2.25（27%）。别的章恒为 1。*/
+/* 无尽章的**深渊狂潮**（用户 2026-09-26）：第 ENDLESS_FROM 层往下每 ENDLESS_EVERY 层 ×1.26，
+   第 150 层正好 ×10（ENDLESS_SURGE_X ^ ((层数 − 50) ÷ ENDLESS_SURGE_SPAN)）。**血量和伤害都乘**。别的章恒为 1。*/
+function endlessSurge(floor){
+  if(!isEndless() || floor <= ENDLESS_FROM) return 1;
+  const k = Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_EVERY;
+  return Math.pow(ENDLESS_SURGE_X, k / ENDLESS_SURGE_SPAN);
+}
+/* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
+   第 50 层 ×1（12%）、第 100 层 ×2.9（35%）、第 150 层 ×10.5（一口就过上限）。别的章恒为 1。*/
 function capRamp(){
-  return G ? 1 + (endlessRamp(G.floor) - 1) * CAP_RAMP_SHARE : 1;
+  return G ? 1 + (endlessRamp(G.floor) * endlessSurge(G.floor) - 1) * CAP_RAMP_SHARE : 1;
 }
 /* 这一刀真的打进怪血条的量（吸血那几件按它算）：普通怪按剩下的血封顶，深渊那只血是一层层的，打多少算多少 */
 function landedOn(m, n){
@@ -961,14 +968,16 @@ function foeNums(def, floor){
   const step = def.fixed ? 0 : Math.max(0, floor - 1);
   const fb = (def.fixed ? null : CH.foeBonus) || {hp:0, dmg:0, armor:0, xp:0};
   const band = def.fixed ? {hp:1, dmg:1} : foeBand(floor);
-  // 无尽章第 50 层往下的深渊压迫（别的章恒为 1）。**只乘在伤害上**，血量不动 —— 见 endlessRamp
+  // 无尽章第 50 层往下的深渊压迫（别的章恒为 1）。只乘在伤害上 —— 见 endlessRamp
   const deep = def.fixed ? 1 : endlessRamp(floor);
+  // 深渊狂潮（2026-09-26）：血量和伤害一起乘，第 150 层 ×10 —— 见 endlessSurge
+  const surge = def.fixed ? 1 : endlessSurge(floor);
   /* 怪物全局倍率（content.js 的 FOE_MULT，用户 2026-09-21）——**所有怪都吃，章末 Boss 也吃**。
      放在最后一步乘，取整、最低 1，跟 FOE_BANDS / endlessRamp 一个待遇。
      armor / xp 那两档默认是 1（为什么见 content.js 那段注释）。*/
   return {
-    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp * FOE_MULT.hp)),
-    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep * FOE_MULT.dmg)),
+    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp * surge * FOE_MULT.hp)),
+    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep * surge * FOE_MULT.dmg)),
     armor: Math.round((def.armor + fb.armor) * FOE_MULT.armor),
     xp: Math.round((def.xp + Math.floor(step / gw.xpEvery) + fb.xp) * FOE_MULT.xp)
   };

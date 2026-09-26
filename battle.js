@@ -1126,7 +1126,6 @@ function bstats(){
   if(has("nick"))      s.crit += 4;
   if(has("rustplate")) s.crit -= 6;
   if(has("spark"))     s.crit += 20;
-  if(has("maul"))      s.crit += 10;
   if(has("carve"))     s.crit += 15;
   if(has("recite"))    s.crit += 30;
   if(has("caution"))   s.crit += 2;
@@ -1177,7 +1176,7 @@ function bstats(){
   if(has("silt"))   s.armor += 1 + Math.floor(w / 10);                // 沉积（第十一批）：每过 10 波 +1
   if(has("layers")) s.armor += Math.floor(P.lvl / 10);                // 千层（第十一批）的底数
   /* 乘法几件，位置写死 */
-  if(has("heavy"))  s.armor = (s.armor + 1) * 4;
+  if(has("heavy"))  s.armor = s.armor * 3;
   if(has("callus")) s.armor = Math.floor((s.armor + 3) * 1.2);
   if(has("layers")) s.armor = s.armor * 1.25;                         // 千层：护甲 ×1.25
   if(has("stack")){ s.armor += 5; if(P.noHitWaves >= 2) s.armor *= 2; }
@@ -1498,7 +1497,7 @@ function swing(mult){
   /* 刻字 / 默诵的「暴击时」那半句（2026-09-23 补：以前只给了暴击率）*/
   if(crit && has("carve"))  pct += 90;
   if(crit && has("recite")) extra += 35;
-  if(has("billow")) cm += 0.2 * Math.floor(pct / 100);             // 叠浪：② 层每满 100% 暴击倍率 +0.2（读这一刀算完的 pct）
+  if(has("billow")) cm += 0.1 * Math.floor(pct / 100);             // 叠浪：② 层每满 100% 暴击倍率 +0.1（读这一刀算完的 pct）
 
   var pre = (s.atk + base + extra) * (1 + pct / 100) + flat;
   /* ⚠️ 塔的伤害跟玩家挂钩（用户 2026-09-22）：把**没吃暴击的那一下**平滑记下来，

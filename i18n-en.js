@@ -1152,7 +1152,7 @@ var RELIC_EN = {
 ],
 "maul": [
 "Maul",
-"Crit rate +10%, crit damage +100% (×2 → ×3)",
+"Crit damage +100%",
 "One blow is enough, so make it count."
 ],
 "crush": [
@@ -1332,7 +1332,7 @@ var RELIC_EN = {
 ],
 "heavy": [
 "Heavy Armor",
-"Armor +1, and armor ×4",
+"Armor ×3",
 "Three layers of plate won't walk fast — but needn't."
 ],
 "psyche": [
@@ -1863,7 +1863,7 @@ var RELIC_EN = {
 ],
 "billow": [
 "Billow",
-"Damage +20%; every full 100% damage bonus: crit damage +20%",
+"Damage +20%; every full 100% damage bonus: crit damage +10%",
 "Wave upon wave — the last one hits the shore hardest."
 ],
 "overcrit": [
