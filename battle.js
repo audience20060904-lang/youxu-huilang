@@ -1316,7 +1316,8 @@ function luck(p){
    ================================================================ */
 var swingDepth = 0;
 
-/* 刀朝哪儿：**优先朝最近的敌人**，附近没人才用移动方向。
+/* 刀朝哪儿：**朝这一刀能砍中最多敌人的方向**（用户 2026-09-26，原来是朝最近的那只）；
+   刀够得着的一只都没有，才朝附近最近的那只，再没有才用移动方向。
    ⚠️ 别改回「只朝移动方向」—— 实测那样绕圈跑 100 秒只砍到 2 只，
       怪永远在你背后，自动挥刀等于没有。幸存者类都是自动瞄准的。 */
 /* 刀气的飞行速度 —— **跟攻速走**（用户 2026-09-23）。
@@ -1366,7 +1367,7 @@ function resoFire(){
 }
 
 function aimDir(s){
-  if(autoLive()){ var aa = autoAim(s); if(aa !== null) return aa; }    // 托管：朝砍得最多的方向
+  var aa = bestAim(s); if(aa !== null) return aa;
   var me = E.me, best = null, bd = 1e9, i, f, d;
   var reach = s.range * 2.4;
   for(i = 0; i < E.foes.length; i++){
@@ -3021,6 +3022,7 @@ function screenToWorld(cx, cy){
 }
 function closeDeploy(){
   DEPLOY = false; selBench = -1; camShift = 0;
+  AUTO.home = {x:E.me.x, y:E.me.y};       // 托管的基地（营地里一座建筑都没有时就认这儿）
   /* 兵营挪过位置的话，士兵跟着站到新的营门口 */
   for(var i = 0; i < E.builds.length; i++) if(E.builds[i].k === "tower") resetMen(E.builds[i]);
   saveWave(false);                       // 摆完塔开战：把这一轮买的塔和花掉的钱落盘
@@ -3100,6 +3102,14 @@ function renderDeploy(){
   camShift = $("deploy").offsetHeight / 2;
 }
 
+/* 这座塔你已经拿了几张（备战区 + 场上，二星算 3 张、三星算 9 张）——
+   商店里写这个，不写牌库里还剩几张（用户 2026-09-26）。离三星还差几张一眼就算得出来。 */
+function ownedCopies(tid){
+  var n = 0, i;
+  for(i = 0; i < P.bench.length; i++) if(P.bench[i].k === "tower" && P.bench[i].tid === tid) n += starCopies(P.bench[i].star);
+  for(i = 0; i < E.builds.length; i++) if(E.builds[i].k === "tower" && E.builds[i].tid === tid) n += starCopies(E.builds[i].star);
+  return n;
+}
 /* ---- 塔的商店：一个弹窗（用户 2026-09-22 从面板里搬出来的）---- */
 function openTwShop(){ selBench = -1; renderTwShop(); show("veilTwShop"); }
 function renderTwShop(){
@@ -3111,7 +3121,7 @@ function renderTwShop(){
     var no = P.gold < c || (benchFree() <= 0 && !wouldCombine(tid));
     h += '<button class="tw r' + t.r + (no ? " dim" : "") + '" data-i="' + i + '">' +
          '<span class="tcost">' + c + L(' 金', ' gold') + '</span>' +
-         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + L(' · 池中 ', ' · pool ') + poolLeft(tid) + '</i>' +
+         '<b>' + t.n + '</b><i>' + RAR_CN[t.r] + L(' · 已拿 ', ' · owned ') + ownedCopies(tid) + '</i>' +
          '<p>' + t.pw + '</p>' + starLines(t, 1) + '</button>';
   }
   $("twShopList").innerHTML = h;
@@ -3466,6 +3476,14 @@ function fireTower(t, ef){
     /* ---- 回血塔（用户 2026-09-22 点名要的一条线）----
        ⚠️ 回血一律走 healUp()，别直接改 P.hp —— 「泉涌」那条溢出转护盾就在里面。
        三座各一种样子：涌泉台是水滴、祷堂是头顶一圈光、生息树是落叶。 */
+    /* 圈里受伤的士兵（兵营 / 骑士团）也回（用户 2026-09-26）：按士兵自己的最大生命 ×MEN_HEAL_X，
+       士兵血少、打起来掉得快，同样的百分比对他们等于没回 */
+    var men = hurtMen(t.x, t.y, ef.range, se.healAll);
+    for(i = 0; i < men.length; i++){
+      men[i].hp = Math.min(men[i].maxHp, men[i].hp + men[i].maxHp * d.healPct * MEN_HEAL_X);
+      fxPlus(men[i].x, men[i].y - 10, col);
+    }
+    if(!se.healAll && Math.hypot(E.me.x - t.x, E.me.y - t.y) > ef.range) return;   // 你不在圈里：只回了士兵
     var st0 = bstats();
     var got = healUp(st0.maxHp * d.healPct, !!se.healOver);
     if(se.healShield) addShield(se.healShield);
@@ -3886,14 +3904,13 @@ function updateTowers(dt){
       t.rep = ef.shots - 1; t.repT = 0.12;
       continue;
     }
-    /* 回血塔 / 铸币台不需要敌人 —— 它们只看自己的 CD（回血塔还要你站在圈里）*/
+    /* 回血塔 / 铸币台不需要敌人 —— 它们只看自己的 CD（回血塔还要你或者受伤的士兵站在圈里）*/
     if(d.kind === "heal" || d.kind === "mint"){
-      if(d.kind === "heal" && !se.healAll && Math.hypot(me.x - t.x, me.y - t.y) > ef.range){
-        t.cd = 0.2; continue;                      // 人不在圈里就不空烧 CD
-      }
       if(d.kind === "heal"){
         if(!st) st = bstats();
-        if(P.hp >= st.maxHp && !se.healShield && !se.healOver){ t.cd = 0.2; continue; }
+        var meIn = se.healAll || Math.hypot(me.x - t.x, me.y - t.y) <= ef.range;
+        var meNeed = meIn && (P.hp < st.maxHp || se.healShield || se.healOver);
+        if(!meNeed && !hurtMen(t.x, t.y, ef.range, se.healAll).length){ t.cd = 0.2; continue; }   // 没人要回就不空烧 CD
       }
       t.cd = ef.cd; fireTower(t, ef);
       t.rep = ef.shots - 1; t.repT = 0.12;
@@ -3925,6 +3942,23 @@ var SOL_R = 8;            // 士兵的碰撞半径
 var SOL_SPD = 150;        // 士兵跑多快（比玩家 155 慢一点，追不上的就交给别的塔）
 var SOL_LEASH = 60;       // 追出兵营射程多远就放手、跑回营门口
 var SOL_REGEN = 0.10;     // 没在打的时候每秒回多少（占士兵血量）
+/* 圈里（all = 全场）活着、没满血的士兵 —— 回血塔和泉给他们回血用 */
+var MEN_HEAL_X = 3;           // 回血塔给士兵回的百分比 = 给你的 ×3
+var SPRING_MEN_PCT = 0.06;    // 泉：身边 SPRING_MEN_R 里的士兵每秒回 6% 最大生命（打着架也回）
+var SPRING_MEN_R = 170;
+function hurtMen(x, y, r, all){
+  var out = [], i, j, t, m;
+  for(i = 0; i < E.builds.length; i++){
+    t = E.builds[i]; if(t.k !== "tower" || !t.men) continue;
+    for(j = 0; j < t.men.length; j++){
+      m = t.men[j];
+      if(m.dead || m.hp >= m.maxHp) continue;
+      if(!all && Math.hypot(m.x - x, m.y - y) > r) continue;
+      out.push(m);
+    }
+  }
+  return out;
+}
 /* 拦得住的怪：近战、非 Boss。远程 / 缝合者 / 唤雷者要保持距离，爆囊只认你，Boss 谁也拦不住。 */
 function canBlock(f){
   var d = f.def;
@@ -4256,6 +4290,13 @@ function updateBuilds(dt){
   for(var i = 0; i < E.builds.length; i++){
     var b = E.builds[i];
     if(b.k !== "spring" && b.k !== "shop") continue;
+    /* 泉：身边的士兵一直在回血（用户 2026-09-26「回血建筑可以给士兵回血」），不占你那一口 */
+    if(b.k === "spring"){
+      var sm = hurtMen(b.x, b.y, SPRING_MEN_R, false);
+      for(var si = 0; si < sm.length; si++) sm[si].hp = Math.min(sm[si].maxHp, sm[si].hp + sm[si].maxHp * SPRING_MEN_PCT * dt);
+      b.menFx = (b.menFx || 0) - dt;
+      if(sm.length && b.menFx <= 0){ b.menFx = 1; for(si = 0; si < sm.length; si++) fxPlus(sm[si].x, sm[si].y - 10, "#266F7B"); }
+    }
     if(b.cool > 0) b.cool -= dt;
     if(Math.hypot(me.x - b.x, me.y - b.y) > BF.site.r){ b.inside = false; continue; }
     /* ⚠️ **进入判定圈的那一下才触发**（用户 2026-09-22 之后商摊变成了营地里的常驻建筑，
@@ -6011,21 +6052,28 @@ function onBossDown(b){
    - 走位：每 AUTO_RETHINK 秒把 30 来个方向各推演一遍（怪会追上来的位置、弹丸的最近距离、
      地面危险区、Boss 抬手锁死的落点、爆囊的引信），扣掉危险分、加上「刀够得着几只 / 捡钱 / 捡箱 /
      低血去喝泉 / 别离营地太远」的分，挑最高的那个方向走。**手一碰摇杆 / 方向键就听你的**，松手接着托管。
-   - 出刀：托管时刀不再只朝最近的那只，而是朝**这一刀能砍中最多（按优先级加权）**的方向。
-   - 挑遗物：升级四选一 / Boss 三选一 / 合成挑一件，等 AUTO_PICK_SEC 秒（这几秒里自己点也行），
+   - 基地：离营地中心太远就往回拉（AUTO_LEASH），太远的钱 / 箱不去捡（AUTO_REACH）。
+   - 出刀：跟手动一样走 bestAim()（朝砍中最多的方向）。
+   - 挑遗物：升级四选一 / Boss 三选一 / 合成挑一件，第一次等 AUTO_PICK_SEC 秒、每托管挑一次少 1 秒（最少 AUTO_PICK_MIN），
+     进部署（休整点）回到 AUTO_PICK_SEC（这几秒里自己点也行），
      卡片上挂一个倒计时标出它要挑哪件；取舍窗等 AUTO_SWAP_SEC 秒。**游商 / 暂停 / 信息 / 遗物页开着就不动**。
    - 满了自动合成：身上带满、没有弹窗时，挑一档「砸掉最不亏」的三件合掉。
    - **部署阶段（休整点）托管停下**，按钮还亮着；点「开战」之后自己接着托管。
    ⚠️ 纯界面状态：不进存档（开关只在这一页里记着，「再来一次」还开着）。
    ⚠️ 它**只读不改**游戏规则 —— 走位走的是摇杆那条路（inputVec 的替身），选遗物走的是按钮那几个函数。
    ================================================================ */
-var AUTO = {on:false, v:{x:0, y:0}, reT:0, veil:null, first:null, vt:0, act:null, tagEl:null, fusing:false};
-var AUTO_PICK_SEC = 5;       // 挑遗物的窗：等几秒再替你挑
-var AUTO_SWAP_SEC = 2;       // 取舍窗：等几秒
+var AUTO = {on:false, v:{x:0, y:0}, reT:0, veil:null, first:null, vt:0, act:null, tagEl:null, fusing:false,
+            wait:5, home:null};
+var AUTO_PICK_SEC = 5;       // 挑遗物的窗：一开始等几秒再替你挑
+var AUTO_PICK_MIN = 1;       // 每托管挑一次就少等 1 秒（用户 2026-09-26），最少等这么久；进部署（休整点）回到 AUTO_PICK_SEC
+var AUTO_SWAP_SEC = 2;       // 取舍窗：等几秒（跟挑遗物的倒计时取小的那个）
+var AUTO_LEASH = 140;        // 离基地（营地中心）超过这么远就往回拉，越远拉得越狠
+var AUTO_REACH = 300;        // 离基地超过这么远的钱 / 箱不去捡
 var AUTO_RETHINK = 0.06;     // 走位几秒重想一次
 var RAR_V = [3, 6, 12, 20, 30];   // 各品质的价值基准线（跟 遗物数据表.md 那把尺子同一套）
 function autoLive(){ return AUTO.on && P && !OVER && !DEPLOY; }
 function setAuto(on){
+  if(on && !AUTO.home && E && E.me) AUTO.home = {x:E.me.x, y:E.me.y};
   AUTO.on = on; AUTO.veil = null; AUTO.first = null; AUTO.v = {x:0, y:0}; AUTO.reT = 0;
   autoUntag();
   $("btnAuto").classList.toggle("on", on);
@@ -6096,14 +6144,21 @@ function autoCtx(s){
     c.drops.push({x:dr.x, y:dr.y, g:1 + Math.min(3, dr.n / (4 + P.wave))});
   }
   for(i = 0; i < E.sites.length; i++) c.sites.push({x:E.sites[i].x, y:E.sites[i].y});
-  var tx = 0, ty = 0, tn = 0;
   for(i = 0; i < E.builds.length; i++){
     var b = E.builds[i];
-    if(b.k === "tower"){ tx += b.x; ty += b.y; tn++; }
-    else if(b.k === "shop") c.shops.push(b);
+    if(b.k === "shop") c.shops.push(b);
     else if(b.k === "spring" && !b.used && hpF < 0.75) c.spring = b;
   }
-  if(tn) c.camp = {x:tx / tn, y:ty / tn};
+  /* 基地 = 营地里所有建筑（塔 / 泉 / 商）的中心；一座都没摆就用开战那一下站的地方 */
+  var bn = 0, bx = 0, by = 0;
+  for(i = 0; i < E.builds.length; i++){ bx += E.builds[i].x; by += E.builds[i].y; bn++; }
+  if(bn) c.camp = {x:bx / bn, y:by / bn};
+  else if(AUTO.home) c.camp = AUTO.home;
+  if(c.camp){                                  // 离基地太远的钱 / 箱不去捡
+    c.drops = c.drops.filter(function(o){ return Math.hypot(o.x - c.camp.x, o.y - c.camp.y) <= AUTO_REACH; });
+    c.sites = c.sites.filter(function(o){ return Math.hypot(o.x - c.camp.x, o.y - c.camp.y) <= AUTO_REACH; });
+    if(c.spring && Math.hypot(c.spring.x - c.camp.x, c.spring.y - c.camp.y) > AUTO_REACH * 1.5) c.spring = null;
+  }
   if(E.boss && !E.boss.dead) c.boss = E.boss;
   return c;
 }
@@ -6207,8 +6262,9 @@ function autoScore(c, vx, vy, ux, uy){
   var score = -danger * (1 + 1.4 * Math.max(0, 1 - c.hpF));
   score += hpS * 16 * (hit > 4 ? 4 + 0.4 * (hit - 4) : hit);
   if(hit <= 0 && near && near.f.immuneT <= 0) score -= hpS * 0.12 * Math.max(0, nearD);   // 刀够不着就往最近的那只挪
-  /* Boss 波：Boss 比你慢，光顾着躲会把它甩到天边、这一波永远打不完 —— 它才是这一波的目标 */
-  if(c.boss){
+  /* Boss 波：Boss 比你慢，光顾着躲会把它甩到天边、这一波永远打不完 —— 它才是这一波的目标
+     （有基地的时候它自己会追回来，所以拉得轻一点）*/
+  if(c.boss && !c.camp){
     px = me.x + vx * 0.5; py = me.y + vy * 0.5;
     score -= (0.1 + 0.25 * hpS) * Math.max(0, Math.hypot(px - c.boss.x, py - c.boss.y) - (c.reach + c.boss.r - 6));
   }
@@ -6240,10 +6296,12 @@ function autoScore(c, vx, vy, ux, uy){
       if(Math.hypot(me.x + vx * t - sb.x, me.y + vy * t - sb.y) < BF.site.r + 14){ score -= 400; break; }
     }
   }
-  /* 营地：塔打得到的地方才是主场，别把怪引到天边去 */
+  /* 基地：塔打得到的地方才是主场（用户 2026-09-26：「托管不会离基地太远」）——
+     超出 AUTO_LEASH 线性 + 平方往回拉，越远越狠；危险分够大时还是能先躲开，躲完就回来 */
   if(c.camp){
     px = me.x + vx * 0.6; py = me.y + vy * 0.6;
-    score -= 0.05 * Math.max(0, Math.hypot(px - c.camp.x, py - c.camp.y) - 240);
+    var over = Math.max(0, Math.hypot(px - c.camp.x, py - c.camp.y) - AUTO_LEASH);
+    score -= 0.8 * over + 0.02 * over * over;
   }
   /* 别来回抖 */
   score += 5 * (ux * AUTO.v.x + uy * AUTO.v.y);
@@ -6265,15 +6323,16 @@ function autoMove(s, dt){
   AUTO.v = best;
   return best;
 }
-/* 托管时的出刀方向：这一刀能砍中的（按优先级加权）最多 */
-function autoAim(s){
+/* 出刀方向：刀够得着的敌人里，挑「这一刀扇形里装得下最多只」的那个方向（数量一样按优先级分高低）。
+   刀够得着的一只都没有 → 返回 null，aimDir 退回「附近最近的那只」。张角 360° 朝哪儿都一样，也交给 aimDir。 */
+function bestAim(s){
   var me = E.me, i, j, f, g, cand = [], best = null, bs = 0;
   if(s.arc >= 360) return null;
   var ha = s.arc * Math.PI / 360;
   for(i = 0; i < E.foes.length; i++){
     f = E.foes[i]; if(f.dead) continue;
     var d = Math.hypot(f.x - me.x, f.y - me.y);
-    if(d <= s.range + f.r) cand.push({f:f, a:Math.atan2(f.y - me.y, f.x - me.x), p:autoPri(f)});
+    if(d <= s.range + f.r) cand.push({a:Math.atan2(f.y - me.y, f.x - me.x), p:autoPri(f)});
   }
   for(i = 0; i < cand.length; i++){
     var sum = 0;
@@ -6282,7 +6341,7 @@ function autoAim(s){
       var ad = g.a - cand[i].a;
       while(ad >  Math.PI) ad -= Math.PI * 2;
       while(ad < -Math.PI) ad += Math.PI * 2;
-      if(Math.abs(ad) <= ha) sum += g.p;
+      if(Math.abs(ad) <= ha) sum += 1 + g.p * 0.01;         // 先比只数，只数一样再比优先级
     }
     if(sum > bs){ bs = sum; best = cand[i].a; }
   }
@@ -6422,6 +6481,7 @@ function autoDecide(vid){
 }
 /* 每一帧都跑（暂停时也跑 —— 挑遗物的窗开着就是暂停），用的是真实时间 */
 function autoTick(rdt){
+  if(DEPLOY) AUTO.wait = AUTO_PICK_SEC;                  // 到了休整点：倒计时回到 5 秒
   if(!AUTO.on || !P || OVER || DEPLOY){ if(AUTO.veil){ AUTO.veil = null; autoUntag(); } return; }
   var on = document.querySelectorAll(".veil.on"), top = on.length ? on[on.length - 1] : null;
   if(!top){
@@ -6435,7 +6495,8 @@ function autoTick(rdt){
   if(AUTO.veil !== vid || AUTO.first !== first){
     autoUntag();
     AUTO.veil = vid; AUTO.first = first;
-    AUTO.vt = (vid === "veilSwap" || vid === "veilSpSwap") ? AUTO_SWAP_SEC : AUTO_PICK_SEC;
+    AUTO.swap = vid === "veilSwap" || vid === "veilSpSwap";
+    AUTO.vt = AUTO.swap ? Math.min(AUTO_SWAP_SEC, AUTO.wait) : AUTO.wait;
     AUTO.act = autoDecide(vid);
     if(AUTO.act && AUTO.act.card){
       AUTO.act.card.classList.add("aipick");
@@ -6445,9 +6506,10 @@ function autoTick(rdt){
   }
   if(!AUTO.act) return;
   AUTO.vt -= rdt;
-  if(AUTO.tagEl) AUTO.tagEl.textContent = L("托管 · ", "Auto · ") + Math.max(1, Math.ceil(AUTO.vt));
+  if(AUTO.tagEl) AUTO.tagEl.textContent = L("托管 · ", "Auto · ") + Math.max(0, Math.ceil(AUTO.vt));
   if(AUTO.vt <= 0){
     var fn = AUTO.act.fn;
+    if(!AUTO.swap) AUTO.wait = Math.max(AUTO_PICK_MIN, AUTO.wait - 1);   // 挑完一次，下一次少等 1 秒
     AUTO.act = null; autoUntag(); AUTO.veil = null; AUTO.first = null;
     fn();
   }
