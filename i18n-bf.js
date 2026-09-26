@@ -139,6 +139,7 @@ Object.assign(I18N, {
   "换一批": "Reroll",
   "都不要": "None of these",
   "遗物带满了": "Relics full",
+  "算了": "Never mind",
   "换掉一件，换下来的当场分解成金币": "Swap one out — it's salvaged into gold on the spot",
   "身上的": "Carried",
   "特殊遗物": "Special relics",

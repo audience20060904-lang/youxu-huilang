@@ -969,7 +969,31 @@ function orbOn(k){ return !!(P && P.orb && P.orb.on && P.orb.on[k]); }
 function orbAdd(k){ return (P && P.orb && P.orb.add && P.orb.add[k]) || 0; }
 function orbBaseOn(k){ return !!(P && P.orb && P.orb.base && P.orb.base[k]); }
 function spDef(id){ for(var i = 0; i < BF_SPECIAL.length; i++) if(BF_SPECIAL[i].id === id) return BF_SPECIAL[i]; return null; }
-function reindex(){ P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1; }
+function reindex(){
+  P.rset = {}; for(var i = 0; i < P.relics.length; i++) P.rset[P.relics[i]] = 1;
+  /* 千面（第十三批）：这一波借来的两件也算「带着」—— 只认这一波的，千面本身得真在身上 */
+  if(P.face && P.face.w === P.wave && P.rset.thousandface)
+    for(var j = 0; j < P.face.ids.length; j++) P.rset[P.face.ids[j]] = 1;
+}
+/* 千面：进一波就从传奇里借 2 件身上没有的（行囊 / 集齐不借），这一波有效 */
+function faceRoll(){
+  if(P.relics.indexOf("thousandface") < 0){ if(P.face){ withMaxHp(function(){ P.face = null; reindex(); }); } return; }
+  var pool = RELICS.filter(function(r){ return r.r === 3 && P.relics.indexOf(r.id) < 0 && FACE_BAN.indexOf(r.id) < 0; });
+  var ids = [];
+  while(ids.length < FACE_N && pool.length) ids.push(pool.splice(ri(0, pool.length - 1), 1)[0].id);
+  withMaxHp(function(){ P.face = {w:P.wave, ids:ids}; reindex(); });
+  if(ids.length) fxText(L("千面：", "Thousand Faces: ") + ids.map(function(id){ return RMAP[id].n; }).join(L("、", ", ")), "#A8891C");
+}
+/* 百纳（第十三批）：普通 / 稀有不占格子 —— 「带满了没有」一律走这两个，别再直接比 P.relics.length */
+function relicLoad(){
+  if(!has("patchwork")) return P.relics.length;
+  var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r >= 2) n++;
+  return n;
+}
+function relicFull(id){
+  if(id && RMAP[id] && RMAP[id].r < 2 && has("patchwork")) return false;
+  return relicLoad() >= relicCap();
+}
 function nRar(r){ var n = 0; for(var i = 0; i < P.relics.length; i++) if(RMAP[P.relics[i]].r === r) n++; return n; }
 /* 群星（第十二批）：身上史诗以上的遗物几件，最多 20 */
 function starN(){ return Math.min(20, nRar(2) + nRar(3) + nRar(4)); }
@@ -1040,6 +1064,7 @@ function newWave(w, quiet){
   if(!prevBled) P.noHitWaves++;
   /* 「稳步」：上一波没受过伤 */
   if(has("pace") && !prevHurt) healUp(bstats().maxHp * 0.55);
+  faceRoll();                                              // 千面（第十三批）：先借，进波的遗物才算得上借来的
   onWaveRelics(w);
 }
 
@@ -1076,6 +1101,7 @@ function bstats(){
   if(has("colossus"))    s.maxHp = Math.round(s.maxHp * 1.3);      // 巨骨（第十一批）：跟铁躯连乘
   if(has("spendlife"))   s.maxHp = Math.round(s.maxHp * (1 + Math.min(40, Math.floor(P.spent / 150)) / 100));   // 千金（第十二批）
   if(has("constellation")) s.maxHp = Math.round(s.maxHp * (1 + 0.05 * starN()));                               // 群星（第十二批）
+  if(has("erudite"))     s.maxHp = Math.round(s.maxHp * (1 + 0.01 * Math.floor(P.kills / 200)));             // 积学（第十三批）：每杀 200 只
   if(has("offer"))       s.maxHp = Math.round(s.maxHp / 2);        // 献身
   s.maxHp = Math.max(1, Math.round(s.maxHp));
   var hpPct = s.maxHp > 0 ? P.hp / s.maxHp : 1;
@@ -1180,6 +1206,8 @@ function bstats(){
   if(has("ease")  && hpPct > 0.80) c += 12;
   if(has("ironvow")) c += 2 * Math.min(5, Math.floor(s.armor / 3));
   if(has("confluence")) c += 2 * confTiers(s);
+  if(has("redirect")) c += 10;                                      // 化劲（第十三批）：挡掉的那部分在 takeHit
+  if(has("lunar") && w % 2 === 0) c += 25;                          // 朔望（第十三批）：偶数波
   c += orbAdd("cut");                                               // 宝珠词条
   s.cutStatic = c;
   s.cut = c;
@@ -1190,6 +1218,9 @@ function bstats(){
   /* --- ⑥ 别的 --- */
   if(has("greed")) s.goldPct += 20;
   if(has("rust"))  s.goldPct += 10;
+  if(has("patchwork")){                                             // 百纳（第十三批）：每带一件普通 / 稀有，金币 −1%
+    for(var pi = 0; pi < P.relics.length; pi++) if(RMAP[P.relics[pi]].r < 2) s.goldPct -= 1;
+  }
   if(has("study")) s.xpPct  += 10;
   if(has("spark")) s.comboStep = 4;                                 // 火星：10 → 4（跟地牢 5 → 2 同一个比例）
   if(has("wellread")) s.range = Math.round(s.range * 1.10);         // 战场改写
@@ -1237,7 +1268,7 @@ function relicCap(){ return BF.relicMax + (has("pack") ? 3 : 0) + (orbOn("black2
    ⚠️ 只在**从没满到满**的那一下弹一次（P.bagAlerted），掉到满以下才复位；
       而且挂在 step() 里（暂停时不跑），所以不会打断别的弹层。 */
 function maybeFullBag(){
-  if(P.relics.length >= relicCap()){
+  if(relicLoad() >= relicCap()){
     if(!P.bagAlerted && !anyVeil() && !OVER){
       P.bagAlerted = true;
       fuseMode = false; fuseSel = []; sellArmed = null;
@@ -1431,6 +1462,9 @@ function swing(mult){
   if(has("billow"))   pct += 20;                                    // 叠浪（第十一批）：换暴击伤害那一半在下面
   if(has("constellation")) pct += 5 * starN();                      // 群星（第十二批）
   if(has("wildfire")) pct += Math.floor(Math.max(0, 1 - hp1) * 150);  // 燎原（第十二批）：每少 1% 生命 +1.5%
+  if(has("erudite"))  pct += Math.floor(1.5 * Math.floor(P.kills / 200));   // 积学（第十三批）：每杀 200 只
+  if(has("lunar") && w % 2 === 1) pct += 35;                        // 朔望（第十三批）：奇数波
+  if(has("redirect") && P.redirect > 0 && mult === 1){ extra += P.redirect; P.redirect = 0; }   // 化劲：挡掉的打回去
   pct += orbAdd("atkPct") + (orbOn("red2") ? 25 : 0);               // 宝珠：② 层，跟别的百分比同一个桶
   if(hasSp("sp_horde"))  pct += 3 * nearFoes(200);
   if(hasSp("sp_magnet")){ pct += 3 * G.magnetN; G.magnetN = 0; }
@@ -1488,6 +1522,14 @@ function swing(mult){
     /* 凿骨（第十二批）：另外扣这只最大生命的 4%（精英 / Boss 1.5%）—— 一刀扫好几只，所以是地牢的一半。
        单独一笔，不吃百分比和暴击。*/
     if(has("chisel") && !f.dead) hurtFoe(f, Math.max(1, Math.round(f.maxHp * (f.boss || f.elite ? 0.015 : 0.04))), s, false);
+    /* 余劲（第十三批）：这一刀砍倒了，溢出的 ×1.5 砸到最近的一只 —— 最多它最大生命的 50%，永远留 1 点（不连锁）*/
+    if(has("momentum") && f.dead && d2 > hpWas && hpWas > 0){
+      var nx = nearestFoe();
+      if(nx){
+        var mo = Math.min(Math.round((d2 - hpWas) * 1.5), Math.floor(nx.maxHp * 0.5), Math.ceil(nx.hp) - 1);
+        if(mo > 0){ nx.hp -= mo; nx.flash = 0.12; fxNum(nx.x, nx.y - nx.r - 4, mo, false); }
+      }
+    }
     /* 吸血（第十一批）只算真的打进血条的量，而且**一刀只算打得最重的那一只** ——
        一刀扫五只的话按五只算，地牢「答一题回一次」的频率就对不上了。*/
     landBest = Math.max(landBest, Math.max(0, hpWas - Math.max(0, f.hp)));
@@ -1677,12 +1719,44 @@ function takeHit(dmg, foe, o){
   if(has("thorns")) splash(foe, 30);
   if(has("build")) addShield(2);
 
-  if(free){ fxText(L("免伤", "No damage"), "#47702F"); return; }
+  if(free){ fxText(L("免伤", "No damage"), "#47702F"); redirectBank(dmg, 0); return; }
 
   /* 卸力（第十一批）：每只敌人**第一次**打中你，这一下减半（每波最多 4 次）—— 地牢的「每场第一次」*/
   if(has("deflect") && foe && !foe.deflected && G.deflectN < 4){ foe.deflected = true; G.deflectN++; o.deflect = true; }
   var out = mitigate(dmg, s, o);
-  if(out <= 0){ fxText("0", "#47702F"); return; }
+  if(out <= 0){ fxText("0", "#47702F"); redirectBank(dmg, 0); return; }
+  /* 缓刑（第十三批）：这一口不立刻扣，分 3 秒慢慢扣（payOwes 每帧扣一点，杀敌让剩下的少扣）*/
+  if(has("reprieve")){
+    if(!P.owes) P.owes = [];
+    P.owes.push({n:out, r:out / 3});
+    redirectBank(dmg, out);
+    fxText("…" + out, "#A93729");
+    return;
+  }
+  var lost = landHit(out, foe, s);
+  redirectBank(dmg, lost);
+}
+/* 化劲：这一口本来 raw，最后落到血上的是 lost，差的那部分 ×3 攒起来，下一刀并进额外伤害（最多攻击的 2 倍）*/
+function redirectBank(raw, lost){
+  if(!has("redirect")) return;
+  var got = Math.max(0, raw - lost) * 3;
+  if(got > 0) P.redirect = Math.min(bstats().atk * 2, (P.redirect || 0) + got);
+}
+/* 缓刑的账：每帧按「3 秒扣完」的速度扣，小数攒着、满 1 点扣 1 点（走 landHit：先吃护盾、照样判倒下）*/
+function payOwes(dt){
+  if(!P.owes || !P.owes.length || OVER) return;
+  var due = 0;
+  for(var i = P.owes.length - 1; i >= 0; i--){
+    var o = P.owes[i], k = Math.min(o.n, o.r * dt);
+    o.n -= k; due += k;
+    if(o.n <= 0.001) P.owes.splice(i, 1);
+  }
+  P.oweBank = (P.oweBank || 0) + due;
+  var whole = Math.floor(P.oweBank);
+  if(whole > 0){ P.oweBank -= whole; landHit(whole, null, bstats(), true); }
+}
+/* 真的落到身上：护盾先吃，剩下的扣血。返回掉了多少血。quiet = 缓刑扣账（不再跳字，不算「被谁打中」）*/
+function landHit(out, foe, s, quiet){
 
   /* ---- 护盾先吃 ---- */
   var hadShield = P.shield > 0;
@@ -1691,7 +1765,7 @@ function takeHit(dmg, foe, o){
     P.shield -= eat; out -= eat;
     if(hadShield && P.shield <= 0) onShieldBroken();
   }
-  if(out <= 0){ fxText(L("盾", "Shield"), "#6E86A8"); return; }
+  if(out <= 0){ if(!quiet) fxText(L("盾", "Shield"), "#6E86A8"); return 0; }
 
   P.hp -= out; G.dmgTaken += out;
   /* 逆刺：挨一下，还一片 */
@@ -1703,7 +1777,7 @@ function takeHit(dmg, foe, o){
   if(has("recoil")) P.recoil = Math.min(3, P.recoil + 1);
   if(has("chew")) P.chew = 1;
   if(has("prime")) P.primeLeft = 3;
-  fxText("-" + out, "#A93729");
+  if(!quiet) fxText("-" + out, "#A93729");
   if(foe && !foe.haunt && G.hauntN < BF.hauntMax * (has("bind") ? 2 : 1)){
     foe.haunt = true; G.hauntN++;
   }
@@ -1713,6 +1787,7 @@ function takeHit(dmg, foe, o){
   if(has("whole") && !G.wholeUsed && P.hp < s.maxHp * 0.5){
     G.wholeUsed = true; P.hp = Math.round(s.maxHp * 0.8); }
   if(P.hp <= 0) deathSave(s);
+  return out;
 }
 
 function onShieldBroken(){
@@ -1746,7 +1821,7 @@ function healUp(n, force){
   return real;
 }
 /* 护盾的硬上限：**生命上限的两倍**（用户 2026-09-22）。
-   ⚠️ 这是全局的一道闸，凝盾自己那个 AEGIS_MAX 仍然照吃（取两者里小的那个）——
+   ⚠️ 这是全局的一道闸，凝盾自己那个 300 仍然照吃（取两者里小的那个；地牢的凝盾 2026-09-26 改成按比例了，战场没跟）——
       护盾不走减伤链也不进结算，堆到四五百就是「这一趟不会死了」。 */
 function shieldCap(s){ return Math.max(1, Math.round((s || bstats()).maxHp * BF.shieldMaxX)); }
 function addShield(n, cap){
@@ -1979,6 +2054,9 @@ function killFoe(f){
   if(f.def.leave) addZone(f.x, f.y, f.def.leave.r, 0, f.def.leave.life, f.leaveDmg, "#4A3A6A");
   var s = bstats();
   P.kills++; P.killStreak++;
+  /* 缓刑（第十三批）：每杀一只，还挂着的账少扣 10% */
+  if(has("reprieve") && P.owes && P.owes.length)
+    for(var oi = 0; oi < P.owes.length; oi++){ P.owes[oi].n *= 0.9; P.owes[oi].r *= 0.9; }
   P.kinds[f.id] = (P.kinds[f.id] || 0) + 1;
   if(f.haunt){ G.hauntN = Math.max(0, G.hauntN - 1); P.hauntKills++;
     if(has("bind")) healUp(s.maxHp * 0.02);                  // 缚魂：驱散回血（2026-09-23 补）
@@ -2832,7 +2910,7 @@ function openDeploy(resume){
                 vacNow:vacNow, orb: P.round === 1 ? (P.orbGold || 0) : 0};
   giveBuildCard("spring"); giveBuildCard("shop");                // 用户：每次部署白给一张泉 + 一张商
   for(i = 0; i < E.builds.length; i++)                           // 用户：商店每五波刷新
-    if(E.builds[i].k === "shop"){ E.builds[i].stock = null; E.builds[i].cool = 0; }
+    if(E.builds[i].k === "shop"){ E.builds[i].stock = null; E.builds[i].cool = 0; E.builds[i].bart = false; }
   rollShopCards();
   for(vi = 0; vi < vcard; vi++) giveFreeCard();      // ⚠️ 要排在 rollShopCards 之后（它会动牌库）
   openDeployUI();
@@ -5710,6 +5788,7 @@ function step(dt){
 
   /* 二段：补的那一刀 */
   if(me.second > 0){ me.second -= dt; if(me.second <= 0) swing(0.7); }
+  payOwes(dt);                                      // 缓刑（第十三批）
   spawnTick(dt); updateFoes(dt); updateShots(dt); updateDrops(dt); updateSites(dt);
   updateTowers(dt); updateTShots(dt); updateBuilds(dt); updateZones(dt);
   updateSpecial(dt, s);
@@ -5900,7 +5979,7 @@ function renderHud(){
   hb.dataset.sh = now;
   $("hpTxt").textContent = Math.ceil(hp) + " / " + s.maxHp + (P.shield > 0 ? "  +" + Math.round(P.shield) : "");
   /* 遗物快满了（还剩 1 格）就在「遗物」按钮上挂个红点 —— 再捡就要弹取舍窗了（用户 2026-09-22）*/
-  $("btnBag").classList.toggle("warn", P.relics.length >= relicCap() - 1);
+  $("btnBag").classList.toggle("warn", relicLoad() >= relicCap() - 1);
   var bb = $("bossBar");
   if(E.boss && !E.boss.dead){
     bb.hidden = false;
@@ -6066,18 +6145,57 @@ function takePick(id){
 var swapNewId = null, swapAfter = null;
 function grantRelic(id, after){
   if(!id){ if(after) after(); return; }
-  if(P.relics.length < relicCap()){
+  if(!relicFull(id)){
     withMaxHp(function(){ P.relics.push(id); reindex(); });
     if(after) after();
     return;
   }
-  swapNewId = id; swapAfter = after;
+  swapNewId = id; swapAfter = after; swapBarter = null;
+  swapChrome(false);
   fillCards("swapNew", [RMAP[id]], function(r){ return '<span class="cost">' + L('卖 ', 'Sell ') + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
-  fillCards("swapOld", relicsByRar(),
+  /* 百纳：普通 / 稀有不占格子，换下它们腾不出位置 —— 带满时只摆史诗以上的 */
+  fillCards("swapOld", relicsByRar().filter(function(r){ return !has("patchwork") || r.r >= 2; }),
             function(r){ return '<span class="cost">+' + sellPrice(r) + L(' 金', ' gold') + '</span>'; });
   show("veilSwap");
 }
+/* 取舍窗的标题 / 说明 / 「算了」钮：易货借这个窗时换一套 */
+function swapChrome(barter){
+  $("swapH").textContent = barter ? L("易货", "Barter") : L("遗物带满了", "Relics full");
+  $("swapSub").textContent = barter ? L("点上面那件花金币买下，或者点一件同品质的换它（每批货一次）",
+                                        "Tap the shelf relic to buy it, or tap a same-rarity relic to trade (once per stock)")
+                                    : L("换掉一件，换下来的当场分解成金币", "Swap one out — it's salvaged into gold on the spot");
+  $("swapCancelRow").hidden = !barter;
+}
+/* 易货（第十三批）：点货架上那件时，有同品质的就先弹这个窗（买 / 换 / 算了）*/
+var swapBarter = null;
+function openBarter(t, row){
+  var r = RMAP[row.id], price = shopPrice(row);
+  swapBarter = {t:t, row:row};
+  swapChrome(true);
+  fillCards("swapNew", [r], function(){ return '<span class="cost">' + price + L(' 金', ' gold') + '</span>'; },
+            function(){ return P.gold < price ? "dim" : ""; });
+  fillCards("swapOld", relicsByRar().filter(function(x){ return x.r === r.r && x.id !== "barter"; }),
+            function(){ return '<span class="cost">' + L('拿它换', 'Trade') + '</span>'; });
+  show("veilSwap");
+}
+function barterDone(oldId){
+  var b = swapBarter; swapBarter = null;
+  hide("veilSwap");
+  if(!b) return;
+  var t = b.t, row = b.row;
+  if(oldId === "buy"){ curShop = t; show("veilShop"); buyShop(row.id, true); renderShop(); return; }
+  if(oldId && !row.sold && !t.bart){
+    var i = P.relics.indexOf(oldId), old = RMAP[oldId], got = row.id;
+    if(i >= 0 && old && old.r === RMAP[got].r){
+      withMaxHp(function(){ P.relics.splice(i, 1); P.relics.push(got); reindex(); });
+      row.id = oldId; row.price = Math.ceil(sellPrice(old) * shopMarkup(old));
+      t.bart = true;
+    }
+  }
+  curShop = t; renderShop(); show("veilShop");
+}
 function doSwap(oldId){
+  if(swapBarter){ barterDone(oldId === null ? "buy" : oldId); return; }
   var nid = swapNewId, after = swapAfter;
   swapNewId = null; swapAfter = null;
   withMaxHp(function(){
@@ -6108,7 +6226,7 @@ function withMaxHp(fn){
 function openInfo(){
   var s = bstats();
   $("infoSub").textContent = L("第 " + P.wave + " 波 · ", "Wave " + P.wave + " · ") + TIER.name + L(" · 击杀 ", " · Kills ") + P.kills +
-    L(" · 遗物 ", " · Relics ") + P.relics.length + " / " + relicCap() + L(" · 特殊 ", " · Special ") + P.special.length;
+    L(" · 遗物 ", " · Relics ") + relicLoad() + " / " + relicCap() + L(" · 特殊 ", " · Special ") + P.special.length;
   $("infoStats").innerHTML =
     st2(L("攻击", "ATK"), s.atk) + st2(L("生命", "HP"), Math.ceil(P.hp) + " / " + s.maxHp) +
     st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic + "%") +
@@ -6127,7 +6245,10 @@ function openInfo(){
   show("veilInfo");
 }
 function openBag(){
-  $("bagTitle").textContent = L("遗物 ", "Relics ") + P.relics.length + " / " + relicCap();
+  $("bagTitle").textContent = L("遗物 ", "Relics ") + relicLoad() + " / " + relicCap() +
+    (has("patchwork") ? L(" · 共 " + P.relics.length + " 件", " · " + P.relics.length + " total") : "") +
+    (P.face && P.face.w === P.wave && has("thousandface") && P.face.ids.length
+      ? L(" · 借来：", " · Borrowed: ") + P.face.ids.map(function(id){ return RMAP[id].n; }).join(L("、", ", ")) : "");
   fillCards("bagList", relicsByRar(),
             function(r){
               if(fuseMode) return "";
@@ -6350,11 +6471,16 @@ function renderShop(){
   }
   $("shopList").innerHTML = h || '<p class="sub">' + L("货架空了。", "Sold out.") + '</p>';
 }
-function buyShop(id){
+function buyShop(id, noBarter){
   var t = curShop; if(!t) return;
   var row = null, i;
   for(i = 0; i < t.stock.length; i++) if(t.stock[i].id === id && !t.stock[i].sold) row = t.stock[i];
-  if(!row || P.gold < shopPrice(row)) return;
+  if(!row) return;
+  /* 易货（第十三批）：这批货还没换过、身上有同品质的 → 先问买还是换 */
+  if(!noBarter && has("barter") && !t.bart && P.relics.some(function(x){ return x !== "barter" && RMAP[x].r === RMAP[row.id].r; })){
+    hide("veilShop"); openBarter(t, row); return;
+  }
+  if(P.gold < shopPrice(row)) return;
   paySpend(shopPrice(row)); P.bought++; P.everBought = true;
   row.sold = true;
   grantRelic(id, renderShop);
@@ -6388,7 +6514,7 @@ function bfSave(m){ if(!save(BF_KEY, m) && window.showErr) showErr(L("存档写�
 var BFRUN_V = 1;
 function bfBuildRow(b){
   return {k:b.k, tid:b.tid, star:b.star, x:Math.round(b.x), y:Math.round(b.y),
-          used:!!b.used, stock:b.stock || null};
+          used:!!b.used, stock:b.stock || null, bart:!!b.bart};
 }
 function saveWave(needDeploy){
   if(!P || OVER) return;
@@ -6445,7 +6571,7 @@ function resumeSaved(r){
       if(!TW_MAP[b.tid]) continue;
       E.builds.push(mkTower(b.tid, b.star, b.x, b.y));
     } else if(b.k === "spring") E.builds.push({k:"spring", x:b.x, y:b.y, t:0, used:!!b.used});
-    else if(b.k === "shop")     E.builds.push({k:"shop", x:b.x, y:b.y, t:0, cool:0, stock:b.stock || null});
+    else if(b.k === "shop")     E.builds.push({k:"shop", x:b.x, y:b.y, t:0, cool:0, stock:b.stock || null, bart:!!b.bart});
   }
   newWave(r.wave, true);                 // quiet：进波的遗物上次已经发过了，别重发
   P.wave = r.wave;
@@ -6473,7 +6599,7 @@ function orbStart(){
   if(rars.length) withMaxHp(function(){
     rars.forEach(function(r){
       var pool = relicPool(r);
-      if(pool.length && P.relics.length < relicCap()){ P.relics.push(pick(pool).id); reindex(); }
+      if(pool.length && !relicFull()){ P.relics.push(pick(pool).id); reindex(); }
     });
   });
   P.hp = bstats().maxHp;                                   // 开局满血（绿 2 之类的上限加成算进去）
@@ -6626,6 +6752,7 @@ function boot(){
 
   onCards("swapNew", function(){ doSwap(null); });
   onCards("swapOld", function(id){ doSwap(id); });
+  $("btnSwapCancel").addEventListener("click", function(){ if(swapBarter) barterDone(null); });
 
   /* ---- 信息 / 特殊遗物 ---- */
   $("btnInfo").addEventListener("click", openInfo);
@@ -6660,7 +6787,7 @@ function boot(){
   $("btnQuit").addEventListener("click", function(){ hide("veilPause"); endRun(); });
 
   /* ---- 游商 ---- */
-  onCards("shopList", buyShop);
+  onCards("shopList", function(id){ buyShop(id); });   // ⚠️ onCards 会把卡片元素当第二个参数传进来，别让它顶掉 noBarter
   $("btnShopClose").addEventListener("click", function(){
     if(curShop) leaveSite(curShop);                          // 摊子留着，回头攒够钱还能来
     curShop = null; hide("veilShop");

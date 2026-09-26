@@ -759,11 +759,38 @@ Object.assign(I18N, {
 "幽墟回廊 · 玩法": "Youxu Corridors · How to play",
 "词就是你的剑": "Words are your sword"
 });
+/* 第十三批遗物（2026-09-26）+ 遗物页品质筛选 */
+Object.assign(I18N, {
+" <span class=\"shn owe\">欠 ": " <span class=\"shn owe\">owe ",
+"余劲 —— 上一刀没收住，先砸掉 ": "Momentum — the last swing carried over, hitting ",
+"（缓刑：分 3 题扣）": " (Reprieve: paid over 3 questions)",
+" <span class=\"sys\">(化劲 +": " <span class=\"sys\">(Redirect +",
+" <span class=\"sys\">(余劲 ": " <span class=\"sys\">(Momentum ",
+" 留给下一只)</span>": " carried to the next foe)</span>",
+" <span class=\"sys\">(化劲攒下 ": " <span class=\"sys\">(Redirect stored ",
+" 咬中你 —— <b>": " bites you — <b>",
+"</b> 点记在账上，分 ": "</b> damage goes on the tab, paid over ",
+" 题扣（答对少扣）": " questions (less for each right answer)",
+" <span class=\"sys\">(缓刑 · 这一份免了)</span>": " <span class=\"sys\">(Reprieve · this share waived)</span>",
+" <span class=\"sys\">(缓刑 · 扣了 ": " <span class=\"sys\">(Reprieve · paid ",
+"，少扣 ": ", saved ",
+"以物易物": "Barter",
+"游商换给你": "The merchant trades you",
+" 递过去，换回了 ": " over and get back ",
+"千面 —— 这一层借来了 ": "Thousand Faces — borrowed for this floor: ",
+"易货": "Barter",
+"拿哪一件去换？": "Trade which one?",
+"算了，不换": "Never mind",
+"<span class=\"rl\">点它 → 算了，不换</span>": "<span class=\"rl\">Tap it → never mind</span>",
+"全部": "All",
+" · 千面借来的（这一层）": " · borrowed (this floor)"
+});
 var I18N_BLOCKS = {
 "#veilForge .note": "One in three <b>rises a rarity</b>, one in three <b>becomes another of the same rarity</b>, one in three <b>drops a rarity</b>. There's no taking it back.",
 "#veilChest .note": "<b>Spell it right</b> and the chest opens. Spell it wrong and the lock jams for good — one chance only.",
 "#veilShop .note": "\"Cave money is spent in the cave. What you carry out, I can't collect.\" <span id=\"shopGold\"></span>",
-"#veilSwap .note": "You can carry at most <b id=\"swapMax\">10</b>. Tap an old one to swap it out — <b>tap the new one above to sell it instead</b>.",
+"#swapBarterNote": "Only a relic of the <b>same rarity</b> can be traded; the one you hand over stays on the shelf.",
+"#swapNote": "You can carry at most <b id=\"swapMax\">10</b>. Tap an old one to swap it out — <b>tap the new one above to sell it instead</b>.",
 "#veilBless .note": "Gems <b id=\"blessGem\">0</b>  One slot <b id=\"blessCost\">2000</b>; once open, changing its relic is free.",
 "#stairNote": "Once you go down, <b>you can't come back to this floor</b>. The game saves when you enter the next floor.",
 "#panelCode .note": "One <b>save code</b> holds your <b>word progress, relic codex, records, gems and blessings</b>. Tap \"Copy\" on the old device and \"Paste\" on the new one. Importing <b>keeps the better of both</b>, so it never erases progress on this device; <b>an unfinished run isn't included</b>.",
@@ -1182,7 +1209,7 @@ var RELIC_EN = {
 ],
 "aegis": [
 "Aegis",
-"Every 10 correct answers: +10 shield (max 300)",
+"Every 10 correct answers: shield +30% max HP (max 2× max HP)",
 "Every word she remembers forms another layer on her."
 ],
 "unchain": [
@@ -1452,7 +1479,7 @@ var RELIC_EN = {
 ],
 "foresight": [
 "Rainy Day Fund",
-"On a new floor: restore 3% max HP per 100 gold you carry",
+"On a new floor: restore 3% max HP per 100 gold you carry (max 200%)",
 "A heavy purse on the hip means sounder sleep."
 ],
 "veteran": [
@@ -1956,6 +1983,46 @@ var RELIC_EN = {
 "Wildfire",
 "Damage +1.5% per 1% HP missing; below 30% HP, right answers heal 3% max HP",
 "A fire burns fiercest on its last stretch."
+],
+"erudite": [
+"Erudition",
+"Per 100 different words answered right: damage +1.5%, max HP +1% (no cap)",
+"Every page you've read stands behind you."
+],
+"reprieve": [
+"Reprieve",
+"Damage taken is paid over 3 questions; each right answer cuts that share by 40%",
+"The sentence is passed — it just hasn't been carried out."
+],
+"redirect": [
+"Redirect",
+"Damage taken −10%; blocked damage ×3 is added to your next right answer",
+"Force isn't stopped — it's caught and sent back."
+],
+"momentum": [
+"Momentum",
+"Overkill damage ×1.5 hits the next foe you fight (max 50% of its HP)",
+"If this swing can't stop, let it find the next one."
+],
+"lunar": [
+"Moon Phase",
+"Odd floors: damage +35%; even floors: damage taken −25%",
+"The moon never stays full, and never stays dark."
+],
+"barter": [
+"Barter",
+"Once per merchant: trade one of your relics for a shelf relic of the same rarity",
+"Money came later."
+],
+"patchwork": [
+"Patchwork",
+"Common and rare relics take no slot; each one you carry: gold income −1%",
+"Keep every scrap, and stitched together it's a robe."
+],
+"thousandface": [
+"Thousand Faces",
+"Each floor: borrow 2 random legendary relics you lack (this floor only)",
+"It leaves every morning wearing a different face."
 ]
 };
 
@@ -2020,6 +2087,14 @@ var BFW_EN = {
  spoils: "Defeating a Boss: one extra level-up relic pick",
  keeneye: "Level-up picks always include an Epic or better",
  wildfire: "Damage +1.5% per 1% HP missing; below 30% HP, each swing heals 3% max HP",
+ /* 第十三批（2026-09-26）*/
+ erudite: "Every 200 enemies defeated: damage +1.5%, max HP +1% (no cap)",
+ reprieve: "Damage taken is paid over 3 seconds; each kill meanwhile cuts what's left by 10%",
+ redirect: "Damage taken −10%; damage blocked ×3 becomes extra damage on your next swing",
+ momentum: "Overkill damage ×1.5 hits the nearest enemy (max 50% of its HP)",
+ lunar: "Odd waves: damage +35%; even waves: damage taken −25%",
+ barter: "Once per merchant stock: trade one of your relics for a shelf relic of the same rarity",
+ thousandface: "Each new wave: borrow 2 random legendary relics you don't have (this wave only)",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",

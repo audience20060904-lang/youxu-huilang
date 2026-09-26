@@ -136,6 +136,7 @@ body{
 .hpbar .sh{position:absolute;left:0;top:0;height:42%;width:0;background:var(--frost);opacity:.6;
   border-bottom:1px solid rgba(255,255,255,.45);transition:width .22s ease}
 .hpbar .shn{color:#DFF1F4;margin-left:6px;text-shadow:0 1px 1px rgba(0,0,0,.45)}
+.hpbar .shn.owe{color:#FFC9BE}      /* 缓刑（第十三批）：还挂着的账 */
 /* 血量告急：颜色变深，并轻轻搏动 */
 .hpbar.low .fill{background:linear-gradient(180deg,#D4604F,#B03726)}
 .hpbar.low .txt{color:#FFF1ED;text-shadow:0 1px 1px rgba(0,0,0,.45)}
@@ -671,10 +672,15 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .shopit .rn{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:.04em}
 .shopit .rp{font-size:12.5px;color:var(--bone)}
 .shopit .rl{font-family:var(--flavor);font-style:italic;font-size:11.5px;color:var(--faint);margin-top:2px}
-.shopit .buy{position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  font-family:var(--body);font-size:13px;padding:8px 12px;border-radius:2px;cursor:pointer;
+/* 买 / 以物易物（易货，第十三批）两颗钮竖着叠在右边，宽度定死，换不了的灰着不藏 */
+.shopit .sbtns{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:6px;width:78px}
+.shopit .buy,.shopit .bart{
+  font-family:var(--body);font-size:13px;padding:8px 6px;border-radius:2px;cursor:pointer;
   background:var(--torch);color:#FFF9EC;border:1px solid var(--torch-deep);font-weight:600;white-space:nowrap}
+.shopit .bart{background:var(--stone-3);color:var(--bone);border-color:var(--edge);font-size:12px}
 .shopit .buy:hover:not(:disabled){background:#B57C15}
+.shopit .bart:disabled{color:var(--faint);cursor:default;font-weight:400}
 .shopit .buy:disabled{background:var(--stone-3);color:var(--faint);border-color:var(--edge);
   cursor:default;font-weight:400}
 .shopit.sold{opacity:.5}
@@ -1129,3 +1135,16 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 /* 学中文时答错摊开：英文释义本来就长（「to prepare (get ready)」这种），再加一行「汉字 拼音」会撑出方块 —— 收一号字 */
 .opt.two.tight{font-size:clamp(12px,1.75vh,14px);line-height:1.2;padding:6px}
 .opt.two.tight .sub{font-size:clamp(10.5px,1.5vh,12px)}
+
+/* ===== 遗物页的品质筛选（用户 2026-09-26：带的遗物超过 20 件才出现）=====
+   一排小药丸：全部 / 普通 / 稀有 / 史诗 / 传奇 / 神圣（只列手上有的），数字是这一档几件。
+   ⚠️ 类名带 rf 前缀 —— 别再跟别处的短名撞（.opt / .cx / .find 都踩过）。*/
+.rfilt{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px;flex:none}
+.rfchip{font-family:var(--body);font-size:11.5px;padding:3px 7px;border-radius:12px;cursor:pointer;
+  background:var(--stone-2);color:var(--dim);border:1px solid var(--edge);white-space:nowrap}
+.rfchip em{font-style:normal;font-family:var(--mono);font-size:10.5px;margin-left:3px;opacity:.75}
+.rfchip.on{background:var(--stone-3);color:var(--bone);border-color:var(--torch)}
+/* 千面借来的两件：虚线框、半透明 —— 看得出「不是你的」 */
+.relic.own.borrowed{opacity:.72;border-style:dashed}
+.rfchip.q0{color:var(--q0)} .rfchip.q1{color:var(--q1)} .rfchip.q2{color:var(--q2)}
+.rfchip.q3{color:var(--q3)} .rfchip.q4{color:var(--q4)}

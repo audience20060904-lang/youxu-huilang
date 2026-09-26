@@ -118,11 +118,13 @@
   <!-- 带满了的取舍 -->
   <div class="veil" id="veilSwap">
     <div class="box col tall">
-      <h2>遗物带满了</h2>
-      <p class="sub">换掉一件，换下来的当场分解成金币</p>
+      <h2 id="swapH">遗物带满了</h2>
+      <p class="sub" id="swapSub">换掉一件，换下来的当场分解成金币</p>
       <div id="swapNew" class="cards"></div>
       <div class="hr">身上的</div>
       <div class="scroll"><div id="swapOld" class="cards"></div></div>
+      <!-- 易货（第十三批）借这个窗时才露出来 -->
+      <div class="rowb" id="swapCancelRow" hidden><button class="btn ghost" id="btnSwapCancel">算了</button></div>
     </div>
   </div>
 

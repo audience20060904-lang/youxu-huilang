@@ -171,6 +171,7 @@
       <!-- 列表自己滚，合成面板钉在标签页下方（带满 15 件时不用滚半天才看得见） -->
       <div class="panel grow">
         <div class="phead"><span id="relicHead">遗物 0</span></div>
+        <div class="rfilt" id="relicFilter" hidden></div>
         <div class="relics own" id="relicOwned"></div>
       </div>
       <div class="panel fusebar">
@@ -482,10 +483,11 @@
 
 <div class="veil" id="veilSwap" hidden>
   <div class="sheet tall">
-    <div class="eyebrow">带不下了</div>
+    <div class="eyebrow" id="swapEyebrow">带不下了</div>
     <h2 id="swapTitle">换掉哪一件？</h2>
     <div class="relic hot" id="swapNew"></div>
-    <p class="note">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
+    <p class="note" id="swapBarterNote" hidden>只能拿<b>同品质</b>的换；换下来的那件留在货架上。</p>
+    <p class="note" id="swapNote">最多带 <b id="swapMax">10</b> 件。点一件旧的把它换下来，<b>点上面这件新的就直接卖掉它</b>。</p>
     <div class="relics sx" id="swapList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
   </div>
