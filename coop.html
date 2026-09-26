@@ -142,6 +142,7 @@
       <div class="panel" id="panelStats">
         <div class="phead">属性 Attributes</div>
         <div class="stats" id="stats"></div>
+        <button class="btn ghost partsbtn" id="btnParts" type="button">构成</button>
       </div>
       <div class="panel" id="panelRun" hidden>
         <div class="phead">本局战绩</div>
@@ -578,6 +579,19 @@
   </div>
 </div>
 
+<!-- 构成（2026-09-26）：上一刀 / 上一口是谁贡献的，top10 占比 -->
+<div class="veil" id="veilParts" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow">构成</div>
+    <div class="tabs">
+      <button class="ptab on" data-pt="dmg" type="button">上次伤害</button>
+      <button class="ptab" data-pt="hurt" type="button">上次受伤</button>
+    </div>
+    <h2 id="partsTitle">上次伤害</h2>
+    <div class="partlist sx" id="partsList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseParts" type="button">关闭</button></div>
+  </div>
+</div>
 <div class="veil" id="veilFuseGot" hidden>
   <div class="sheet">
     <div class="eyebrow" id="fuseGotEyebrow">合成</div>

@@ -147,6 +147,7 @@ body{background:var(--void);color:var(--bone);font-family:var(--body)}
 .stats div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--edge-soft);
            padding:3px 0}
 .stats span{color:var(--faint)}
+.stats b .over{color:var(--blood)}
 
 /* ===== 遗物卡 ===== */
 .cards{display:flex;flex-direction:column;gap:8px}

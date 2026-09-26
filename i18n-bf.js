@@ -38,7 +38,7 @@ var BF_EN = {
     sp_exec:    ["Execute", "Hitting an enemy below 25% HP kills it outright (not Bosses)", "That last blow — he never bothers with it."],
     sp_vortex:  ["Vortex", "Every 3s, drag nearby enemies to your side", "No need to find them. Let them come."],
     sp_frost:   ["Frost Ring", "Enemies within 220 move 40% slower", "The closer they get, the more it's like running through water."],
-    sp_horde:   ["Sea of Foes", "Each nearby enemy: damage +3% (no cap)", "The more that surround him, the wider he grins."],
+    sp_horde:   ["Sea of Foes", "Each nearby enemy: damage +3%", "The more that surround him, the wider he grins."],
     sp_rampage: ["Rampage", "Each kill: attack speed +5% for 4s, stacks up to 15", "Stop and you're done. So don't stop."],
     sp_skull:   ["Skullsplitter", "Crits explode on the target: radius 100, 130% damage (max 3 per swing)", "A skull makes the finest fuse."],
     sp_magnet:  ["Lodestone", "Pickup range ×4; each coin picked up: next swing damage +3% (resets on swing)", "Gold clings to him. So does the blade."],

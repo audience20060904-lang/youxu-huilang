@@ -153,6 +153,7 @@
       <div class="panel" id="panelStats">
         <div class="phead">属性 Attributes</div>
         <div class="stats" id="stats"></div>
+        <button class="btn ghost partsbtn" id="btnParts" type="button">构成</button>
       </div>
       <!-- 没进冒险时整块藏起来（用户 2026-09）——「本局」在镇上没有意义 -->
       <div class="panel" id="panelRun" hidden>
@@ -537,6 +538,19 @@
 </div>
 
 <!-- 合成完的二选一：材料已经砸了，所以这个窗只能挑，没有关闭钮 -->
+<!-- 构成（2026-09-26）：上一刀 / 上一口是谁贡献的，top10 占比 -->
+<div class="veil" id="veilParts" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow">构成</div>
+    <div class="tabs">
+      <button class="ptab on" data-pt="dmg" type="button">上次伤害</button>
+      <button class="ptab" data-pt="hurt" type="button">上次受伤</button>
+    </div>
+    <h2 id="partsTitle">上次伤害</h2>
+    <div class="partlist sx" id="partsList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseParts" type="button">关闭</button></div>
+  </div>
+</div>
 <div class="veil" id="veilFuseGot" hidden>
   <div class="sheet">
     <div class="eyebrow" id="fuseGotEyebrow">合成</div>
@@ -663,7 +677,7 @@
         <li><b>下楼</b>：踩上 <span style="color:var(--venom)">▼</span> 会<b>先问你一句</b>要不要下去，不会一脚踩空。选了「再待一会儿」还想走，<b>再点一下脚下那格</b>就行。</li>
         <li><b>战斗</b>：走到怪物身上就进入战斗。每一回合出一个单词 —— <b>答对，你砍它一刀；答错，它咬你一口</b>。数字都很小，你随时能算出"还要答对几个"。
           题面上边有一条 <b>7 秒读条</b>：走完还没作答，怪白咬你一口 —— 但<b>不算答错</b>，题目、四个选项、连击全都原样留着，读条从头再走一遍，直到你答出来。<b>拼写题不限时。</b></li>
-        <li><b>数值</b>：你 <b>40 点血</b>，一刀 <b>6 点</b>伤害；廊道灰鼠 12 点血，两刀就倒。<b>每 5 连击</b>伤害 +2%（可叠加、不封顶），答错清零。暴击是双倍。</li>
+        <li><b>数值</b>：你 <b>40 点血</b>，一刀 <b>6 点</b>伤害；廊道灰鼠 12 点血，两刀就倒。<b>每 5 连击</b>伤害 +2%（可叠加），答错清零。暴击是双倍。</li>
         <li><b>拼写题</b>：每题有一小成的概率要你把词拼出来，<b>不限时</b>。拼对<b>连击 +10、这一场经验翻倍</b>；
           拼错跟别的答错一样 —— 那个词记进<b>心魔</b>，再答 10 题之后回来找你。</li>
         <li><b>连击跨怪物保留</b>：打完一只接着打下一只，连击<b>不会归零</b> —— 撤退、走路、下一层都留着。只有<b>答错</b>才断（拿了「长链」就只减半），倒下回镇上才清空。</li>

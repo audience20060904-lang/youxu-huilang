@@ -783,7 +783,10 @@ Object.assign(I18N, {
 "算了，不换": "Never mind",
 "<span class=\"rl\">点它 → 算了，不换</span>": "<span class=\"rl\">Tap it → never mind</span>",
 "全部": "All",
-" · 千面借来的（这一层）": " · borrowed (this floor)"
+" · 千面借来的（这一层）": " · borrowed (this floor)",
+"构成": "Breakdown",
+"上次伤害": "Last hit",
+"上次受伤": "Last hit taken"
 });
 var I18N_BLOCKS = {
 "#veilForge .note": "One in three <b>rises a rarity</b>, one in three <b>becomes another of the same rarity</b>, one in three <b>drops a rarity</b>. There's no taking it back.",
@@ -794,7 +797,7 @@ var I18N_BLOCKS = {
 "#veilBless .note": "Gems <b id=\"blessGem\">0</b>  One slot <b id=\"blessCost\">2000</b>; once open, changing its relic is free.",
 "#stairNote": "Once you go down, <b>you can't come back to this floor</b>. The game saves when you enter the next floor.",
 "#panelCode .note": "One <b>save code</b> holds your <b>word progress, relic codex, records, gems and blessings</b>. Tap \"Copy\" on the old device and \"Paste\" on the new one. Importing <b>keeps the better of both</b>, so it never erases progress on this device; <b>an unfinished run isn't included</b>.",
-"#veilHelp .rules": "<ul>\n<li><b>Walking</b>: <b>tap any floor tile and your hero walks there</b>. Tap a monster to fight it, tap <span style=\"color:var(--venom)\">▼</span> to head downstairs (there's no ▼ until the floor is cleared). To stop midway, tap elsewhere or press <span class=\"kbd\">Esc</span>.</li>\n<li><b>Exploring</b>: monsters stand still — you have to find them. Chapters 1–5 have <b>50 floors</b> each; the last one, \"Endless\", <b>has no bottom</b>. Each floor has <b>about a dozen</b> monsters. <b>Clear them all</b> and the stairs appear — <b>where the last monster fell</b>.</li>\n<li><b>Fighting</b>: walk into a monster to fight. Each round is one word — <b>answer right and you strike; answer wrong and it bites</b>. A <b>7-second timer</b> runs above the question: if it runs out, the monster bites — but it <b>doesn't count as wrong</b>; the question stays and the timer restarts. <b>Spelling questions have no timer.</b></li>\n<li><b>Question types</b>: pick the English meaning of a Chinese word, pick the Chinese word for an English meaning, or (sometimes) <b>build the word from character tiles</b>. Pinyin is shown with the characters; tap 🔊 to hear it.</li>\n<li><b>Combo</b>: <b>every 5 combo</b> adds +2% damage (stacks, no cap). It carries over between monsters and floors, and breaks only on a <b>wrong answer</b>. Crits deal double.</li>\n<li><b>Spelling</b>: build it right for <b>combo +10 and double XP for that battle</b>. Build it wrong and the word becomes a <b>haunt</b> — it comes back after 10 more questions.</li>\n<li><b>Healing</b>: no potions. <b>Each kill heals 3</b>, leveling up heals 5, and a <span style=\"color:var(--frost)\">spring</span> restores <b>15% of max HP</b> — it asks first, so you can save it for later.</li>\n<li><b>Words</b>: <b>each chapter uses one level</b> — Chapter 1 <b>HSK 1</b>, Chapter 2 <b>HSK 2</b>, Chapter 3 <b>HSK 3</b>, Chapter 4 <b>HSK 4</b>, Chapter 5 <b>HSK 5</b>; Chapter 6 \"Endless\" <b>mixes HSK 4–6</b>. Words you miss come back <b>more often</b> until you've got them.</li>\n<li><b>Retreat</b>: you can retreat from any fight; the monster keeps its wounds. But turning your back costs <b>half your max HP</b> (never below 1).</li>\n<li><b>Risk</b>: before answering, tap \"Risk it · I'm sure\" — <b>right: double damage and combo counts 2; wrong: you take double damage</b>. \"Lock Risk\" on the map Risks every question automatically.</li>\n<li><b>Weakness</b>: each monster fears one category of words (shown in battle). Hit it with that category for <b>+2 damage</b>.</li>\n<li><b>Relics</b>: <b>after each cleared floor, pick one of five</b>. You can carry <b>up to 15</b>. On the Relics tab you can <b>salvage</b> them for gold, or fuse <b>3 of a rarity + 500 gold</b> into a higher one — you choose from three. Relics last for this run only — they are <b>the only way to grow stronger</b>.</li>\n<li><b>Haunts</b>: words you missed this run <b>come back after 10 more questions</b>. Get them right to banish them and heal 2.</li>\n<li><b>Along the way</b>: <span style=\"color:var(--r3)\">altars</span> (from floor 10) trade 5 HP for a relic — sometimes it's a <b>furnace</b> that reforges one of yours; <span style=\"color:var(--torch)\">chests</span> open only if you spell a word (<b>one try</b>); <span style=\"color:var(--frost)\">merchants</span> sell relics for cave gold. <b>Auto-path walks around them</b> — tap one to use it.</li>\n<li><b>Saving</b>: the game <b>loads automatically</b>. It saves only when you <b>enter a chapter, go down a floor, or return to town</b> — close the page midway and you restart <b>from this floor's entrance</b>.</li>\n<li><b>Switching devices</b>: in Settings, tap <b>\"Copy save code\"</b> on the old device and <b>\"Paste save code\"</b> on the new one. Importing keeps the better of both.</li>\n<li><b>Scoring</b>: a run's end (fall or clear) scores <b>max combo, kills, accuracy and unspent gold</b>, multiplied by <b>floors reached</b> (floor ÷ 10, no cap) and the chapter's <b>difficulty</b>, and converted into <b>gems</b>. Spend gems on <b>Blessings</b> in town: 2000 opens a slot to make a relic more common (×3 within its rarity) or ban it from runs.</li>\n<li><b>Falling</b>: you're carried back to town and <b>lose your relics and gold</b> — but the run still pays out gems. Word progress and the codex are never lost.</li>\n</ul>"
+"#veilHelp .rules": "<ul>\n<li><b>Walking</b>: <b>tap any floor tile and your hero walks there</b>. Tap a monster to fight it, tap <span style=\"color:var(--venom)\">▼</span> to head downstairs (there's no ▼ until the floor is cleared). To stop midway, tap elsewhere or press <span class=\"kbd\">Esc</span>.</li>\n<li><b>Exploring</b>: monsters stand still — you have to find them. Chapters 1–5 have <b>50 floors</b> each; the last one, \"Endless\", <b>has no bottom</b>. Each floor has <b>about a dozen</b> monsters. <b>Clear them all</b> and the stairs appear — <b>where the last monster fell</b>.</li>\n<li><b>Fighting</b>: walk into a monster to fight. Each round is one word — <b>answer right and you strike; answer wrong and it bites</b>. A <b>7-second timer</b> runs above the question: if it runs out, the monster bites — but it <b>doesn't count as wrong</b>; the question stays and the timer restarts. <b>Spelling questions have no timer.</b></li>\n<li><b>Question types</b>: pick the English meaning of a Chinese word, pick the Chinese word for an English meaning, or (sometimes) <b>build the word from character tiles</b>. Pinyin is shown with the characters; tap 🔊 to hear it.</li>\n<li><b>Combo</b>: <b>every 5 combo</b> adds +2% damage (stacks). It carries over between monsters and floors, and breaks only on a <b>wrong answer</b>. Crits deal double.</li>\n<li><b>Spelling</b>: build it right for <b>combo +10 and double XP for that battle</b>. Build it wrong and the word becomes a <b>haunt</b> — it comes back after 10 more questions.</li>\n<li><b>Healing</b>: no potions. <b>Each kill heals 3</b>, leveling up heals 5, and a <span style=\"color:var(--frost)\">spring</span> restores <b>15% of max HP</b> — it asks first, so you can save it for later.</li>\n<li><b>Words</b>: <b>each chapter uses one level</b> — Chapter 1 <b>HSK 1</b>, Chapter 2 <b>HSK 2</b>, Chapter 3 <b>HSK 3</b>, Chapter 4 <b>HSK 4</b>, Chapter 5 <b>HSK 5</b>; Chapter 6 \"Endless\" <b>mixes HSK 4–6</b>. Words you miss come back <b>more often</b> until you've got them.</li>\n<li><b>Retreat</b>: you can retreat from any fight; the monster keeps its wounds. But turning your back costs <b>half your max HP</b> (never below 1).</li>\n<li><b>Risk</b>: before answering, tap \"Risk it · I'm sure\" — <b>right: double damage and combo counts 2; wrong: you take double damage</b>. \"Lock Risk\" on the map Risks every question automatically.</li>\n<li><b>Weakness</b>: each monster fears one category of words (shown in battle). Hit it with that category for <b>+2 damage</b>.</li>\n<li><b>Relics</b>: <b>after each cleared floor, pick one of five</b>. You can carry <b>up to 15</b>. On the Relics tab you can <b>salvage</b> them for gold, or fuse <b>3 of a rarity + 500 gold</b> into a higher one — you choose from three. Relics last for this run only — they are <b>the only way to grow stronger</b>.</li>\n<li><b>Haunts</b>: words you missed this run <b>come back after 10 more questions</b>. Get them right to banish them and heal 2.</li>\n<li><b>Along the way</b>: <span style=\"color:var(--r3)\">altars</span> (from floor 10) trade 5 HP for a relic — sometimes it's a <b>furnace</b> that reforges one of yours; <span style=\"color:var(--torch)\">chests</span> open only if you spell a word (<b>one try</b>); <span style=\"color:var(--frost)\">merchants</span> sell relics for cave gold. <b>Auto-path walks around them</b> — tap one to use it.</li>\n<li><b>Saving</b>: the game <b>loads automatically</b>. It saves only when you <b>enter a chapter, go down a floor, or return to town</b> — close the page midway and you restart <b>from this floor's entrance</b>.</li>\n<li><b>Switching devices</b>: in Settings, tap <b>\"Copy save code\"</b> on the old device and <b>\"Paste save code\"</b> on the new one. Importing keeps the better of both.</li>\n<li><b>Scoring</b>: a run's end (fall or clear) scores <b>max combo, kills, accuracy and unspent gold</b>, multiplied by <b>floors reached</b> (floor ÷ 10, no cap) and the chapter's <b>difficulty</b>, and converted into <b>gems</b>. Spend gems on <b>Blessings</b> in town: 2000 opens a slot to make a relic more common (×3 within its rarity) or ban it from runs.</li>\n<li><b>Falling</b>: you're carried back to town and <b>lose your relics and gold</b> — but the run still pays out gems. Word progress and the codex are never lost.</li>\n</ul>"
 };
 var RELIC_EN = {
 "quick": [
@@ -1284,7 +1287,7 @@ var RELIC_EN = {
 ],
 "bastion": [
 "Bastion",
-"Armor +4; each point of armor: damage +3%",
+"Armor +4; each point of armor: damage +3% (max +300%)",
 "A wall can march too."
 ],
 "recoil": [
@@ -1845,7 +1848,7 @@ var RELIC_EN = {
 /* 第十一批（2026-09-25）：19 件史诗以上 */
 "rings": [
 "Tree Rings",
-"Every 5 levels: ATK +1 (no cap)",
+"Every 5 levels: ATK +1",
 "The tree never counts how much it has grown. The rings do."
 ],
 "bloodtemper": [
@@ -1875,12 +1878,12 @@ var RELIC_EN = {
 ],
 "silt": [
 "Silt",
-"Armor +1; +1 more every 10 floors deeper (no cap)",
+"Armor +1; +1 more every 10 floors deeper",
 "Every floor's dust settles on the armor and never lifts."
 ],
 "layers": [
 "Thousand Layers",
-"Every 10 levels: armor +1 (no cap); armor ×1.25",
+"Every 10 levels: armor +1; armor ×1.25",
 "Level pressed on level, until it's one solid block."
 ],
 "disarm": [
@@ -1900,7 +1903,7 @@ var RELIC_EN = {
 ],
 "loam": [
 "Loam",
-"Every 2 levels: max HP +1 (no cap)",
+"Every 2 levels: max HP +1",
 "Soil piles up layer by layer, and you stand a little higher."
 ],
 "colossus": [
@@ -1986,7 +1989,7 @@ var RELIC_EN = {
 ],
 "erudite": [
 "Erudition",
-"Per 100 different words answered right: damage +1.5%, max HP +1% (no cap)",
+"Per 100 different words answered right: damage +1.5%, max HP +1%",
 "Every page you've read stands behind you."
 ],
 "reprieve": [
@@ -2023,6 +2026,51 @@ var RELIC_EN = {
 "Thousand Faces",
 "Each floor: borrow 2 random legendary relics you lack (this floor only)",
 "It leaves every morning wearing a different face."
+],
+"deepnail": [
+"Deep Nail",
+"Every 5 floors deeper: extra damage +2",
+"The deeper the nail, the harder to pull."
+],
+"pursue": [
+"Pursuit",
+"Each hit a monster has taken from you: damage +8 on it (stacks)",
+"If one cut won't drop it, cut again."
+],
+"avenge": [
+"Vindication",
+"First correct answer after a miss: extra damage +45% max HP",
+"Wherever he fell, he goes back."
+],
+"sinkfist": [
+"Sunken Fist",
+"Armor +2; each point of armor: damage +2",
+"Wrap a fist in iron and it stops being a fist."
+],
+"bloodedge": [
+"Blood Edge",
+"Damage + 20% of current HP",
+"The blood on the blade is his own."
+],
+"firststrike": [
+"First Strike",
+"Vs monsters at full HP: damage + level ×1.5",
+"The first cut is always the deepest."
+],
+"hone": [
+"Whetstone",
+"Each correct answer this floor: extra damage +1 (max +35)",
+"Every right answer puts an edge on it."
+],
+"repay": [
+"Repayment",
+"Extra damage + 100% of the monster's attack",
+"However hard it bites, it gets back."
+],
+"crumble": [
+"Rout",
+"Each kill this floor: extra damage + 10% of your level",
+"When one falls, the rest start to shake."
 ]
 };
 
@@ -2066,13 +2114,13 @@ if(LANG_LEARN === "ja"){
    ⚠️ 改了 content.js 的 BFW / BFW_RE（或者战场的实现），这里对应那一条要跟着改。*/
 var BFW_EN = {
  /* 第十一批（2026-09-25）：战场说法跟地牢不一样的那几件（中文在 content.js 的 BFW）*/
- rings: "Every 3 levels: ATK +1 (no cap)",
+ rings: "Every 3 levels: ATK +1",
  bloodtemper: "ATK + 5% of max HP",
- silt: "Armor +1; +1 more every 10 waves (no cap)",
+ silt: "Armor +1; +1 more every 10 waves",
  disarm: "Defeating an enemy: gain shield equal to 1% max HP",
  bladewall: "On hit: 1.5% of that swing's damage becomes shield (max 50% of max HP per wave)",
  citywall: "Each new wave: shield refills to 50% of max HP",
- loam: "Each level: max HP +2 (no cap)",
+ loam: "Each level: max HP +2",
  thirst: "On hit: restore HP equal to 1.5% of that swing's damage (one enemy per swing)",
  bloodmoon: "Crit rate +15%; on crit, restore HP equal to 4% of that swing (one enemy per swing)",
  bloodriver: "On hit: restore 3% of that swing's damage (one enemy per swing); half the overflow becomes shield (up to 50% max HP)",
@@ -2088,13 +2136,22 @@ var BFW_EN = {
  keeneye: "Level-up picks always include an Epic or better",
  wildfire: "Damage +1.5% per 1% HP missing; below 30% HP, each swing heals 3% max HP",
  /* 第十三批（2026-09-26）*/
- erudite: "Every 200 enemies defeated: damage +1.5%, max HP +1% (no cap)",
+ erudite: "Every 200 enemies defeated: damage +1.5%, max HP +1%",
  reprieve: "Damage taken is paid over 3 seconds; each kill meanwhile cuts what's left by 10%",
  redirect: "Damage taken −10%; damage blocked ×3 becomes extra damage on your next swing",
  momentum: "Overkill damage ×1.5 hits the nearest enemy (max 50% of its HP)",
  lunar: "Odd waves: damage +35%; even waves: damage taken −25%",
  barter: "Once per merchant stock: trade one of your relics for a shelf relic of the same rarity",
  thousandface: "Each new wave: borrow 2 random legendary relics you don't have (this wave only)",
+ deepnail: "Every 5 waves: extra damage +2",
+ pursue: "Each hit an enemy has taken from you: damage +8 on it (stacks)",
+ avenge: "Next swing after taking damage: extra damage +15% max HP",
+ sinkfist: "Armor +2; each point of armor: damage +2",
+ bloodedge: "Damage + 20% of current HP",
+ firststrike: "Vs enemies at full HP: damage + your level",
+ hone: "Each swing that lands this wave: extra damage +1 (max +35)",
+ repay: "Extra damage + 100% of the enemy's attack",
+ crumble: "Every 10 kills this wave: extra damage + 10% of your level",
  gambler: "Close-range hits: damage +10",
  salve: "Defeating an enemy: 40% chance to restore 2 HP",
  echo: "First hit each wave costs no HP and restores 5% max HP",

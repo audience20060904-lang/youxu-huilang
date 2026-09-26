@@ -398,7 +398,7 @@ var BF_SPECIAL = [
   lore:"不必去找，让它们自己过来。"},
  {id:"sp_frost",   n:"霜环",  pw:"身边 220 范围内的敌人移速 −40%",
   lore:"越靠近他，越像在水里跑。"},
- {id:"sp_horde",   n:"人海",  pw:"身边每有一个敌人，伤害 +3%（不封顶）",
+ {id:"sp_horde",   n:"人海",  pw:"身边每有一个敌人，伤害 +3%",
   lore:"围上来的越多，他笑得越开。"},
  {id:"sp_rampage", n:"狂暴",  pw:"每次击杀攻速 +5%，持续 4 秒，最多叠 15 层",
   lore:"停下来就凉了，所以别停。"},
@@ -1049,7 +1049,8 @@ function newWave(w, quiet){
        fixDone:false, digDone:false, dmgTaken:0, undyingUsed:false, magnetN:0, chapelUsed:false,
        cautionN:0, broke:false, addsT:0, bossDown:false, spawnAcc:0,
        chaseN:0, fearN:0, bled:false,
-       deflectN:0, gaspUsed:false, bwallGot:0, bwallBank:0, sipBank:0, riverBank:0};   // 第十一批
+       deflectN:0, gaspUsed:false, bwallGot:0, bwallBank:0, sipBank:0, riverBank:0,    // 第十一批
+       honeN:0, waveKills:0};                                                            // 第十四批：磨砺 / 摧枯
   P.wave = w;
   /* ⚠️ 仇敌是**跨波**的（波是定时切的，场上的怪不清），所以计数要按场上现数一遍 ——
      以前直接清零，上一波标记的怪这一波死掉就把它减成负数，养魔跟着变成负的伤害加成。 */
@@ -1155,6 +1156,7 @@ function bstats(){
   if(has("twoply"))    s.armor += 4;
   if(has("rustplate")) s.armor += 2;
   if(has("bastion"))   s.armor += 4;
+  if(has("sinkfist"))  s.armor += 2;                                 // 沉拳（第十四批）：换伤害那半在 swing()
   if(has("armpad"))    s.armor += 1;
   if(has("underarmor"))s.armor += 2;
   if(has("armblade"))  s.armor += 2;
@@ -1433,7 +1435,7 @@ function swing(mult){
   if(has("delve"))   pct += Math.min(20, 0.5 * (w - 1));
   if(has("slay")){   pct += 30; if(weak) pct += 100; }
   if(has("opening") && G.openLeft > 0){ pct += 100; G.openLeft--; }
-  if(has("bastion")) pct += 3 * s.defGear;
+  if(has("bastion")) pct += Math.min(300, 3 * s.defGear);
   if(has("recoil"))  pct += 50 * Math.min(3, P.recoil);
   if(has("knock") && isBossWave(w)) pct += 50;
   if(has("stockpile")) pct += Math.min(30, 5 * P.bought);
@@ -1475,6 +1477,13 @@ function swing(mult){
   if(has("surge") && luck(0.25)) extra += 25;
   if(has("mirror"))   flat += Math.min(200, Math.floor(P.shield / 5));
   if(has("bloodmaul"))flat += Math.min(15, 3 * Math.floor(G.healed / 10));
+  /* ===== 第十四批：额外伤害 / 点伤（2026-09-26）。看敌人的三件（追斩 / 先手 / 还施）在下面逐只加 ===== */
+  if(has("deepnail")) extra += 2 * Math.floor(w / 5);
+  if(has("hone"))     extra += Math.min(35, G.honeN);
+  if(has("crumble"))  extra += Math.floor(Math.floor(G.waveKills / 10) * P.lvl * 0.1);
+  if(has("avenge") && P.avenge && mult === 1){ extra += Math.round(s.maxHp * 0.15); P.avenge = false; }
+  if(has("sinkfist")) flat += 2 * s.defGear;
+  if(has("bloodedge"))flat += Math.floor(Math.max(0, P.hp) * 0.2);
   if(has("flash") && cb > 0 && cb % 5 === 0) forceCrit = true;
   if(has("instant") && moving) forceCrit = true;
   if(has("fate")) forceCrit = true;                                 // 定数（第十一批）：每一刀都暴击
@@ -1515,6 +1524,11 @@ function swing(mult){
     var slowed = hasSp("sp_ice") && isSlowed(f);
     var rr = raw;
     if(has("greet") && !f.greeted){ f.greeted = true; rr = rawGreet; }
+    /* 第十四批：看这一只的三件 —— 追斩 / 先手是③点伤（不吃百分比），还施是④额外伤害（吃百分比），都吃暴击 */
+    var pf = (has("pursue") ? 8 * (f.struck || 0) : 0) + ((has("firststrike") && f.hp >= f.maxHp) ? P.lvl : 0);
+    var pe = has("repay") ? (f.dmg || 0) : 0;
+    if(pf || pe) rr += Math.round((pe * (1 + pct / 100) + pf) * (crit ? cm : 1) * mult);
+    f.struck = (f.struck || 0) + 1;
     var d2 = Math.max(1, rr - (noArmor ? 0 : f.armor));
     if(slowed) d2 *= 2;                                   // 冰裂：对被减速的翻倍
     var hpWas = f.hp;
@@ -1552,6 +1566,7 @@ function swing(mult){
       aoe(f.x, f.y, 100, Math.round(raw * 1.3), "#B45B12"); }
   }
   if(leechN > 0) healUp(s.maxHp * 0.004 * leechN);        // 饮刃：攒完一次回
+  if(mult === 1) G.honeN++;                                // 磨砺（第十四批）：这一波砍中几刀
   /* ===== 第十一批：按「这一刀」长的四件 =====
      healUp 里有 Math.round，小数会被抹掉，所以按小数攒在 G 上、攒满 1 点给 1 点（每波清零）。*/
   var sipPct = (has("thirst") ? 1.5 : 0) + ((crit && has("bloodmoon")) ? 4 : 0);
@@ -1654,6 +1669,8 @@ function onSwingRelics(s, c){
    ================================================================ */
 function mitigate(dmg, s, o){
   o = o || {};
+  /* 先减护甲、再算减伤百分比（用户 2026-09-26，跟地牢一个顺序）—— 原来护甲排在最后，减的是打过折的那一口 */
+  dmg = Math.max(1, dmg - s.armor);
   var cut = s.cutStatic + buildCut();      // 归墟碑：你站在它范围里时受到的伤害 −20%
   if(has("twice") && o.repeat)  cut += 12;                   // 战场改写：同种怪第二下起几乎每下都算
   if(has("psyche") && o.haunt)  cut += 15;
@@ -1680,7 +1697,6 @@ function mitigate(dmg, s, o){
   if(has("endure") && out > s.maxHp * 0.10) out = Math.floor(out * 0.80);
   if(has("brace") && !G.braceUsed && P.hp > s.maxHp * 0.5 && P.hp - out <= s.maxHp * 0.5){
     G.braceUsed = true; out = Math.floor(out * 0.45); }
-  out = Math.max(0, out - s.armor);
   if(has("slip") && luck(0.20)) out = 0;
   if(out > 0 && has("glimmer") && luck(0.12)) out = 0;     // 浮光（第十一批）：跟错身各掷各的
   return Math.max(out > 0 ? 1 : 0, out);
@@ -1777,6 +1793,7 @@ function landHit(out, foe, s, quiet){
   if(has("recoil")) P.recoil = Math.min(3, P.recoil + 1);
   if(has("chew")) P.chew = 1;
   if(has("prime")) P.primeLeft = 3;
+  P.avenge = true;                                                  // 雪耻（第十四批）：下一刀吃加成
   if(!quiet) fxText("-" + out, "#A93729");
   if(foe && !foe.haunt && G.hauntN < BF.hauntMax * (has("bind") ? 2 : 1)){
     foe.haunt = true; G.hauntN++;
@@ -2053,7 +2070,7 @@ function killFoe(f){
   /* 「蚀空」：死了还占着一块地（走 addZone，跟唤雷者和祭司的火场同一套）*/
   if(f.def.leave) addZone(f.x, f.y, f.def.leave.r, 0, f.def.leave.life, f.leaveDmg, "#4A3A6A");
   var s = bstats();
-  P.kills++; P.killStreak++;
+  P.kills++; P.killStreak++; G.waveKills++;
   /* 缓刑（第十三批）：每杀一只，还挂着的账少扣 10% */
   if(has("reprieve") && P.owes && P.owes.length)
     for(var oi = 0; oi < P.owes.length; oi++){ P.owes[oi].n *= 0.9; P.owes[oi].r *= 0.9; }
@@ -6229,7 +6246,7 @@ function openInfo(){
     L(" · 遗物 ", " · Relics ") + relicLoad() + " / " + relicCap() + L(" · 特殊 ", " · Special ") + P.special.length;
   $("infoStats").innerHTML =
     st2(L("攻击", "ATK"), s.atk) + st2(L("生命", "HP"), Math.ceil(P.hp) + " / " + s.maxHp) +
-    st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic + "%") +
+    st2(L("护甲", "Armor"), s.armor) + st2(L("减伤", "Damage cut"), s.cutStatic > BF.cutMax ? BF.cutMax + '/<span class="over">' + s.cutStatic + "</span>%" : s.cutStatic + "%") +
     st2(L("暴击", "Crit"), s.crit + "% ×" + s.critMult.toFixed(1)) + st2(L("移速", "Move speed"), Math.round(s.spd)) +
     st2(L("攻速", "Attack speed"), s.aspd.toFixed(2) + L(" 刀/秒", " swings/s")) + st2(L("刀程", "Blade reach"), Math.round(s.range)) +
     st2(L("张角", "Swing arc"), Math.round(s.arc) + "°") + st2(L("拾取", "Pickup"), Math.round(s.pickup)) +

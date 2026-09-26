@@ -334,6 +334,7 @@ body{
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:12.5px}
 .stats .s{display:flex;justify-content:space-between;gap:6px;color:var(--dim)}
 .stats .s b{color:var(--bone);font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.stats .s b .over{color:var(--blood)}
 
 /* ===== 弹层 ===== */
 /* ⚠️ 弹层**自己不滚**（用户 2026-09-23：「弹窗做固定大小，内置滚动，不要调用浏览器滚动」）——
@@ -591,6 +592,22 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
   font-family:var(--body);font-size:12.5px;padding:6px 10px;cursor:pointer;margin-bottom:-1px}
 .tab.on{color:var(--torch);border-bottom-color:var(--torch)}
+/* 构成弹窗（2026-09-26）：子选项卡照 .tab 的样子，类名带 p 前缀（别用 .tab —— 那条监听会把它接到图鉴上）*/
+.ptab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
+  font-family:var(--body);font-size:12.5px;padding:6px 10px;cursor:pointer;margin-bottom:-1px}
+.ptab.on{color:var(--torch);border-bottom-color:var(--torch)}
+#partsTitle b{font-family:var(--mono);color:var(--torch)}
+.partlist{display:flex;flex-direction:column;gap:2px}
+.prow{flex-shrink:0;display:grid;grid-template-columns:22px 1fr auto auto;align-items:center;gap:8px;
+  padding:5px 4px;border-bottom:1px dotted var(--edge);font-size:13px}
+.prow i{font-style:normal;color:var(--faint);font-family:var(--mono);font-size:11.5px;text-align:center}
+.prow span{color:var(--bone);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow em{font-style:normal;color:var(--dim);font-family:var(--mono);font-size:12px}
+.prow b{font-family:var(--mono);font-weight:600;color:var(--bone);min-width:42px;text-align:right}
+.prow.neg b,.prow.neg em{color:var(--blood)}
+.prow.cut b{color:var(--venom)}
+.prow.add b{color:var(--frost)}
+.partsbtn{margin-top:8px;padding:4px 14px;font-size:12.5px}
 .codex{display:flex;flex-direction:column;gap:6px}   /* 高度交给外面的 .sheet.tall / .sx（2026-09-23 去掉了 52vh）*/
 /* ⚠️ 图鉴卡片占用了 .cx / .cn / .cd —— 战斗窗那条连击用的是带前缀的 .cmb-*，别再撞名字
    （跟当年 .opt 撞设置页复选框是同一个坑）。 */
