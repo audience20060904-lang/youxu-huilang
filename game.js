@@ -968,11 +968,12 @@ function endlessRamp(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
   return 1 + Math.floor((floor - ENDLESS_FROM) / ENDLESS_EVERY) * ENDLESS_RAMP;
 }
-/* 无尽章的**深渊狂潮**（用户 2026-09-26）：第 ENDLESS_FROM 层往后（第 51 层起）**每一层**的怪
-   血量和伤害都 ×ENDLESS_SURGE_X(10)，一个平的倍率。别的章恒为 1。*/
+/* 无尽章的**深渊狂潮**（用户 2026-09-26，2026-09-27 改成逐层爬坡）：血量和伤害一起乘，
+   第 ENDLESS_FROM(50) 层 ×1，每往下一层线性 +9%，第 150 层到 ×ENDLESS_SURGE_X(10)，之后一直 ×10。别的章恒为 1。*/
 function endlessSurge(floor){
   if(!isEndless() || floor <= ENDLESS_FROM) return 1;
-  return ENDLESS_SURGE_X;
+  const t = Math.min(1, (floor - ENDLESS_FROM) / ENDLESS_SURGE_SPAN);
+  return 1 + (ENDLESS_SURGE_X - 1) * t;
 }
 /* 第十五批（2026-09-26）：「这一层怪物的攻击」—— 这一层会出的小怪的平均伤害（refFoe，吃分段倍率 / 深渊压迫 / 深渊狂潮）。
    量敌 / 映甲 / 磨盾按它算，怪涨多少这几件就跟多少。饮战 / 镇岳看的是眼前这一只（m.dmg）。*/
@@ -989,7 +990,7 @@ function adamantPct(s){
 /* 冒险失手的倍率：底子 ×2，托底 ×1.8，壮胆 ×1（不翻倍） */
 function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? CUSHION_MULT : 2; }
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
-   第 50 层 ×1（12%）、第 51 层 ×5.5（66%）、第 100 层 ×7（84%）、第 110 层往后一口就过上限。别的章恒为 1。*/
+   第 50 层 12%、第 60 层 19%、第 75 层 29%、第 100 层 56%、第 125 层 85%、第 140 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
   return G ? 1 + (endlessRamp(G.floor) * endlessSurge(G.floor) - 1) * CAP_RAMP_SHARE : 1;
 }
