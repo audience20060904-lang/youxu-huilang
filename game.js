@@ -5828,6 +5828,7 @@ function goTown(){
   resetHpFx();                           // 回主城重建了角色，血条动效的基准跟着清
   fuseOn = false; fuseSel = [];          // 合成的挑选状态跟着这一趟一起结束
   newRelics = [];                        // 「new」红点也是局内的界面状态，不进存档
+  autoMasterBasics();  // 无尽的词全遇到过 → A1 / A2 自动熟练（跟着下面这次 commit 落盘）
   commit(false);       // 存档点之三：回到主城 —— 永久数据落盘，续玩档删掉
   hideAll();
   showScene();
@@ -5942,6 +5943,34 @@ function chapterSeenPct(chId){
   let seen = 0;
   pool.forEach(function(w){ if(LEX[lexKey(w)]) seen++; });
   return Math.round(seen / pool.length * 100);
+}
+/* 无尽的词全遇到过了 → 最低两档（A1 / A2、HSK 1 / 2、N5 / N4）自动记成熟练（用户 2026-09-27）。
+   「遇到过」= LEX 里有记录（跟 chapterSeenPct 同一个口径）；「熟练」= 熟练度拉满 5、下次到期推到 SRS_GAP 最后一档。
+   已经满 5 的不碰（别把它的到期日往回拨），错题次数 miss 留着。返回改了几个。
+   回镇上（goTown）和开页面（boot 末尾）各查一次 —— 反复调没副作用。*/
+function autoMasterBasics(){
+  const end = CHAPTERS.filter(function(c){ return c.endless; })[0];
+  if(!end) return 0;
+  const lvs = chapterLvs(end);
+  for(let i = 0; i < lvs.length; i++){
+    const b = BYLV[lvs[i]] || [];
+    if(!b.length) return 0;
+    for(let j = 0; j < b.length; j++) if(!LEX[lexKey(b[j])]) return 0;
+  }
+  const today = dayNo(), top = SRS_GAP.length - 1;
+  let n = 0;
+  [1, 2].forEach(function(lv){
+    (BYLV[lv] || []).forEach(function(w){
+      const k = lexKey(w), r = LEX[k] || {str:0, seen:0, wrong:0};
+      if((r.str || 0) >= top) return;
+      r.str = top; r.wrong = 0; r.d = Math.max(r.d || 0, today + SRS_GAP[top]);
+      LEX[k] = r;
+      n++;
+    });
+  });
+  if(n) toast(L("无尽的词全遇到过了：", "Every Endless word met: ") + chapterById(1).level + " / " + chapterById(2).level +
+                L(" 的 " + n + " 个词自动记为熟练", " — " + n + " words marked mastered"));
+  return n;
 }
 function openCave(){
   renderPractice();
@@ -8473,6 +8502,7 @@ renderLock();                      // 「锁定冒险」的开关状态存在 OP
     if(!tutDone()){ MET.tut = 1; commitPerm(); }
   }
   if(!tutDone()) startTutorial();
+  if(autoMasterBasics()) commitPerm();   // 老档可能早就满足条件了，开页面时补一次
 })();
 refreshSaveState();
 })();
