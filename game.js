@@ -142,6 +142,31 @@ function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : wordFull(w);
 /* 熟练度表 LEX 的键：英语 / 中文就是词本身；**西语是 "es:词"**（pan / pie / once / red 这些跟英语拼写一样，
    不加前缀两门语言的熟练度就串了）。凡是 LEX[...] 一律过 lexKey()，按键反查词一律过 lexWord()。*/
 function lexKey(w){ return w.k || w.en; }
+/* ===== 按时间复习（用户 2026-09-27）=====
+   LEX 的每一条多两个字段：**d = 下一次到期的那一天**（本地日期的天号，dayNo()）、**miss = 一共答错过几次**（错题本排行用）。
+   答对：**到期了才涨熟练度**，并按新熟练度把下次到期往后推 SRS_GAP 天（1 → 3 → 7 → 15 → 30）；
+         没到期答对只是「对了」，熟练度不动 —— 同一天连对三次不再算掌握。
+   答错：熟练度 −1、当天就到期。老记录没有 d = 已到期，没有 miss 就拿 wrong（连错计数）顶上。
+   ⚠️ **改熟练度一律走 lexMark()**（战斗 answer() / 宝箱 judgeChest() 两处），别再直接写 rec.str。*/
+function dayNo(){ const t = new Date(); return Math.floor((t.getTime() - t.getTimezoneOffset() * 60000) / 86400000); }
+function lexDue(r, today){ return !!r && !(r.d > (today == null ? dayNo() : today)); }
+function lexMiss(r){ return r ? (r.miss != null ? r.miss : (r.wrong || 0)) : 0; }
+function lexMark(rec, ok){
+  const today = dayNo();
+  if(ok){
+    if(lexDue(rec, today)){
+      rec.str = Math.min(5, (rec.str || 0) + 1);
+      rec.d = today + SRS_GAP[Math.min(rec.str, SRS_GAP.length - 1)];
+    }
+    rec.wrong = 0;
+  } else {
+    rec.miss = lexMiss(rec) + 1;
+    rec.str = Math.max(0, (rec.str || 0) - 1);
+    rec.wrong = (rec.wrong || 0) + 1;
+    rec.d = today;
+  }
+  return rec;
+}
 function lexWord(k){
   if(LANG_LEARN === "es") return k.slice(0, 3) === "es:" ? WMAP[k.slice(3)] : null;
   if(LEARN_JA) return k.slice(0, 3) === "ja:" ? WMAP[k.slice(3)] : null;
@@ -1490,10 +1515,18 @@ function renderSheets(s){
   const today = todayRec(), tn = today.r + today.w;
   let todayWords = 0;
   for(const k in today.ws) if(lexWord(k)) todayWords++;
+  const dn = dayNo();
+  let dueNow = 0, dueTmr = 0;
+  keys.forEach(function(k){
+    const r = LEX[k];
+    if(lexDue(r, dn)) dueNow++; else if(r.d === dn + 1) dueTmr++;
+  });
   $("vocab").innerHTML = st(T("今日已学"), todayWords + T(" 词")) +
                          st(T("今日正确率"), tn ? Math.round(today.r / tn * 100) + "%" : "—") +
+                         st(T("待复习"), dueNow + T(" 词")) + st(T("明天到期"), dueTmr + T(" 词")) +
                          st(T("已掌握"), mastered) + st(T("已遇见"), keys.length) +
                          st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
+  renderMissBook(keys);
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
   $("panelRun").hidden = !inRun;
@@ -1504,6 +1537,21 @@ function renderSheets(s){
     st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl));
   renderRelics();
   renderMate();
+}
+
+/* 错题本（用户 2026-09-27，信息页）：按「一共答错过几次」排，只列正在学的这门语言，前 MISS_BOOK_N 个 */
+function renderMissBook(keys){
+  const list = keys.filter(function(k){ return lexMiss(LEX[k]) > 0; })
+    .sort(function(a, b){ return lexMiss(LEX[b]) - lexMiss(LEX[a]) || (LEX[a].str || 0) - (LEX[b].str || 0); })
+    .slice(0, MISS_BOOK_N);
+  const box = $("missBook");
+  if(!list.length){ box.innerHTML = "<div class=\"mbempty\">" + T("还没有答错过的词") + "</div>"; return; }
+  box.innerHTML = list.map(function(k, i){
+    const w = lexWord(k), r = LEX[k];
+    return "<div class=\"mbrow" + (lexDue(r) ? " due" : "") + "\"><i>" + (i + 1) + "</i>" +
+      "<b>" + wordFull(w) + (w.py ? " <span class=\"py\">" + w.py + "</span>" : "") + "</b>" +
+      "<span class=\"mbcn\">" + w.cn + "</span><em>" + L("错 " + lexMiss(r) + " 次", "×" + lexMiss(r)) + "</em></div>";
+  }).join("");
 }
 
 /* ================= 移动与寻路 ================= */
@@ -2000,8 +2048,12 @@ function pickQuizWord(cat){
   if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
   /* **没学过的新词权重 80%**（用户 2026-09）：LEX 里没有记录 = 这个存档从没遇到过。
      掷中就只在生词里挑；这一章的生词问完了（fresh 空）自然落回下面那个熟练度加权袋。*/
+  /* 按时间复习（2026-09-27）：先按 DUE_RATE 在「到期了的老词」里挑，没中再按 NEW_WORD_RATE 挑生词 */
+  const today = dayNo();
+  const due = pool.filter(function(w){ return lexDue(LEX[lexKey(w)], today); });
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
-  if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
+  if(due.length && Math.random() < DUE_RATE) pool = due;
+  else if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
   const bag = [];
   pool.forEach(function(w){
     const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
@@ -2591,7 +2643,7 @@ function answer(btn, ok){
     if(P.rend >= REND_CAP) relicLog += T(" <span class=\"sys\">(割裂割满 ") + REND_CAP + T(" 点，从此不再割)</span>");
   }
   if(ok){
-    P.right++; rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0;
+    P.right++; lexMark(rec, true);
     /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
        原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
@@ -2953,7 +3005,9 @@ function answer(btn, ok){
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
   } else {
-    P.wrong++; rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1;
+    P.wrong++; lexMark(rec, false);
+    if(!P.missN) P.missN = {};                 // 结算「这一趟答错的词」：这一趟每个词错了几次
+    P.missN[word.en] = (P.missN[word.en] || 0) + 1;
     G.floorWrong = (G.floorWrong || 0) + 1;    // 循迹：这一层打错了几题，nextFloor() 里跟上一层比
     P.avenge = true;                           // 雪耻（第十四批）：下一次答对吃加成
     B.wrongTimes = (B.wrongTimes || 0) + 1;    // 后劲：这一场第几次答错，mitigate() 里读
@@ -4226,8 +4280,12 @@ function judgeChest(){
   chestQ.done = true;
   const rec = LEX[lexKey(w)] || {str:0, seen:0, wrong:0};
   rec.seen++;
-  if(ok){ rec.str = Math.min(5, (rec.str||0) + 1); rec.wrong = 0; }
-  else { rec.str = Math.max(0, (rec.str||0) - 1); rec.wrong = (rec.wrong||0) + 1; addHaunt(w.en); }
+  lexMark(rec, ok);
+  if(!ok){
+    addHaunt(w.en);
+    if(!P.missN) P.missN = {};
+    P.missN[w.en] = (P.missN[w.en] || 0) + 1;
+  }
   LEX[lexKey(w)] = rec;        // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
       ? T("<span class=\"big ok\">咔哒 —— 开了</span>")
@@ -6274,20 +6332,23 @@ function endRun(win, gaveUp){
        ? li(T("难度等级 · ") + diffById(P.diff).name, diffById(P.diff).desc) : "") +
     li(T("丢在洞里"), (P.relics.length || 0) + T(" 件遗物 · ") + P.gold + T(" 金币")) +
     li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
+    li(T("这趟答错的词"), Object.keys(P.missN || {}).length + T(" 个")) +
     li(T("累计掌握"), Object.keys(LEX).filter(function(k){ return lexWord(k) && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
-  const box = $("endWords");
+  /* 结算只列**这一趟答错的词**（用户 2026-09-27，原来列的是遇到的全部），错得多的排前面 */
+  const box = $("endWords"), missN = P.missN || {};
+  const missed = Object.keys(missN).filter(function(en){ return !!WMAP[en]; })
+    .sort(function(a, b){ return missN[b] - missN[a]; });
   box.innerHTML = "";
-  if(!P.seenWords.length){
-    box.innerHTML = T("<div class=\"cx lost\"><div class=\"cn\">还没遇到任何词</div></div>");
+  if(!missed.length){
+    box.innerHTML = T("<div class=\"cx w-ok\"><div class=\"cn\">这一趟一个词都没答错</div></div>");
   } else {
-    P.seenWords.forEach(function(en){
-      const w = WMAP[en], r = (w && LEX[lexKey(w)]) || {str:0};
-      if(!w) return;
+    missed.forEach(function(en){
+      const w = WMAP[en], r = LEX[lexKey(w)] || {str:0};
       const s = r.str || 0;
       const d = document.createElement("div");
-      d.className = "cx " + (s >= 3 ? "w-ok" : r.wrong ? "w-bad" : "");
+      d.className = "cx w-bad";
       d.innerHTML = "<div class=\"cn\"><span>" + arTag(w) + w.en + (w.py ? " <i class=\"py\">" + w.py + "</i>" : "") + "</span>" +
-        "<span class=\"meta stars\">" + "★".repeat(s) + "☆".repeat(5-s) + "</span></div>" +
+        "<span class=\"meta\">" + L("错 " + missN[en] + " 次", "×" + missN[en]) + " <span class=\"stars\">" + "★".repeat(s) + "☆".repeat(5-s) + "</span></span></div>" +
         "<div class=\"cd\">" + w.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[w.cat] + "</span></div>";
       box.appendChild(d);
     });
@@ -6578,11 +6639,14 @@ function codeIO(io){
   const E = io.enc, out = {lex:{}, codex:{}, meta:{accF:{}}, town:{}}, notes = [], nR = RELICS.length;
   let relOk = true;
   const many = function(n){ if(n > 99999) throw new Error(T("码坏了")); return n; };
+  const lexSeen = [];      // 每门语言读 / 写过哪些下标 —— 最后那段「复习日期 + 错题次数」照着它走
   /* 一门语言的熟练度：词数 + 前缀校验 + 哪些词有记录 + 每个词（见过几次 → 熟练度 → 上次错没错，前一个给后一个当上下文）*/
   function lex(list, pre){
     const n = io.num("wn", list.length), h = io.raw(E ? wordsHash(n, list) : 0, 16);
     const got = E ? list : lexList(n, list, h), ok = !!got;
-    io.set("w", n, E ? list.map(function(w){ return !!LEX[pre + w[0]]; }) : null).forEach(function(i){
+    const idx = io.set("w", n, E ? list.map(function(w){ return !!LEX[pre + w[0]]; }) : null);
+    lexSeen.push({list:got, pre:pre, ok:ok, idx:idx});
+    idx.forEach(function(i){
       const rec = E ? LEX[pre + list[i][0]] : {};
       const seen = io.num("ws", rec.seen);
       const str = Math.min(5, io.sym("wt" + Math.min(seen, 4), Math.max(0, Math.min(5, rec.str || 0)), 3));
@@ -6654,7 +6718,18 @@ function codeIO(io){
     },
     function(){ lex(ZH_WORDS, ""); out.meta.tut = io.bit("tut", MET.tut); },
     function(){ lex(ES_WORDS, "es:"); },                   // 西语 / 日语的键带前缀（见 lexKey()），码里按下标存所以不用管
-    function(){ lex(JA_WORDS, "ja:"); }
+    function(){ lex(JA_WORDS, "ja:"); },
+    function(){                                            // 按时间复习（2026-09-27）：四门语言每个有记录的词 → 错过几次 + 还有几天到期
+      const today = dayNo();
+      lexSeen.forEach(function(L4){
+        L4.idx.forEach(function(i){
+          const k = L4.ok ? L4.pre + L4.list[i][0] : null, rec = (E ? LEX[k] : null) || {};
+          const miss = io.num("wm", lexMiss(rec));
+          const off = io.num("wd", Math.max(0, Math.min(400, (rec.d || 0) - today)));
+          if(!E && k && out.lex[k]){ out.lex[k].miss = miss; out.lex[k].d = today + off; }
+        });
+      });
+    }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
   const ns = io.num("n", secs.length);
@@ -6861,11 +6936,14 @@ function mergeData(o){
     const inc = o.lex[k], cur = LEX[k];
     if(!inc || typeof inc !== "object") continue;
     // 取熟练度高的那份；平手就取见得多的
+    const miss = Math.max(lexMiss(inc), lexMiss(cur));        // 错题次数取大的那边
     if(!cur || (inc.str||0) > (cur.str||0) ||
        ((inc.str||0) === (cur.str||0) && (inc.seen||0) > (cur.seen||0))){
       LEX[k] = {str:inc.str||0, seen:inc.seen||0, wrong:inc.wrong||0};
+      if(typeof inc.d === "number") LEX[k].d = inc.d;         // 复习日期跟着取中的那一份走
       better++;
     }
+    if(miss) LEX[k].miss = miss;
   }
 
   let legs = 0;

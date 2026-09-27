@@ -623,6 +623,16 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .cx.lost .cn{color:var(--faint)}
 .cx .cd{font-size:12px;color:var(--dim);line-height:1.45}
 .cx .stars{color:var(--torch);letter-spacing:.08em}
+/* 错题本（信息页，2026-09-27）：一行一个词 —— 名次 / 词 / 释义 / 错几次；到期了的词名次标红 */
+.mbook{display:flex;flex-direction:column;gap:2px;font-size:12.5px}
+.mbrow{display:grid;grid-template-columns:22px auto 1fr auto;gap:8px;align-items:baseline;padding:3px 2px;border-bottom:1px dashed var(--edge-soft)}
+.mbrow i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:right}
+.mbrow.due i{color:var(--blood)}
+.mbrow b{color:var(--bone);font-weight:600;white-space:nowrap}
+.mbrow b .py{font-weight:400;font-size:11px;color:var(--faint)}
+.mbrow .mbcn{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mbrow em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--blood)}
+.mbempty{font-size:12px;color:var(--faint)}
 /* 图鉴的搜索框（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找。
    ⚠️ 这个类**以前叫 `.find`，跟取景框里的寻路按钮 `.giveup.find` 撞了**
    （而且定义在后面，`width:100%` 被套到了按钮身上，把「放弃」挤成上下两行）——
