@@ -623,7 +623,11 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .cx.lost .cn{color:var(--faint)}
 .cx .cd{font-size:12px;color:var(--dim);line-height:1.45}
 .cx .stars{color:var(--torch);letter-spacing:.08em}
-/* 错题本（信息页，2026-09-27）：一行一个词 —— 名次 / 词 / 释义 / 错几次；到期了的词名次标红 */
+.vbtns{display:flex;flex-direction:column;gap:6px}
+.vbtns .btn{width:100%}
+.mbook.sx{overflow-y:auto;min-height:0;flex:1}
+.mbook .mbrow{flex-shrink:0}
+/* 错题本（弹窗，2026-09-27）：一行一个词 —— 名次 / 词 / 释义 / 错几次；到期了的词名次标红 */
 .mbook{display:flex;flex-direction:column;gap:2px;font-size:12.5px}
 .mbrow{display:grid;grid-template-columns:22px auto 1fr auto;gap:8px;align-items:baseline;padding:3px 2px;border-bottom:1px dashed var(--edge-soft)}
 .mbrow i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:right}

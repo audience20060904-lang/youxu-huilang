@@ -1526,7 +1526,6 @@ function renderSheets(s){
                          st(T("待复习"), dueNow + T(" 词")) + st(T("明天到期"), dueTmr + T(" 词")) +
                          st(T("已掌握"), mastered) + st(T("已遇见"), keys.length) +
                          st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
-  renderMissBook(keys);
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
   $("panelRun").hidden = !inRun;
@@ -1540,6 +1539,12 @@ function renderSheets(s){
 }
 
 /* 错题本（用户 2026-09-27，信息页）：按「一共答错过几次」排，只列正在学的这门语言，前 MISS_BOOK_N 个 */
+function openMiss(){
+  renderMissBook(Object.keys(LEX).filter(function(k){ return !!lexWord(k); }));
+  $("veilMiss").hidden = false;
+  const box = $("missBook");
+  if(box) box.scrollTop = 0;
+}
 function renderMissBook(keys){
   const list = keys.filter(function(k){ return lexMiss(LEX[k]) > 0; })
     .sort(function(a, b){ return lexMiss(LEX[b]) - lexMiss(LEX[a]) || (LEX[a].str || 0) - (LEX[b].str || 0); })
@@ -6506,12 +6511,12 @@ function openCodex(tab){
 }
 function hideAll(){
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -7207,7 +7212,7 @@ document.addEventListener("keydown", function(ev){
       if(b){ ev.preventDefault(); b.click(); }
     } else if(ev.key === "Escape"){
       if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
-      else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts") v.hidden = true;
+      else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
     }
     return;
@@ -7377,6 +7382,8 @@ $("codexFind").addEventListener("input", function(){
 $("btnCloseCodex").addEventListener("click", function(){ $("veilCodex").hidden = true; });
 /* 构成（2026-09-26）*/
 $("btnParts").addEventListener("click", openParts);
+$("btnMiss").addEventListener("click", openMiss);
+$("btnCloseMiss").addEventListener("click", function(){ $("veilMiss").hidden = true; });
 $("btnCloseParts").addEventListener("click", function(){ $("veilParts").hidden = true; });
 document.querySelectorAll("#veilParts .ptab").forEach(function(b){
   b.addEventListener("click", function(){ partsTab = b.dataset.pt; renderParts(); });

@@ -151,12 +151,11 @@
       <div class="panel">
         <div class="phead">词汇记录</div>
         <div class="stats" id="vocab"></div>
-        <button class="btn" id="btnCodex" type="button">查看图鉴 · 跨局记录</button>
-      </div>
-      <!-- 错题本（用户 2026-09-27）：按一共答错过几次排，镇上洞里都在 -->
-      <div class="panel">
-        <div class="phead">错题本</div>
-        <div class="mbook" id="missBook"></div>
+        <!-- 错题本（用户 2026-09-27）：单独一个按钮，点开是弹窗（veilMiss） -->
+        <div class="vbtns">
+          <button class="btn" id="btnCodex" type="button">查看图鉴 · 跨局记录</button>
+          <button class="btn" id="btnMiss" type="button">错题本</button>
+        </div>
       </div>
     </section>
 
@@ -595,6 +594,15 @@
     <h2 id="partsTitle">上次伤害</h2>
     <div class="partlist sx" id="partsList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseParts" type="button">关闭</button></div>
+  </div>
+</div>
+<!-- 错题本（2026-09-27）：按一共答错过几次排，前 30 个 -->
+<div class="veil" id="veilMiss" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow" id="missSub">按答错次数排</div>
+    <h2>错题本</h2>
+    <div class="mbook sx" id="missBook"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseMiss" type="button">关闭</button></div>
   </div>
 </div>
 <div class="veil" id="veilFuseGot" hidden>
