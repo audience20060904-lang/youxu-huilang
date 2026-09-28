@@ -143,25 +143,72 @@ function wordShow(w){ return w && w.py ? w.en + " (" + w.py + ")" : wordFull(w);
 /* 熟练度表 LEX 的键：英语 / 中文就是词本身；**西语是 "es:词"**（pan / pie / once / red 这些跟英语拼写一样，
    不加前缀两门语言的熟练度就串了）。凡是 LEX[...] 一律过 lexKey()，按键反查词一律过 lexWord()。*/
 function lexKey(w){ return w.k || w.en; }
-/* ===== 按时间复习（用户 2026-09-27）=====
-   LEX 的每一条多两个字段：**d = 下一次到期的那一天**（本地日期的天号，dayNo()）、**miss = 一共答错过几次**（错题本排行用）。
-   答对：**到期了才涨熟练度**，并按新熟练度把下次到期往后推 SRS_GAP 天（1 → 3 → 7 → 15 → 30）；
-         没到期答对只是「对了」，熟练度不动 —— 同一天连对三次不再算掌握。
-   答错：熟练度 −1、当天就到期。老记录没有 d = 已到期，没有 miss 就拿 wrong（连错计数）顶上。
-   ⚠️ **改熟练度一律走 lexMark()**（战斗 answer() / 宝箱 judgeChest() 两处），别再直接写 rec.str。*/
+/* ===== 按时间复习 · FSRS-5（用户 2026-09-27 加按天到期，2026-09-28 换成 Anki 的 FSRS，参数在 content.js 的 FSRS_*）=====
+   LEX 的每一条：s = 稳定度（天）、df = 难度（1~10）、lr = 上次复习那天、d = 下次到期那天（天号，dayNo()）、
+   miss = 一共答错几次（错题本）、lw = 最近一次答错那天。str（熟练度 0~5）现在是从 s 折出来的（strOfS），别处照旧读它。
+   每次作答 lexHow() 定答法 → FSRS_GRADE 折成 1~4 分 → fsrsStep() 更新 s / df / d：
+   - 同一天第二次答对不算数（同一天连对三次不再算掌握）—— 除非今天刚答错过，那是在「重学」，照 FSRS 的同日公式走；
+   - 答错（包括拼写只差一个字母）一律当天就到期，好让它今天再露一次面。
+   ⚠️ **改熟练度一律走 lexMark()**（战斗 answer() / 宝箱 judgeChest() 两处），别再直接写 rec.str / rec.s。*/
 function dayNo(){ const t = new Date(); return Math.floor((t.getTime() - t.getTimezoneOffset() * 60000) / 86400000); }
 function lexDue(r, today){ return !!r && !(r.d > (today == null ? dayNo() : today)); }
 function lexMiss(r){ return r ? (r.miss != null ? r.miss : (r.wrong || 0)) : 0; }
-/* 记忆权重（用户 2026-09-28，数值在 content.js 的 WT_*）：老记录没有 wt，从 WT_BASE 起按错过几次往上估（最多 +5），已掌握的 −1 */
-function lexWt(r){
-  if(!r) return WT_BASE;
-  if(typeof r.wt === "number") return r.wt;
-  return Math.max(0, WT_BASE + Math.min(5, lexMiss(r)) - ((r.str || 0) >= 3 ? 1 : 0));
+var FSRS_DECAY = -0.5, FSRS_FACTOR = 19 / 81;         // 遗忘曲线 R(t) = (1 + FACTOR·t/s)^DECAY，t = s 时正好 90%
+function fsrsR(t, s){ return Math.pow(1 + FSRS_FACTOR * Math.max(0, t) / s, FSRS_DECAY); }
+/* 现在还记得住的概率（没有 s 的记录当成 0，最该先复习）*/
+function lexRecall(r, today){
+  if(!r || typeof r.s !== "number") return 0;
+  return fsrsR((today == null ? dayNo() : today) - (r.lr || 0), r.s);
 }
-/* 这一题算哪种答法（给 lexMark 的 how）：拼写题拼错看差几个字母，选择题答对看快慢 / 超没超过时 */
+function fsrsIvl(s){
+  const i = s / FSRS_FACTOR * (Math.pow(FSRS_RETAIN, 1 / FSRS_DECAY) - 1);
+  return Math.min(FSRS_MAX_DAYS, Math.max(1, Math.round(i)));
+}
+function fsrsClampD(d){ return Math.min(10, Math.max(1, d)); }
+function fsrsD0(g){ return fsrsClampD(FSRS_W[4] - Math.exp(FSRS_W[5] * (g - 1)) + 1); }
+function fsrsNextD(d, g){
+  const w = FSRS_W, lin = d - w[6] * (g - 3) * (10 - d) / 9;     // 越接近 10 挪得越慢
+  return fsrsClampD(w[7] * fsrsD0(4) + (1 - w[7]) * lin);         // 往「轻松」的初始难度回拉一点点
+}
+function strOfS(s){
+  let n = 0;
+  for(let i = 1; i < SRS_GAP.length; i++) if(s >= SRS_GAP[i]) n = i;
+  return n;
+}
+/* 老记录（换 FSRS 之前的）没有 s：按原来的熟练度 / 错题次数估一份，免得全当生词 */
+function fsrsSeed(rec, today){
+  if(typeof rec.s === "number" || !(rec.str || typeof rec.d === "number")) return;
+  rec.s = Math.max(0.5, SRS_GAP[Math.min(rec.str || 0, SRS_GAP.length - 1)]);
+  rec.df = fsrsClampD(5 + Math.min(4, lexMiss(rec)));
+  rec.lr = Math.min(today, typeof rec.d === "number" ? rec.d - fsrsIvl(rec.s) : today - 1);
+}
+/* 按 g 分（1 忘了 / 2 吃力 / 3 记得 / 4 轻松）走一步 FSRS。稳定度用的是这一步之前的难度 */
+function fsrsStep(rec, g, today){
+  const w = FSRS_W;
+  if(typeof rec.s !== "number"){
+    rec.s = w[g - 1];
+    rec.df = fsrsD0(g);
+  } else {
+    const s = rec.s, d = rec.df || 5, t = today - (rec.lr || today);
+    if(t <= 0) rec.s = s * Math.exp(w[17] * (g - 3 + w[18]));               // 同一天又答了一次
+    else {
+      const r = fsrsR(t, s);
+      rec.s = g === 1
+        ? Math.min(s, w[11] * Math.pow(d, -w[12]) * (Math.pow(s + 1, w[13]) - 1) * Math.exp(w[14] * (1 - r)))
+        : s * (Math.exp(w[8]) * (11 - d) * Math.pow(s, -w[9]) * (Math.exp(w[10] * (1 - r)) - 1) *
+               (g === 2 ? w[15] : 1) * (g === 4 ? w[16] : 1) + 1);
+    }
+    rec.df = fsrsNextD(d, g);
+  }
+  rec.s = Math.min(FSRS_MAX_DAYS * 2, Math.max(0.05, rec.s));
+  rec.lr = today;
+  rec.d = today + fsrsIvl(rec.s);
+  rec.str = strOfS(rec.s);
+}
+/* 这一题算哪种答法（给 lexMark 的 how，分数查 FSRS_GRADE）：拼写看拼没拼对 / 差几个字母，选择题看快慢 / 读条走完过没有 */
 function lexHow(ok, spell, typed, target, sec, slow){
-  if(spell) return ok ? "fast" : (nearMiss(typed, target) ? "near" : "spell");
-  if(!ok) return "wrong";
+  if(spell) return ok ? "spell" : (nearMiss(typed, target) ? "near" : "miss");
+  if(!ok) return "miss";
   return slow ? "slow" : sec <= FAST_SEC ? "fast" : "ok";
 }
 /* 拼写「只差一点」：长度一样且只错一格，或者只是相邻两格对调（字格是定长的，所以不用算插入 / 删除）*/
@@ -173,30 +220,20 @@ function nearMiss(a, b){
   if(bad.length === 1) return b.length > 1;
   return bad.length === 2 && bad[1] === bad[0] + 1 && a[bad[0]] === b[bad[1]] && a[bad[1]] === b[bad[0]];
 }
-/* how = lexHow() 的结果（不传就按老规矩：对 = ok、错 = wrong），haunted = 心魔现身时答的 */
-function lexMark(rec, ok, how, haunted){
+/* how = lexHow() 的结果（不传就按老规矩：对 = ok、错 = miss）*/
+function lexMark(rec, ok, how){
   const today = dayNo();
-  how = how || (ok ? "ok" : "wrong");
-  let wt = lexWt(rec);
-  if(ok){
-    if(lexDue(rec, today)){
-      rec.str = Math.min(5, (rec.str || 0) + 1);
-      wt += WT_HIT[how] || 0;                    // 变轻只在到期那一次算；答得慢照样变重
-      wt = Math.max(0, Math.min(WT_MAX, wt));
-      const gap = SRS_GAP[Math.min(rec.str, SRS_GAP.length - 1)] * WT_GAP[wt];
-      rec.d = today + Math.max(1, Math.round(gap));
-    } else if(WT_HIT[how] > 0) wt += WT_HIT[how];
-    rec.wrong = 0;
-  } else {
+  const g = FSRS_GRADE[how || (ok ? "ok" : "miss")] || (ok ? 3 : 1);
+  fsrsSeed(rec, today);
+  const sameDay = typeof rec.s === "number" && rec.lr === today;
+  if(!(ok && sameDay && rec.lw !== today)) fsrsStep(rec, g, today);   // 同一天刷对不算数，重学除外
+  if(ok) rec.wrong = 0;
+  else {
     rec.miss = lexMiss(rec) + 1;
-    wt += (WT_HIT[how] || WT_HIT.wrong) + (haunted ? WT_HIT.haunt : 0);
-    /* 只差一个字母：熟练度不掉（它其实记得），照样当天到期；心魔现身又错：多掉 1 */
-    if(how !== "near" || haunted) rec.str = Math.max(0, (rec.str || 0) - (haunted ? 2 : 1));
     rec.wrong = (rec.wrong || 0) + 1;
-    rec.d = today;
+    rec.d = today;                               // 答错当天就到期，今天再露一次面
     rec.lw = today;                              // 最近一次答错是哪天（题卡右上角「N 天前」）
   }
-  rec.wt = Math.max(0, Math.min(WT_MAX, wt));
   return rec;
 }
 /* 答错了顺手记进「今日错题」（MET.day.wm）—— lexMark 拿不到键，所以单独一个函数，两处答错都调 */
@@ -2116,21 +2153,29 @@ function pickQuizWord(cat){
   if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
   /* **没学过的新词权重 80%**（用户 2026-09）：LEX 里没有记录 = 这个存档从没遇到过。
      掷中就只在生词里挑；这一章的生词问完了（fresh 空）自然落回下面那个熟练度加权袋。*/
-  /* 按时间复习（2026-09-27）：先按 DUE_RATE 在「到期了的老词」里挑，没中再按 NEW_WORD_RATE 挑生词 */
+  /* 按时间复习（FSRS）：复习占几成跟着这一章积压了多少到期词走（DUE_MIN ~ DUE_MAX），没中再按 NEW_WORD_RATE 挑生词 */
   const today = dayNo();
   const due = pool.filter(function(w){ return lexDue(LEX[lexKey(w)], today); });
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
-  if(due.length && Math.random() < DUE_RATE) pool = due;
-  else if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
-  /* 袋子里放几份：熟练度越低越多，上次答错 +3，**记忆权重每高出 WT_BASE 一格再 +1**（难词先出） */
+  const dueRate = DUE_MIN + (DUE_MAX - DUE_MIN) * Math.min(1, due.length / DUE_FULL);
   const bag = [];
-  pool.forEach(function(w){
-    const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
-    let wt = s >= 3 ? 1 : s === 2 ? 2 : s === 1 ? 3 : 4;
-    if(r && r.wrong) wt += 3;
-    if(r) wt += Math.max(0, lexWt(r) - WT_BASE);
-    for(let i=0;i<wt;i++) bag.push(w);
-  });
+  if(due.length && Math.random() < dueRate){
+    /* 到期的词里「现在还记得住的概率」越低放得越多 —— 最快要忘的先出 */
+    due.forEach(function(w){
+      const n = 1 + Math.round((1 - lexRecall(LEX[lexKey(w)], today)) * 10);
+      for(let i=0;i<n;i++) bag.push(w);
+    });
+  } else {
+    if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
+    /* 袋子里放几份：熟练度越低越多，上次答错 +3，难度（df）每高出 5 一格再 +1 */
+    pool.forEach(function(w){
+      const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
+      let wt = s >= 3 ? 1 : s === 2 ? 2 : s === 1 ? 3 : 4;
+      if(r && r.wrong) wt += 3;
+      if(r && r.df) wt += Math.max(0, Math.round(r.df) - 5);
+      for(let i=0;i<wt;i++) bag.push(w);
+    });
+  }
   let w = pick(bag), guard = 0;
   while(B && B.q && w.en === B.q.word.en && guard++ < 12) w = pick(bag);
   return w;
@@ -2205,7 +2250,7 @@ function startQTimer(){
    ⚠️ 别再往这里加「揭晓正确答案 / 禁用选项 / 露出继续钮」那一套 —— 那是判错的做法。*/
 function timeUp(){
   if(!B || !B.q || B.locked) return;
-  B.q.slow = true;                // 记忆权重：读条走完过一圈，这题之后答对也只算「答得吃力」
+  B.q.slow = true;                // 读条走完过一圈，这题之后答对也只算「吃力」（FSRS 2 分）
   const m = B.mob, s = stats();
   /* 沙漏：超时那一下完全不掉血，代价是这一层的读条永久短一截。
      ⚠️ 要在减伤链之前就返回 —— 不然会白白吃掉屏息的次数、白掷一次错身。*/
@@ -2709,7 +2754,7 @@ function answer(btn, ok){
   const fastAns = isSpell ? ok : usedSec <= FAST_SEC;  // 答得快（不分对错，「刹那」数的是这个）
   const fast = fastAns && ok;                          // 「3 秒内答对」——速答线那五件看的都是它
   const leftSec = (isSpell && !ok) ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
-  /* 记忆权重：这一题算哪种答法（拼错差几个字母 / 答对快不快 / 读条走完过没有）*/
+  /* 按时间复习：这一题算哪种答法（拼错差几个字母 / 答对快不快 / 读条走完过没有），lexMark 折成 FSRS 的分 */
   const how = lexHow(ok, isSpell, B.spell, spellOf(word), usedSec, B.q.slow);
   let head, note = "";
   /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
@@ -2723,7 +2768,7 @@ function answer(btn, ok){
     if(P.rend >= REND_CAP) relicLog += T(" <span class=\"sys\">(割裂割满 ") + REND_CAP + T(" 点，从此不再割)</span>");
   }
   if(ok){
-    P.right++; lexMark(rec, true, how, B.q.haunted);
+    P.right++; lexMark(rec, true, how);
     /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
        原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
@@ -3085,7 +3130,7 @@ function answer(btn, ok){
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
   } else {
-    P.wrong++; lexMark(rec, false, how, B.q.haunted); noteMissToday(word);
+    P.wrong++; lexMark(rec, false, how); noteMissToday(word);
     if(!P.missN) P.missN = {};                 // 结算「这一趟答错的词」：这一趟每个词错了几次
     P.missN[word.en] = (P.missN[word.en] || 0) + 1;
     G.floorWrong = (G.floorWrong || 0) + 1;    // 循迹：这一层打错了几题，nextFloor() 里跟上一层比
@@ -6044,7 +6089,8 @@ function autoMasterBasics(){
     (BYLV[lv] || []).forEach(function(w){
       const k = lexKey(w), r = LEX[k] || {str:0, seen:0, wrong:0};
       if((r.str || 0) >= top) return;
-      r.str = top; r.wrong = 0; r.d = Math.max(r.d || 0, today + SRS_GAP[top]);
+      r.s = Math.max(r.s || 0, SRS_GAP[top]); r.df = r.df || fsrsD0(3); r.lr = today;
+      r.str = top; r.wrong = 0; r.d = Math.max(r.d || 0, today + fsrsIvl(r.s));
       LEX[k] = r;
       n++;
     });
@@ -6835,7 +6881,7 @@ function codeIO(io){
         L4.idx.forEach(function(i){
           const k = L4.ok ? L4.pre + L4.list[i][0] : null, rec = (E ? LEX[k] : null) || {};
           const miss = io.num("wm", lexMiss(rec));
-          const off = io.num("wd", Math.max(0, Math.min(400, (rec.d || 0) - today)));
+          const off = io.num("wd", Math.max(0, Math.min(FSRS_MAX_DAYS, (rec.d || 0) - today)));
           if(!E && k && out.lex[k]){ out.lex[k].miss = miss; out.lex[k].d = today + off; }
         });
       });
@@ -6850,12 +6896,19 @@ function codeIO(io){
         });
       });
     },
-    function(){                                            // 记忆权重（2026-09-28）：四门语言每个有记录的词 → wt（0~10，4 位）
+    function(){                                            // FSRS（2026-09-28）：稳定度按 1.05 的对数存、难度 ×10、上次复习几天前（0 = 没有 s）
+      const today = dayNo();
       lexSeen.forEach(function(L4){
         L4.idx.forEach(function(i){
           const k = L4.ok ? L4.pre + L4.list[i][0] : null, rec = (E ? LEX[k] : null) || {};
-          const wt = io.sym("wk", Math.min(WT_MAX, lexWt(E ? rec : null)), 4);
-          if(!E && k && out.lex[k]) out.lex[k].wt = Math.min(WT_MAX, wt);
+          const has = io.bit("fh", typeof rec.s === "number");
+          if(!has) return;
+          const sq = io.num("fs", E ? Math.max(0, Math.round(Math.log(rec.s / 0.05) / Math.log(1.05))) : 0);
+          const dq = io.num("fd", E ? Math.round((fsrsClampD(rec.df || 5) - 1) * 10) : 0);
+          const ago = io.num("fl", E ? Math.max(0, Math.min(FSRS_MAX_DAYS, today - (rec.lr || today))) : 0);
+          if(!E && k && out.lex[k]){
+            out.lex[k].s = 0.05 * Math.pow(1.05, sq); out.lex[k].df = 1 + dq / 10; out.lex[k].lr = today - ago;
+          }
         });
       });
     }
@@ -7070,7 +7123,7 @@ function mergeData(o){
        ((inc.str||0) === (cur.str||0) && (inc.seen||0) > (cur.seen||0))){
       LEX[k] = {str:inc.str||0, seen:inc.seen||0, wrong:inc.wrong||0};
       if(typeof inc.d === "number") LEX[k].d = inc.d;         // 复习日期跟着取中的那一份走
-      if(typeof inc.wt === "number") LEX[k].wt = inc.wt;       // 记忆权重也跟着走
+      ["s", "df", "lr"].forEach(function(f){ if(typeof inc[f] === "number") LEX[k][f] = inc[f]; });   // FSRS 也跟着走
       better++;
     }
     if(miss) LEX[k].miss = miss;
