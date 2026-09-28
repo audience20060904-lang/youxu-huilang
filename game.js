@@ -2326,7 +2326,7 @@ function nextQuestion(){
   let type;
   if(P.tut) type = tutQuestionType(B.asked);                  // 教程关：题型是排好的
   else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
-  else if(defOf(word) && Math.random() < DEF_RATE) type = "def";   // 哪一句在说这个词（有释义句的词才出）
+  else if(defReady(word) && Math.random() < DEF_RATE) type = "def";   // 哪一句在说这个词（已掌握、有释义句的词才出）
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
   B.q = {word:word, type:type, done:false, haunted: hauntReady(word.en)};
@@ -2410,6 +2410,12 @@ function nextQuestion(){
    而且两边的释义里都不许提到对方（hen「a female chicken」不能给 chicken 当干扰项）。*/
 function defOf(w){
   return LANG_LEARN === "en" && typeof DEFS_EN !== "undefined" && w ? DEFS_EN[w.en] || "" : "";
+}
+/* 这个词能不能出释义句题：有释义，而且**已经掌握了**（熟练度 ≥ DEF_MIN_STR，用户 2026-09-28）——
+   没掌握的词先老老实实认中文，掌握了再拿英文解释考它 */
+function defReady(w){
+  const r = w && LEX[lexKey(w)];
+  return !!defOf(w) && !!r && (r.str || 0) >= DEF_MIN_STR;
 }
 function defMentions(a, b){           // a 的释义里有没有提到 b 这个词（按词头比：learning 也算提到 learn）
   let h = b.en.toLowerCase().replace(/[^a-z]/g, "");
