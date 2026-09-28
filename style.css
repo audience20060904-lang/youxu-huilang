@@ -451,6 +451,24 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .opt .sub{font-family:var(--mono);font-size:clamp(11px,1.6vh,12.5px);
   font-weight:400;opacity:.72;line-height:1.2;word-break:break-word}
 
+/* 「哪一句在说这个词」（用户 2026-09-28）：四句英文释义**竖排成四行、铺满整宽**，
+   高度跟 2×2 方块那一块一样（31vh，封 318px）—— 换题型战斗窗不跳。
+   每行：左边序号、右边一句话，最多两行（def-words/build.py 把释义封在 70 个字符，360 宽上量过）。
+   答完另外三行右上角挂 .dw 小签「lion · 狮子」，**压在行的上边框上**，占的是行间空隙和上内边距，不压字、不占高度。*/
+.opts.def{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);
+  width:100%;height:min(31vh,318px);gap:clamp(5px,1vh,8px)}
+.opts.def .opt{aspect-ratio:auto;overflow:visible;text-align:left;
+  justify-content:flex-start;align-items:center;
+  padding:7px 10px 5px 32px;font-size:clamp(12.5px,1.95vh,14.5px);line-height:1.25}
+.opts.def .opt .n{top:50%;left:7px;transform:translateY(-50%)}
+.opts.def .opt.right{font-weight:400}
+.opts.def .dtx{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.opts.def .dw{position:absolute;right:8px;top:-7px;padding:0 6px;height:14px;line-height:13px;
+  border:1px solid var(--edge);border-radius:7px;background:var(--stone);
+  font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap;max-width:70%;
+  overflow:hidden;text-overflow:ellipsis}
+.opts.def .opt.wrong .dw{border-color:var(--blood);color:#7E2618;background:#FBEBE7}
+
 /* 答完题这里会多出两行（判定 + 释义）。**高度提前留够**，不然答完窗就长高、出滚动条。 */
 .verdict{text-align:center;font-size:13.5px;min-height:clamp(52px,7.6vh,62px);
   display:flex;flex-direction:column;gap:3px;justify-content:center}

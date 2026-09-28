@@ -1,0 +1,462 @@
+# A1 · 英文释义句（「哪一句在说这个词」那一题用）
+# 格式：英文词|释义句    —— 一句只写这个词最常用的那个意思，用 A1/A2 的简单词，不许出现这个词本身
+cat|a small animal with soft fur that people often keep at home
+dog|an animal that barks and is often kept to guard a house
+bird|an animal with feathers and wings that can usually fly
+fish|an animal that lives in water and swims using its fins
+horse|a large animal that people ride and that can run very fast
+pig|a fat pink farm animal with a flat nose, kept for its meat
+cow|a large farm animal that gives us milk
+duck|a water bird with a wide flat beak that says "quack"
+rabbit|a small animal with long ears that jumps and eats carrots
+mouse|a very small grey animal with a long thin tail
+bear|a large heavy wild animal with thick fur that likes honey
+tiger|a large wild cat with orange fur and black stripes
+lion|a large wild cat from Africa; the male has long hair on its head
+monkey|a clever animal with a long tail that climbs trees
+sheep|a farm animal with thick white wool
+chicken|a farm bird that we keep for its eggs and meat
+elephant|a very large grey animal with big ears and a long nose
+panda|a black and white bear from China that eats bamboo
+fox|a wild animal like a small dog, with red fur and a thick tail
+hen|a female chicken
+spider|a small creature with eight legs that makes webs
+butterfly|an insect with large, brightly coloured wings
+animal|any living thing that can move, such as a dog or a bird
+pet|an animal that you keep at home and look after
+bread|a food made from flour and water and baked in an oven
+milk|the white drink that comes from cows
+egg|the round thing a hen lays, which we often eat for breakfast
+rice|small white grains that are cooked and eaten a lot in Asia
+apple|a round fruit with red or green skin that grows on trees
+banana|a long curved fruit with a yellow skin
+water|the clear liquid in rivers and rain that we drink
+meat|the flesh of an animal that we eat as food
+cake|a sweet food made from flour, eggs and sugar, baked in an oven
+soup|a hot liquid food made by cooking vegetables or meat in water
+tea|a hot drink made by pouring water onto dried leaves
+juice|a drink made from fruit, such as oranges or apples
+sugar|a sweet white or brown food that you put in drinks and cakes
+salt|a white powder that you put on food to give it more taste
+noodles|long thin strips of food made from flour, eaten in soup
+coffee|a hot brown drink that helps people wake up
+fruit|the sweet part of a plant that you can eat, like an apple
+vegetable|a plant that we eat, such as a carrot or a potato
+beef|meat that comes from a cow
+pork|meat that comes from a pig
+orange|a round sweet fruit with a thick skin of the same colour
+chocolate|a sweet brown food made from cocoa
+candy|a small sweet food made from sugar
+cookie|a small flat sweet cake that is dry and hard
+sandwich|two pieces of bread with cheese, meat or egg between them
+pizza|a flat round bread baked with cheese and tomato on top
+breakfast|the first meal of the day, eaten in the morning
+lunch|the meal you eat in the middle of the day
+dinner|the main meal of the day, usually eaten in the evening
+meal|the food that you eat at one time, such as lunch
+food|things that people and animals eat
+dish|food cooked in a particular way, served as part of a meal
+menu|a list of the food you can order in a restaurant
+oil|a thick liquid from plants, used for cooking
+corn|a tall plant with yellow seeds that you can eat
+red|the colour of blood or of strawberries
+blue|the colour of the sky on a clear day
+green|the colour of grass and leaves
+yellow|the colour of a lemon or of the sun
+black|the colour of the sky at night with no stars
+white|the colour of snow or milk
+brown|the colour of chocolate or of earth
+pink|a pale red colour
+colour|red, blue and green are all examples of this
+colourful|full of bright shades, like a rainbow
+hand|the part at the end of your arm with four fingers and a thumb
+head|the top part of your body, where your eyes and mouth are
+eye|the part of your face that you see with
+ear|one of the two parts of your head that you hear with
+nose|the part in the middle of your face that you smell with
+mouth|the part of your face that you eat and speak with
+foot|the part at the end of your leg that you stand on
+hair|the thin threads that grow on your head
+arm|the part of your body between your shoulder and your hand
+leg|the long part of your body that you walk and stand on
+face|the front part of your head, with the eyes, nose and mouth
+body|the whole physical form of a person or an animal
+back|the part of your body behind you, from your neck to your waist
+neck|the part of your body that joins your head to your shoulders
+heart|the part inside your chest that sends blood around your body
+toe|one of the five small parts at the end of your foot
+lip|one of the two soft edges around your mouth
+tongue|the soft moving part inside your mouth that you taste with
+brain|the part inside your head that you think with
+mother|a woman who has a child
+father|a man who has a child
+sister|a girl or woman who has the same parents as you
+brother|a boy or man who has the same parents as you
+family|a group of people who are related, like parents and children
+friend|a person you know well and like, who is not in your family
+baby|a very young child who cannot walk or talk yet
+boy|a male child
+girl|a female child
+teacher|a person whose job is to help students learn at school
+man|an adult male person
+woman|an adult female person
+child|a young person who is not an adult yet
+people|men, women and children in general
+person|one human being
+student|a person who goes to a school or university to learn
+doctor|a person whose job is to treat people who are ill
+nurse|a person who looks after sick people in a hospital
+police|the people whose job is to stop crime and keep order
+driver|a person whose job is to take people somewhere in a car, bus or taxi
+worker|a person who does a job, especially with their hands
+son|a male child of his parents
+daughter|a female child of her parents
+grandmother|the mother of your mother or father
+grandfather|the father of your mother or father
+uncle|the brother of your mother or father
+aunt|the sister of your mother or father
+husband|the man that a woman is married to
+wife|the woman that a man is married to
+book|a set of printed pages fixed together for you to read
+pen|a thing you write with, using ink
+chair|a seat for one person, with four legs and a back
+table|a piece of furniture with a flat top, where you eat or work
+door|the thing you open and close to go into a room or building
+window|a glass opening in a wall that lets in light
+bed|a piece of furniture that you sleep on
+box|a square container, often made of paper or wood, with a lid
+key|a small piece of metal used to lock or unlock a door
+bag|a container that you carry things in
+clock|a thing on a wall or table that shows the time
+cup|a small container with a handle that you drink tea from
+phone|a device you use to talk to someone who is far away
+car|a road vehicle with four wheels and an engine for a few people
+bike|a vehicle with two wheels that you ride by moving your legs
+ball|a round object that you throw, hit or kick in games
+shoe|a thing you wear on your foot, usually made of leather
+hat|a thing that you wear on your head
+coat|a long warm piece of clothing you wear outside when it is cold
+map|a drawing of an area that shows roads, rivers and towns
+bus|a large vehicle that carries many passengers along a fixed road
+train|a long vehicle that runs on a railway
+plane|a vehicle with wings that flies in the air
+boat|a small vehicle that travels on water
+desk|a table that you sit at to write, read or work
+paper|thin white material that you write on
+pencil|a thin wooden stick with grey inside that you write or draw with
+bottle|a tall glass or plastic container for drinks
+plate|a flat round dish that you eat food from
+bowl|a deep round dish for soup or rice
+knife|a sharp tool used for cutting
+fork|a tool with three or four points that you eat food with
+spoon|a tool with a small round end for eating soup
+glass|a clear container that you drink water from
+radio|a device you listen to for news and music
+computer|an electronic machine for working, playing games and going online
+camera|a device used for taking photographs
+picture|a drawing or painting
+photo|an image that you take with a camera
+letter|a written message that you send to someone by post
+card|a piece of stiff paper with a picture, sent on birthdays
+money|coins and notes that you use to buy things
+watch|a small clock that you wear on your wrist
+ring|a small circle of metal that you wear on your finger
+dress|a piece of clothing for a woman or girl that covers the body and legs
+shirt|a piece of clothing with buttons and a collar, worn on the top half
+trousers|a piece of clothing that covers each leg separately
+sock|a soft thing you wear on your foot inside your shoe
+skirt|a piece of clothing for women that hangs down from the waist
+jacket|a short coat
+toy|an object for a child to play with
+game|an activity with rules that people play for fun
+music|sounds that are made by singing or playing instruments
+film|a story shown in moving pictures at the cinema or on TV
+wall|one of the sides of a room or building
+sun|the bright thing in the sky that gives us light and heat in the day
+moon|the round thing that shines in the sky at night
+star|one of the small bright points of light in the night sky
+tree|a tall plant with a wooden trunk and branches
+flower|the colourful part of a plant, which often smells nice
+rain|water that falls from clouds in drops
+snow|soft white pieces of frozen water that fall from the sky in winter
+wind|air that moves quickly outside
+fire|the hot bright flames produced when something burns
+stone|a small hard piece of rock
+river|a long natural flow of water that goes to the sea
+mountain|a very high hill
+sky|the space above the earth where you see clouds and the sun
+sea|the large area of salt water that covers much of the earth
+night|the time when it is dark and most people sleep
+day|the time when it is light outside
+cloud|a white or grey mass in the sky that can bring rain
+grass|the thin green plant that covers fields and gardens
+leaf|one of the flat green parts that grow on a tree
+lake|a large area of water with land all around it
+field|an area of land on a farm, used for crops or animals
+hill|an area of land higher than the land around it, but not very high
+earth|the planet that we live on
+world|all the countries and people on the planet
+air|what you breathe in, which you cannot see
+weather|how hot, cold, wet or windy it is outside
+plant|a living thing that grows in soil, like a tree or a flower
+wood|the hard material that trees are made of
+run|to move very fast on your feet
+walk|to move on your feet at a normal speed
+eat|to put food in your mouth and swallow it
+drink|to take water, milk or juice into your mouth and swallow it
+sleep|to rest at night with your eyes closed
+read|to look at words and understand what they mean
+write|to put words on paper with a pen
+sing|to make music with your voice
+jump|to push yourself up into the air with your legs
+open|to move a door or lid so that you can go in or see inside
+close|to shut a door, window or box
+look|to turn your eyes toward something so you can see it
+sit|to rest on a chair with your weight on your bottom
+stand|to be on your feet without moving
+give|to hand something to someone so that they have it
+help|to make it easier for someone to do something
+come|to move toward the person who is speaking
+go|to move from one place to another, away from here
+take|to get something with your hands and carry it away
+find|to see or get something that you were looking for
+be|to exist, or to have a quality or state, as in "I ___ happy"
+have|to own something or hold it, as in "I ___ a dog"
+do|to carry out an action or a job, as in "___ your homework"
+make|to create or produce something, like a cake or a toy
+say|to speak words
+tell|to give information to someone by speaking
+ask|to say something to someone because you want an answer
+answer|to say or write something back when someone asks you a question
+know|to have information about something in your mind
+think|to use your mind to have ideas or opinions
+want|to wish to have or do something
+like|to think that something is nice or enjoyable
+need|to have to have something because you cannot do without it
+work|to do a job, usually to earn money
+play|to do things for fun, like games or sports
+study|to spend time learning about a subject, often from books
+learn|to get new knowledge or a new skill
+teach|to show someone how to do something or explain a subject
+see|to notice something with your eyes
+hear|to notice a sound with your ears
+listen|to pay attention to a sound, like music or someone speaking
+speak|to use your voice to say words
+talk|to have a conversation with someone
+call|to phone someone
+use|to do something with a thing for a purpose
+put|to move something into a place
+get|to receive or obtain something
+buy|to get something by paying money for it
+pay|to give money for something you want
+sell|to give something to someone in exchange for money
+cook|to make food hot and ready to eat
+wash|to clean something with water and soap
+clean|to remove dirt from something, like a room
+wear|to have clothes or shoes on your body
+start|to begin doing something
+stop|to not continue doing something
+finish|to come to the end of doing something
+try|to make an effort to do something
+live|to have your home in a place
+stay|to remain in a place and not leave
+leave|to go away from a place
+wait|to stay somewhere until someone comes or something happens
+meet|to see and talk to someone for the first time or by plan
+visit|to go and see a person or a place for a short time
+travel|to go from one place to another, especially far away
+drive|to control a car and make it move
+ride|to sit on a horse or a bike and control it as it moves
+fly|to move through the air using wings
+swim|to move through water using your arms and legs
+dance|to move your body to music
+draw|to make a picture with a pencil or pen
+build|to make a house or a wall by putting parts together
+carry|to hold something and take it with you as you move
+bring|to take something or someone with you to a place
+send|to make a letter or a message go to someone
+show|to let someone see something
+move|to change position or go to a different place
+turn|to go round or to change direction
+push|to press something to make it move away from you
+pull|to hold something and make it move toward you
+big|large in size
+small|not large in size
+hot|having a high temperature, like fire
+cold|having a low temperature, like ice
+good|of high quality, or pleasant
+bad|not good; unpleasant or of low quality
+new|recently made or bought, and not used before
+old|made or bought a long time ago, and used for years
+happy|feeling pleased and cheerful
+sad|feeling unhappy, for example because something bad happened
+fast|moving or able to move at high speed
+slow|taking a long time to move or to do something
+long|measuring a great distance from one end to the other
+short|small in length or distance
+strong|having great power in your body
+tired|feeling that you need to rest or sleep
+young|having lived for only a short time
+tall|of more than average height, used for people
+high|far above the ground
+low|close to the ground
+little|small, often in a nice or cute way
+large|bigger than usual in size or amount
+nice|pleasant and enjoyable
+fine|healthy and well, or good enough
+great|very good or impressive
+beautiful|very attractive to look at
+pretty|attractive, used especially for girls and women
+dirty|not clean
+wet|covered with water
+dry|not wet
+warm|a little hot in a pleasant way
+cool|a little cold in a pleasant way
+rich|having a lot of money
+poor|having very little money
+easy|not difficult to do
+hard|difficult to do or understand
+busy|having a lot of things to do
+free|able to do what you want, without being controlled
+ready|prepared and able to start something
+hungry|wanting to eat
+thirsty|wanting to drink
+ill|not well, because you have a sickness
+right|correct, not wrong
+wrong|not correct
+true|based on facts, not made up
+same|exactly like another one, not different
+different|not like something else
+lovely|very nice and attractive
+funny|making you laugh
+important|mattering a lot
+delicious|tasting very good
+sweet|tasting of sugar
+soft|not hard; nice to touch
+afternoon|the part of the day between twelve o'clock and evening
+evening|the part of the day after the afternoon and before night
+month|one of the twelve parts of a year, such as May
+yesterday|the day before today
+morning|the early part of the day, before twelve o'clock
+week|a period of seven days
+year|a period of twelve months
+today|this day
+tomorrow|the day after today
+time|what we measure in hours and minutes
+date|the number of the day and the month, like 5 May
+birthday|the day each year when you celebrate being born
+holiday|a time when you do not go to work or school and can relax
+weekend|Saturday and Sunday
+noon|twelve o'clock in the middle of the day
+early|before the usual or expected time
+late|after the usual or expected time
+age|how many years old someone is
+now|at this moment
+Monday|the day after Sunday and before Tuesday
+Tuesday|the day after Monday and before Wednesday
+Wednesday|the day after Tuesday and before Thursday
+Thursday|the day after Wednesday and before Friday
+Friday|the day after Thursday and before Saturday
+Saturday|the day after Friday and before Sunday
+Sunday|the day after Saturday and before Monday
+park|a public area with grass and trees where people go to relax
+city|a large and important town with many people
+town|a place with houses and shops, smaller than a city
+street|a road in a town with buildings along it
+garden|land next to a house where you grow flowers and vegetables
+school|a place where children go to learn
+shop|a place where you go to buy things
+home|the place where you live
+room|one of the separate spaces inside a building
+house|a building where a family lives
+flat|a set of rooms for living in, on one floor of a building
+kitchen|the room where you cook food
+bedroom|the room where you sleep
+bathroom|the room where you wash and have a bath or shower
+office|a room or building where people work at desks
+hotel|a building where you pay to stay for the night when you travel
+restaurant|a place where you pay to sit and eat a meal
+bank|a place where you can keep your money safe
+farm|land where people grow crops and keep animals
+zoo|a place where wild animals are kept for people to see
+cinema|a place where you go to watch films on a big screen
+country|an area of land with its own government, such as France
+road|a hard way for cars and buses to travel on
+way|a path or route that you take to go somewhere
+place|a particular area or position, like a town or a room
+building|a structure with walls and a roof, like a house or a school
+love|to like someone or something very, very much
+fun|enjoyable and pleasant to do
+glad|pleased and happy about something
+sorry|feeling bad about something you did
+worry|to keep thinking that something bad might happen
+calm|quiet and relaxed, not angry or excited
+shy|nervous about meeting or talking to new people
+miss|to feel sad because someone is not with you
+kind|nice and willing to help other people
+feeling|an emotion inside you, such as happiness or anger
+wish|something that you hope will happen
+thank|to tell someone you are grateful for something they did
+welcome|to greet someone in a friendly way when they arrive
+enjoy|to get pleasure from doing something
+luck|good things that happen to you by chance
+hate|to dislike someone or something very much
+care|to feel that something or someone matters to you
+dream|a hope or plan that you would really like to come true
+smile|to make your mouth turn up at the ends because you are happy
+one|the number 1
+two|the number 2, one more than one
+three|the number 3, one more than two
+four|the number 4, one more than three
+five|the number 5, one more than four
+six|the number 6, one more than five
+seven|the number 7, one more than six
+eight|the number 8, one more than seven
+nine|the number 9, one more than eight
+ten|the number 10, one more than nine
+eleven|the number 11, one more than ten
+twelve|the number 12, one more than eleven
+twenty|the number 20, two times ten
+thirty|the number 30, three times ten
+forty|the number 40, four times ten
+fifty|the number 50, five times ten
+hundred|the number 100, ten times ten
+thousand|the number 1,000, ten times one hundred
+zero|the number 0; nothing at all
+first|coming before all the others in order
+second|coming after the first one in order
+number|a word or sign like 1, 2 or 3 that you use for counting
+many|a large number of, used with things you can count
+much|a large amount of, used with things you cannot count
+few|a small number of; not many
+half|one of two equal parts of something
+very|to a great degree, as in "___ good"
+too|more than is needed or wanted, as in "___ hot to drink"
+also|in addition; as well
+only|no more than; just one
+just|a very short time ago
+again|one more time
+still|continuing until now, without stopping
+already|before now, or sooner than expected
+soon|in a short time from now
+then|after that; next
+here|in or at this place
+there|in or at that place
+always|at all times; every time
+never|at no time; not ever
+often|many times
+sometimes|at some times, but not always
+usually|in most cases; normally
+together|with each other
+maybe|possibly; perhaps
+really|in fact; truly
+well|in a good way
+quickly|at a fast speed
+slowly|at a slow speed
+carefully|with great attention, so as not to make mistakes
+almost|nearly, but not completely
+enough|as much as is needed
+more|a larger amount
+most|the largest amount
+less|a smaller amount
+ago|before now, as in "two years ___"

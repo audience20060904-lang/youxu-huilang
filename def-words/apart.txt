@@ -1,0 +1,19 @@
+# 释义句那题「不许同框」的词（一行一组，空格隔开）：意思太近，两句话放一起分不清哪句是它。
+# 近义词表 syn.js 已经挡掉的不用写；两边释义互相提到对方的（hen「a female chicken」）game.js 也会自己挡。
+good nice great fine
+bring carry
+picture photo
+really very
+wish dream
+world earth
+chocolate candy
+corn vegetable
+home flat house
+son boy
+daughter girl
+right true
+meet visit
+go leave
+stop finish
+like enjoy
+just already ago

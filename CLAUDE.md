@@ -287,7 +287,7 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 
 ## 文件结构
 
-`index.html` 按固定顺序加载脚本，**顺序不能乱**（`util` 提供全局函数 → `i18n` 定语言 → `words-a1` / `words-zh` / `words-es` / `words-ja` / `content` / `orb` / `art` → `i18n-en` 换英文文案 → `game` 依赖全部）：
+`index.html` 按固定顺序加载脚本，**顺序不能乱**（`util` 提供全局函数 → `i18n` 定语言 → `words-a1` / `words-zh` / `words-es` / `words-ja` / `syn` / `defs-en` / `content` / `orb` / `art` → `i18n-en` 换英文文案 → `game` 依赖全部）：
 
 | 文件 | 作用 |
 | --- | --- |
@@ -299,6 +299,7 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 | `i18n-bf.js` | **战场模式的英文**（2026-09-23）：塔 / 怪 / Boss / 特殊遗物 / 难度层按 id 覆盖（`BF_EN`）+ battle.html 静态文案。**只有 battle.html 加载，排在 `battle.js` 后面** |
 | `words-es.js` | **西班牙语词库**（A1~C1，4968 词，名词带冠词）+ 学西语时换掉整套词库全局的那段。**是 `es-words/build.py` 生成的，别手改**（改 `es-words/g1~g5.txt`）。排在 `words-zh.js` 后面（index / coop 都加载 —— `makeCode()` 要读 `ES_WORDS`） |
 | `words-ja.js` | **日语词库**（JLPT N5~N1，4853 词，带假名读音）+ 学日语时换掉整套词库全局的那段。**是 `ja-words/build.py` 生成的，别手改**。排在 `words-es.js` 后面（index / coop 都加载 —— `makeCode()` 要读 `JA_WORDS`） |
+| `defs-en.js` | **释义句题的英文释义**（2026-09-28）：`DEFS_EN` / `DEFS_APART`。**是 `def-words/build.py` 生成的，别手改**（改 `def-words/en*.txt` / `apart.txt`）。排在 `syn.js` 后面（index / coop 都加载）。见「释义句题」那一节 |
 | `syn.js` | **四选一的近义词表**（2026-09-24）：`SYN_EN` / `SYN_ES` / `SYN_JA`（中文那份是 `words-zh.js` 的 `ZH_SYN`）。**是 `syn-words/build.py` 生成的，别手改**；要补就改 `syn-words/manual-en/es/ja.txt` 再跑。排在 `words-ja.js` 后面（index / coop 都加载）。**改了任何一门词库的释义都要重跑一遍** |
 | `words-zh.js` | **中文词库**（HSK 1~6，4817 词，格式多一个拼音）+ 学中文时换掉整套词库全局的那段。生成脚本在 `zh-words/`（不上线） |
 | `words-a1.js` | 词库 8925 词（A1 460 / A2 465 / **B1 3000 / B2 3000** / **B2–C1 2000**，B1/B2 各有 1000 个是 2026-09-23 **追加在数组末尾**的，见「常见改动」加单词那条）+ 类别名 `CAT_CN`、词性名 `POS_CN` + 派生索引 `WMAP` / `BYCAT` / `BYPOS` / `BYLV`（**`BYLV` 现在有 1~5 五个桶**，加难度就得给它加桶）。文件名是历史遗留，**装的是全部五档**。这个仓库里**只有它是 CRLF 换行**，重新生成时别改成 LF |
@@ -477,6 +478,22 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
   `goTown()` 和开页面各查一次（反复调没副作用），改了就 `toast()` 一句。**以后往 A1 / A2 追加新词，满足条件的账号回一次镇上就自动熟练了。**
 - **存档码**：`codeIO()` 的 `secs` 末尾追加了一段（四门语言每个有记录的词：`miss` + 还有几天到期），老码没这段就当全部到期；
   `mergeData()` 里 `miss` 取大、`d` 跟着被选中的那一份走。存档文件整份带 LEX，不用改。
+
+## 释义句题「哪一句在说这个词」（用户 2026-09-28）
+
+- 题面是一个英文词，下面**四行英文释义句**，只有一句是它的。**不限时**（`startQTimer()` 放过 `type === "def"`），速答线按拼写题的规矩算（答对 = 0 秒）。
+  只在**学英语**、且这个词写了释义句时出：没掷中拼写题的题里有 **`DEF_RATE`(25%)** 换成它（`content.js`）。
+- 代码在 `game.js` 的 `defOf()` / `defOpts()` / `renderDef()`，答完在 `answer()` 开头那段 `B.q.type === "def"`。
+  **干扰项**：同一难度、**同一词性**（名词都是「a …」、动词都是「to …」，不能靠句式猜）、有释义、不是近义词（`nearSyn()`）、
+  不在 `def-words/apart.txt` 的同一组（`defApart()`）、两边释义都不提到对方（`defMentions()`，按词头比）。本档凑不齐 4 个就去全词库补。
+- **布局**：`.opts.def` 竖排四行、铺满整宽，**高度跟 2×2 方块那一块一样**（`min(31vh, 318px)`），换题型战斗窗不跳；四档屏幕量过答题前后同高。
+  每行左边序号、右边一句（`-webkit-line-clamp:2`）。答完对的那行绿、点错的红，**另外三行右上角挂 `.dw` 小签「lion · 狮子」**，压在行的上边框上，不占高度。
+  题卡上的 qlabel 是「哪一句在说这个词？」。
+- **数据**：`defs-en.js`（`DEFS_EN = {英文词: 释义句}` + `DEFS_APART`）是 **`def-words/build.py` 生成的，别手改**。真相是 `def-words/en1.txt`（A1）、以后的 en2~en5.txt，
+  一行 `英文词|释义句`。**按词做键、不按下标，所以不碰存档码**，可以一档一档慢慢补，没写的词就不出这种题。
+  写法：**一句只写最常用的那个意思**（跟中文释义对得上）、只用 A1/A2 的简单词、**不许出现这个词自己**、**不超过 70 个字符**（360 宽上两行；脚本全拦）。
+  现在只写了 **A1 460 条**。加一档：写 `enN.txt` → `python3 def-words/build.py` → 拿 Playwright 把新的全表放进一行量一遍截没截断、每个词凑不凑得齐 4 个选项，
+  再把意思太近的往 `apart.txt` 加组。
 
 ## 深渊 · 无终之影（第 51 层，2026-09-22）
 

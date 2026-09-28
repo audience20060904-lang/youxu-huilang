@@ -2220,7 +2220,7 @@ function qCustom(){ return OPT.snow && typeof OPT.qtime === "number" ? OPT.qtime
 function qBase(){ const c = qCustom(); return c > 0 ? c : QUIZ_TIME; }
 function startQTimer(){
   clearQTimer();
-  if(!B || !B.q || B.q.type === "spell") return;
+  if(!B || !B.q || B.q.type === "spell" || B.q.type === "def") return;   // 拼写 / 释义句都不限时
   if(P && P.tut) return;          // 教程关不限时 —— 先把规矩看明白
   if(qCustom() === 0) return;     // 设置里选了「不限时」
   const t = $("qTimer"), fill = $("qTimerFill");
@@ -2326,6 +2326,7 @@ function nextQuestion(){
   let type;
   if(P.tut) type = tutQuestionType(B.asked);                  // 教程关：题型是排好的
   else if(Math.random() < spellChance()) type = "spell";      // 每题独立掷一次
+  else if(defOf(word) && Math.random() < DEF_RATE) type = "def";   // 哪一句在说这个词（有释义句的词才出）
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
   B.q = {word:word, type:type, done:false, haunted: hauntReady(word.en)};
@@ -2357,10 +2358,12 @@ function nextQuestion(){
   $("spellBar").hidden = true;
   $("letters").hidden = true;
   $("opts").hidden = false;
+  $("opts").className = "opts";
   $("btnSpeak").hidden = true;
 
   B.optCount = 4;
   if(type === "spell"){ renderSpell(word); return; }
+  if(type === "def"){ renderDef(word); return; }
 
   if(type === "en2zh"){
     $("qLabel").textContent = T("这个词是什么意思？");
@@ -2399,6 +2402,64 @@ function nextQuestion(){
     box.appendChild(b);
   });
   startQTimer();          // 选择题才有读条（startQTimer 自己会放过拼写题）
+}
+/* ===== 哪一句在说这个词（用户 2026-09-28）=====
+   题面是这个英文词，下面四行英文释义句，只有一句是它的。**不限时**（startQTimer 放过它），速答线那几件按拼写题的规矩算。
+   释义在 defs-en.js（def-words/build.py 生成），只在学英语时出，没写释义的词不出这种题。
+   干扰项：同一难度、**同一词性**（名词都是「a …」、动词都是「to …」，不能靠句式猜）、有释义、不是近义词，
+   而且两边的释义里都不许提到对方（hen「a female chicken」不能给 chicken 当干扰项）。*/
+function defOf(w){
+  return LANG_LEARN === "en" && typeof DEFS_EN !== "undefined" && w ? DEFS_EN[w.en] || "" : "";
+}
+function defMentions(a, b){           // a 的释义里有没有提到 b 这个词（按词头比：learning 也算提到 learn）
+  let h = b.en.toLowerCase().replace(/[^a-z]/g, "");
+  if(h.length > 3) h = h.replace(/[ey]$/, "");
+  return new RegExp("\\b" + h).test(defOf(a).toLowerCase());
+}
+let DEF_APART = null;                  // 意思太近、不许同框的组（defs-en.js 的 DEFS_APART）→ {词: 组号}
+function defApart(a, b){
+  if(!DEF_APART){
+    DEF_APART = {};
+    (typeof DEFS_APART !== "undefined" ? DEFS_APART : []).forEach(function(g, i){
+      g.forEach(function(w){ (DEF_APART[w] = DEF_APART[w] || []).push(i); });
+    });
+  }
+  const x = DEF_APART[a.en], y = DEF_APART[b.en];
+  return !!(x && y && x.some(function(i){ return y.indexOf(i) >= 0; }));
+}
+function defOpts(word){
+  const ok = function(o, opts){
+    if(!defOf(o) || o.pos !== word.pos) return false;
+    return !opts.some(function(x){
+      return x.en === o.en || x.cn === o.cn || nearSyn(x, o) || defApart(x, o) || defMentions(x, o) || defMentions(o, x);
+    });
+  };
+  const opts = [word];
+  [scopeToLevel(ALLW, word.lv || 1), ALLW].forEach(function(src){
+    const bag = src.slice();
+    while(opts.length < 4 && bag.length){
+      const c = bag.splice(Math.floor(Math.random() * bag.length), 1)[0];
+      if(ok(c, opts)) opts.push(c);
+    }
+  });
+  return opts.sort(function(){ return Math.random() - .5; });
+}
+function renderDef(word){
+  $("qLabel").textContent = T("哪一句在说这个词？");
+  $("qWord").innerHTML = word.en;
+  $("qWord").className = "qword";
+  const opts = defOpts(word);
+  B.q.opts = opts;
+  const box = $("opts");
+  box.className = "opts def";
+  box.innerHTML = "";
+  opts.forEach(function(o, i){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "opt";
+    b.innerHTML = "<span class=\"n\">" + (i+1) + "</span><span class=\"dtx\">" + defOf(o) + "</span>";
+    b.addEventListener("click", function(){ answer(b, o.en === word.en); });
+    box.appendChild(b);
+  });
 }
 /* 冒险按钮上的两行字：第一行是按钮自己的文本节点，第二行是里面的 <em>。
    ⚠️ 别用 textContent 整块赋值 —— 那会把 <em> 一起干掉（以前就是这个 bug）。 */
@@ -2713,7 +2774,21 @@ function answer(btn, ok){
   today.ws[lexKey(word)] = 1;
   if(ok) today.r++; else today.w++;
 
-  if(B.q.type !== "spell"){
+  if(B.q.type === "def"){
+    /* 释义句：对的那行绿、点错的那行红，**另外三行右上角挂一个小签写它说的是哪个词**（压在行的上边框上，不占高度）*/
+    const list = B.q.opts || [];
+    Array.prototype.forEach.call($("opts").children, function(b, i){
+      b.disabled = true;
+      const o = list[i];
+      if(!o) return;
+      if(o.en === word.en){ b.classList.add("right"); return; }
+      const tag = document.createElement("span");
+      tag.className = "dw";
+      tag.textContent = o.en + " · " + o.cn;
+      b.appendChild(tag);
+    });
+    if(!ok && btn) btn.classList.add("wrong");
+  } else if(B.q.type !== "spell"){
     /* 答错了就把**每个选项的中英两边都摊开**（用户 2026-09）——
        字写在方块里面（方块本来就是正方形，装得下第二行），
        **不往 verdict 加行**，战斗窗答题前后照旧同高。
@@ -2745,15 +2820,16 @@ function answer(btn, ok){
   // 通感：每一题都算打中弱点（弱点的 +2 点伤、破绽、追猎全都跟着生效）
   const hitWeak = hasRelic("synes") || (!!m.weak && (m.weakPos ? word.pos === m.weak : word.cat === m.weak));
   const isSpell = B.q.type === "spell";
+  const untimed = isSpell || B.q.type === "def";       // 不限时的题：速答线按拼写题的规矩算（答对 = 0 秒）
   /* ===== 速答线（第十批）=====
      从摆题到作答花了几秒（B.qAt 在 nextQuestion() 里记），FAST_SEC 秒之内算「快」。
      ⚠️ **拼写题拼对算「0 秒内答对」**（用户 2026-09-25）：它不限时、字母要一个一个点，按真实用时算永远快不了，
      所以拼对一律当成 0 秒 —— 速答线那五件全吃、「从容」按读条满格算、「刹那」照样记一次速答。
      拼错就不算快（跟选择题答错一样）。*/
-  const usedSec = isSpell ? 0 : (Date.now() - (B.qAt || Date.now())) / 1000;
-  const fastAns = isSpell ? ok : usedSec <= FAST_SEC;  // 答得快（不分对错，「刹那」数的是这个）
+  const usedSec = untimed ? 0 : (Date.now() - (B.qAt || Date.now())) / 1000;
+  const fastAns = untimed ? ok : usedSec <= FAST_SEC;  // 答得快（不分对错，「刹那」数的是这个）
   const fast = fastAns && ok;                          // 「3 秒内答对」——速答线那五件看的都是它
-  const leftSec = (isSpell && !ok) ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
+  const leftSec = (untimed && !ok) ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
   /* 按时间复习：这一题算哪种答法（拼错差几个字母 / 答对快不快 / 读条走完过没有），lexMark 折成 FSRS 的分 */
   const how = lexHow(ok, isSpell, B.spell, spellOf(word), usedSec, B.q.slow);
   let head, note = "";
