@@ -93,7 +93,8 @@ if(!MET.accF || typeof MET.accF !== "object") MET.accF = {};   // 老档没有�
 function dayKey(){ const t = new Date(); return t.getFullYear() + "-" + (t.getMonth() + 1) + "-" + t.getDate(); }
 function todayRec(){
   const d = dayKey();
-  if(!MET.day || MET.day.d !== d || !MET.day.ws) MET.day = {d:d, r:0, w:0, ws:{}};
+  if(!MET.day || MET.day.d !== d || !MET.day.ws) MET.day = {d:d, r:0, w:0, ws:{}, wm:{}};
+  if(!MET.day.wm) MET.day.wm = {};              // 今日错题（2026-09-28）：{词键: 今天错了几次}
   return MET.day;
 }
 let P = null, G = null, B = null, cells = [], pendingLoot = null, pendingRoom = null, chestQ = null, reopenShop = null;
@@ -164,8 +165,20 @@ function lexMark(rec, ok){
     rec.str = Math.max(0, (rec.str || 0) - 1);
     rec.wrong = (rec.wrong || 0) + 1;
     rec.d = today;
+    rec.lw = today;                              // 最近一次答错是哪天（题卡右上角「N 天前」）
   }
   return rec;
+}
+/* 答错了顺手记进「今日错题」（MET.day.wm）—— lexMark 拿不到键，所以单独一个函数，两处答错都调 */
+function noteMissToday(w){
+  const wm = todayRec().wm, k = lexKey(w);
+  wm[k] = (wm[k] || 0) + 1;
+}
+/* 「3 天前」：lw 是天号，没有（老记录）就返回空串 */
+function missAgo(r){
+  if(!r || typeof r.lw !== "number") return "";
+  const n = dayNo() - r.lw;
+  return n <= 0 ? L("今天", "today") : L(n + "天前", n + "d ago");
 }
 function lexWord(k){
   if(LANG_LEARN === "es") return k.slice(0, 3) === "es:" ? WMAP[k.slice(3)] : null;
@@ -1539,11 +1552,30 @@ function renderSheets(s){
 }
 
 /* 错题本（用户 2026-09-27，信息页）：按「一共答错过几次」排，只列正在学的这门语言，前 MISS_BOOK_N 个 */
-function openMiss(){
-  renderMissBook(Object.keys(LEX).filter(function(k){ return !!lexWord(k); }));
+let missTab = "all";           // 错题本的子选项卡：all 历史错题 / today 今日错题（纯界面状态）
+function openMiss(tab){
+  if(tab) missTab = tab;
+  document.querySelectorAll("#veilMiss .mtab").forEach(function(b){ b.classList.toggle("on", b.dataset.mt === missTab); });
+  $("missSub").textContent = missTab === "today" ? T("今天答错的词") : T("按答错次数排");
+  if(missTab === "today") renderMissToday();
+  else renderMissBook(Object.keys(LEX).filter(function(k){ return !!lexWord(k); }));
   $("veilMiss").hidden = false;
   const box = $("missBook");
   if(box) box.scrollTop = 0;
+}
+/* 今日错题：MET.day.wm 里今天错过的词，按今天错了几次排（不封 30 个，一天错不了那么多）*/
+function renderMissToday(){
+  const wm = todayRec().wm;
+  const list = Object.keys(wm).filter(function(k){ return !!lexWord(k); })
+    .sort(function(a, b){ return wm[b] - wm[a]; });
+  const box = $("missBook");
+  if(!list.length){ box.innerHTML = "<div class=\"mbempty\">" + T("今天还没有答错过") + "</div>"; return; }
+  box.innerHTML = list.map(function(k, i){
+    const w = lexWord(k);
+    return "<div class=\"mbrow\"><i>" + (i + 1) + "</i>" +
+      "<b>" + wordFull(w) + (w.py ? " <span class=\"py\">" + w.py + "</span>" : "") + "</b>" +
+      "<span class=\"mbcn\">" + w.cn + "</span><em>" + L("错 " + wm[k] + " 次", "×" + wm[k]) + "</em></div>";
+  }).join("");
 }
 function renderMissBook(keys){
   const list = keys.filter(function(k){ return lexMiss(LEX[k]) > 0; })
@@ -1555,7 +1587,8 @@ function renderMissBook(keys){
     const w = lexWord(k), r = LEX[k];
     return "<div class=\"mbrow" + (lexDue(r) ? " due" : "") + "\"><i>" + (i + 1) + "</i>" +
       "<b>" + wordFull(w) + (w.py ? " <span class=\"py\">" + w.py + "</span>" : "") + "</b>" +
-      "<span class=\"mbcn\">" + w.cn + "</span><em>" + L("错 " + lexMiss(r) + " 次", "×" + lexMiss(r)) + "</em></div>";
+      "<span class=\"mbcn\">" + w.cn + "</span><em>" + L("错 " + lexMiss(r) + " 次", "×" + lexMiss(r)) +
+      (missAgo(r) ? "<small>" + missAgo(r) + "</small>" : "") + "</em></div>";
   }).join("");
 }
 
@@ -2226,6 +2259,13 @@ function nextQuestion(){
   // 「锁定冒险」开着就每题自动押上（拼写题除外，那题本来就不给冒险）
   B.wager = !!OPT.lock && type !== "spell";
   $("qHaunt").hidden = !B.q.haunted;
+  /* 待复习的错题（2026-09-28）：到期了、以前答错过 → 右上角「答错 N 次 / N 天前」。答题前算好，答完不变 */
+  const mr = LEX[lexKey(word)], qm = $("qMiss");
+  if(!P.tut && mr && lexDue(mr) && lexMiss(mr) > 0){
+    const ago = missAgo(mr);
+    qm.innerHTML = "<b>" + L("答错" + lexMiss(mr) + "次", "Missed " + lexMiss(mr) + "×") + "</b>" + (ago ? "<i>" + ago + "</i>" : "");
+    qm.hidden = false;
+  } else qm.hidden = true;
   $("qcard").classList.toggle("haunted", !!B.q.haunted);   // 标签浮在 qlabel 的位置上，不占高度（见 style.css）
   const wr = $("wagerRow"), wb = $("btnWager");
   wb.classList.toggle("on", B.wager);
@@ -3010,7 +3050,7 @@ function answer(btn, ok){
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
   } else {
-    P.wrong++; lexMark(rec, false);
+    P.wrong++; lexMark(rec, false); noteMissToday(word);
     if(!P.missN) P.missN = {};                 // 结算「这一趟答错的词」：这一趟每个词错了几次
     P.missN[word.en] = (P.missN[word.en] || 0) + 1;
     G.floorWrong = (G.floorWrong || 0) + 1;    // 循迹：这一层打错了几题，nextFloor() 里跟上一层比
@@ -4288,6 +4328,7 @@ function judgeChest(){
   lexMark(rec, ok);
   if(!ok){
     addHaunt(w.en);
+    noteMissToday(w);
     if(!P.missN) P.missN = {};
     P.missN[w.en] = (P.missN[w.en] || 0) + 1;
   }
@@ -6763,6 +6804,16 @@ function codeIO(io){
           if(!E && k && out.lex[k]){ out.lex[k].miss = miss; out.lex[k].d = today + off; }
         });
       });
+    },
+    function(){                                            // 最近一次答错是几天前（2026-09-28）：0 = 没记，n = (n−1) 天前；只写答错过的词
+      const today = dayNo();
+      lexSeen.forEach(function(L4){
+        L4.idx.forEach(function(i){
+          const k = L4.ok ? L4.pre + L4.list[i][0] : null, rec = (E ? LEX[k] : null) || {};
+          const back = io.num("wa", typeof rec.lw === "number" ? Math.min(4000, Math.max(0, today - rec.lw)) + 1 : 0);
+          if(!E && back && k && out.lex[k]) out.lex[k].lw = today - (back - 1);
+        });
+      });
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
@@ -6978,6 +7029,8 @@ function mergeData(o){
       better++;
     }
     if(miss) LEX[k].miss = miss;
+    const lw = Math.max(inc.lw || 0, (cur && cur.lw) || 0);   // 最近一次答错：取晚的那天
+    if(lw) LEX[k].lw = lw;
   }
 
   let legs = 0;
@@ -6998,10 +7051,13 @@ function mergeData(o){
   if(im.day && im.day.d && im.day.ws){
     const dn = function(x){ return x.split("-").map(Number).reduce(function(a, v){ return a * 100 + v; }, 0); };
     const cur = M.day;
-    if(!cur || !cur.d || dn(im.day.d) > dn(cur.d)) M.day = {d:im.day.d, r:im.day.r || 0, w:im.day.w || 0, ws:Object.assign({}, im.day.ws)};
+    if(!cur || !cur.d || dn(im.day.d) > dn(cur.d)) M.day = {d:im.day.d, r:im.day.r || 0, w:im.day.w || 0, ws:Object.assign({}, im.day.ws),
+                                                            wm:Object.assign({}, im.day.wm || {})};
     else if(cur.d === im.day.d){
       cur.r = Math.max(cur.r || 0, im.day.r || 0); cur.w = Math.max(cur.w || 0, im.day.w || 0);
       cur.ws = Object.assign(cur.ws || {}, im.day.ws);
+      cur.wm = cur.wm || {};
+      for(const k in (im.day.wm || {})) cur.wm[k] = Math.max(cur.wm[k] || 0, im.day.wm[k] || 0);   // 今日错题：同一个词取大
     }
   }
   if(im.tut) M.tut = 1;              // 新手教程：哪边走过都算走过（一个账号一次）
@@ -7382,7 +7438,10 @@ $("codexFind").addEventListener("input", function(){
 $("btnCloseCodex").addEventListener("click", function(){ $("veilCodex").hidden = true; });
 /* 构成（2026-09-26）*/
 $("btnParts").addEventListener("click", openParts);
-$("btnMiss").addEventListener("click", openMiss);
+$("btnMiss").addEventListener("click", function(){ openMiss("all"); });
+document.querySelectorAll("#veilMiss .mtab").forEach(function(b){
+  b.addEventListener("click", function(){ openMiss(b.dataset.mt); });
+});
 $("btnCloseMiss").addEventListener("click", function(){ $("veilMiss").hidden = true; });
 $("btnCloseParts").addEventListener("click", function(){ $("veilParts").hidden = true; });
 document.querySelectorAll("#veilParts .ptab").forEach(function(b){

@@ -637,6 +637,18 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .mbrow .mbcn{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .mbrow em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--blood)}
 .mbempty{font-size:12px;color:var(--faint)}
+.mbrow em small{font-size:10px;color:var(--faint);margin-left:5px}
+/* 错题本的子选项卡（历史 / 今日），照 .ptab 的样子，类名带 m 前缀（别用 .tab）*/
+.mtab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);
+  font-family:var(--body);font-size:12.5px;padding:6px 10px;cursor:pointer;margin-bottom:-1px}
+.mtab.on{color:var(--torch);border-bottom-color:var(--torch)}
+#veilMiss .tabs{flex-shrink:0;margin-bottom:6px}
+/* 战斗题卡右上角：待复习的错题「答错 N 次 / N 天前」—— 绝对定位不占高度；答完 🔊 出来就收掉（同一个角）*/
+.qmiss{position:absolute;right:6px;top:5px;display:flex;flex-direction:column;align-items:flex-end;
+  font-family:var(--mono);font-size:10px;line-height:1.25;color:var(--blood);pointer-events:none;z-index:1}
+.qmiss b{font-weight:600}
+.qmiss i{font-style:normal;color:var(--faint)}
+.qmiss[hidden],.spk:not([hidden]) ~ .qmiss{display:none}
 /* 图鉴的搜索框（用户 2026-09）：词库按英文/中文找，遗物按名字/效果/铭文找。
    ⚠️ 这个类**以前叫 `.find`，跟取景框里的寻路按钮 `.giveup.find` 撞了**
    （而且定义在后面，`width:100%` 被套到了按钮身上，把「放弃」挤成上下两行）——

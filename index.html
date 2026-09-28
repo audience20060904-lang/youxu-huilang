@@ -357,6 +357,8 @@
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
       <div class="qword" id="qWord">cat</div>
       <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>
+      <!-- 待复习的错题：右上角写「答错 N 次 / N 天前」（2026-09-28），绝对定位不占高度，答完喇叭出来就收掉 -->
+      <div class="qmiss" id="qMiss" hidden></div>
     </div>
 
     <div class="wagerrow" id="wagerRow">
@@ -560,6 +562,10 @@
   <div class="sheet tall">
     <div class="eyebrow" id="missSub">按答错次数排</div>
     <h2>错题本</h2>
+    <div class="tabs">
+      <button class="mtab on" data-mt="all" type="button">历史错题</button>
+      <button class="mtab" data-mt="today" type="button">今日错题</button>
+    </div>
     <div class="mbook sx" id="missBook"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseMiss" type="button">关闭</button></div>
   </div>
