@@ -152,21 +152,51 @@ function lexKey(w){ return w.k || w.en; }
 function dayNo(){ const t = new Date(); return Math.floor((t.getTime() - t.getTimezoneOffset() * 60000) / 86400000); }
 function lexDue(r, today){ return !!r && !(r.d > (today == null ? dayNo() : today)); }
 function lexMiss(r){ return r ? (r.miss != null ? r.miss : (r.wrong || 0)) : 0; }
-function lexMark(rec, ok){
+/* 记忆权重（用户 2026-09-28，数值在 content.js 的 WT_*）：老记录没有 wt，从 WT_BASE 起按错过几次往上估（最多 +5），已掌握的 −1 */
+function lexWt(r){
+  if(!r) return WT_BASE;
+  if(typeof r.wt === "number") return r.wt;
+  return Math.max(0, WT_BASE + Math.min(5, lexMiss(r)) - ((r.str || 0) >= 3 ? 1 : 0));
+}
+/* 这一题算哪种答法（给 lexMark 的 how）：拼写题拼错看差几个字母，选择题答对看快慢 / 超没超过时 */
+function lexHow(ok, spell, typed, target, sec, slow){
+  if(spell) return ok ? "fast" : (nearMiss(typed, target) ? "near" : "spell");
+  if(!ok) return "wrong";
+  return slow ? "slow" : sec <= FAST_SEC ? "fast" : "ok";
+}
+/* 拼写「只差一点」：长度一样且只错一格，或者只是相邻两格对调（字格是定长的，所以不用算插入 / 删除）*/
+function nearMiss(a, b){
+  a = Array.from(a || ""); b = Array.from(b || "");
+  if(a.length !== b.length || !a.length) return false;
+  const bad = [];
+  for(let i = 0; i < a.length; i++) if(a[i] !== b[i]) bad.push(i);
+  if(bad.length === 1) return b.length > 1;
+  return bad.length === 2 && bad[1] === bad[0] + 1 && a[bad[0]] === b[bad[1]] && a[bad[1]] === b[bad[0]];
+}
+/* how = lexHow() 的结果（不传就按老规矩：对 = ok、错 = wrong），haunted = 心魔现身时答的 */
+function lexMark(rec, ok, how, haunted){
   const today = dayNo();
+  how = how || (ok ? "ok" : "wrong");
+  let wt = lexWt(rec);
   if(ok){
     if(lexDue(rec, today)){
       rec.str = Math.min(5, (rec.str || 0) + 1);
-      rec.d = today + SRS_GAP[Math.min(rec.str, SRS_GAP.length - 1)];
-    }
+      wt += WT_HIT[how] || 0;                    // 变轻只在到期那一次算；答得慢照样变重
+      wt = Math.max(0, Math.min(WT_MAX, wt));
+      const gap = SRS_GAP[Math.min(rec.str, SRS_GAP.length - 1)] * WT_GAP[wt];
+      rec.d = today + Math.max(1, Math.round(gap));
+    } else if(WT_HIT[how] > 0) wt += WT_HIT[how];
     rec.wrong = 0;
   } else {
     rec.miss = lexMiss(rec) + 1;
-    rec.str = Math.max(0, (rec.str || 0) - 1);
+    wt += (WT_HIT[how] || WT_HIT.wrong) + (haunted ? WT_HIT.haunt : 0);
+    /* 只差一个字母：熟练度不掉（它其实记得），照样当天到期；心魔现身又错：多掉 1 */
+    if(how !== "near" || haunted) rec.str = Math.max(0, (rec.str || 0) - (haunted ? 2 : 1));
     rec.wrong = (rec.wrong || 0) + 1;
     rec.d = today;
     rec.lw = today;                              // 最近一次答错是哪天（题卡右上角「N 天前」）
   }
+  rec.wt = Math.max(0, Math.min(WT_MAX, wt));
   return rec;
 }
 /* 答错了顺手记进「今日错题」（MET.day.wm）—— lexMark 拿不到键，所以单独一个函数，两处答错都调 */
@@ -2092,11 +2122,13 @@ function pickQuizWord(cat){
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
   if(due.length && Math.random() < DUE_RATE) pool = due;
   else if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
+  /* 袋子里放几份：熟练度越低越多，上次答错 +3，**记忆权重每高出 WT_BASE 一格再 +1**（难词先出） */
   const bag = [];
   pool.forEach(function(w){
     const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
     let wt = s >= 3 ? 1 : s === 2 ? 2 : s === 1 ? 3 : 4;
     if(r && r.wrong) wt += 3;
+    if(r) wt += Math.max(0, lexWt(r) - WT_BASE);
     for(let i=0;i<wt;i++) bag.push(w);
   });
   let w = pick(bag), guard = 0;
@@ -2173,6 +2205,7 @@ function startQTimer(){
    ⚠️ 别再往这里加「揭晓正确答案 / 禁用选项 / 露出继续钮」那一套 —— 那是判错的做法。*/
 function timeUp(){
   if(!B || !B.q || B.locked) return;
+  B.q.slow = true;                // 记忆权重：读条走完过一圈，这题之后答对也只算「答得吃力」
   const m = B.mob, s = stats();
   /* 沙漏：超时那一下完全不掉血，代价是这一层的读条永久短一截。
      ⚠️ 要在减伤链之前就返回 —— 不然会白白吃掉屏息的次数、白掷一次错身。*/
@@ -2676,6 +2709,8 @@ function answer(btn, ok){
   const fastAns = isSpell ? ok : usedSec <= FAST_SEC;  // 答得快（不分对错，「刹那」数的是这个）
   const fast = fastAns && ok;                          // 「3 秒内答对」——速答线那五件看的都是它
   const leftSec = (isSpell && !ok) ? 0 : Math.max(0, Math.floor(qSeconds() - usedSec));   // 从容：读条还剩几整秒
+  /* 记忆权重：这一题算哪种答法（拼错差几个字母 / 答对快不快 / 读条走完过没有）*/
+  const how = lexHow(ok, isSpell, B.spell, spellOf(word), usedSec, B.q.slow);
   let head, note = "";
   /* ⚠️ note 是死变量（从来没被渲染过，老代码留的）。新遗物的反馈一律攒在 relicLog 上，
      接到底下那条 say() 后面 —— 想让玩家在战斗窗里当场看见，就只能写进 head。*/
@@ -2688,7 +2723,7 @@ function answer(btn, ok){
     if(P.rend >= REND_CAP) relicLog += T(" <span class=\"sys\">(割裂割满 ") + REND_CAP + T(" 点，从此不再割)</span>");
   }
   if(ok){
-    P.right++; lexMark(rec, true);
+    P.right++; lexMark(rec, true, how, B.q.haunted);
     /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
        原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
@@ -3050,7 +3085,7 @@ function answer(btn, ok){
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
   } else {
-    P.wrong++; lexMark(rec, false); noteMissToday(word);
+    P.wrong++; lexMark(rec, false, how, B.q.haunted); noteMissToday(word);
     if(!P.missN) P.missN = {};                 // 结算「这一趟答错的词」：这一趟每个词错了几次
     P.missN[word.en] = (P.missN[word.en] || 0) + 1;
     G.floorWrong = (G.floorWrong || 0) + 1;    // 循迹：这一层打错了几题，nextFloor() 里跟上一层比
@@ -4325,7 +4360,7 @@ function judgeChest(){
   chestQ.done = true;
   const rec = LEX[lexKey(w)] || {str:0, seen:0, wrong:0};
   rec.seen++;
-  lexMark(rec, ok);
+  lexMark(rec, ok, lexHow(ok, true, chestQ.spell, spellOf(w), 0, false));
   if(!ok){
     addHaunt(w.en);
     noteMissToday(w);
@@ -6814,6 +6849,15 @@ function codeIO(io){
           if(!E && back && k && out.lex[k]) out.lex[k].lw = today - (back - 1);
         });
       });
+    },
+    function(){                                            // 记忆权重（2026-09-28）：四门语言每个有记录的词 → wt（0~10，4 位）
+      lexSeen.forEach(function(L4){
+        L4.idx.forEach(function(i){
+          const k = L4.ok ? L4.pre + L4.list[i][0] : null, rec = (E ? LEX[k] : null) || {};
+          const wt = io.sym("wk", Math.min(WT_MAX, lexWt(E ? rec : null)), 4);
+          if(!E && k && out.lex[k]) out.lex[k].wt = Math.min(WT_MAX, wt);
+        });
+      });
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
@@ -7026,6 +7070,7 @@ function mergeData(o){
        ((inc.str||0) === (cur.str||0) && (inc.seen||0) > (cur.seen||0))){
       LEX[k] = {str:inc.str||0, seen:inc.seen||0, wrong:inc.wrong||0};
       if(typeof inc.d === "number") LEX[k].d = inc.d;         // 复习日期跟着取中的那一份走
+      if(typeof inc.wt === "number") LEX[k].wt = inc.wt;       // 记忆权重也跟着走
       better++;
     }
     if(miss) LEX[k].miss = miss;
