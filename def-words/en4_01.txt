@@ -1,0 +1,501 @@
+# B2 · 第 1 段（词库 B2 第 1~500 个）
+antler|one of the two branching horns on the head of a male deer
+badger|a grey wild animal with a black and white face that lives in holes
+beetle|an insect with a hard shiny back
+bison|a large wild cow with a big head and thick hair, from North America
+cocoon|the silk case a caterpillar makes around itself before becoming a moth
+cub|a young lion, bear, fox or wolf
+falcon|a fast bird that hunts, often trained by people
+fin|one of the thin flat parts on a fish that help it swim
+gill|one of the openings on the side of a fish that it breathes through
+habitat|the natural home of an animal or plant
+hedgehog|a small animal covered with sharp spines that rolls into a ball
+larva|the young worm-like form of an insect
+leopard|a large wild cat with yellow fur and black spots
+mane|the long hair on the neck of a horse or a lion
+mule|an animal whose parents are a horse and a donkey
+otter|a river animal with brown fur that eats fish
+parasite|a creature that lives on another and feeds from it
+paw|the foot of an animal like a cat or a dog
+pest|an insect or animal that damages crops
+poultry|chickens, ducks and other birds kept for eggs and meat
+primate|the group of animals that includes humans, apes and monkeys
+salmon|a large fish with pink flesh that swims up rivers
+seagull|a grey and white bird that lives near the sea
+sparrow|a small brown bird that is very common in towns
+squirrel|a small animal with a big bushy tail that lives in trees
+swan|a large white water bird with a long curved neck
+venom|the poison of a snake or a spider
+wasp|a black and yellow flying insect that can sting
+weasel|a small thin wild animal with a long body that kills mice
+whisker|one of the long stiff hairs near the mouth of a cat
+albatross|a very large white sea bird with long wings
+antelope|an African animal like a deer that runs very fast
+baboon|a large monkey with a face like a dog
+buffalo|a large animal like a cow with long curved horns
+canary|a small yellow bird that sings and is kept as a pet
+caterpillar|a small long creature with many legs that becomes a butterfly
+centipede|a small long creature with very many legs
+chameleon|a lizard that can change the colour of its skin
+cheetah|a wild cat with spots, the fastest land animal
+chimpanzee|an African ape that is very intelligent
+cockroach|a large brown insect that lives in dirty buildings
+coyote|a wild animal like a small wolf from North America
+cuckoo|a grey bird that lays its eggs in other birds' nests
+dinosaur|a very large reptile that lived millions of years ago
+earthworm|a long thin creature with no legs that lives in soil
+flamingo|a tall pink bird with long legs that stands in water
+gazelle|a small graceful African animal like a deer
+hyena|an African wild animal like a dog that makes a laughing sound
+almond|a flat oval nut with a pale colour
+apricot|a small soft orange fruit with a stone inside
+bacon|thin slices of salted meat from a pig, often fried for breakfast
+barley|a grain used for making beer and food
+cereal|a breakfast food made from grain that you eat with milk
+cinnamon|a sweet brown spice from the bark of a tree
+cocoa|a brown powder used to make chocolate
+crumb|a very small piece of bread or cake
+cuisine|a style of cooking from a particular country
+cutlery|knives, forks and spoons
+dairy|milk, cheese and butter
+delicacy|a rare or expensive food that is good to eat
+ginger|a hot spicy root used in cooking
+lentil|a small round dried seed that you cook and eat
+liquor|strong alcoholic drink
+mustard|a yellow sauce with a hot taste, eaten with meat
+oatmeal|a food made from crushed oats, eaten hot for breakfast
+olive|a small green or black fruit that gives oil
+pancake|a thin flat round cake cooked in a pan
+pastry|a mixture of flour, fat and water baked to make pies
+peanut|a nut that grows under the ground
+pumpkin|a large round orange vegetable
+radish|a small red root vegetable with a hot taste
+raisin|a dried grape
+sardine|a small sea fish often sold in tins
+spinach|a vegetable with dark green leaves
+starch|a white substance in potatoes and rice
+toast|bread that has been made brown and crisp by heating
+turkey|a large bird eaten at Christmas and Thanksgiving
+vanilla|a sweet flavour used in ice cream and cakes
+walnut|a nut with a hard shell and a wrinkled shape
+whisky|a strong alcoholic drink made from grain, from Scotland
+yoghurt|a thick food made from milk, often with fruit
+yolk|the yellow part of an egg
+anchovy|a very small salty fish
+asparagus|a vegetable with long thin green stems
+avocado|a green fruit with a large stone and soft pale flesh
+beetroot|a dark red root vegetable
+broccoli|a green vegetable that looks like a small tree
+caviar|the eggs of a large fish, eaten as an expensive food
+celery|a vegetable with long pale green stems
+condiment|a sauce or salt added to food at the table
+cucumber|a long green vegetable eaten raw in salads
+custard|a sweet yellow sauce made with milk and eggs
+dressing|a sauce of oil and vinegar for salads
+fillet|a piece of meat or fish with no bones
+garnish|a small amount of food used to decorate a dish
+gourmet|a person who knows a lot about good food
+lasagne|an Italian dish of flat pasta layers with meat and cheese
+maize|a tall plant grown for its large yellow grains
+marinade|a liquid in which meat is left before cooking
+molasses|a thick dark brown syrup made from sugar
+parsley|a herb with small curly green leaves
+porridge|a hot breakfast food made from oats and milk
+ravioli|small squares of pasta filled with meat or cheese
+saffron|an expensive yellow spice from a flower
+beige|a pale sandy brown colour
+emerald|a bright green colour, like the jewel
+hue|a colour or shade of colour
+indigo|a dark blue-purple colour
+lilac|a pale purple colour
+maroon|a dark brownish-red colour
+tint|a small amount of a colour
+azure|bright blue like a clear sky
+auburn|reddish-brown, used for hair
+opaque|not letting light through
+glossy|smooth and shiny
+murky|dark and dirty, so you cannot see through it
+dazzling|so bright that you cannot see well
+radiant|showing great happiness; very bright
+pigment|a substance that gives colour to something
+dye|a substance used to change the colour of cloth or hair
+palette|a board on which a painter mixes colours
+sheen|a soft shine on a surface
+tinge|a very small amount of a colour or feeling
+glare|a very strong light that hurts your eyes
+mottled|marked with patches of different colours
+speckled|covered with many small spots
+striped|having long narrow bands of colour
+transparent|clear so that you can see through it
+translucent|letting some light through but not completely clear
+monochrome|using only black, white and grey
+fluorescent|very bright and seeming to shine
+abdomen|the part of the body that contains the stomach
+artery|a tube that carries blood from the heart to the body
+blister|a small swelling on the skin filled with liquid
+cartilage|a strong flexible material in joints, ears and noses
+collarbone|the bone that goes from the shoulder to the base of the neck
+digestion|the process of breaking down food in the stomach
+eyelash|one of the small hairs at the edge of the eyelid
+freckle|a small brown spot on the skin
+gland|an organ that produces a chemical substance for the body
+gut|the tube in your body that food passes through
+heartbeat|the sound or movement of your heart pumping blood
+hormone|a chemical in the body that controls growth and other processes
+immunity|the ability of the body to fight a disease
+intestine|the long tube that carries food away from the stomach
+knuckle|one of the joints in your fingers
+ligament|a strong band that holds bones together at a joint
+marrow|the soft substance inside bones
+metabolism|the chemical processes that turn food into energy
+navel|the small hole in the middle of your stomach
+pelvis|the ring of bones at the bottom of your back
+pore|a very small hole in your skin
+saliva|the liquid in your mouth
+scalp|the skin on the top of your head under the hair
+skeleton|the frame of all the bones in a body
+sneeze|a sudden rush of air out of the nose, often when you have a cold
+spleen|an organ near the stomach that cleans the blood
+tendon|a strong band that joins a muscle to a bone
+tumour|a mass of cells growing in the body where it should not
+vision|the power of seeing with your eyes
+yawn|opening your mouth wide because you are tired
+anatomy|the scientific study of the body's structure
+antibody|a substance in the blood that fights disease
+aorta|the main artery that carries blood from the heart
+bacteria|very small living things, some of which cause disease
+bloodstream|the blood flowing around the body
+cavity|a hole in a tooth caused by decay
+cell|the smallest unit of a living thing
+chromosome|a part of a cell that carries genes
+circulation|the movement of blood around the body
+concussion|a head injury that makes you confused for a while
+cornea|the clear outer layer at the front of the eye
+cramp|a sudden pain when a muscle tightens
+dandruff|small white pieces of dead skin in the hair
+diaphragm|the muscle below the lungs that helps you breathe
+eardrum|the thin skin inside the ear that shakes when sound hits it
+embryo|a baby or animal in the very early stage of growth
+enzyme|a substance in the body that speeds up chemical changes
+fatigue|a feeling of being very tired
+infection|a disease caused by bacteria or a virus
+larynx|the part of the throat that holds the vocal cords
+molar|one of the large back teeth used for chewing
+nausea|the feeling that you are going to be sick
+accountant|a person whose job is to keep financial records
+activist|a person who works hard to bring political change
+ally|a country or person that supports you
+amateur|a person who does something for pleasure, not as a job
+analyst|a person whose job is to study information in detail
+applicant|a person who asks formally for a job
+architect|a person who designs buildings
+assassin|a person who kills an important person
+assistant|a person who helps someone in their work
+bandit|a robber who attacks travellers
+barber|a man whose job is to cut men's hair
+bodyguard|a person paid to protect someone important
+butcher|a person who sells meat
+candidate|a person who is trying to be elected or chosen for a job
+cashier|a person who takes money in a shop or bank
+celebrity|a famous person
+civilian|a person who is not in the army
+commander|an officer in charge of a group of soldiers
+companion|a person who travels or spends time with you
+consultant|an expert who gives advice to companies
+consumer|a person who buys goods
+curator|a person in charge of a museum
+delegate|a person chosen to represent a group at a meeting
+detective|a police officer who investigates crimes
+diplomat|a person who represents their country abroad
+disciple|a follower of a religious teacher
+economist|an expert on money and trade
+elder|an older person with authority in a group
+emperor|the ruler of an empire
+executive|a senior manager in a company
+follower|a person who supports a leader
+gambler|a person who bets money
+gardener|a person whose job is to grow flowers and cut grass
+governor|the leader of a state in the USA
+guardian|a person legally responsible for a child
+hermit|a person who lives alone away from society
+immigrant|a person who has come to live in another country
+infant|a baby
+inhabitant|a person or animal that lives in a place
+inventor|a person who creates a new machine or method
+investor|a person who puts money into a business
+landlord|a person who rents a house to someone
+lecturer|a teacher at a university
+mayor|the leader of a town or city
+mentor|an experienced person who advises a younger one
+messenger|a person who carries messages
+narrator|the person who tells the story
+nomad|a person who moves from place to place with no fixed home
+novelist|a person who writes long stories
+patron|a person who gives money to support artists
+pedestrian|a person walking in the street
+physician|a doctor
+pioneer|one of the first people to do something new
+plumber|a person who fixes water pipes
+producer|a person who is in charge of making a film
+publisher|a company that prints and sells books
+referee|the official who makes sure players follow the rules
+refugee|a person forced to leave their country because of war
+reporter|a person who writes news stories
+resident|a person who lives in a particular place
+ruler|a person who governs a country
+secretary|a person who types letters and organises an office
+senator|a member of the senate
+sheriff|an officer who keeps order in a county in the USA
+shepherd|a person who looks after sheep
+smuggler|a person who takes goods into a country illegally
+sponsor|a company that gives money to an event
+spouse|a husband or wife
+steward|a man who looks after passengers on a plane or ship
+successor|a person who takes a job after someone else
+supporter|a person who helps or agrees with someone
+tailor|a person who makes clothes, especially for men
+tenant|a person who pays rent to live in a place
+traitor|a person who helps the enemy of their country
+tyrant|a cruel ruler with total power
+veteran|a person who has been a soldier in a war
+volunteer|a person who works for free
+voter|a person who chooses in an election
+warden|a person in charge of a building, like a prison
+youngster|a young person
+ambassador|a top diplomat who represents a country abroad
+apostle|one of the twelve followers of Jesus
+aristocrat|a member of the highest social class
+artisan|a skilled worker who makes things by hand
+astronaut|a person who travels into space
+astronomer|a scientist who studies the stars
+attorney|a lawyer in the USA
+bachelor|a man who has never been married
+biologist|a scientist who studies living things
+broker|a person who buys and sells for others
+bureaucrat|an official in a government office
+chairman|the person in charge of a meeting or a company
+chancellor|the head of government in some countries
+chemist|a scientist who studies substances
+clown|a person in a circus with funny clothes and a red nose
+colonel|a senior army officer
+comedian|a person who tells jokes to entertain people
+composer|a person who writes music
+comrade|a friend, especially a fellow soldier
+conductor|a person who leads an orchestra
+conqueror|a person who takes control of a country by force
+contractor|a person or company that does work for others under an agreement
+courier|a person who delivers packages
+craftsman|a person skilled in making things by hand
+critic|a person who writes reviews of books or films
+dictator|a ruler with total power who was not elected
+dweller|someone who lives in a certain kind of place, like a city
+electrician|a person who fixes electrical equipment
+envoy|a person sent to deliver a message to another government
+exile|a person forced to live away from their own country
+gladiator|a man who fought other men in ancient Rome for entertainment
+historian|a person who studies the past
+hostage|a person held prisoner until demands are met
+janitor|a person who looks after a building
+jockey|a person who rides horses in races
+labourer|a person who does hard physical work
+linguist|a person who studies languages
+magician|a person who does tricks that seem like magic
+mariner|a sailor
+martyr|a person who dies for their beliefs
+midwife|a nurse who helps women give birth
+militia|a group of ordinary people trained as soldiers
+novice|a person new to an activity
+nun|a woman who lives in a religious community
+offender|someone who has done something illegal
+onlooker|a person who watches something happen
+oracle|a person in ancient times who gave advice from the gods
+orator|a skilled public speaker
+outcast|a person rejected by society
+passenger|a person travelling in a vehicle who is not driving
+alloy|a metal made by mixing two or more metals
+ammunition|bullets and bombs
+antenna|a wire that receives radio or TV signals
+anvil|a heavy iron block on which metal is hammered
+apparatus|equipment used for a particular purpose
+apron|a piece of cloth worn over clothes to keep them clean
+archive|a collection of historical documents
+ashtray|a small dish for cigarette ash
+badge|a small piece of metal or cloth worn to show who you are
+bandage|a long piece of cloth wrapped around a wound
+barricade|a barrier built quickly to block a road
+beam|a line of light
+bin|a container for rubbish
+blueprint|a detailed plan for a building or machine
+bracelet|a piece of jewellery worn around the wrist
+briefcase|a flat case for carrying papers
+bullet|a small piece of metal fired from a gun
+cage|a box with bars for keeping birds or animals
+capsule|a small container of medicine that you swallow
+cartridge|a small container of ink for a printer
+cauldron|a large round metal pot for cooking over a fire
+chisel|a tool with a sharp edge for cutting wood or stone
+clip|a small metal object for holding things together
+coil|a series of circles made from wire
+corkscrew|a tool for pulling corks out of bottles
+costume|clothes worn by an actor
+crayon|a coloured wax stick for drawing
+cylinder|a tube shape with flat round ends
+dart|a small pointed object thrown at a round board in a game
+detector|a device that finds something, like metal or smoke
+disc|a flat round object
+document|an official paper with written information
+elevator|a machine that carries people up and down in a building
+emblem|a design that represents a country or group
+eraser|a small object used to remove pencil marks
+fan|a machine with turning blades that moves air to cool you
+fence|a wooden or metal wall around a garden or field
+fibre|a thin thread of natural or artificial material
+firearm|a gun
+flag|a piece of cloth with a design that represents a country
+foam|a mass of small bubbles
+fuel|a substance like petrol that is burned to give power
+funnel|a tube wide at the top, used to pour liquid into a bottle
+furniture|chairs, tables, beds and similar things in a room
+fuse|a safety device that stops too much electricity
+gauge|an instrument that measures an amount
+generator|a machine that produces electricity
+gown|a long formal dress
+grid|a pattern of lines crossing each other to form squares
+hinge|a metal part that lets a door open and close
+hook|a curved piece of metal for hanging things
+hose|a long rubber tube for water
+kit|a set of tools or equipment for an activity
+knob|a round handle on a door or drawer
+lantern|a lamp in a case with a handle
+latch|a simple lock on a gate
+lens|a curved piece of glass in a camera or glasses
+manual|a book that tells you how to use a machine
+mast|the tall pole on a ship that holds the sails
+mat|a small piece of thick cloth placed on the floor
+microphone|a device that makes your voice louder
+microscope|an instrument that makes very small things look bigger
+missile|a flying weapon that explodes when it hits its target
+mug|a large cup with straight sides
+nozzle|the narrow end of a pipe where liquid comes out
+oar|a long pole with a flat end used to row a boat
+ornament|an object used to decorate a room
+padlock|a lock you can move, with a U-shaped bar
+panel|a flat piece of wood or glass that forms part of a door
+parachute|a large cloth that lets you fall slowly from a plane
+pedal|the part of a bike that you push with your feet
+pin|a thin sharp piece of metal used to hold cloth together
+pistol|a small gun held in one hand
+piston|a part of an engine that moves up and down in a tube
+pliers|a tool for holding and bending wire
+plough|a farm tool used to turn over soil
+pottery|pots and dishes made from baked clay
+projector|a machine that shows pictures on a screen
+pulley|a wheel with a rope used to lift heavy things
+rack|a frame with bars for holding things
+rag|an old piece of cloth used for cleaning
+rail|a bar you hold on to on stairs
+reel|a round object for winding thread or film
+rifle|a long gun fired from the shoulder
+rod|a long thin stick
+saddle|a leather seat on a horse
+sandal|an open shoe for hot weather
+saucer|a small plate you put a cup on
+sensor|a device that detects heat, light or movement
+shaft|a long rod in a machine that turns
+shutter|the part of a camera that opens to let in light
+slipper|a soft shoe worn at home
+spade|a tool for digging with a flat metal blade
+stapler|a device for joining pages with small metal pieces
+steel|a strong metal made from iron
+stick|a thin piece of wood from a tree
+straw|a thin tube for drinking through
+string|a thin rope for tying things
+syringe|a tube with a needle for giving injections
+tag|a small piece of paper or cloth with information
+tank|a large military vehicle with a big gun
+tape|a long narrow sticky strip for joining things
+thermometer|an instrument for measuring temperature
+tin|a metal container for food
+tripod|a stand with three legs for a camera
+trolley|a small cart with wheels for carrying things
+trophy|a cup given as a prize
+tweezers|a small tool for picking up tiny things
+typewriter|an old machine for writing with keys
+urn|a large vase, often for keeping ashes
+valve|a device that controls the flow of liquid in a pipe
+vase|a container for flowers
+vehicle|a machine such as a car or bus that carries people
+vest|a piece of underwear worn on the top half of the body
+wagon|a vehicle pulled by horses for carrying goods
+wax|a substance used to make candles
+whip|a long leather strap used for hitting animals
+wig|false hair worn on the head
+yarn|thread used for knitting
+zip|a fastener with two rows of metal teeth
+abacus|a frame with beads used for counting
+amplifier|a device that makes sounds louder
+armchair|a comfortable chair with sides for your arms
+artefact|an object made by people long ago
+artillery|large guns used by an army
+ballot|a paper used to vote in secret
+barbecue|a metal frame for cooking food outdoors over fire
+barometer|an instrument that measures air pressure
+bayonet|a long knife fixed to the end of a rifle
+binoculars|a device you hold to your eyes to see far things
+bonnet|the metal cover over a car's engine
+brace|a device that supports something, like a weak leg
+brochure|a thin book with pictures giving information
+buoy|a floating object that marks a place in the sea
+calculator|a small machine that does maths
+cannon|a large old gun that fires heavy metal balls
+canvas|strong cloth used for tents and paintings
+carriage|a vehicle pulled by horses
+cartoon|a funny film with drawings
+catalogue|a list of goods for sale
+catapult|a Y-shaped stick with elastic, for shooting stones
+ceramic|a material made from baked clay
+chandelier|a large decorative light that hangs from the ceiling
+chariot|an ancient two-wheeled vehicle pulled by horses in battle
+chart|a drawing that shows information clearly
+cipher|a secret way of writing
+clamp|a tool that holds things tightly together
+clipboard|a board with a clip at the top to hold papers
+compartment|a separate section of a train or a box
+component|one of the parts of a machine
+crest|the feathers that stand up on a bird's head
+crossbow|a weapon that shoots arrows with a trigger
+decoy|something used to trick a person or animal into a trap
+diagram|a simple drawing that shows how something works
+diesel|a heavy oil used in engines
+drill|a tool for making holes
+dynamite|a powerful explosive
+easel|a wooden frame that holds a painting while an artist works
+escalator|moving stairs
+explosive|a substance that can blow up
+filter|a device that removes dirt from liquid
+firework|a small device that explodes in coloured light
+fleet|a group of ships
+forceps|a medical tool for holding things
+freezer|a machine that keeps food frozen
+garland|a ring of flowers
+gauntlet|a thick glove that covers the wrist
+gramophone|an old machine for playing records
+grenade|a small bomb thrown by hand
+grill|a metal frame for cooking food over heat
+gunpowder|a black powder that explodes
+gutter|a channel along the edge of a roof or road that carries rain water
+handcuffs|a pair of metal rings for locking a prisoner's wrists
+handrail|a bar along stairs that you hold on to
+harpoon|a spear used for hunting whales
+headphones|a device you wear over your ears to listen to music
+helm|the wheel used to steer a ship
+hologram|a 3D image made with light
+hoop|a large ring of wood or metal
+hurdle|a small fence that runners jump over
+incense|a substance that makes a nice smell when burned
+insignia|a badge that shows rank
+kiln|an oven for baking clay pots
+lattice|a pattern of crossed strips
+lifeboat|a boat used to save people at sea
+locker|a small cupboard that you can close with a key, at a gym or school
+loom|a machine for weaving cloth

@@ -1,0 +1,501 @@
+# B1 · 第 5 段（词库 B1 第 2001~2500 个）
+monster|a large ugly frightening creature in stories
+bug|a small insect
+rat|an animal like a large mouse with a long tail
+puppy|a young dog
+bunny|a child's word for a rabbit
+goldfish|a small orange fish often kept in a bowl as a pet
+hawk|a bird with sharp claws that hunts small animals
+soda|a sweet fizzy drink
+steak|a thick slice of beef that you fry or grill
+popcorn|corn seeds heated until they burst, often eaten at the cinema
+shrimp|a small sea creature with a thin shell that turns pink when cooked
+supper|a light meal eaten in the evening
+ham|meat from a pig's leg that has been salted
+burger|a round flat piece of beef served in a bread roll
+lemonade|a sweet drink made from lemons, sugar and water
+vodka|a strong clear alcoholic drink from Russia
+watermelon|a large round fruit with green skin and red flesh
+blueberry|a small dark blue fruit that grows on bushes
+raspberry|a small soft red fruit made of many tiny parts
+kiwi|a fruit with brown hairy skin and green flesh
+alcohol|drinks such as beer and wine that can make people drunk
+health|the condition of your body and whether you are ill or well
+disease|an illness of people, animals or plants
+fat|the oily substance under the skin of people and animals
+injury|harm done to a person's body
+appearance|the way someone or something looks
+surgery|medical treatment in which a doctor cuts open the body
+illness|the state of being sick
+virus|a tiny living thing that causes illnesses like a cold
+gene|a part of a cell that controls qualities passed from parents
+expression|the look on someone's face that shows how they feel
+headache|a pain in your head
+vaccine|a substance put into the body to protect against a disease
+hunger|the feeling that you need to eat
+toothache|a pain in a tooth
+stomachache|a pain in your belly
+flu|an illness like a bad cold with fever and aches
+allergy|a condition that makes you ill when you touch or eat something
+cancer|a serious disease in which cells grow out of control
+government|the group of people who control a country
+guy|a man
+class|a group of students who are taught together
+director|the person who tells the actors what to do in a film
+lord|a man of high rank in the past who owned land
+character|a person in a book, play or film
+council|a group of people elected to govern a town
+union|an organisation of workers that protects their rights
+army|a large group of soldiers who fight on land
+association|an official group of people with the same interest
+committee|a small group chosen to make decisions for a larger group
+population|the number of people who live in a place
+kid|a child
+dad|an informal word for father
+girlfriend|a girl or woman that someone is having a romantic relationship with
+boyfriend|a boy or man that someone is having a romantic relationship with
+enemy|a person who hates you and wants to harm you
+squad|a small group of soldiers or players
+authority|the people or organisation with official power
+deputy|a person who is second in rank and can act for the leader
+mate|a friend
+mum|an informal word for mother
+elite|a small group of people who are the best or most powerful
+bishop|a senior priest in charge of churches in an area
+congress|the group of people who make laws in the USA
+management|the people who run a company
+opposition|political parties that are not in government
+actress|a woman who performs in films or plays
+ghost|the spirit of a dead person that some people believe they see
+fool|a stupid person
+lover|a person you are having a romantic relationship with
+liar|a person who says things that are not true
+musician|a person who plays music, often as a job
+visitor|a person who comes to see a place or a person
+survivor|a person who stays alive after an accident or disaster
+maid|a woman whose job is to clean a house or hotel room
+explorer|a person who travels to places no one has been to before
+grandson|the son of your son or daughter
+newborn|a baby that has just been born
+vegetarian|a person who does not eat meat
+dwarf|a very short creature in fairy tales
+millionaire|a very rich person
+philosopher|a person who thinks deeply about life and truth
+technician|a person whose job is to keep equipment working
+coward|a person who is not brave
+salesman|a man whose job is to persuade people to buy things
+bully|a person who hurts or frightens weaker people
+choir|a group of people who sing together
+fairy|a tiny creature with wings and magic powers in stories
+politician|a person who works in government or wants to be elected
+user|a person who uses a product or service
+speaker|a person who gives a talk in public
+reader|a person who looks at books, newspapers or magazines
+player|a person who takes part in a sport or game
+household|all the people who live together in one house
+teammate|a person in the same team as you
+roommate|a person who shares a room or flat with you
+housewife|a woman who stays at home and looks after her family
+hairdresser|a person whose job is to cut and style hair
+shopkeeper|a person who owns a small store
+grandpa|an informal word for grandfather
+grandma|an informal word for grandmother
+lady|a polite word for a woman
+gentleman|a polite word for a man
+designer|a person who plans how new things will look
+researcher|a person who studies a subject to find new facts
+stepmother|the woman your father married after your mother
+stepfather|the man your mother married after your father
+toddler|a young child who has just learned to walk
+diver|a person who swims under water with special equipment
+part|one piece of a whole
+business|the activity of buying and selling to make money
+system|a set of things or methods that work together
+case|an example of a particular situation
+power|the ability to control people and events
+job|work that you do regularly to earn money
+side|one of the two halves of something, left or right
+line|a long thin mark on a surface
+service|the help that a shop or restaurant gives its customers
+law|the system of rules that a country has
+war|fighting between countries with armies
+story|a description of events, real or imagined
+course|a set of lessons on a subject
+information|facts about something
+post|a message that you put on a website
+video|a recording of moving pictures
+fact|something that is known to be true
+problem|something that causes difficulty
+question|a sentence that asks for information
+idea|a plan or thought that you have
+cause|the thing that makes something happen
+data|facts and numbers collected for study
+form|a type or kind of something
+media|TV, radio and newspapers
+art|paintings, drawings and sculptures
+education|the process of teaching and learning
+example|something that shows what others of its type are like
+experience|knowledge you get from doing things
+program|a set of instructions that makes a computer do something
+programme|a show on TV or radio
+type|a kind or sort of something
+chance|a possibility that something will happen
+song|a piece of music with words that you sing
+word|a unit of language that has a meaning
+action|the process of doing something
+cost|the amount of money needed to buy or do something
+issue|an important subject that people are discussing
+project|a planned piece of work
+account|an arrangement with a bank to keep your money
+industry|the production of goods in factories
+view|a personal opinion
+result|what happens because of something
+policy|a plan of action agreed by a government or company
+performance|a show in front of an audience
+role|the character that an actor plays
+source|the place something comes from
+evidence|facts that show something is true
+production|the process of making something, like a film
+stuff|things in general
+tax|money that you must pay to the government
+league|a group of sports teams that play against each other
+size|how big or small something is
+step|one of a series of actions to achieve something
+range|a set of different things of the same kind
+review|an examination of something to check it or change it
+science|the study of the natural world through experiments
+attention|the act of watching or listening carefully
+football|a game in which two teams kick a ball
+property|things that belong to someone, especially land
+quality|how good or bad something is
+style|a particular way of doing or making something
+language|the words that people in a country use to talk
+title|the name of a book, film or song
+article|a piece of writing in a newspaper
+decision|a choice that you make after thinking
+situation|what is happening at a particular time
+technology|the use of science to make machines and tools
+choice|the act of picking from different things
+code|instructions written for a computer
+loss|the fact of no longer having something
+version|a form of something that is a little different from others
+goal|something you want to achieve
+practice|doing something regularly to get better at it
+success|the achievement of what you wanted
+truth|the real facts about something
+culture|the customs, art and beliefs of a group of people
+growth|an increase in size or amount
+response|an answer or reaction
+effect|a change caused by something
+network|a group of connected computers
+weight|how heavy something is
+difference|the way two things are not the same
+text|the written words in a book or document
+treatment|medical care for an illness or injury
+credit|a way of buying something now and paying for it later
+section|one of the parts that something is divided into
+speed|how fast something moves
+sale|the act of selling something
+tour|a trip in which you visit several places
+episode|one part of a TV series
+income|money that you receive regularly
+justice|fair treatment of people according to the law
+movement|a change of position
+safety|the state of being safe from danger
+statement|something said or written officially
+ability|the power or skill to do something
+collection|a group of objects that someone has gathered
+gun|a weapon that shoots bullets
+knowledge|the information and understanding you have
+subject|a topic you study at school, such as maths
+product|something that is made to be sold
+battle|a fight between two armies
+degree|the amount or level of something
+feature|an important or interesting part of something
+image|a picture on a screen or in a photo
+insurance|an agreement to pay money if something bad happens to you
+opinion|what you think about something
+sport|a physical game like football or tennis
+direction|the way that someone or something is moving
+ship|a large boat that carries people or goods by sea
+stock|a share in a company that you can buy and sell
+cash|money in coins and notes
+effort|hard work done to achieve something
+impact|a strong effect on something
+operation|cutting open a body to repair a part inside
+address|the details of where someone lives
+analysis|a careful study of something
+commission|money paid to someone for each sale they make
+competition|an event in which people try to win
+marriage|the legal relationship between husband and wife
+trip|a short journey to a place and back
+crime|an action that is against the law
+reality|the way things really are
+advice|an opinion about what someone should do
+agreement|a decision or arrangement accepted by two sides
+comment|something you say to give your opinion
+purpose|the reason for doing something
+theory|an idea that tries to explain something
+drug|a medicine or a substance used to change the body
+economy|the system of money and trade in a country
+mission|an important job that someone is sent to do
+task|a piece of work that you have to do
+status|a person's social or professional position
+trial|the process in a court of deciding if someone is guilty
+activity|something that you do for fun or exercise
+application|a program on a phone or computer
+condition|something that must happen before something else can
+flight|a journey on a plane
+freedom|the state of being free
+interview|a meeting where someone asks you questions for a job
+distance|the amount of space between two places
+protection|something that keeps you safe
+speech|a formal talk given to an audience
+traffic|the cars and vehicles on a road
+solution|a way of solving a problem
+structure|the way the parts of something are arranged
+brand|a product name made by a particular company
+budget|the amount of money you have to spend
+fashion|the popular style of clothes at a particular time
+fund|money collected for a particular purpose
+profile|a short description of a person
+seat|something that you sit on
+foundation|the most basic part from which something develops
+edition|one printing of a book or newspaper
+grade|a level at school that children study in for a year
+method|a way of doing something
+option|something that you can choose
+television|a device with a screen for watching programmes
+trouble|problems or difficulties
+advantage|something that helps you to be more successful
+influence|the power to affect how someone thinks or acts
+progress|movement toward a better state
+background|the details of a person's family and past
+concept|an idea of how something is
+labour|hard physical work
+leadership|the ability to lead a group
+length|how long something is
+software|the programs that run on a computer
+connection|a link between two things
+aid|help such as money or food given to countries in need
+beauty|the quality of being very attractive
+violence|behaviour that hurts or kills people
+reference|a mention of something
+religion|the belief in God or gods
+strategy|a plan for achieving a goal
+core|the central and most important part
+description|words that tell what something is like
+reaction|how you behave because of something
+victory|the fact of winning a battle or game
+emergency|a sudden dangerous situation that needs action now
+failure|a lack of success
+mail|letters and packages sent by post
+shape|the form of something, like round or square
+accident|something bad that happens by chance, like a car crash
+alternative|another thing that you can choose
+capacity|the amount that something can hold
+discussion|a conversation about a topic
+duty|something you must do because it is your job
+behaviour|the way you act
+debt|money that you owe
+survey|a set of questions asked to many people
+joke|something funny that you say to make people laugh
+loan|money that you borrow from a bank
+affair|an event or situation
+drama|a play for the theatre, TV or radio
+entry|an item in a list or dictionary
+factor|one of the things that affect a result
+mistake|something that is wrong
+payment|an amount of money paid
+sector|a part of a country's economy
+chapter|one of the parts that a book is divided into
+finance|the management of large amounts of money
+identity|who someone is
+journey|the act of travelling from one place to another
+argument|an angry disagreement
+conflict|serious disagreement or fighting
+fault|responsibility for a mistake
+talent|a natural ability to do something well
+truck|a large vehicle for carrying goods
+context|the situation in which something happens
+coverage|the reporting of news about something
+mode|a particular way of operating
+crisis|a time of great difficulty or danger
+literature|books and poems that are considered as art
+signal|a sign or sound that gives a message
+theme|the main subject of a talk or book
+assembly|a meeting of a large group of people
+combination|a mix of different things
+bomb|a weapon that explodes
+facility|a building or equipment for a special use
+bond|a close connection between people
+delivery|the act of bringing goods to someone
+gender|the fact of being male or female
+instance|a particular example of something
+prize|something you win in a competition
+possibility|something that might happen
+sentence|a group of words that begins with a capital letter
+category|a group of things of the same kind
+detail|a small fact or piece of information
+item|a single thing in a list or group
+mess|a dirty and untidy state
+scheme|an official plan
+storage|space for keeping things
+basketball|a game in which players throw a ball into a high net
+creation|something that someone has made
+employment|the state of having a paid job
+golf|a game where you hit a small ball into holes with a stick
+importance|the quality of mattering a lot
+object|a thing that you can see and touch
+pattern|a design of lines and shapes
+perspective|a way of thinking about something
+revolution|an attempt to change a government by force
+tournament|a sports competition with many games
+circle|a round shape
+concert|a performance of music
+error|a mistake
+origin|the beginning of something
+personality|a person's character
+retail|the sale of goods to the public in shops
+tip|money you give to a waiter for good service
+baseball|an American game played with a bat and ball
+fantasy|a pleasant situation that you imagine
+comedy|a funny film or play
+comparison|the act of looking at the ways two things are alike or different
+defence|protection against attack
+democracy|a system where people choose their government by voting
+fee|money paid for a service
+trend|a general direction of change
+wealth|a large amount of money
+approval|the feeling that something is good
+permission|the act of allowing someone to do something
+appointment|an arrangement to meet someone at a particular time
+improvement|a change that makes something better
+philosophy|the study of life, truth and knowledge
+tone|the way someone's voice sounds
+topic|a subject that people talk or write about
+audio|recorded sound
+format|the way something is arranged
+gap|an empty space between two things
+lesson|a period of time when you are taught something
+membership|the state of being part of a club
+proposal|a plan that you suggest
+reputation|the opinion people have about someone
+technique|a particular way of doing something that needs skill
+adventure|an exciting experience
+contrast|a clear difference between things
+element|a part of something
+extension|a part added to make something bigger
+poverty|the state of being poor
+server|a main computer that stores information for others
+bonus|extra money added to your pay
+discovery|something that is found for the first time
+mystery|something that nobody understands
+penalty|money you must pay as a punishment
+photography|the art of taking photos
+bath|the act of washing your body in a large container of water
+explanation|a reason or description that makes something clear
+rank|a position in an organisation, like the army
+wage|money paid every week for work
+custom|a traditional way of doing things
+output|the amount that is produced
+welfare|help given to people who need money or care
+hockey|a game played with sticks and a small ball or puck
+skill|an ability to do something well
+aspect|one part of a situation or problem
+inspiration|a sudden good idea
+priority|something that is more important than other things
+promotion|a move to a higher position at work
+poetry|poems in general
+disaster|a sudden event that causes great damage
+fitness|the state of being healthy and strong
+makeup|colours that people put on their faces
+angle|the space between two lines that meet
+efficiency|the quality of working well without waste
+experiment|a scientific test
+pace|the speed at which someone moves
+possession|something that you own
+agriculture|farming
+commerce|the business of buying and selling
+currency|the money used in a country
+exhibition|a show of art or objects for the public
+sin|a wrong act against God's rules
+summary|a short statement of the main points
+survival|the state of continuing to live
+achievement|something good that you succeed in doing
+destruction|the act of destroying something
+heritage|traditions and buildings from the past
+logic|a way of thinking carefully and clearly
+privacy|the state of being alone or not watched
+salary|money paid every month for a job
+script|the written words of a play or film
+chemistry|the science of substances and how they react
+consumption|the amount of something that is used
+discount|an amount taken off the usual price
+exception|something that does not follow the rule
+impression|an idea or feeling about someone
+input|information put into a computer
+luxury|something expensive that you do not need
+absence|the state of being away
+fame|the state of being known by many people
+principle|a basic rule or belief
+punishment|what you get for doing something wrong
+column|an article that appears regularly in a newspaper
+composition|a piece of writing done at school
+difficulty|something that is hard to do
+intention|something that you plan to do
+complaint|a statement that you are not happy with something
+feedback|opinions about how well you have done something
+humanity|kindness and care for other people
+innovation|a new idea or method
+preparation|the act of getting ready for something
+romance|a romantic relationship
+chip|a very small part of a computer that stores information
+database|a large collection of data stored on a computer
+documentary|a film that gives facts about a real subject
+jazz|a type of music with a strong rhythm, from African Americans
+psychology|the study of the mind
+symbol|a sign or object that represents something
+treaty|a formal agreement between countries
+craft|a skill of making things by hand
+hardware|the physical parts of a computer
+phrase|a small group of words
+wisdom|good judgement from experience
+certificate|an official document that shows you passed a course
+dialogue|a conversation in a book, play or film
+jet|a fast plane
+lifestyle|the way a person lives
+judgement|the ability to make good decisions
+logo|a design that a company uses as its sign
+revenge|harming someone because they harmed you
+tourism|the business of providing holidays for tourists
+tune|a series of musical notes
+equality|the state of being equal
+exam|a test of knowledge
+requirement|something that you need
+poem|a piece of writing with short lines and rhythm
+signature|your name written in your own way
+habit|something you do regularly without thinking
+burden|a heavy responsibility
+discipline|training to obey rules
+essay|a short piece of writing on a subject
+expense|money spent on something
+invasion|the act of entering another country with an army
+substance|a solid, liquid or gas material
+suggestion|an idea that you offer
+biology|the science of living things
+imagination|the ability to form pictures in your mind
+hood|the part of a coat that covers your head
+nonsense|words or ideas that are silly or untrue
+privilege|a special advantage given to some people
+radar|a system that finds objects using radio waves
+yoga|exercises for the body and mind from India
+cargo|goods carried by ship or plane
+taxi|a car that you pay to take you somewhere
+tobacco|dried leaves used in cigarettes
+weakness|a lack of strength
+animation|films made with drawings that seem to move
+clue|something that helps you solve a mystery
+mixture|things mixed together
+grammar|the rules of a language
+bubble|a ball of air inside a liquid

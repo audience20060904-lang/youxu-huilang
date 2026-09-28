@@ -4,7 +4,7 @@
 用法（在仓库根目录）：
     python3 def-words/build.py
 
-真相是 def-words/en1.txt（A1）、en2.txt（A2）…… 一行一条：英文词|释义句，# 开头是注释。
+真相是 def-words/en1.txt（A1）、en3_01.txt ~（B1，一档拆成好几个文件）…… 一行一条：英文词|释义句，# 开头是注释。
 写法：一句只写这个词**最常用的那个意思**（跟中文释义对得上），只用 A1/A2 的简单词，
 名词写「a/an …」、动词写「to …」、形容词副词直接写性质。实在不好说的虚词可以用 ___ 挖空举例（"as in "I ___ happy""）。
 脚本拦：
@@ -21,7 +21,9 @@ import json, os, re, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, '..')
 MAX_LEN = 70
-FILES = [('en1.txt', 1), ('en2.txt', 2), ('en3.txt', 3), ('en4.txt', 4), ('en5.txt', 5)]
+import glob
+# en1.txt、en3_01.txt、en3_02.txt …：文件名里 en 后面那个数字就是难度，一档可以拆成好几个文件
+FILES = [(os.path.basename(f), int(os.path.basename(f)[2])) for f in sorted(glob.glob(os.path.join(HERE, 'en[1-5]*.txt')))]
 
 # 词库：借 node 把 words-a1.js 跑一遍，拿 [英文, 中文, 类别, 难度, 词性]
 js = ("const vm=require('vm'),fs=require('fs');const c={window:{}};vm.createContext(c);"

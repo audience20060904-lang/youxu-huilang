@@ -1,0 +1,84 @@
+1|n grandmother / grandfather  ::  the mother of your mother or father  ||  the father of your mother or father
+1|n grandmother / uncle  ::  the mother of your mother or father  ||  the brother of your mother or father
+1|n grandmother / aunt  ::  the mother of your mother or father  ||  the sister of your mother or father
+1|n grandfather / uncle  ::  the father of your mother or father  ||  the brother of your mother or father
+1|n grandfather / aunt  ::  the father of your mother or father  ||  the sister of your mother or father
+1|n husband / wife  ::  the man that a woman is married to  ||  the woman that a man is married to
+1|num eleven / hundred  ::  the number 11, one more than ten  ||  the number 100, ten times ten
+1|num twenty / hundred  ::  the number 20, two times ten  ||  the number 100, ten times ten
+1|num thirty / hundred  ::  the number 30, three times ten  ||  the number 100, ten times ten
+1|num forty / hundred  ::  the number 40, four times ten  ||  the number 100, ten times ten
+1|num fifty / hundred  ::  the number 50, five times ten  ||  the number 100, ten times ten
+3|n merchant / trade  ::  a person who buys and sells goods, especially in the past  ||  the buying and selling of goods
+3|n sailor / crew  ::  a person who works on a ship  ||  the people who work on a ship or plane
+3|n audience / attention  ::  the people who watch or listen to a show  ||  the act of watching or listening carefully
+3|n foreigner / colony  ::  a person from another country  ||  a country ruled by another country
+3|n monarch / prince  ::  a king or queen  ||  the son of a king or queen
+3|n monarch / princess  ::  a king or queen  ||  the daughter of a king or queen
+3|n wartime / peace  ::  a period when there is a war  ||  a time when there is no war
+3|n barracks / housing  ::  buildings where soldiers live  ||  buildings where people live
+3|n hope / chance  ::  the feeling that something good will happen  ||  a possibility that something will happen
+3|n anxiety / possibility  ::  a feeling of worry about what might happen  ||  something that might happen
+3|n character / dialogue  ::  a person in a book, play or film  ||  a conversation in a book, play or film
+3|n lover / romance  ::  a person you are having a romantic relationship with  ||  a romantic relationship
+3|n media / programme  ::  TV, radio and newspapers  ||  a show on TV or radio
+3|n difference / category  ::  the way two things are not the same  ||  a group of things of the same kind
+3|n budget / wealth  ::  the amount of money you have to spend  ||  a large amount of money
+3|n payment / wealth  ::  an amount of money paid  ||  a large amount of money
+3|n finance / wealth  ::  the management of large amounts of money  ||  a large amount of money
+3|n truck / van  ::  a large vehicle for carrying goods  ||  a small vehicle for carrying goods
+3|adj fragile / sturdy  ::  easily broken  ||  strong and not easily broken
+3|adj obvious / unclear  ::  easy to see or understand  ||  not easy to understand
+3|adj distant / nearby  ::  far away  ||  not far away
+3|adj fortunate / unlucky  ::  having good luck  ||  having bad luck
+3|adj remote / nearby  ::  far away from towns  ||  not far away
+3|adj arrogant / superior  ::  thinking that you are better than other people  ||  better than others
+3|adj competitive / eager  ::  wanting very much to win  ||  wanting to do something very much
+3|adj female / male  ::  belonging to the sex that can have babies  ||  belonging to the sex that cannot have babies
+3|adj scientific / technical  ::  connected with science  ||  connected with machines and science
+3|adj thick / thin  ::  having a large distance between two sides  ||  having a small distance between two sides
+3|num tenth / hundredth  ::  coming after the ninth in order  ||  coming after the ninety-ninth in order
+3|num inch / metre  ::  a unit for measuring length, about 2.5 centimetres  ||  a unit for measuring length, 100 centimetres
+3|v crash / strike  ::  to hit something hard in a vehicle  ||  to hit someone or something hard
+3|v deny / lie  ::  to say that something is not true  ||  to say something that is not true
+3|v handle / act  ::  to deal with a situation or a problem  ||  to do something to deal with a situation
+3|v prevent / cease  ::  to stop something from happening  ||  to stop happening
+3|v react / tend  ::  to behave in a particular way because of something  ||  to usually behave in a particular way
+3|v refuse / threaten  ::  to say that you will not do something  ||  to say that you will hurt someone
+3|v flip / spin  ::  to turn something over quickly  ||  to turn around and around quickly
+3|v insert / cover  ::  to put something into something else  ||  to put something over something else
+3|v owe / repay  ::  to need to pay back money that you borrowed  ||  to pay back money that you borrowed
+3|v tend / treat  ::  to usually behave in a particular way  ||  to behave toward someone in a particular way
+3|adv mostly / scarcely  ::  almost all  ||  almost not at all
+3|adv temporarily / newly  ::  for a short time only  ||  only a short time ago
+4|n catalogue / merchandise  ::  a list of goods for sale  ||  goods for sale
+4|n bitterness / injustice  ::  a feeling of anger about unfair treatment  ||  unfair treatment
+4|n humility / arrogance  ::  the quality of not thinking you are better than others  ||  the attitude of thinking you are better than others
+4|n loneliness / sadness  ::  the unhappy feeling of being alone  ||  the feeling of being unhappy
+4|n shareholder / asset  ::  a person who owns part of a company  ||  something valuable that a company owns
+4|n intruder / admission  ::  a person who enters a place without permission  ||  permission to enter a place
+4|n removal / distraction  ::  the act of taking something away  ||  something that takes your attention away
+4|n fortune / expenditure  ::  a very large amount of money  ||  the amount of money spent
+4|n lifeline / plight  ::  something that helps you in a difficult situation  ||  a very difficult situation
+4|adj optimistic / pessimistic  ::  expecting good things to happen  ||  expecting bad things to happen
+4|adj prominent / infamous  ::  important and well known  ||  well known for something bad
+4|adj thoughtful / thoughtless  ::  kind and thinking of others  ||  not thinking about the feelings of others
+4|adj inflexible / powerless  ::  unable to change  ||  unable to control or change something
+4|v gasp / startle  ::  to breathe in suddenly in surprise  ||  to surprise someone suddenly
+4|v migrate / shift  ::  to move to another place for the season  ||  to move from one place to another
+4|v avert / inhibit  ::  to prevent something bad from happening  ||  to prevent something from happening freely
+4|v collaborate / coordinate  ::  to work together with someone  ||  to organise people to work together
+4|v distribute / encompass  ::  to give things to many people  ||  to include many things
+4|v stagnate / stifle  ::  to stop developing  ||  to stop something from developing
+4|v unify / reunite  ::  to bring together into one  ||  to bring people together again
+5|n snout / tapir  ::  the long nose of an animal like a pig  ||  an animal like a pig with a long nose
+5|n vat / vial  ::  a very large container for liquids  ||  a small glass container for liquids
+5|n bough / treetop  ::  a large branch of a tree  ||  the top branches of a tree
+5|v abduct / divest  ::  to take someone away by force  ||  to take something away from someone
+5|v belie / debunk  ::  to give a false idea of something  ||  to show that an idea is false
+5|v confiscate / divest  ::  to take something away as a punishment  ||  to take something away from someone
+5|v detach / segregate  ::  to separate one thing from another  ||  to separate one group from another
+5|v lessen / sober  ::  to make or become less  ||  to become less drunk
+5|adj benign / malignant  ::  not dangerous, used for a tumour  ||  dangerous and spreading, used for tumours
+5|adj graphic / imprecise  ::  clear and detailed  ||  not clear or exact in detail
+5|num quart / gallon  ::  a unit of liquid, about 1.1 litres  ||  a unit of liquid, about 4.5 litres

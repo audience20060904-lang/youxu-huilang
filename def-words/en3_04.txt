@@ -1,0 +1,501 @@
+# B1 · 第 4 段（词库 B1 第 1501~2000 个）
+rainy|with water falling from clouds a lot of the time
+rational|based on reason rather than feelings
+rear|at the back
+reckless|doing dangerous things without thinking
+regional|connected with a particular area of a country
+relevant|connected with what is being discussed
+reluctant|not wanting to do something
+remarkable|unusual and surprising in a way that people notice
+responsible|having the duty to take care of something
+ridiculous|very silly and unreasonable
+risky|possibly dangerous
+robust|strong and healthy
+round|shaped like a ball or a circle
+rugged|rough and rocky, with uneven ground
+sandy|covered with the tiny grains you find on a beach
+satisfied|pleased because you got what you wanted
+savage|wild and violent
+scared|afraid
+scientific|connected with science
+secret|known by only a few people
+secure|safe and protected
+senior|older or higher in rank
+separate|not joined together
+severe|very serious and bad
+shallow|not deep
+shameful|so bad that you should feel embarrassed
+shocking|very surprising and upsetting
+significant|large or important enough to be noticed
+silly|stupid in a way that is not serious
+similar|almost the same
+sincere|honest; meaning what you say
+skilled|having the ability to do something well
+sleepy|tired and ready to go to bed
+slender|thin in an attractive way
+slight|very small
+slippery|difficult to hold or stand on because it is smooth or wet
+smart|clever
+smelly|having an unpleasant odour
+snowy|covered with white frozen flakes from the sky
+social|connected with meeting and spending time with people
+solar|connected with the sun
+solemn|very serious, not happy
+spacious|having a lot of room inside
+specific|exact and clear
+splendid|very impressive and beautiful
+spotted|covered with a pattern of small round marks
+spiral|curving round and round a centre, like a snail's shell
+stable|firmly fixed and not likely to change
+standard|normal and usual
+steep|rising or falling sharply, like a hill that is hard to climb
+sticky|made of or covered with something like glue
+stiff|hard and difficult to bend
+straight|not bending or curving
+stressful|making you feel worried and under pressure
+striking|so unusual that you notice it
+sturdy|strong and not easily broken
+stunning|extremely beautiful
+successful|achieving what you wanted
+suitable|right for a particular purpose
+sunny|bright with light from the sun
+superior|better than others
+swift|very fast
+symbolic|representing something else
+talented|having a natural ability to do something well
+tame|not wild; used to living with people
+tasty|having a good flavour
+technical|connected with machines and science
+tense|nervous and worried, not relaxed
+terrified|extremely afraid
+thick|having a large distance between two sides
+thin|having a small distance between two sides
+thrilling|very exciting
+tiny|extremely small
+tolerant|willing to accept behaviour that you do not like
+toxic|poisonous
+traditional|following customs that have existed for a long time
+tragic|very sad, often involving death
+tremendous|very great in amount or level
+trivial|not important
+typical|having the usual qualities of a type
+unable|not able to do something
+uncertain|not knowing what will happen or what to do
+unconscious|not awake because of an injury
+unexpected|surprising because you did not think it would happen
+unfamiliar|not known to you
+unfriendly|not kind or pleasant to other people
+unhappy|not happy
+unhealthy|not good for your health
+unlikely|probably not going to happen
+unlimited|without any limit
+unlucky|having bad luck
+unnecessary|not needed
+unpleasant|not nice
+unusual|different from what is normal
+unwilling|not ready or happy to do something
+upper|higher than something else
+upright|standing straight up
+urgent|needing to be dealt with immediately
+useless|of no use
+usual|normal; happening most often
+vacant|empty; not being used
+valid|legally accepted; not out of date
+valuable|worth a lot of money
+vast|extremely large in area
+violent|using force to hurt people
+visible|able to be seen
+visual|connected with seeing
+voluntary|done because you want to, not because you must
+watery|thin and weak, with too much liquid
+weak|not physically strong
+weird|strange in a way that is hard to explain
+wild|living in nature, not kept by people
+windy|with air moving strongly outside
+wise|showing good judgement and experience
+wooden|made of wood
+worse|more bad
+worth|having a particular value in money
+wounded|injured by a weapon
+youthful|young or seeming young
+century|a period of one hundred years
+decade|a period of ten years
+delay|to make something happen later than planned
+period|a length of time
+recent|happening a short time ago
+sudden|happening quickly and without warning
+eternal|lasting forever
+dawn|the time in the morning when the sun first appears
+dusk|the time in the evening when it is becoming dark
+twilight|the weak light after the sun goes down
+era|a long period of history
+instant|a very short moment
+pause|a short stop before continuing
+interval|a period of time between two events
+duration|the length of time that something lasts
+deadline|the time by which you must finish something
+anniversary|the date on which something happened in a past year
+occasion|a special event or time
+event|something that happens, especially something important
+phase|one stage in a process of change
+cycle|a series of events that happen again and again in order
+routine|the things you usually do every day in the same order
+frequent|happening often
+constant|happening all the time
+previous|happening or existing just before
+temporary|lasting for only a short time
+permanent|lasting forever or for a very long time
+annual|happening once a year
+monthly|happening once a month
+weekly|happening once a week
+agenda|a list of things to discuss at a meeting
+beginning|the first part of something
+birth|the time when a baby comes out of its mother
+childhood|the time of your life when you are a child
+daylight|the natural light of the day
+eve|the day before a special day, like New Year
+festival|a special day or time of celebration
+generation|all the people born at about the same time
+onset|the beginning of something, especially something bad
+prime|main; most important
+rhythm|a regular pattern of sounds or movements
+session|a period of time spent on one activity
+spell|to say or write the letters of a word in the right order
+tradition|a custom that has existed for a long time
+wartime|a period when there is a war
+everlasting|continuing forever
+hourly|happening every hour
+lifelong|lasting your whole life
+momentary|lasting for a very short time
+nightly|happening every night
+outdated|no longer modern or useful
+upcoming|happening soon
+palace|a large grand house where a king or queen lives
+temple|a building where people worship
+prison|a building where criminals are kept as a punishment
+tunnel|a passage under the ground
+chamber|a room, especially a large one for a special purpose
+ruin|the parts of a building that remain after it has been destroyed
+border|the line between two countries
+shelter|a place that protects you from bad weather or danger
+region|a large area of a country
+path|a narrow way for walking
+fortress|a large strong building to protect people from attack
+castle|a large strong building with thick walls, where kings lived
+gateway|an entrance to a place, often with a gate
+dungeon|a dark prison under a castle
+cellar|a room under a house, used for storing things
+vault|a room with thick walls where money is kept safe
+crypt|a room under a church where dead people are buried
+tomb|a large stone grave
+graveyard|a place where dead people are buried
+shrine|a holy place built to remember a saint or god
+altar|a table in a church used for religious ceremonies
+chapel|a small church
+monastery|a building where monks live
+courtyard|an open space with walls around it
+corridor|a long passage in a building with rooms on each side
+hall|a large room used for meetings or concerts
+balcony|a platform on the outside of a building above the ground
+attic|a room at the top of a house under the roof
+basement|a room below the ground floor of a building
+lobby|the area just inside the entrance of a hotel
+studio|a room where an artist or photographer works
+workshop|a room where things are made or repaired
+laboratory|a room where scientists do experiments
+warehouse|a large building for storing goods
+dock|a place where ships are loaded and unloaded
+pier|a long structure built out into the sea for boats to stop at
+lighthouse|a tower with a strong light that warns ships of danger
+settlement|a place where people have come to live and built homes
+colony|a country ruled by another country
+province|one of the large parts that some countries are divided into
+kingdom|a country ruled by a king or queen
+empire|a group of countries ruled by one leader
+realm|an area of activity or interest
+territory|land that belongs to one country
+frontier|the land at the edge of a country
+outpost|a small military camp far away from the main army
+camp|a place where people stay in tents
+route|a way from one place to another
+lane|a narrow road in the country
+highway|a main road for fast travel between cities
+avenue|a wide street in a city, often with trees
+junction|a place where two roads meet
+platform|the area next to the track where you get on a train
+terminal|a building at an airport where passengers arrive and leave
+stadium|a large sports ground with seats around it
+arena|a large area where sports or shows take place
+gallery|a building where paintings are shown to the public
+clinic|a place where people go to see a doctor
+orchard|a piece of land where fruit trees are grown
+vineyard|a farm where grapes are grown for making wine
+bar|a place where people go to buy and drink alcohol
+barracks|buildings where soldiers live
+base|a place where an army or group has its main office
+booth|a small area with thin walls, used for selling things
+burrow|a hole in the ground dug by an animal like a rabbit
+campus|the grounds and buildings of a university
+chimney|a tall pipe on a roof that takes smoke out of a building
+circus|a travelling show with clowns and animals
+citadel|a strong castle on a hill above a city
+club|a group of people who meet to share an interest
+courthouse|a building where legal trials take place
+den|the hidden home of a wild animal such as a lion
+depot|a place where goods or vehicles are kept
+dwelling|a house or place to live
+embassy|the office of a country's representatives in a foreign country
+fireplace|an open space in a wall where you burn wood to heat a room
+floor|the flat surface you walk on inside a building
+fort|a strong building used by soldiers
+garrison|a group of soldiers living in a town to defend it
+hallway|the space inside the front door of a house
+hamlet|a very small village
+haven|a place where you are safe
+hearth|the floor in front of a fireplace
+inn|a small old hotel, often in the countryside
+landing|the flat area at the top of a set of stairs
+lounge|a comfortable room for relaxing in
+metropolis|a very large city
+orphanage|a home for children whose parents are dead
+pasture|land with grass for cows and sheep to eat
+pavement|the path at the side of a road for people to walk on
+porch|a covered area at the entrance to a house
+rooftop|the outside top surface of a building
+scene|the place where something happens, like an accident
+seaside|a place by the sea where people go on holiday
+shed|a small simple building in a garden for storing tools
+site|a place where something is built or happens
+spot|a particular place
+stairway|a set of stairs inside a building
+stall|a table in a market where things are sold
+threshold|the floor at the entrance to a room
+veranda|a covered area along the outside of a house
+workplace|the place where you do your job
+fear|the feeling you have when you are afraid
+hope|the feeling that something good will happen
+anger|the strong feeling that makes you want to shout or fight
+shame|the bad feeling you have when you did something wrong
+regret|a feeling of sadness about something you wish you had not done
+relief|the good feeling when something bad has stopped
+courage|the ability to do something dangerous without fear
+despair|the feeling of having no hope at all
+doubt|a feeling of not being sure
+trust|a belief that someone is honest and will not hurt you
+desire|a strong feeling of wanting something
+grief|great sadness because someone has died
+pride|a feeling of pleasure in what you have achieved
+envy|the feeling of wanting what someone else has
+sorrow|a feeling of deep sadness
+delight|a feeling of great pleasure
+terror|extreme fear
+panic|a sudden strong fear that stops you thinking clearly
+rage|very strong anger
+guilt|the feeling of having done something wrong
+mercy|kindness shown to someone you could punish
+passion|a very strong feeling of love or interest
+sympathy|a feeling of being sorry for someone who is suffering
+anxiety|a feeling of worry about what might happen
+stress|a feeling of worry caused by difficult situations
+temper|a tendency to become angry easily
+spirit|a person's mind and feelings, as opposed to the body
+will|the determination to do something
+memory|something that you remember from the past
+instinct|a natural way of behaving that you do not learn
+pleasure|a feeling of happiness and enjoyment
+eager|wanting to do something very much
+furious|extremely angry
+gloomy|sad and without hope
+weary|tired after a long effort
+joyful|very happy
+hopeless|without any chance of success
+fearful|worried that something bad may happen
+restless|unable to stay still or relax
+ashamed|feeling bad because you did something wrong
+content|the ideas or subject matter in a book, film or speech
+bold|brave and confident
+timid|shy and easily frightened
+tender|gentle and loving
+fierce|violent and frightening, like a wild animal
+amazement|a feeling of great surprise
+attitude|the way you think and feel about something
+belief|a feeling that something is true
+bravery|the quality of not being afraid
+concern|a feeling of worry about something important
+confidence|the feeling that you can do something well
+confusion|the state of not understanding
+enjoyment|the pleasure you get from something
+faith|strong belief in God or a religion
+fondness|a feeling of liking someone
+frustration|the feeling of being annoyed because you cannot do something
+fury|extreme anger
+glory|great honour and praise that comes from success
+grace|a smooth and attractive way of moving
+happiness|the state of being happy
+harmony|a situation in which people live together peacefully
+honour|great respect
+horror|a strong feeling of shock and fear
+humour|the ability to find things funny
+kindness|the quality of being kind
+loyalty|the quality of always supporting someone
+madness|crazy or foolish behaviour
+motive|a reason for doing something
+outrage|a strong feeling of anger and shock
+peace|a time when there is no war
+annoyed|a little angry
+depressed|very unhappy for a long time
+envious|wanting what someone else has
+frightened|feeling fear
+frustrated|upset because you cannot achieve what you want
+hopeful|believing that something good will happen
+indifferent|not interested or not caring
+jolly|happy and friendly
+merciful|willing to forgive rather than punish
+moody|having feelings that change often
+pitiful|making you feel sorry for someone
+regretful|feeling sorry about something you did
+relieved|happy because something unpleasant has stopped
+sullen|angry and silent
+thankful|feeling glad and grateful
+billion|the number 1,000,000,000
+trillion|the number 1,000,000,000,000
+third|coming after the second in order
+fourth|coming after the third in order
+fifth|coming after the fourth in order
+sixth|coming after the fifth in order
+seventh|coming after the sixth in order
+eighth|coming after the seventh in order
+ninth|coming after the eighth in order
+tenth|coming after the ninth in order
+triple|three times as much or as many
+quantity|an amount or number of something
+amount|how much there is of something
+sum|the total when numbers are added together
+majority|more than half of a group
+minority|less than half of a group
+fraction|a part of a whole number, such as 1/2
+decimal|a number with a point in it, such as 3.5
+digit|any of the numbers from 0 to 9
+unit|a standard measure, such as a metre or a kilo
+eleventh|coming after the tenth in order
+twelfth|coming after the eleventh in order
+fifteenth|coming after the fourteenth in order
+twentieth|coming after the nineteenth in order
+hundredth|coming after the ninety-ninth in order
+thousandth|coming after the nine hundred and ninety-ninth in order
+quadruple|four times as much or as many
+fivefold|five times as much or as many
+score|the number of points you get in a game
+tally|a record of how many there are, kept by counting
+batch|a group of things made or dealt with at the same time
+bundle|a number of things tied together
+heap|a large untidy pile of things
+pile|a number of things placed on top of each other
+bunch|a group of flowers held together
+cluster|a group of similar things close together
+dose|an amount of medicine taken at one time
+volume|how loud a sound is
+abroad|in or to a foreign country
+absolutely|completely
+afterwards|after something else has happened
+anyway|used to say something is true despite other things
+apart|separated by a distance
+aside|to one side, out of the way
+backward|toward the back
+barely|only just; almost not
+beforehand|before something else happens
+besides|in addition to what has been said
+briefly|for a short time
+clearly|in a way that is easy to see or understand
+closely|near in space or relationship
+completely|totally; in every way
+constantly|all the time
+deeply|very much
+directly|without stopping or going another way
+downstairs|on or to a lower floor of a building
+eventually|in the end, after a long time
+exactly|precisely; without any mistake
+extremely|to a very great degree
+fairly|more than a little but not very
+forever|for all time
+forward|toward the front
+frankly|in an honest and direct way
+further|to a greater degree or distance
+generally|usually; in most cases
+gently|in a soft and calm way
+gradually|slowly, over a period of time
+highly|to a large degree
+immediately|at once, without waiting
+indeed|really; certainly
+largely|mostly; to a great extent
+lately|recently
+loudly|making a lot of noise
+mainly|mostly; more than anything else
+meanwhile|during the same time
+merely|only; simply
+mostly|almost all
+naturally|as you would expect
+normally|in the usual way
+obviously|in a way that is easy to understand
+otherwise|if not; or else
+overall|in general; when everything is considered
+perfectly|completely; without any faults
+personally|in your own opinion
+possibly|maybe
+previously|before the time you are talking about
+quietly|making little noise
+rapidly|very quickly
+rarely|not often
+recently|not long ago
+regularly|at the same time each day or week
+seldom|almost never
+seriously|in a way that is not funny
+shortly|in a short time; soon
+simply|in an easy way
+slightly|a little
+angrily|in a way that shows you are very cross
+anxiously|in a worried way
+beautifully|in a very attractive way
+bitterly|in a way that shows great sadness or anger
+boldly|in a brave and confident way
+brightly|with a lot of light
+calmly|in a relaxed way, without getting excited
+cheerfully|in a happy way
+commonly|often; usually
+confidently|in a way that shows you believe in yourself
+correctly|in the right way
+definitely|without any doubt
+effectively|in a way that works well
+equally|to the same degree
+faintly|in a way that is hard to see or hear
+fiercely|in a violent or angry way
+fortunately|luckily
+freely|without being controlled
+gladly|willingly and happily
+gratefully|with thanks
+happily|in a joyful way
+heavily|with great weight or force
+hurriedly|quickly, because you do not have much time
+initially|at the beginning
+intensely|in a very strong way
+lightly|with little force or weight
+madly|in a wild and uncontrolled way
+moreover|and also; in addition
+nervously|in a worried and frightened way
+nowhere|not in or to any place
+partly|to some extent, but not completely
+perhaps|possibly; maybe
+politely|in a well-mannered way
+proudly|in a way that shows you are pleased with yourself
+quite|fairly; rather
+safely|without danger
+scarcely|almost not at all
+secretly|without other people knowing
+somehow|in some way that is not known
+somewhat|to some degree; rather
+swiftly|very quickly and smoothly
+therefore|for that reason
+thus|in this way; as a result
+upward|toward a higher position
+warmly|in a friendly way
+wildly|in an uncontrolled way
