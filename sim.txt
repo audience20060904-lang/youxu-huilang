@@ -1,84 +1,472 @@
+1|n bread / cake  ::  a food made from flour and water and baked in an oven  ||  a sweet food made from flour, eggs and sugar, baked in an oven
+1|n cake / candy  ::  a sweet food made from flour, eggs and sugar, baked in an oven  ||  a small sweet food made from sugar
+1|n sugar / chocolate  ::  a sweet white or brown food that you put in drinks and cakes  ||  a sweet brown food made from cocoa
 1|n grandmother / grandfather  ::  the mother of your mother or father  ||  the father of your mother or father
 1|n grandmother / uncle  ::  the mother of your mother or father  ||  the brother of your mother or father
 1|n grandmother / aunt  ::  the mother of your mother or father  ||  the sister of your mother or father
 1|n grandfather / uncle  ::  the father of your mother or father  ||  the brother of your mother or father
 1|n grandfather / aunt  ::  the father of your mother or father  ||  the sister of your mother or father
 1|n husband / wife  ::  the man that a woman is married to  ||  the woman that a man is married to
+1|n afternoon / noon  ::  the part of the day between twelve o'clock and evening  ||  twelve o'clock in the middle of the day
+1|n morning / noon  ::  the early part of the day, before twelve o'clock  ||  twelve o'clock in the middle of the day
+1|n Monday / Wednesday  ::  the day after Sunday and before Tuesday  ||  the day after Tuesday and before Thursday
+1|n Monday / Saturday  ::  the day after Sunday and before Tuesday  ||  the day after Friday and before Sunday
+1|n Tuesday / Thursday  ::  the day after Monday and before Wednesday  ||  the day after Wednesday and before Friday
+1|n Tuesday / Sunday  ::  the day after Monday and before Wednesday  ||  the day after Saturday and before Monday
+1|n Wednesday / Friday  ::  the day after Tuesday and before Thursday  ||  the day after Thursday and before Saturday
+1|n Thursday / Saturday  ::  the day after Wednesday and before Friday  ||  the day after Friday and before Sunday
+1|n Friday / Sunday  ::  the day after Thursday and before Saturday  ||  the day after Saturday and before Monday
+1|v leave / travel  ::  to go away from a place  ||  to go from one place to another, especially far away
+1|num three / twenty  ::  the number 3, one more than two  ||  the number 20, two times ten
+1|num four / thirty  ::  the number 4, one more than three  ||  the number 30, three times ten
+1|num five / forty  ::  the number 5, one more than four  ||  the number 40, four times ten
+1|num six / fifty  ::  the number 6, one more than five  ||  the number 50, five times ten
+1|num eleven / twenty  ::  the number 11, one more than ten  ||  the number 20, two times ten
+1|num eleven / thirty  ::  the number 11, one more than ten  ||  the number 30, three times ten
+1|num eleven / forty  ::  the number 11, one more than ten  ||  the number 40, four times ten
+1|num eleven / fifty  ::  the number 11, one more than ten  ||  the number 50, five times ten
 1|num eleven / hundred  ::  the number 11, one more than ten  ||  the number 100, ten times ten
+1|num eleven / thousand  ::  the number 11, one more than ten  ||  the number 1,000, ten times one hundred
+1|num twenty / thirty  ::  the number 20, two times ten  ||  the number 30, three times ten
+1|num twenty / forty  ::  the number 20, two times ten  ||  the number 40, four times ten
+1|num twenty / fifty  ::  the number 20, two times ten  ||  the number 50, five times ten
 1|num twenty / hundred  ::  the number 20, two times ten  ||  the number 100, ten times ten
+1|num twenty / thousand  ::  the number 20, two times ten  ||  the number 1,000, ten times one hundred
+1|num thirty / forty  ::  the number 30, three times ten  ||  the number 40, four times ten
+1|num thirty / fifty  ::  the number 30, three times ten  ||  the number 50, five times ten
 1|num thirty / hundred  ::  the number 30, three times ten  ||  the number 100, ten times ten
+1|num thirty / thousand  ::  the number 30, three times ten  ||  the number 1,000, ten times one hundred
+1|num forty / fifty  ::  the number 40, four times ten  ||  the number 50, five times ten
 1|num forty / hundred  ::  the number 40, four times ten  ||  the number 100, ten times ten
+1|num forty / thousand  ::  the number 40, four times ten  ||  the number 1,000, ten times one hundred
 1|num fifty / hundred  ::  the number 50, five times ten  ||  the number 100, ten times ten
+1|num fifty / thousand  ::  the number 50, five times ten  ||  the number 1,000, ten times one hundred
+2|n potato / root  ::  a round vegetable that grows under the ground, used for chips  ||  the part of a plant that grows under the ground
+2|n peach / cherry  ::  a soft round fruit with yellow-red skin and a large stone  ||  a small round red fruit with a stone inside
+2|n shoulder / chest  ::  the part of your body between your neck and your arm  ||  the front of your body between your neck and stomach
+2|adj narrow / wide  ::  small from one side to the other  ||  large from one side to the other
+2|adj clever / confused  ::  able to learn and understand quickly  ||  not able to understand
+3|n predator / seafood  ::  an animal that kills and eats other animals  ||  fish and other sea animals that you can eat
+3|n portion / ration  ::  an amount of food for one person  ||  a fixed amount of food that each person is allowed to have
+3|n brandy / vodka  ::  a strong alcoholic drink made from wine  ||  a strong clear alcoholic drink from Russia
+3|n limb / torso  ::  an arm or a leg  ||  the main part of the body, not including the head, arms and legs
+3|n hunter / hunting  ::  a person who chases and kills wild animals  ||  the activity of chasing and killing animals
+3|n wizard / witch  ::  a man in stories who has magic powers  ||  a woman in stories who has magic powers
+3|n wizard / fairy  ::  a man in stories who has magic powers  ||  a tiny creature with wings and magic powers in stories
+3|n witch / fairy  ::  a woman in stories who has magic powers  ||  a tiny creature with wings and magic powers in stories
+3|n merchant / trader  ::  a person who buys and sells goods, especially in the past  ||  a person who buys and sells goods or shares
 3|n merchant / trade  ::  a person who buys and sells goods, especially in the past  ||  the buying and selling of goods
+3|n blacksmith / carpenter  ::  a person who makes things out of iron by heating it  ||  a person who makes things out of wood
 3|n sailor / crew  ::  a person who works on a ship  ||  the people who work on a ship or plane
+3|n jury / trial  ::  a group of people in a court who decide if someone is guilty  ||  the process in a court of deciding if someone is guilty
 3|n audience / attention  ::  the people who watch or listen to a show  ||  the act of watching or listening carefully
+3|n employee / wage  ::  a person who is paid to work for someone  ||  money paid every week for work
+3|n author / notebook  ::  a person who writes books  ||  a small book of blank pages for writing notes
+3|n fellow / boyfriend  ::  a man or boy  ||  a boy or man that someone is having a romantic relationship with
 3|n foreigner / colony  ::  a person from another country  ||  a country ruled by another country
+3|n foreigner / invasion  ::  a person from another country  ||  the act of entering another country with an army
+3|n legend / rumour  ::  an old story that may not be true  ||  a story that people pass around that may not be true
 3|n monarch / prince  ::  a king or queen  ||  the son of a king or queen
 3|n monarch / princess  ::  a king or queen  ||  the daughter of a king or queen
+3|n monarch / crown  ::  a king or queen  ||  a gold circle worn on the head by a king or queen
+3|n monarch / palace  ::  a king or queen  ||  a large grand house where a king or queen lives
+3|n monarch / kingdom  ::  a king or queen  ||  a country ruled by a king or queen
+3|n monarch / throne  ::  a king or queen  ||  the special chair where a king or queen sits
+3|n banner / robe  ::  a long piece of cloth with words on it  ||  a long loose piece of clothing
+3|n banner / ribbon  ::  a long piece of cloth with words on it  ||  a long narrow piece of cloth used for decoration
+3|n banner / garment  ::  a long piece of cloth with words on it  ||  a piece of clothing
+3|n arrow / spike  ::  a thin stick with a sharp point that you shoot from a bow  ||  a thin sharp point
+3|n robe / ribbon  ::  a long loose piece of clothing  ||  a long narrow piece of cloth used for decoration
+3|n robe / garment  ::  a long loose piece of clothing  ||  a piece of clothing
+3|n charm / production  ::  a quality that makes people like you  ||  the process of making something, like a film
+3|n flask / temperature  ::  a container that keeps drinks hot or cold  ||  how hot or cold something is
+3|n machine / task  ::  a piece of equipment with moving parts that does work  ||  a piece of work that you have to do
+3|n bench / sofa  ::  a long seat for two or more people  ||  a long soft seat for two or three people
+3|n ribbon / garment  ::  a long narrow piece of cloth used for decoration  ||  a piece of clothing
+3|n flute / trumpet  ::  a musical instrument like a pipe that you blow across  ||  a metal musical instrument that you blow into
+3|n earring / necklace  ::  a piece of jewellery that you wear on your ear  ||  a piece of jewellery that you wear around your neck
+3|n garment / patch  ::  a piece of clothing  ||  a small piece of cloth sewn over a hole in clothes
+3|n garment / sail  ::  a piece of clothing  ||  a large piece of cloth on a boat that catches the wind
+3|n garment / sheet  ::  a piece of clothing  ||  a large piece of cloth that you put on a bed
+3|n harness / protection  ::  straps used to control a horse or keep a person safe  ||  something that keeps you safe
+3|n hatch / deck  ::  a small door in a floor, ceiling or ship  ||  the floor of a ship
+3|n jug / mould  ::  a container with a handle for pouring liquids  ||  a hollow container that you pour liquid into to give it a shape
+3|n scooter / motorcycle  ::  a small vehicle with two wheels that you push with one foot  ||  a vehicle with two wheels and an engine
+3|n stove / cooker  ::  a piece of kitchen equipment for cooking or heating  ||  a large piece of kitchen equipment for heating food
+3|n swamp / marsh  ::  an area of soft wet land  ||  an area of low wet land
+3|n sunlight / eclipse  ::  the light from the sun  ||  a time when the moon blocks the light of the sun
+3|n sunlight / twilight  ::  the light from the sun  ||  the weak light after the sun goes down
+3|n moonlight / eclipse  ::  the light from the moon  ||  a time when the moon blocks the light of the sun
+3|n pebble / marble  ::  a small smooth stone  ||  a hard smooth stone used for buildings and statues
+3|n berry / blueberry  ::  a small round fruit that grows on a bush  ||  a small dark blue fruit that grows on bushes
+3|n gale / sandstorm  ::  a very strong wind  ||  a strong wind in the desert that carries clouds of sand
+3|n routine / category  ::  the things you usually do every day in the same order  ||  a group of things of the same kind
 3|n wartime / peace  ::  a period when there is a war  ||  a time when there is no war
+3|n vault / haven  ::  a room with thick walls where money is kept safe  ||  a place where you are safe
+3|n monastery / apartment  ::  a building where monks live  ||  a set of rooms in a building where people live
+3|n courtyard / fireplace  ::  an open space with walls around it  ||  an open space in a wall where you burn wood to heat a room
+3|n province / section  ::  one of the large parts that some countries are divided into  ||  one of the parts that something is divided into
+3|n junction / roundabout  ::  a place where two roads meet  ||  a circle where several roads meet
 3|n barracks / housing  ::  buildings where soldiers live  ||  buildings where people live
+3|n burrow / pit  ::  a hole in the ground dug by an animal like a rabbit  ||  a large hole in the ground
+3|n dwelling / household  ::  a house or place to live  ||  all the people who live together in one house
+3|n porch / veranda  ::  a covered area at the entrance to a house  ||  a covered area along the outside of a house
+3|n stall / goods  ::  a table in a market where things are sold  ||  things that are made to be sold
+3|n workplace / interview  ::  the place where you do your job  ||  a meeting where someone asks you questions for a job
 3|n hope / chance  ::  the feeling that something good will happen  ||  a possibility that something will happen
+3|n hope / fate  ::  the feeling that something good will happen  ||  a power believed to control what will happen
+3|n hope / prediction  ::  the feeling that something good will happen  ||  a statement about what will happen in the future
+3|n anger / desire  ::  the strong feeling that makes you want to shout or fight  ||  a strong feeling of wanting something
 3|n anxiety / possibility  ::  a feeling of worry about what might happen  ||  something that might happen
 3|n character / dialogue  ::  a person in a book, play or film  ||  a conversation in a book, play or film
+3|n girlfriend / lover  ::  a girl or woman that someone is having a romantic relationship with  ||  a person you are having a romantic relationship with
+3|n girlfriend / romance  ::  a girl or woman that someone is having a romantic relationship with  ||  a romantic relationship
+3|n boyfriend / lover  ::  a boy or man that someone is having a romantic relationship with  ||  a person you are having a romantic relationship with
+3|n boyfriend / romance  ::  a boy or man that someone is having a romantic relationship with  ||  a romantic relationship
 3|n lover / romance  ::  a person you are having a romantic relationship with  ||  a romantic relationship
+3|n stepmother / stepfather  ::  the woman your father married after your mother  ||  the man your mother married after your father
 3|n media / programme  ::  TV, radio and newspapers  ||  a show on TV or radio
+3|n programme / drama  ::  a show on TV or radio  ||  a play for the theatre, TV or radio
+3|n cost / wealth  ::  the amount of money needed to buy or do something  ||  a large amount of money
+3|n tax / penalty  ::  money that you must pay to the government  ||  money you must pay as a punishment
+3|n range / category  ::  a set of different things of the same kind  ||  a group of things of the same kind
+3|n football / volleyball  ::  a game in which two teams kick a ball  ||  a game in which two teams hit a ball over a high net with their hands
+3|n truth / documentary  ::  the real facts about something  ||  a film that gives facts about a real subject
 3|n difference / category  ::  the way two things are not the same  ||  a group of things of the same kind
+3|n economy / currency  ::  the system of money and trade in a country  ||  the money used in a country
 3|n budget / wealth  ::  the amount of money you have to spend  ||  a large amount of money
+3|n fund / funding  ::  money collected for a particular purpose  ||  money given for a particular purpose
+3|n connection / gap  ::  a link between two things  ||  an empty space between two things
+3|n aid / welfare  ::  help such as money or food given to countries in need  ||  help given to people who need money or care
+3|n aid / donation  ::  help such as money or food given to countries in need  ||  money or goods given to help people
 3|n payment / wealth  ::  an amount of money paid  ||  a large amount of money
 3|n finance / wealth  ::  the management of large amounts of money  ||  a large amount of money
 3|n truck / van  ::  a large vehicle for carrying goods  ||  a small vehicle for carrying goods
+3|n gender / presence  ::  the fact of being male or female  ||  the fact of being in a place
+3|n server / chip  ::  a main computer that stores information for others  ||  a very small part of a computer that stores information
+3|n welfare / donation  ::  help given to people who need money or care  ||  money or goods given to help people
+3|n poem / essay  ::  a piece of writing with short lines and rhythm  ||  a short piece of writing on a subject
+3|n scholarship / donation  ::  money given to a student to help pay for their studies  ||  money or goods given to help people
+3|n homeland / hometown  ::  the country where you were born  ||  the town where you were born or grew up
+3|n tennis / badminton  ::  a game where players hit a ball over a net with rackets  ||  a game where players hit a light object with feathers over a net
+3|n east / west  ::  the direction where the sun rises  ||  the direction where the sun sets
+3|n north / south  ::  the direction toward the top of a map  ||  the direction toward the bottom of a map
+3|adj current / immediate  ::  happening now  ||  happening now, without waiting
 3|adj fragile / sturdy  ::  easily broken  ||  strong and not easily broken
+3|adj bitter / spicy  ::  having a strong, sharp taste that is not sweet  ||  having a strong hot taste
 3|adj obvious / unclear  ::  easy to see or understand  ||  not easy to understand
+3|adj complex / confusing  ::  having many parts, difficult to understand  ||  difficult to understand
 3|adj distant / nearby  ::  far away  ||  not far away
+3|adj former / present  ::  existing in the past, but not now  ||  existing now
 3|adj fortunate / unlucky  ::  having good luck  ||  having bad luck
+3|adj lucky / magic  ::  having good things happen by chance  ||  having special powers that make impossible things happen
+3|adj rapid / sudden  ::  happening very quickly  ||  happening quickly and without warning
 3|adj remote / nearby  ::  far away from towns  ||  not far away
+3|adj arctic / polar  ::  connected with the very cold area near the North Pole  ||  connected with the North or South Pole
 3|adj arrogant / superior  ::  thinking that you are better than other people  ||  better than others
 3|adj competitive / eager  ::  wanting very much to win  ||  wanting to do something very much
 3|adj female / male  ::  belonging to the sex that can have babies  ||  belonging to the sex that cannot have babies
+3|adj meaningful / pointless  ::  having a clear purpose or value  ||  having no purpose
+3|adj prior / previous  ::  happening before  ||  happening or existing just before
+3|adj savage / fierce  ::  wild and violent  ||  violent and frightening, like a wild animal
 3|adj scientific / technical  ::  connected with science  ||  connected with machines and science
 3|adj thick / thin  ::  having a large distance between two sides  ||  having a small distance between two sides
+3|num third / fifth  ::  coming after the second in order  ||  coming after the fourth in order
+3|num third / sixth  ::  coming after the second in order  ||  coming after the fifth in order
+3|num third / seventh  ::  coming after the second in order  ||  coming after the sixth in order
+3|num third / eighth  ::  coming after the second in order  ||  coming after the seventh in order
+3|num third / ninth  ::  coming after the second in order  ||  coming after the eighth in order
+3|num third / tenth  ::  coming after the second in order  ||  coming after the ninth in order
+3|num third / eleventh  ::  coming after the second in order  ||  coming after the tenth in order
+3|num third / twelfth  ::  coming after the second in order  ||  coming after the eleventh in order
+3|num third / fifteenth  ::  coming after the second in order  ||  coming after the fourteenth in order
+3|num third / twentieth  ::  coming after the second in order  ||  coming after the nineteenth in order
+3|num third / hundredth  ::  coming after the second in order  ||  coming after the ninety-ninth in order
+3|num third / thousandth  ::  coming after the second in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num fourth / sixth  ::  coming after the third in order  ||  coming after the fifth in order
+3|num fourth / seventh  ::  coming after the third in order  ||  coming after the sixth in order
+3|num fourth / eighth  ::  coming after the third in order  ||  coming after the seventh in order
+3|num fourth / ninth  ::  coming after the third in order  ||  coming after the eighth in order
+3|num fourth / tenth  ::  coming after the third in order  ||  coming after the ninth in order
+3|num fourth / eleventh  ::  coming after the third in order  ||  coming after the tenth in order
+3|num fourth / twelfth  ::  coming after the third in order  ||  coming after the eleventh in order
+3|num fourth / fifteenth  ::  coming after the third in order  ||  coming after the fourteenth in order
+3|num fourth / twentieth  ::  coming after the third in order  ||  coming after the nineteenth in order
+3|num fourth / hundredth  ::  coming after the third in order  ||  coming after the ninety-ninth in order
+3|num fourth / thousandth  ::  coming after the third in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num fifth / seventh  ::  coming after the fourth in order  ||  coming after the sixth in order
+3|num fifth / eighth  ::  coming after the fourth in order  ||  coming after the seventh in order
+3|num fifth / ninth  ::  coming after the fourth in order  ||  coming after the eighth in order
+3|num fifth / tenth  ::  coming after the fourth in order  ||  coming after the ninth in order
+3|num fifth / eleventh  ::  coming after the fourth in order  ||  coming after the tenth in order
+3|num fifth / twelfth  ::  coming after the fourth in order  ||  coming after the eleventh in order
+3|num fifth / fifteenth  ::  coming after the fourth in order  ||  coming after the fourteenth in order
+3|num fifth / twentieth  ::  coming after the fourth in order  ||  coming after the nineteenth in order
+3|num fifth / hundredth  ::  coming after the fourth in order  ||  coming after the ninety-ninth in order
+3|num fifth / thousandth  ::  coming after the fourth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num sixth / eighth  ::  coming after the fifth in order  ||  coming after the seventh in order
+3|num sixth / ninth  ::  coming after the fifth in order  ||  coming after the eighth in order
+3|num sixth / tenth  ::  coming after the fifth in order  ||  coming after the ninth in order
+3|num sixth / eleventh  ::  coming after the fifth in order  ||  coming after the tenth in order
+3|num sixth / twelfth  ::  coming after the fifth in order  ||  coming after the eleventh in order
+3|num sixth / fifteenth  ::  coming after the fifth in order  ||  coming after the fourteenth in order
+3|num sixth / twentieth  ::  coming after the fifth in order  ||  coming after the nineteenth in order
+3|num sixth / hundredth  ::  coming after the fifth in order  ||  coming after the ninety-ninth in order
+3|num sixth / thousandth  ::  coming after the fifth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num seventh / ninth  ::  coming after the sixth in order  ||  coming after the eighth in order
+3|num seventh / tenth  ::  coming after the sixth in order  ||  coming after the ninth in order
+3|num seventh / eleventh  ::  coming after the sixth in order  ||  coming after the tenth in order
+3|num seventh / twelfth  ::  coming after the sixth in order  ||  coming after the eleventh in order
+3|num seventh / fifteenth  ::  coming after the sixth in order  ||  coming after the fourteenth in order
+3|num seventh / twentieth  ::  coming after the sixth in order  ||  coming after the nineteenth in order
+3|num seventh / hundredth  ::  coming after the sixth in order  ||  coming after the ninety-ninth in order
+3|num seventh / thousandth  ::  coming after the sixth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num eighth / tenth  ::  coming after the seventh in order  ||  coming after the ninth in order
+3|num eighth / eleventh  ::  coming after the seventh in order  ||  coming after the tenth in order
+3|num eighth / twelfth  ::  coming after the seventh in order  ||  coming after the eleventh in order
+3|num eighth / fifteenth  ::  coming after the seventh in order  ||  coming after the fourteenth in order
+3|num eighth / twentieth  ::  coming after the seventh in order  ||  coming after the nineteenth in order
+3|num eighth / hundredth  ::  coming after the seventh in order  ||  coming after the ninety-ninth in order
+3|num eighth / thousandth  ::  coming after the seventh in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num ninth / eleventh  ::  coming after the eighth in order  ||  coming after the tenth in order
+3|num ninth / twelfth  ::  coming after the eighth in order  ||  coming after the eleventh in order
+3|num ninth / fifteenth  ::  coming after the eighth in order  ||  coming after the fourteenth in order
+3|num ninth / twentieth  ::  coming after the eighth in order  ||  coming after the nineteenth in order
+3|num tenth / twentieth  ::  coming after the ninth in order  ||  coming after the nineteenth in order
 3|num tenth / hundredth  ::  coming after the ninth in order  ||  coming after the ninety-ninth in order
+3|num tenth / thousandth  ::  coming after the ninth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num triple / quadruple  ::  three times as much or as many  ||  four times as much or as many
+3|num triple / fivefold  ::  three times as much or as many  ||  five times as much or as many
+3|num sum / addition  ::  the total when numbers are added together  ||  the process of adding numbers together
+3|num eleventh / fifteenth  ::  coming after the tenth in order  ||  coming after the fourteenth in order
+3|num eleventh / twentieth  ::  coming after the tenth in order  ||  coming after the nineteenth in order
+3|num eleventh / hundredth  ::  coming after the tenth in order  ||  coming after the ninety-ninth in order
+3|num eleventh / thousandth  ::  coming after the tenth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num twelfth / fifteenth  ::  coming after the eleventh in order  ||  coming after the fourteenth in order
+3|num twelfth / twentieth  ::  coming after the eleventh in order  ||  coming after the nineteenth in order
+3|num twelfth / hundredth  ::  coming after the eleventh in order  ||  coming after the ninety-ninth in order
+3|num twelfth / thousandth  ::  coming after the eleventh in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num fifteenth / twentieth  ::  coming after the fourteenth in order  ||  coming after the nineteenth in order
+3|num fifteenth / hundredth  ::  coming after the fourteenth in order  ||  coming after the ninety-ninth in order
+3|num fifteenth / thousandth  ::  coming after the fourteenth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num twentieth / hundredth  ::  coming after the nineteenth in order  ||  coming after the ninety-ninth in order
+3|num twentieth / thousandth  ::  coming after the nineteenth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num hundredth / thousandth  ::  coming after the ninety-ninth in order  ||  coming after the nine hundred and ninety-ninth in order
+3|num quadruple / fivefold  ::  four times as much or as many  ||  five times as much or as many
 3|num inch / metre  ::  a unit for measuring length, about 2.5 centimetres  ||  a unit for measuring length, 100 centimetres
+3|v swallow / descend  ::  to make food go down your throat  ||  to go down
+3|v betray / rely  ::  to hurt someone who trusts you by helping their enemy  ||  to trust someone to help you
+3|v claim / deny  ::  to say that something is true without proof  ||  to say that something is not true
+3|v claim / lie  ::  to say that something is true without proof  ||  to say something that is not true
+3|v confirm / deny  ::  to say that something is definitely true or will happen  ||  to say that something is not true
+3|v confirm / refuse  ::  to say that something is definitely true or will happen  ||  to say that you will not do something
+3|v confirm / lie  ::  to say that something is definitely true or will happen  ||  to say something that is not true
 3|v crash / strike  ::  to hit something hard in a vehicle  ||  to hit someone or something hard
+3|v decrease / increase  ::  to become smaller in number or amount  ||  to become larger in number or amount
+3|v decrease / reduce  ::  to become smaller in number or amount  ||  to make something smaller in amount
+3|v decrease / shrink  ::  to become smaller in number or amount  ||  to become smaller
 3|v deny / lie  ::  to say that something is not true  ||  to say something that is not true
+3|v expand / increase  ::  to become larger  ||  to become larger in number or amount
+3|v fade / weaken  ::  to slowly become less bright or strong  ||  to make someone or something less strong
 3|v handle / act  ::  to deal with a situation or a problem  ||  to do something to deal with a situation
+3|v heal / recover  ::  to become well again after an injury  ||  to become well again after an illness
+3|v install / operate  ::  to put a machine or program in place so it works  ||  to make a machine work
 3|v prevent / cease  ::  to stop something from happening  ||  to stop happening
 3|v react / tend  ::  to behave in a particular way because of something  ||  to usually behave in a particular way
 3|v refuse / threaten  ::  to say that you will not do something  ||  to say that you will hurt someone
+3|v act / cope  ::  to do something to deal with a situation  ||  to deal with a difficult situation successfully
+3|v cheer / scream  ::  to shout loudly because you are happy  ||  to shout loudly in a high voice because of fear
+3|v cheer / yell  ::  to shout loudly because you are happy  ||  to shout very loudly
+3|v contribute / donate  ::  to give money or help for a shared purpose  ||  to give money to help people
+3|v descend / kneel  ::  to go down  ||  to go down onto your knees
+3|v descend / sink  ::  to go down  ||  to go down below the surface of water
+3|v determine / investigate  ::  to find out the facts about something  ||  to try to find out the facts about a crime or problem
+3|v drain / spill  ::  to let liquid flow away  ||  to let a liquid flow out of its container by accident
 3|v flip / spin  ::  to turn something over quickly  ||  to turn around and around quickly
 3|v insert / cover  ::  to put something into something else  ||  to put something over something else
+3|v investigate / seek  ::  to try to find out the facts about a crime or problem  ||  to try to find something
 3|v owe / repay  ::  to need to pay back money that you borrowed  ||  to pay back money that you borrowed
+3|v rub / swing  ::  to move your hand backwards and forwards on something  ||  to move backwards and forwards from a fixed point
 3|v tend / treat  ::  to usually behave in a particular way  ||  to behave toward someone in a particular way
 3|adv mostly / scarcely  ::  almost all  ||  almost not at all
 3|adv temporarily / newly  ::  for a short time only  ||  only a short time ago
+3|adv firstly / secondly  ::  used to introduce the first point  ||  used to introduce the next point after the first
+4|n badger / inhabitant  ::  a grey wild animal with a black and white face that lives in holes  ||  a person or animal that lives in a place
+4|n squirrel / inhabitant  ::  a small animal with a big bushy tail that lives in trees  ||  a person or animal that lives in a place
+4|n antelope / gazelle  ::  an African animal like a deer that runs very fast  ||  a small graceful African animal like a deer
+4|n caterpillar / centipede  ::  a small long creature with many legs that becomes a butterfly  ||  a small long creature with very many legs
+4|n centipede / earthworm  ::  a small long creature with very many legs  ||  a long thin creature with no legs that lives in soil
+4|n earthworm / lifespan  ::  a long thin creature with no legs that lives in soil  ||  how long a living thing lives
+4|n liquor / whisky  ::  strong alcoholic drink  ||  a strong alcoholic drink made from grain, from Scotland
+4|n liquor / rum  ::  strong alcoholic drink  ||  a strong alcoholic drink made from sugar cane
+4|n oatmeal / porridge  ::  a food made from crushed oats, eaten hot for breakfast  ||  a hot breakfast food made from oats and milk
+4|n radish / beetroot  ::  a small red root vegetable with a hot taste  ||  a dark red root vegetable
+4|n yolk / custard  ::  the yellow part of an egg  ||  a sweet yellow sauce made with milk and eggs
+4|n asparagus / celery  ::  a vegetable with long thin green stems  ||  a vegetable with long pale green stems
+4|n broccoli / resemblance  ::  a green vegetable that looks like a small tree  ||  the state of looking like someone
+4|n antibody / cholesterol  ::  a substance in the blood that fights disease  ||  a fatty substance in the blood that can cause heart disease
+4|n bloodstream / circulation  ::  the blood flowing around the body  ||  the movement of blood around the body
+4|n immigrant / emigrant  ::  a person who has come to live in another country  ||  a person who leaves their country to live in another
+4|n patron / backing  ::  a person who gives money to support artists  ||  support, often money
+4|n pioneer / prototype  ::  one of the first people to do something new  ||  the first model of a new product
+4|n refugee / deportation  ::  a person forced to leave their country because of war  ||  the act of forcing someone to leave a country
+4|n tyrant / dictator  ::  a cruel ruler with total power  ||  a ruler with total power who was not elected
+4|n oracle / antiquity  ::  a person in ancient times who gave advice from the gods  ||  ancient times
+4|n apron / badge  ::  a piece of cloth worn over clothes to keep them clean  ||  a small piece of metal or cloth worn to show who you are
+4|n apron / rag  ::  a piece of cloth worn over clothes to keep them clean  ||  an old piece of cloth used for cleaning
+4|n badge / pin  ::  a small piece of metal or cloth worn to show who you are  ||  a thin sharp piece of metal used to hold cloth together
+4|n badge / mantle  ::  a small piece of metal or cloth worn to show who you are  ||  a loose piece of clothing without sleeves, worn over the shoulders
+4|n badge / medallion  ::  a small piece of metal or cloth worn to show who you are  ||  a large round piece of metal worn on a chain
+4|n bullet / cannon  ::  a small piece of metal fired from a gun  ||  a large old gun that fires heavy metal balls
+4|n emblem / flag  ::  a design that represents a country or group  ||  a piece of cloth with a design that represents a country
+4|n hose / periscope  ::  a long rubber tube for water  ||  a long tube with mirrors used in a submarine to see above water
+4|n mat / chunk  ::  a small piece of thick cloth placed on the floor  ||  a thick piece of something
+4|n microphone / amplifier  ::  a device that makes your voice louder  ||  a device that makes sounds louder
+4|n microphone / megaphone  ::  a device that makes your voice louder  ||  a cone-shaped device that makes your voice louder
+4|n pottery / kiln  ::  pots and dishes made from baked clay  ||  an oven for baking clay pots
+4|n tag / napkin  ::  a small piece of paper or cloth with information  ||  a piece of cloth or paper used to wipe your mouth at meals
+4|n wagon / carriage  ::  a vehicle pulled by horses for carrying goods  ||  a vehicle pulled by horses
+4|n amplifier / megaphone  ::  a device that makes sounds louder  ||  a cone-shaped device that makes your voice louder
+4|n barbecue / grill  ::  a metal frame for cooking food outdoors over fire  ||  a metal frame for cooking food over heat
+4|n binoculars / visibility  ::  a device you hold to your eyes to see far things  ||  how far you can see
+4|n carriage / chariot  ::  a vehicle pulled by horses  ||  an ancient two-wheeled vehicle pulled by horses in battle
 4|n catalogue / merchandise  ::  a list of goods for sale  ||  goods for sale
+4|n clamp / forceps  ::  a tool that holds things tightly together  ||  a medical tool for holding things
+4|n component / lubricant  ::  one of the parts of a machine  ||  an oily substance that helps machine parts move smoothly
+4|n component / mechanism  ::  one of the parts of a machine  ||  the parts of a machine that work together
+4|n garland / poppy  ::  a ring of flowers  ||  a red flower that grows in fields
+4|n blizzard / hurricane  ::  a storm with heavy snow and strong wind  ||  a violent storm with very strong winds
+4|n delta / gulf  ::  an area of land where a river splits into many parts before the sea  ||  a large area of sea partly surrounded by land
+4|n delta / terrain  ::  an area of land where a river splits into many parts before the sea  ||  the type of land in an area
+4|n delta / expanse  ::  an area of land where a river splits into many parts before the sea  ||  a large open area of land or sea
+4|n ecosystem / fauna  ::  all the plants and animals in an area and how they affect each other  ||  all the animals of an area
+4|n ecosystem / flora  ::  all the plants and animals in an area and how they affect each other  ||  all the plants of an area
+4|n gorge / ravine  ::  a deep narrow valley, usually with a river running through it  ||  a deep narrow valley
+4|n gulf / terrain  ::  a large area of sea partly surrounded by land  ||  the type of land in an area
+4|n gulf / expanse  ::  a large area of sea partly surrounded by land  ||  a large open area of land or sea
+4|n plateau / terrain  ::  a large flat area of high land  ||  the type of land in an area
+4|n terrain / wetland  ::  the type of land in an area  ||  an area of land that is often covered with water
+4|n terrain / wilderness  ::  the type of land in an area  ||  a wild area of land where no one lives
+4|n terrain / basin  ::  the type of land in an area  ||  the area of land from which water flows into a river
+4|n terrain / expanse  ::  the type of land in an area  ||  a large open area of land or sea
+4|n terrain / inlet  ::  the type of land in an area  ||  a narrow area of water going into the land
+4|n terrain / cemetery  ::  the type of land in an area  ||  an area of land where dead people are buried
+4|n terrain / estate  ::  the type of land in an area  ||  a large area of land with a big house
+4|n terrain / mainland  ::  the type of land in an area  ||  the main area of land of a country, not its islands
+4|n terrain / wasteland  ::  the type of land in an area  ||  an empty area of land that cannot be used
+4|n twig / willow  ::  a small thin branch  ||  a tree with long thin branches that grow near water
+4|n wetland / basin  ::  an area of land that is often covered with water  ||  the area of land from which water flows into a river
+4|n wetland / inlet  ::  an area of land that is often covered with water  ||  a narrow area of water going into the land
+4|n lifespan / mammoth  ::  how long a living thing lives  ||  a large hairy elephant that lived long ago
+4|n chronicle / chronology  ::  a written record of events in the order they happened  ||  the order in which events happened
+4|n cemetery / grave  ::  an area of land where dead people are buried  ||  a place in the ground where a dead person is buried
+4|n hangar / morgue  ::  a large building where planes are kept  ||  a building where dead bodies are kept before burial
+4|n nursery / nanny  ::  a place where small children are looked after  ||  a woman who looks after children in their home
+4|n vicinity / antarctic  ::  the area around a place  ||  the area around the South Pole
+4|n catacomb / morgue  ::  an underground place where dead bodies are kept  ||  a building where dead bodies are kept before burial
+4|n pitch / playground  ::  an area of ground where football is played  ||  an area where children play
 4|n bitterness / injustice  ::  a feeling of anger about unfair treatment  ||  unfair treatment
+4|n dignity / severity  ::  the quality of being serious and deserving respect  ||  the state of being serious
 4|n humility / arrogance  ::  the quality of not thinking you are better than others  ||  the attitude of thinking you are better than others
 4|n loneliness / sadness  ::  the unhappy feeling of being alone  ||  the feeling of being unhappy
+4|n optimism / pessimism  ::  the belief that things will be good  ||  the belief that things will go badly
 4|n shareholder / asset  ::  a person who owns part of a company  ||  something valuable that a company owns
 4|n intruder / admission  ::  a person who enters a place without permission  ||  permission to enter a place
+4|n settler / immigration  ::  a person who goes to live in a new country  ||  the process of coming to live in a new country
+4|n guerrilla / resistance  ::  a member of a small group fighting against an army  ||  the act of fighting against something
+4|n replacement / adoption  ::  a thing that takes the place of another  ||  the act of legally taking another person's child as your own
 4|n removal / distraction  ::  the act of taking something away  ||  something that takes your attention away
+4|n removal / drainage  ::  the act of taking something away  ||  the system of taking water away
 4|n fortune / expenditure  ::  a very large amount of money  ||  the amount of money spent
+4|n passage / excerpt  ::  a short part of a book  ||  a short part taken from a book or film
+4|n racism / injustice  ::  unfair treatment of people because of their race  ||  unfair treatment
+4|n racism / persecution  ::  unfair treatment of people because of their race  ||  cruel treatment because of race or religion
+4|n suspension / pension  ::  the act of stopping someone from working for a time  ||  money paid to people who have stopped working because of age
+4|n warrant / clause  ::  a legal document that allows the police to arrest someone  ||  a part of a legal document
+4|n destiny / omen  ::  the things that will happen to a person in the future  ||  a sign of what will happen in the future
+4|n diameter / radius  ::  a line through the centre of a circle  ||  a line from the centre of a circle to its edge
+4|n denial / paradox  ::  a statement that something is not true  ||  a statement that seems impossible but is true
+4|n plague / massacre  ::  a disease that spreads quickly and kills many people  ||  the killing of many people
+4|n confession / accusation  ::  a statement admitting you did something wrong  ||  a statement saying someone did something wrong
+4|n corpse / autopsy  ::  a dead body  ||  an examination of a dead body to find the cause of death
+4|n corpse / burial  ::  a dead body  ||  the act of putting a dead body in the ground
+4|n dilemma / plight  ::  a situation in which you must make a difficult choice  ||  a very difficult situation
+4|n exemption / clearance  ::  official permission not to do something others must do  ||  official permission to do something
+4|n caution / peril  ::  great care to avoid danger  ||  great danger
+4|n graffiti / mural  ::  drawings or words painted on walls in public places  ||  a painting on a wall
 4|n lifeline / plight  ::  something that helps you in a difficult situation  ||  a very difficult situation
+4|adj opaque / translucent  ::  not letting light through  ||  letting some light through but not completely clear
+4|adj glossy / sleek  ::  smooth and shiny  ||  smooth, shiny and elegant in shape
+4|adj murky / transparent  ::  dark and dirty, so you cannot see through it  ||  clear so that you can see through it
+4|adj transparent / evident  ::  clear so that you can see through it  ||  clear to see
+4|adj addictive / tempting  ::  making you want more and unable to stop  ||  making you want to have or do something
+4|adj dignified / honourable  ::  calm, serious and deserving respect  ||  deserving respect
+4|adj drastic / detrimental  ::  having a strong, sudden effect  ||  having a bad effect on something
+4|adj frugal / extravagant  ::  careful not to spend much money  ||  spending too much money
+4|adj intelligent / perceptive  ::  able to learn and understand things quickly  ||  quick to notice and understand things
+4|adj obscure / infamous  ::  not well known and hard to understand  ||  well known for something bad
 4|adj optimistic / pessimistic  ::  expecting good things to happen  ||  expecting bad things to happen
 4|adj prominent / infamous  ::  important and well known  ||  well known for something bad
 4|adj thoughtful / thoughtless  ::  kind and thinking of others  ||  not thinking about the feelings of others
+4|adj disruptive / mischievous  ::  causing trouble  ||  enjoying causing small trouble in a playful way
+4|adj improbable / plausible  ::  not likely to be true  ||  seeming reasonable and likely to be true
+4|adj industrious / dedicated  ::  working very hard  ||  working hard at something because you care about it
 4|adj inflexible / powerless  ::  unable to change  ||  unable to control or change something
+4|adj malicious / paranoid  ::  wanting to harm others  ||  believing without reason that others want to harm you
+4|v flick / hurry  ::  to move something with a quick movement of your finger  ||  to move or do something quickly
 4|v gasp / startle  ::  to breathe in suddenly in surprise  ||  to surprise someone suddenly
 4|v migrate / shift  ::  to move to another place for the season  ||  to move from one place to another
+4|v pour / discharge  ::  to make a liquid flow out of a container  ||  to let a liquid or gas flow out
+4|v withdraw / extract  ::  to take money out of a bank  ||  to take something out
 4|v avert / inhibit  ::  to prevent something bad from happening  ||  to prevent something from happening freely
 4|v collaborate / coordinate  ::  to work together with someone  ||  to organise people to work together
 4|v distribute / encompass  ::  to give things to many people  ||  to include many things
 4|v stagnate / stifle  ::  to stop developing  ||  to stop something from developing
 4|v unify / reunite  ::  to bring together into one  ||  to bring people together again
+4|num denominator / numerator  ::  the number below the line in a fraction  ||  the number above the line in a fraction
+5|n adder / viper  ::  a small poisonous snake found in Europe  ||  a poisonous snake
+5|n boar / warthog  ::  a wild pig  ||  an African wild pig with growths on its face
+5|n cobra / viper  ::  a poisonous snake that spreads the skin of its neck  ||  a poisonous snake
+5|n drake / mallard  ::  a male duck  ||  a common wild duck; the male has a green head
+5|n grouse / quail  ::  a fat brown bird hunted for sport  ||  a small brown bird hunted for food
+5|n grouse / wren  ::  a fat brown bird hunted for sport  ||  a very small brown bird
+5|n grub / nymph  ::  the young of an insect, like a small worm  ||  a young insect that looks like a small adult
+5|n heron / osprey  ::  a tall grey bird with long legs that catches fish  ||  a large bird that catches fish
+5|n lark / wren  ::  a small brown bird that sings while flying high  ||  a very small brown bird
+5|n pheasant / quail  ::  a large bird with a long tail, hunted for food  ||  a small brown bird hunted for food
+5|n quail / wren  ::  a small brown bird hunted for food  ||  a very small brown bird
+5|n shrew / snout  ::  a very small animal like a mouse with a long nose  ||  the long nose of an animal like a pig
+5|n shrew / tapir  ::  a very small animal like a mouse with a long nose  ||  an animal like a pig with a long nose
 5|n snout / tapir  ::  the long nose of an animal like a pig  ||  an animal like a pig with a long nose
+5|n thrush / wren  ::  a brown bird with a spotted chest that sings  ||  a very small brown bird
+5|n artichoke / kale  ::  a green vegetable with thick pointed leaves  ||  a green vegetable with curly leaves
+5|n leek / zucchini  ::  a vegetable like a long onion  ||  a long green vegetable like a cucumber
+5|n spatula / utensil  ::  a kitchen tool with a wide flat blade  ||  a tool used in the kitchen
+5|n strainer / utensil  ::  a kitchen tool for separating liquids from food  ||  a tool used in the kitchen
+5|n utensil / whisk  ::  a tool used in the kitchen  ||  a kitchen tool for beating eggs
+5|n facade / forecourt  ::  the front of a building  ||  an open area in front of a building
 5|n vat / vial  ::  a very large container for liquids  ||  a small glass container for liquids
 5|n bough / treetop  ::  a large branch of a tree  ||  the top branches of a tree
+5|n marshland / quagmire  ::  a large area of wet ground  ||  an area of soft wet ground you sink into
+5|n sojourn / stopover  ::  a short stay in a place  ||  a short stay during a long journey
+5|v abate / lessen  ::  to become calmer or less intense, like a storm  ||  to make or become less
 5|v abduct / divest  ::  to take someone away by force  ||  to take something away from someone
+5|v admonish / reprimand  ::  to tell someone firmly that they have done wrong  ||  to tell someone officially that they have done wrong
+5|v annex / cede  ::  to take control of another country's land  ||  to give land or power to another country
 5|v belie / debunk  ::  to give a false idea of something  ||  to show that an idea is false
 5|v confiscate / divest  ::  to take something away as a punishment  ||  to take something away from someone
+5|v deplete / minimise  ::  to reduce an amount of something  ||  to reduce to the smallest possible amount
 5|v detach / segregate  ::  to separate one thing from another  ||  to separate one group from another
+5|v forage / scavenge  ::  to search for food  ||  to search through rubbish for food
+5|v lessen / slacken  ::  to make or become less  ||  to become slower or less tight
 5|v lessen / sober  ::  to make or become less  ||  to become less drunk
+5|adj palatable / tangy  ::  pleasant to taste  ||  having a strong, sharp and pleasant taste
+5|adj palatable / piquant  ::  pleasant to taste  ||  having a pleasantly sharp taste
+5|adj tangy / pungent  ::  having a strong, sharp and pleasant taste  ||  having a strong sharp smell
 5|adj benign / malignant  ::  not dangerous, used for a tumour  ||  dangerous and spreading, used for tumours
+5|adj blatant / overt  ::  done openly without trying to hide it  ||  done openly
 5|adj graphic / imprecise  ::  clear and detailed  ||  not clear or exact in detail
+5|adj immoral / sinful  ::  morally wrong  ||  morally wrong according to religion
+5|adj mushy / swampy  ::  soft and wet  ||  covered with soft wet ground
+5|num numeric / algebra  ::  using numbers  ||  maths that uses letters to represent numbers
 5|num quart / gallon  ::  a unit of liquid, about 1.1 litres  ||  a unit of liquid, about 4.5 litres
