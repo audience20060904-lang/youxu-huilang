@@ -2414,6 +2414,7 @@ function defOf(w){
 /* 这个词能不能出释义句题：有释义，而且**已经掌握了**（熟练度 ≥ DEF_MIN_STR，用户 2026-09-28）——
    没掌握的词先老老实实认中文，掌握了再拿英文解释考它 */
 function defReady(w){
+  if(OPT.defq === false) return false;            // 设置里关掉了
   const r = w && LEX[lexKey(w)];
   return !!defOf(w) && !!r && (r.str || 0) >= DEF_MIN_STR;
 }
@@ -7538,6 +7539,10 @@ $("optSpeak").checked = OPT.speak !== false;
 $("optAuto").checked = OPT.auto !== false;
 $("optSpeak").addEventListener("change", function(){ OPT.speak = this.checked; saveOpt(); });
 $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; saveOpt(); });
+/* 释义句题的开关（用户 2026-09-29）：默认开；只有学英语才有这种题，别的语言整行藏掉 */
+$("optDefQ").checked = OPT.defq !== false;
+$("optDefQRow").hidden = LANG_LEARN !== "en";
+$("optDefQ").addEventListener("change", function(){ OPT.defq = this.checked; saveOpt(); });
 /* 答题时间（「snow」口令解锁，见 qCustom()）。输入框失焦 / 回车才生效，空着或乱填就退回当前值 */
 function renderQTimeSet(){
   const box = $("qtimeSet");
