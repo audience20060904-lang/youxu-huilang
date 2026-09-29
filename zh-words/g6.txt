@@ -211,7 +211,7 @@
 和谐|harmonious|ad
 高手|master hand (ace)|pe
 参赛|to compete|ve
-刮|to scrape (blow)|ve
+刮|to blow (of wind)|ve
 信仰|faith (belief)|th
 录像|video recording|th
 查看|to examine (look over)|ve
@@ -410,7 +410,7 @@
 难忘|unforgettable|ad
 用心|attentively|av
 奉献|to devote|ve
-挨|to suffer (be next to)|ve||ái
+挨|to suffer (endure)|ve||ái
 心脏病|heart disease|th
 救助|to help (rescue)|ve
 一同|together (along)|av
@@ -829,7 +829,7 @@
 座谈会|forum (symposium)|th
 借鉴|to draw lessons from|ve
 旅店|inn|pl
-近日|recently (in the next few days)|ti
+近日|recently (these days)|ti
 地名|place name|th
 老乡|fellow townsman|pe
 内外|inside and outside|pl

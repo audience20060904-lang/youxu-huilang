@@ -1,5 +1,5 @@
 搞|to do (get done)|ve
-唯一|sole|ad
+唯一|only (sole)|ad
 肯定|definitely|av
 杀|to kill|ve
 控制|to control|ve
@@ -21,9 +21,9 @@
 恢复|to recover|ve
 棒|excellent (great)|ad
 意识|consciousness|th
-执行|to execute|ve
+执行|to carry out (execute)|ve
 分享|to share|ve
-女性|female sex|pe
+女性|woman (female)|pe
 讨厌|to dislike|fe|v
 人物|figure (character)|pe
 拒绝|to refuse|ve
@@ -33,7 +33,7 @@
 协议|agreement|th
 竞争|to compete (rival)|ve
 估计|to estimate|ve
-意味着|to signify|ve
+意味着|to mean (imply)|ve
 俱乐部|club|pl
 建筑|building (architecture)|pl
 丢|to lose (misplace)|ve
@@ -45,7 +45,7 @@
 恨|to hate|fe|v
 难以|hard to|av
 偷|to steal|ve
-展示|to exhibit|ve
+展示|to show (exhibit)|ve
 基地|base|pl
 掌握|to master|ve
 记忆|memory|th
@@ -91,14 +91,14 @@
 碎|broken (to pieces)|ad
 一辈子|a lifetime|ti
 全世界|the whole world|pl
-说法|wording (version)|th
+说法|way of putting it|th
 评论|comment|th|n
 物质|matter (substance)|th
 躲|to hide|ve
 烂|rotten|ad
 尤其|especially (particularly)|av
 醉|drunk|ad
-扔|to toss|ve
+扔|to throw (away)|ve
 时光|time (days)|ti
 博士|doctor (PhD)|pe
 浪漫|romantic|ad
@@ -146,7 +146,7 @@
 臭|smelly|ad
 违法|illegal|ad
 堆|pile|th
-男性|male sex|pe
+男性|man (male)|pe
 收集|to collect|ve
 频道|channel|th
 当年|in those years|ti
@@ -169,10 +169,10 @@
 厨房|kitchen|pl
 注册|to register (sign up)|ve
 回报|to repay|ve
-展现|to unfold|ve
+展现|to reveal (show)|ve
 评估|to assess|ve
 环节|link (segment)|th
-餐厅|dining hall|pl
+餐厅|restaurant (dining hall)|pl
 违反|to violate|ve
 活力|vitality|th
 软|soft|ad
@@ -187,7 +187,7 @@
 提示|to prompt|ve
 摔|to fall (tumble)|ve
 沟通|to communicate (connect)|ve
-收拾|to put in order|ve
+收拾|to tidy up (pack)|ve
 乘客|passenger|pe
 艰难|arduous|ad
 专辑|album|th
@@ -218,7 +218,7 @@
 询问|to inquire (ask about)|ve
 补偿|to compensate|ve
 软件|software|th
-严肃|solemn|ad
+严肃|serious (solemn)|ad
 肌肉|muscle|bo
 随后|soon after|av
 安慰|to comfort|fe|v
@@ -318,7 +318,7 @@
 卧室|bedroom|pl
 众多|numerous|ad
 失误|slip (error)|th|n
-尊敬|to revere|ve
+尊敬|to respect (honor)|ve
 依旧|as usual|av
 包装|packaging|th|n
 强迫|to force|ve
@@ -388,7 +388,7 @@
 差别|disparity|th
 更新|to update|ve
 当场|on the spot|av
-餐馆|eatery|pl
+餐馆|restaurant|pl
 打架|to fight|ve
 助手|helper|pe
 键|key (on keyboard)|th

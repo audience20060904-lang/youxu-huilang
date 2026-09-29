@@ -11,7 +11,7 @@
 基金|fund|th
 之外|outside of|pl
 狂|wild (mad)|ad
-人士|public figure|pe
+人士|people (in a field)|pe
 签|to sign|ve
 价|price (value)|th
 证实|to confirm (verify)|ve

@@ -16,7 +16,7 @@
 早就|long ago|av
 骑|to ride|ve||qí
 多久|how long|ti
-好事|good deed|th
+好事|good thing|th
 提到|to mention|ve
 送给|to give (as a gift)|ve
 接下来|next up|av
@@ -49,7 +49,7 @@
 难题|tough question|th
 院长|dean|pe
 夜里|at night|ti
-名称|title (name)|th
+名称|name (of a thing)|th
 课堂|lesson (classroom)|pl
 出国|to go abroad|ve
 骑车|to ride a bike|ve
@@ -86,7 +86,7 @@
 问路|to ask the way|ve
 叫作|to be called|ve
 凉快|nice and cool|ad
-午睡|nap|ve
+午睡|to take a nap|ve
 药片|pill|th
 音节|syllable|th
 中级|intermediate|ad

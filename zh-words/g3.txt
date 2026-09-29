@@ -19,7 +19,7 @@
 成功|success|th|n|chénggōng
 结束|to end|ve
 调查|to investigate|ve
-方式|manner|th
+方式|way (manner)|th
 美元|US dollar|th||měiyuán
 处理|to deal with|ve
 能力|ability|th
@@ -27,7 +27,7 @@
 支持|to support|ve
 注意|to pay attention|ve
 活|alive|ad
-拍|to pat (to film)|ve
+拍|to film (take photos)|ve
 整个|entire|ad
 保证|to guarantee|ve
 根本|at all|av
@@ -45,7 +45,7 @@
 保持|to maintain|ve
 代表|representative|pe
 突然|sudden|ad
-里面|interior|pl
+里面|inside|pl
 确定|to confirm|ve
 目标|goal|th
 任务|task|th
@@ -128,7 +128,7 @@
 困难|difficulty|th|n
 专业|major (specialty)|th
 规定|rule|th|n
-产生|to produce|ve
+产生|to bring about|ve
 对方|the other side|pe
 状态|state (condition)|th
 环境|environment|na
@@ -139,7 +139,7 @@
 危险|dangerous|ad
 管理|to manage|ve
 乱|messy|ad
-适合|to fit|ve
+适合|to suit|ve
 正式|formal|ad
 从来|always (ever)|av
 实际上|in fact|av
@@ -158,7 +158,7 @@
 经验|experience (skill)|th
 集中|to concentrate|ve
 破|broken|ad
-理由|excuse (reason)|th
+理由|reason (grounds)|th
 感受|to feel (experience)|fe|v
 完美|perfect|ad
 传|to pass on|ve
@@ -204,7 +204,7 @@
 艺术|art|th
 麻烦|trouble|th|n
 事故|accident|th
-美好|fine (happy)|ad
+美好|lovely|ad
 抓住|to seize|ve
 武器|weapon|th
 思想|thought|th
@@ -342,12 +342,12 @@
 服装|clothing|th
 形式|form|th
 判断|to judge|ve
-成立|to found|ve
+成立|to set up (found)|ve
 现代|modern|ad||xiàndài
 工资|salary|th
 深刻|profound|ad
 庆祝|to celebrate|ve
-伤心|heartbroken|fe
+伤心|sad (heartbroken)|fe
 眼前|before one's eyes|pl
 足球|soccer|th
 全面|comprehensive|ad
@@ -359,7 +359,7 @@
 区别|difference|th
 合法|legal|ad
 将来|future|ti
-个性|personality|th
+个性|individuality|th
 批准|to approve|ve
 前进|to advance|ve
 啤酒|beer|fo
@@ -385,7 +385,7 @@
 谈判|to negotiate|ve
 飞行|to fly (aviation)|ve
 纪念|to commemorate|ve
-补|to mend|ve
+补|to make up for|ve
 公民|citizen|pe
 分别|separately|av
 愿望|wish|fe|n
@@ -407,7 +407,7 @@
 歌手|singer|pe
 实验室|laboratory|pl
 开放|to open up|ve
-性格|character (temper)|th
+性格|personality|th
 团结|to unite|ve
 成就|achievement|th
 课程|course|th
@@ -544,13 +544,13 @@
 办理|to handle (process)|ve
 可乐|cola|fo
 握手|to shake hands|ve
-题目|title (topic)|th
+题目|exam question (title)|th
 跑步|to jog|ve
 初中|junior high school|pl
 卫生间|bathroom|pl
 子女|children (sons and daughters)|pe
 老太太|old lady|pe
-上衣|jacket|th
+上衣|top (clothing)|th
 打听|to inquire|ve
 老百姓|ordinary people|pe
 果汁|juice|fo

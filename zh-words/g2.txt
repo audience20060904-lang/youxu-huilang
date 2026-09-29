@@ -8,7 +8,7 @@
 可能|maybe|av
 才|only then|av
 像|to resemble|ve
-认为|to believe|ve
+认为|to think (that)|ve
 应该|should|ve
 带|to bring|ve
 大家|everybody|pe
@@ -22,13 +22,13 @@
 必须|must|av
 长|long|ad||cháng
 成为|to become|ve
-事情|affair|th
+事情|thing (matter)|th
 感觉|feeling|fe|n
 进行|to carry out|ve
 出现|to appear|ve
 头|head|bo
 见到|to see (meet)|ve
-通过|to pass through|ve
+通过|to pass (through)|ve
 周|week|ti||zhōu
 过去|the past|ti
 参加|to take part in|ve
@@ -41,7 +41,7 @@
 发|to send out|ve
 计划|plan|th|n
 以后|afterwards|ti
-要求|to demand|ve
+要求|to require|ve
 信|letter (mail)|th
 队|team|pe
 接|to pick up|ve
@@ -84,7 +84,7 @@
 活动|activity|th
 信息|information|th
 最近|recently|ti
-换|to exchange|ve
+换|to change (swap)|ve
 靠|to lean on|ve
 脸|face|bo
 快乐|joyful|fe
@@ -114,7 +114,7 @@
 好像|as if|av
 克|gram|nu||kè
 愿意|willing|fe
-装|to load|ve
+装|to put in (load)|ve
 音乐|music|th
 感谢|to thank|fe|v
 眼|eye|bo
@@ -138,7 +138,7 @@
 声音|sound|th
 数|to count|ve||shǔ
 变成|to turn into|ve
-受到|to suffer (receive)|ve
+受到|to receive (be subjected to)|ve
 经过|to go through|ve
 哭|to cry|ve
 漂亮|pretty|ad
@@ -186,7 +186,7 @@
 刚才|a moment ago|ti
 办公室|office|pl
 正确|right (correct)|ad
-爱情|romance|fe|n
+爱情|love (romantic)|fe|n
 收到|to receive (get)|ve
 够|enough|ad
 方向|direction|pl
@@ -340,7 +340,7 @@
 客人|guest|pe
 人口|population|pe
 平时|usually|av
-不好意思|embarrassed|fe
+不好意思|sorry (embarrassed)|fe
 便宜|cheap|ad||piányi
 请求|request|th|n
 准确|accurate|ad
@@ -350,15 +350,15 @@
 广场|square (plaza)|pl
 好久|a long time|ti
 夏天|summer|ti
-早餐|morning meal|fo
+早餐|breakfast|fo
 图片|picture|th
 车辆|vehicle|th
-早晨|early in the day|ti
+早晨|early morning|ti
 出门|to go out (the door)|ve
 做法|way of doing|th
 作家|writer|pe
 地铁|subway|th
-熟|ripe (familiar)|ad
+熟|cooked (familiar)|ad
 小时候|in childhood|ti
 全身|whole body|bo
 练习|exercise|th|n
@@ -388,7 +388,7 @@
 科学家|scientist|pe
 姓|surname|th
 篮球|basketball|th
-晚餐|evening meal|fo
+晚餐|dinner|fo
 大门|main gate|pl||dàmén
 晚会|evening party|th
 少年|teenager|pe
@@ -405,9 +405,9 @@
 凉|cool|ad||liáng
 平常|ordinary (usual)|ad
 半夜|midnight|ti
-商量|to consult|ve
+商量|to talk over|ve
 黄|yellow|co
-午餐|midday meal|fo
+午餐|lunch|fo
 排队|to queue|ve
 校园|campus|pl
 爱人|spouse|pe
@@ -508,7 +508,7 @@
 阴天|cloudy day|na
 中医|Chinese medicine|th||zhōngyī
 春节|Spring Festival|ti
-留学生|overseas student|pe
+留学生|international student|pe
 猪|pig|an
 羊|sheep|an
 熊猫|panda|an

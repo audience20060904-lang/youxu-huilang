@@ -25,7 +25,7 @@
 总统|president|pe
 似乎|seemingly|av
 几乎|almost|av
-宝贝|darling (treasure)|pe
+宝贝|baby (darling)|pe
 位置|position|pl
 附近|nearby|pl
 参与|to participate|ve
@@ -120,13 +120,13 @@
 采访|to interview|ve
 即将|about to|av
 答案|answer (solution)|th
-规则|regulation|th
+规则|rule|th
 激动|thrilled|fe
 依然|as before|av
 阶段|stage (phase)|ti
 擦|to wipe|ve
 无聊|bored|fe
-一致|unanimous|ad
+一致|in agreement|ad
 刺激|to stimulate|ve
 贴|to stick|ve
 美女|beautiful woman|pe
@@ -135,7 +135,7 @@
 移动|to move (shift)|ve
 销售|sales|th
 呼吸|to breathe|ve
-确认|to verify|ve
+确认|to confirm|ve
 出色|outstanding|ad
 冰|ice|na
 材料|material|th
@@ -155,7 +155,7 @@
 奖|prize|th
 微笑|smile|th|n
 良好|good (fine)|ad
-思考|to ponder|ve
+思考|to think deeply|ve
 夫人|madam|pe
 严格|strict|ad
 企业|enterprise|pl
@@ -170,7 +170,7 @@
 吸|to inhale|ve
 行业|industry (trade)|th
 士兵|soldier|pe
-承担|to undertake|ve
+承担|to take on (bear)|ve
 面临|to be faced with|ve
 神秘|mysterious|ad
 登记|to register|ve
@@ -232,7 +232,7 @@
 依靠|to depend on|ve
 弱|weak|ad
 购买|to purchase|ve
-战士|warrior|pe
+战士|fighter (soldier)|pe
 针|needle|th
 划|to row|ve
 巧克力|chocolate|fo
@@ -362,7 +362,7 @@
 代替|to replace|ve
 冰箱|refrigerator|th
 汇报|to report back|ve
-论文|thesis|th
+论文|paper (thesis)|th
 粗|thick (coarse)|ad
 综合|comprehensive (overall)|ad
 形容|to describe (depict)|ve
@@ -383,7 +383,7 @@
 乐趣|pleasure|fe|n
 渐渐|little by little|av
 亲密|intimate|ad
-着急|to feel anxious|fe
+着急|anxious (in a hurry)|fe
 具备|to possess|ve
 尽力|to do one's best|ve
 新娘|bride|pe
@@ -392,8 +392,8 @@
 构成|to constitute|ve
 口袋|pocket|th
 无限|unlimited|ad
-吃惊|to be startled|fe
-嘴巴|mouth (jaw)|bo
+吃惊|surprised|fe
+嘴巴|mouth|bo
 扫|to sweep|ve
 秘书|secretary|pe
 燃烧|to burn (blaze)|ve

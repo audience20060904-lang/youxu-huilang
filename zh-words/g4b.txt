@@ -187,7 +187,7 @@
 茶叶|tea leaves|fo
 感兴趣|to be interested|fe|v
 运动会|sports meet|th
-登山|mountain climbing|ve
+登山|to climb mountains|ve
 降温|to cool down|ve
 抽奖|prize draw|ve
 概括|to summarize|ve

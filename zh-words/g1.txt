@@ -149,7 +149,7 @@
 手机|mobile phone|th
 忙|busy|ad
 十|ten|nu
-看见|to catch sight of|ve
+看见|to see (catch sight of)|ve
 听到|to hear|ve
 女儿|daughter|pe
 说话|to speak|ve
@@ -160,7 +160,7 @@
 去年|last year|ti
 热|hot|ad
 试|to try|ve
-睡觉|to go to bed|ve
+睡觉|to sleep (go to bed)|ve
 电脑|computer|th
 票|ticket|th
 床|bed|th
@@ -197,7 +197,7 @@
 生日|birthday|ti
 姐姐|older sister|pe
 课|class (lesson)|th
-饭|cooked rice|fo
+饭|meal|fo
 家人|family member|pe
 有时候|sometimes|av
 小姐|miss (young lady)|pe
