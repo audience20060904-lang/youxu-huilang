@@ -362,8 +362,10 @@ function newRun(){
   $("log").innerHTML = "";
   hideAll();
   if(P.study){
-    say(L("<b>纯净学习</b>：生命 " + STUDY_HP + "，屋里只有一只打不死的书灵（一口 1 点）。随时能撤退，不掉血、自动存档。",
-          "<b>Pure study</b>: " + STUDY_HP + " HP, one Book Spirit that can't die (bites for 1). Retreat any time — no HP lost, progress saved."), "sys");
+    say(L("<b>纯净学习</b>：生命 " + STUDY_HP + "，屋里只有一只打不死的书灵 —— 攻击 1 起，每挨 " + STUDY_RAMP_PER + " 伤害 +1（最多 " + (STUDY_FOE.dmg + STUDY_RAMP_MAX) + "）。" +
+          "每 " + STUDY_COMBO_PER + " 连击回 " + STUDY_COMBO_HEAL + " 点生命。随时能撤退，不掉血、自动存档。",
+          "<b>Pure study</b>: " + STUDY_HP + " HP, one Book Spirit that can't die — attack starts at 1, +1 per " + STUDY_RAMP_PER + " damage it takes (max " + (STUDY_FOE.dmg + STUDY_RAMP_MAX) + "). " +
+          "Every " + STUDY_COMBO_PER + " combo heals " + STUDY_COMBO_HEAL + ". Retreat any time — no HP lost, progress saved."), "sys");
     if(P.practice) say(L("<b>练习模式</b>：书灵咬不疼你，这一趟不计纪录。", "<b>Practice mode</b>: the spirit can't hurt you; this run won't set a record."), "sys");
   } else if(!P.tut){
     say(T("石门在身后合上。走廊里只有火把的回声。"), "sys");
@@ -1230,13 +1232,20 @@ function makeStudyFoe(def, x, y){
   const m = makeFoe(def, x, y);
   m.art = studyArt();
   m.max = m.hp = 1;
-  m.dmg = def.dmg;
+  m.dmg = studyDmgNow();
   m.armor = 0; m.xp = 0; m.loot = 0;
   return m;
 }
 function studyAbsorb(m, n){
   P.studyDmg = (P.studyDmg || 0) + n;
   if(n > (P.studyTop || 0)) P.studyTop = n;
+  const d0 = m.dmg;
+  m.dmg = studyDmgNow();
+  if(m.dmg > d0) say(L("书灵被打疼了 —— 攻击升到 <b>" + m.dmg + "</b>。", "The Book Spirit is getting angry — attack now <b>" + m.dmg + "</b>."), "hurt");
+}
+/* 书灵现在的攻击：每挨 STUDY_RAMP_PER 伤害 +1，最多 +STUDY_RAMP_MAX（按 P.studyDmg 现算，读档也对得上）*/
+function studyDmgNow(){
+  return STUDY_FOE.dmg + Math.min(STUDY_RAMP_MAX, Math.floor((P.studyDmg || 0) / STUDY_RAMP_PER));
 }
 /* 纯净学习 + 练习模式 = 完全不掉血（答错 / 超时两处判） */
 function studyNoHurt(){ return !!(P && P.study && P.practice); }
@@ -2062,7 +2071,7 @@ function renderBattleBars(){
   if(abyss) $("foeName").textContent = m.name + T(" · 第 ") + (m.layer || 1) + T(" 层");
   if(m.def && m.def.study){      // 书灵：血条永远是满的，上面写这一趟一共打了多少
     $("foeFill").style.width = "100%";
-    $("foeTxt").textContent = "∞ · " + L("累计伤害 ", "Total dmg ") + (P.studyDmg || 0);
+    $("foeTxt").textContent = "∞ · " + L("累计伤害 ", "Total dmg ") + (P.studyDmg || 0) + L(" · 攻击 ", " · ATK ") + m.dmg;
   } else {
     $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
     $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
@@ -2909,6 +2918,7 @@ function answer(btn, ok){
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
     if(hasRelic("corrode")) G.corrodeArmor = Math.min(CORRODE_MAX, (G.corrodeArmor || 0) + 1);
     /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
+    const comboBefore = P.combo;              // 纯净学习：跨过几个 10 连击就回几次血（下面 maxCombo 那行之后算）
     P.combo += B.wager ? 2 : 1;
     if(fast && hasRelic("offbeat")) P.combo += OFFBEAT_COMBO;   // 抢拍：答得快多记一点（在拼对那 +10 之前）
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
@@ -2928,6 +2938,15 @@ function answer(btn, ok){
         (rs.hp ? T("，回 ") + rs.hp + T(" 点") : "") + ")</span>";
     }
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
+    /* 纯净学习（用户 2026-10-01）：每攒满 STUDY_COMBO_PER 连击回 STUDY_COMBO_HEAL 点生命（拼对一下跨两档就回两次）*/
+    if(P.study){
+      const tiers = Math.floor(P.combo / STUDY_COMBO_PER) - Math.floor(comboBefore / STUDY_COMBO_PER);
+      if(tiers > 0){
+        const sh = healUp(STUDY_COMBO_HEAL * tiers, s);
+        if(sh.hp) relicLog += L(" <span class=\"sys\">(连击 ×" + P.combo + "，回 " + sh.hp + " 点)</span>",
+                                " <span class=\"sys\">(combo ×" + P.combo + ", +" + sh.hp + " HP)</span>");
+      }
+    }
     if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(COUNTER_HEAL, s);   // 计数器
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤 + 额外伤害）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
@@ -3259,7 +3278,7 @@ function answer(btn, ok){
       relicLog += T(" <span class=\"sys\">(反刍回了 ") + back + T(" 点生命)</span>");
     }
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
-    if(B.q.haunted && hauntGone){
+    if(B.q.haunted && hauntGone && !P.study){   // 纯净学习里打心魔不回血（回血改成每 10 连击，见上面）
       const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * BIND_HEAL)) : 2;
       healUp(back, s);
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
@@ -6221,7 +6240,8 @@ function renderModeList(){
     card("game", L("遗物 · 升级 · 宝石", "Relics · levels · gems"), L("游戏模式", "Game mode"),
          L("照常下洞，下一步选难度", "The normal run — pick a difficulty next")) +
     card("study", L("只背单词", "Words only"), L("纯净学习模式", "Pure study mode"),
-         L("生命 " + STUDY_HP + " · 打不死的书灵（一口 1 点）· 随时撤退不掉血", STUDY_HP + " HP · an unkillable Book Spirit (bites for 1) · retreat any time") +
+         L("生命 " + STUDY_HP + " · 打不死的书灵（攻击 1~" + (STUDY_FOE.dmg + STUDY_RAMP_MAX) + "）· 每 " + STUDY_COMBO_PER + " 连击回 " + STUDY_COMBO_HEAL + " 血 · 随时撤退不掉血",
+           STUDY_HP + " HP · an unkillable Book Spirit (ATK 1–" + (STUDY_FOE.dmg + STUDY_RAMP_MAX) + ") · " + STUDY_COMBO_PER + " combo heals " + STUDY_COMBO_HEAL + " · retreat any time") +
          (practiceOn ? L(" · 练习模式：不掉血、不计纪录", " · Practice: no HP loss, no record")
                      : L(" · 历史最高伤害 ", " · Best damage ") + (best || "—")));
 }
@@ -6567,7 +6587,7 @@ function resumeRun(s){
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, layer:m.ly || 1,
                  dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
-    if(def.study) G.mobs[G.mobs.length - 1].art = studyArt();   // 书灵的立绘跟着这一章走
+    if(def.study){ const sm = G.mobs[G.mobs.length - 1]; sm.art = studyArt(); sm.dmg = studyDmgNow(); }   // 书灵的立绘跟着这一章走
   });
   /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
      所以读档之后必须照 genFloor() 的规矩补一次，否则 coopDealDamage 的 m.cid 是 undefined、
