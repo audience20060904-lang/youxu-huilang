@@ -431,6 +431,15 @@ var ABYSS_DMG_PCT = 0.1;    // 攻击 = 这一层血量 × 10%，最少 1
 var ABYSS = {id:"abyss", g:"渊", name:"无终之影", art:"crown", cat:"all",
              hp:1, dmg:1, armor:0, xp:0, boss:true, fixed:true, abyss:true};
 
+/* ===== 纯净学习模式（用户 2026-10-01）=====
+   选完章节后弹「游戏模式 / 纯净学习模式」：学习模式只有一层、一间屋、一只**血量无限、攻击 1** 的「书灵」，
+   生命锁成 STUDY_HP、随时能撤退（不掉血，撤退那一下自动存档），倒下（或放弃）时记「历史最高伤害」。
+   开着练习模式进来 = 完全不掉血，但不计纪录。逻辑全在 game.js 的「纯净学习模式」一节。
+   art 只是兜底：真正用的是这一章章末 Boss 的立绘（跟深渊同一个路子）。*/
+var STUDY_HP  = 100;
+var STUDY_FOE = {id:"study", g:"书", name:"书灵", art:"warden", cat:"all",
+                 hp:1, dmg:1, armor:0, xp:0, boss:true, fixed:true, study:true};
+
 /* 割裂：每答一题自伤 1 点，**累计割掉 REND_CAP 点就停手**，额外伤害 +REND_EXTRA */
 var REND_CAP = 100;
 var REND_EXTRA = 20;   // 割裂：④额外伤害（进基础桶，(58+20)/58 = 伤害 +34%）

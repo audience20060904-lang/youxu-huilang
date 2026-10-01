@@ -856,7 +856,7 @@ a.place{text-decoration:none}
 .route.picked{border-color:var(--torch);box-shadow:inset 0 0 0 2px var(--torch)}
 /* 难度卡（用户 2026-09-21）：跟路线卡同一套外观，只是右边没有那个「遇见 N%」，
    把留给它的 64px 收回来。选中的那一档复用 .picked 的高亮边。*/
-.route.diff{padding-right:12px}
+.route.diff,.route.mode{padding-right:12px}
 .btn:disabled{opacity:.45;cursor:default}
 .btn:disabled:hover{border-color:var(--edge)}
 

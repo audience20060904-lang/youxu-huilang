@@ -345,8 +345,13 @@ function newRun(){
            gildN 是这一趟投过几次（价格和档位都按它算）。本局有效，跟着续玩档。*/
         gild:{}, gildN:0,
         /* 新手教程（2026-09-23）：这一趟是教程关 —— 只有一层、不写续玩档、不结算（见「新手教程」一节）*/
-        tut: !!tutPending };
+        tut: !!tutPending,
+        /* 纯净学习模式（用户 2026-10-01）：一层、一只打不死的书灵、生命锁 100。
+           studyDmg = 这一趟一共打了它多少，studyTop = 单次最高（结算 / 纪录用，跟着续玩档）*/
+        study: !!studyOn, studyDmg:0, studyTop:0 };
   tutPending = false;
+  studyOn = false;
+  if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
   G = { floor:0, paused:false, over:false };
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -356,11 +361,15 @@ function newRun(){
   // 不用先删旧档：下面 nextFloor() 会 commit 一次，直接盖掉（存档点之一：进入关卡）
   $("log").innerHTML = "";
   hideAll();
-  if(!P.tut){
+  if(P.study){
+    say(L("<b>纯净学习</b>：生命 " + STUDY_HP + "，屋里只有一只打不死的书灵（一口 1 点）。随时能撤退，不掉血、自动存档。",
+          "<b>Pure study</b>: " + STUDY_HP + " HP, one Book Spirit that can't die (bites for 1). Retreat any time — no HP lost, progress saved."), "sys");
+    if(P.practice) say(L("<b>练习模式</b>：书灵咬不疼你，这一趟不计纪录。", "<b>Practice mode</b>: the spirit can't hurt you; this run won't set a record."), "sys");
+  } else if(!P.tut){
     say(T("石门在身后合上。走廊里只有火把的回声。"), "sys");
     say(T("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。"), "sys");
   }
-  if(P.practice) say(T("<b>练习模式</b>：护甲 +50，攻击减半。"), "sys");
+  if(P.practice && !P.study) say(T("<b>练习模式</b>：护甲 +50，攻击减半。"), "sys");
   if(P.diff !== DIFF_DEFAULT){
     const dd = diffById(P.diff);
     if(dd) say("<b>" + dd.name + T("</b>：") + dd.desc + T("。"), "sys");
@@ -538,13 +547,17 @@ function stats(){
      ⚠️ **两个倍率先乘起来、只取整一次** —— 分两步各 round 的话
      D 级（×2）+ 练习（×0.5）会因为中间那次取整漂掉一两点，而用户要的是
      「练习 + D 级正好抵消，等于白拿 50 护甲」，必须严格等于原攻击。*/
-  const practice = P.practice && !noShelter();     // 无尽 50 层往下 / 深渊：练习模式整个不算（见 noShelterAt）
+  const practice = practiceStats();
   const dmul = diffMult(P.diff) * (practice ? CHAPTER.practiceAtkMult : 1);
   if(practice) s.def += CHAPTER.practiceDef;
   if(dmul !== 1) s.atk = Math.max(1, Math.round(s.atk * dmul));
   /* 守财现在是百分比伤害，不在这儿加攻击了 —— 见 answer() 的百分比层 */
+  if(P.study) s.maxHp = STUDY_HP;                  // 纯净学习模式：生命锁死
   return s;
 }
+/* 练习模式那一刀（+50 护甲、攻击减半）算不算：无尽 50 层往下 / 深渊不算（见 noShelterAt），
+   纯净学习模式也不算 —— 那里的练习模式只表示「不掉血」（见 studyNoHurt）。*/
+function practiceStats(){ return !!(P && P.practice && !noShelter() && !P.study); }
 /* ================= 生成 ================= */
 function nextFloor(){
   cancelWalk();
@@ -854,6 +867,11 @@ function slotChain(){
 function isBossFloor(f){ return f > 0 && (f % BOSS_EVERY === 0 || isAbyssFloor(f)); }
 /* 进一层之后那两行日志（nextFloor 和联机的 applyCoopWorld 共用同一份文案）。*/
 function sayFloorIntro(){
+  if(P && P.study){
+    say("—— " + CH.name + L(" · 纯净学习 ——", " · Pure study ——"), "crit");
+    say(L("一间屋子，一只书灵。它的血没有底 —— 能打多少就打多少。", "One room, one Book Spirit. Its HP has no bottom — hit it as hard as you can."), "sys");
+    return;
+  }
   const last = G.floor === floorMax();
   const bossRoom = isBossFloor(G.floor);
   const abyss = inAbyss();
@@ -887,13 +905,14 @@ function genBossRoom(){
   G.stair = {x:bx, y:by};          // 清空前只是个占位，Boss 倒下的地方才是真阶梯
   // 深渊（第 51 层）里是血量无限的「无终之影」，它自己一套数值（makeAbyssFoe，不吃下面那几个倍率）
   if(isAbyssFloor(G.floor)){ G.mobs.push(makeAbyssFoe(ABYSS, bx, by)); return; }
+  if(P.study){ G.mobs.push(makeStudyFoe(STUDY_FOE, bx, by)); return; }   // 纯净学习：打不死的书灵
   // 无尽章没有章末 Boss（CH.boss 是 null），每一间 Boss 房里都是跟着层数长的「层间守者」
   const def = (G.floor === floorMax() && CH.boss) ? CH.boss : GATEKEEPER;
   G.mobs.push(makeBossFoe(def, bx, by));
 }
 function genFloor(){
   if(P.tut){ genTutorialFloor(); return; }
-  if(isBossFloor(G.floor)){ genBossRoom(); return; }
+  if(isBossFloor(G.floor) || P.study){ genBossRoom(); return; }
   const map = [], seen = [], vis = [];
   for(let y=0;y<H;y++){
     map.push(new Array(W).fill(0));
@@ -1102,7 +1121,7 @@ function capRamp(){
 /* 这一刀真的打进怪血条的量（吸血那几件按它算）：普通怪按剩下的血封顶，深渊那只血是一层层的，打多少算多少 */
 function landedOn(m, n){
   if(!(n > 0)) return 0;
-  if(m.def && m.def.abyss) return n;
+  if(m.def && (m.def.abyss || m.def.study)) return n;
   return Math.max(0, Math.min(n, m.hp));
 }
 /* 一只怪在第 floor 层的数值：基础 + 层数成长 + 章节 foeBonus，**最后**再乘一次分段倍率。
@@ -1201,6 +1220,26 @@ function abyssAbsorb(m, n){
   }
   return broke;
 }
+
+/* ===== 纯净学习模式 · 书灵（用户 2026-10-01）=====
+   血量无限、攻击 1。它的血条画成「∞」，打出去的伤害全记在 P.studyDmg 上（studyAbsorb）——
+   m.hp 永远不动，所以 answer() 里「m.hp <= 0 就结束战斗」那条分支走不到，这一层永远清不空。
+   立绘跟深渊一样现取这一章章末 Boss 的（无尽章没有就借层间守者）。*/
+function studyArt(){ return (CH.boss && CH.boss.art) || GATEKEEPER.art || STUDY_FOE.art; }
+function makeStudyFoe(def, x, y){
+  const m = makeFoe(def, x, y);
+  m.art = studyArt();
+  m.max = m.hp = 1;
+  m.dmg = def.dmg;
+  m.armor = 0; m.xp = 0; m.loot = 0;
+  return m;
+}
+function studyAbsorb(m, n){
+  P.studyDmg = (P.studyDmg || 0) + n;
+  if(n > (P.studyTop || 0)) P.studyTop = n;
+}
+/* 纯净学习 + 练习模式 = 完全不掉血（答错 / 超时两处判） */
+function studyNoHurt(){ return !!(P && P.study && P.practice); }
 
 /* ================= 日志 ================= */
 function say(t, cls){
@@ -1395,7 +1434,8 @@ function renderHud(){
   // Boss 房那一层在顶栏写成 `10*`，并且是血色的（用户 2026-09）
   const bossFloor = isBossFloor(G.floor);
   // 无尽章和深渊的分母都是「∞」：都没有「最后一层」（见 floorMax / abyssFloor）
-  $("hFloor").textContent = G.floor + (bossFloor ? "*" : "") + "/" + ((isEndless() || inAbyss()) ? "∞" : FLOORS);
+  $("hFloor").textContent = P.study ? "1/1"
+    : G.floor + (bossFloor ? "*" : "") + "/" + ((isEndless() || inAbyss()) ? "∞" : FLOORS);
   $("hFloor").classList.toggle("bossfloor", bossFloor);
   $("hLevel").textContent = P.lvl;
   $("hGold").textContent = P.gold;
@@ -1993,10 +2033,12 @@ function startBattle(m){
   $("foeArt").innerHTML = ART[m.art];
   $("meArt").innerHTML = HERO;
   $("foeName").textContent = m.name;
-  $("foeTag").textContent = (m.def && m.def.abyss) ? T("深渊 · 血量无限，打穿一层还有一层")
+  $("foeTag").textContent = (m.def && m.def.study) ? L("纯净学习 · 血量无限，随时能撤退", "Pure study · endless HP, retreat any time")
+                          : (m.def && m.def.abyss) ? T("深渊 · 血量无限，打穿一层还有一层")
                           : m.boss ? T("章节首领 · 全部词类") : (T("遭遇 · ") + CAT_CN[m.cat] + T("类词"));
   showWeak(m);
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
+  $("btnFlee").textContent = P.study ? L("撤退 · 不掉血", "Retreat · no HP lost") : T("撤退 · 掉一半血");
   $("veilBattle").hidden = false;
   say(T("你撞上了 ") + m.name + T("。"), "hurt");
   if(P.combo > 0) say(T("上一场的连击 <b>×") + P.combo + T("</b> 还留着 —— 别断。"), "crit");
@@ -2018,8 +2060,13 @@ function renderBattleBars(){
   const abyss = !!(m.def && m.def.abyss);
   /* 无终之影的血条画的是**当前这一层**（血量无限，画不出总条），第几层写在名字后面。*/
   if(abyss) $("foeName").textContent = m.name + T(" · 第 ") + (m.layer || 1) + T(" 层");
-  $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
-  $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
+  if(m.def && m.def.study){      // 书灵：血条永远是满的，上面写这一趟一共打了多少
+    $("foeFill").style.width = "100%";
+    $("foeTxt").textContent = "∞ · " + L("累计伤害 ", "Total dmg ") + (P.studyDmg || 0);
+  } else {
+    $("foeFill").style.width = Math.max(0, m.hp / m.max * 100) + "%";
+    $("foeTxt").textContent = Math.max(0, m.hp) + " / " + m.max;
+  }
   /* 联机第二期：怪有两条独立满血，这条画在怪血条下面，显示队友那边剩多少（半透明 50%，
      纯显示，权威值来自服务器的 hp 广播）。index.html 没有 #foeMateBar，$() 拿到 null
      就跳过 —— 单人版一步都跑不到这儿。*/
@@ -2258,6 +2305,11 @@ function timeUp(){
     hurtBegin(m, s, false); hurtRow("glass", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
     G.glassCut = (G.glassCut || 0) + GLASS_CUT;
     say(T("沙漏替你咽下了这一下 —— 这一层的读条只剩 <b>") + qSeconds() + T("</b> 秒了。"), "hurt");
+    startQTimer();
+    return;
+  }
+  if(studyNoHurt()){             // 纯净学习 + 练习模式：不掉血
+    say(L("时间到 —— 练习模式，不掉血。题还在，接着答。", "Time's up — practice mode, no HP lost. Same question, keep going."), "sys");
     startQTimer();
     return;
   }
@@ -3293,6 +3345,10 @@ function answer(btn, ok){
         head = T("<span class=\"big no\">断链 —— 链子替你挨了</span>");
         note = T("连击 −") + unchainAt() + T("，血一点没掉。");
       }
+      if(dmg > 0 && studyNoHurt()){             // 纯净学习 + 练习模式：一律不掉血
+        hurtRow("@practice", -dmg); dmg = 0;
+        head = L("<span class=\"big no\">失手 · 练习模式不掉血</span>", "<span class=\"big no\">Missed · practice, no HP lost</span>");
+      }
       if(dmg > 0 && fearless){
         hurtRow("fearless", -dmg); dmg = 0;
         head = T("<span class=\"big no\">无惧 —— 旧账咬不动你</span>");
@@ -3743,7 +3799,7 @@ function hurtSplit(k, v, extra){
   if(!HR || !v) return;
   const b = HR.parts[k], src = [];
   if(k === "def"){
-    const prac = (P.practice && !noShelter()) ? CHAPTER.practiceDef : 0;
+    const prac = practiceStats() ? CHAPTER.practiceDef : 0;
     if(prac) src.push(["@practice", prac]);
     if(b.base - prac) src.push(["@gild", b.base - prac]);
   } else if(b.base) src.push(["@gild", b.base]);
@@ -4055,6 +4111,19 @@ function flee(){
   autoOff();          // 主动撤退就是「我不想打这只」，别让自动寻路扭头又走回去
   clearQTimer();
   const m = B.mob, s = stats();
+  /* 纯净学习：随时撤退、不掉血，撤退那一下把当前进度存下来（用户 2026-10-01 —— 这一模式的第四个存档点）*/
+  if(P.study){
+    B = null;
+    $("veilBattle").hidden = true;
+    G.paused = false;
+    say(L("你退开了 —— " + m.name + " 留在原地。进度已经存好，回来接着打。",
+          "You step back — the " + m.name + " stays put. Progress saved; come back any time."), "sys");
+    commit(true);
+    lockInput(260);
+    renderHud();
+    render();
+    return;
+  }
   // 脱壳：每层第一次撤退不付那半条命
   const free = hasRelic("shed") && !G.fleeFree;
   if(free) G.fleeFree = true;
@@ -6122,6 +6191,49 @@ function takeDiff(id){
   enterRoute(route);
 }
 
+/* ===== 游戏模式 / 纯净学习模式（用户 2026-10-01）=====
+   单人版点一条路先弹这个窗：游戏模式 → 照旧选难度；纯净学习模式 → 直接进那一间屋（studyOn → newRun 写进 P.study）。
+   联机没有这个窗（routeList 的 click 里直接 askDiff）。跟 veilDiff 一样是主城弹层，不进 hideAll() / anyVeil()。*/
+let studyOn = false;
+function askMode(routeId){
+  const r = ROUTES.filter(function(x){ return x.id === routeId; })[0];
+  if(!r || !r.open) return;
+  pendingRoute = routeId;
+  const sub = $("modeSub");
+  if(sub) sub.textContent = r.name + " · " + r.tag;
+  renderModeList();
+  $("veilMode").hidden = false;
+}
+function closeMode(){
+  pendingRoute = null;
+  $("veilMode").hidden = true;
+}
+function renderModeList(){
+  const box = $("modeList");
+  if(!box) return;
+  const best = MET.studyBest || 0;
+  const card = function(id, tag, name, desc){
+    return "<button type=\"button\" class=\"route mode\" data-mode=\"" + id + "\">" +
+      "<span class=\"rt\">" + tag + "</span><span class=\"rn\">" + name + "</span>" +
+      "<span class=\"rd\">" + desc + "</span><span class=\"rgo\">" + T("进入 ▸") + "</span></button>";
+  };
+  box.innerHTML =
+    card("game", L("遗物 · 升级 · 宝石", "Relics · levels · gems"), L("游戏模式", "Game mode"),
+         L("照常下洞，下一步选难度", "The normal run — pick a difficulty next")) +
+    card("study", L("只背单词", "Words only"), L("纯净学习模式", "Pure study mode"),
+         L("生命 " + STUDY_HP + " · 打不死的书灵（一口 1 点）· 随时撤退不掉血", STUDY_HP + " HP · an unkillable Book Spirit (bites for 1) · retreat any time") +
+         (practiceOn ? L(" · 练习模式：不掉血、不计纪录", " · Practice: no HP loss, no record")
+                     : L(" · 历史最高伤害 ", " · Best damage ") + (best || "—")));
+}
+function takeMode(mode){
+  const route = pendingRoute;
+  if(!route) return;
+  $("veilMode").hidden = true;
+  if(mode === "study"){ studyOn = true; enterRoute(route); return; }
+  studyOn = false;
+  askDiff(route);
+}
+
 /* 练习模式的开关：**纯局前选项**，不进设置存档 ——
    勾了之后 newRun() 把它写进 P.practice，那一趟才算数（数值在 stats() 里）。*/
 let practiceOn = false;
@@ -6137,6 +6249,8 @@ function renderPractice(){
      （联机里房主的练习开关是从网络上来的，可能正好赶上难度窗开着）。*/
   const dv = $("veilDiff");
   if(dv && !dv.hidden) renderDiffList();
+  const mv = $("veilMode");
+  if(mv && !mv.hidden) renderModeList();
 }
 /* 这一章的词见过多少（用户 2026-09 要在洞窟的卡片上显示）——
    分母是这一章那几档难度的全部词（BYLV[难度]，无尽章是 3+4+5 三桶加起来），
@@ -6271,6 +6385,7 @@ function enterRoute(id, fromNet){
   setChapter(r.ch || 1);          // 路线决定这一趟是哪一章（词难度、怪、宝石倍率）
   pendingRoute = null;
   $("veilDiff").hidden = true;
+  if($("veilMode")) $("veilMode").hidden = true;
   $("veilCave").hidden = true;
   SCENE = "run";
   showScene();
@@ -6351,6 +6466,7 @@ function foeDef(id){
   for(let i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].boss && CHAPTERS[i].boss.id === id) return CHAPTERS[i].boss;
   if(id === GATEKEEPER.id) return GATEKEEPER;
   if(id === ABYSS.id) return ABYSS;          // 深渊那只（前四章第 51 层）
+  if(id === STUDY_FOE.id) return STUDY_FOE;  // 纯净学习模式的书灵
   for(let i=0;i<FOES.length;i++) if(FOES[i].id === id) return FOES[i];
   return null;
 }
@@ -6383,6 +6499,9 @@ function resumeRun(s){
   if(typeof P.down !== "boolean") P.down = false;             // 老档没有「倒地」（联机第二期）
   if(typeof P.cleared !== "boolean") P.cleared = false;       // 老档没有「这一趟通关过没」（深渊）
   if(typeof P.abyss !== "number") P.abyss = 0;                // 老档没有「打穿了几层深渊」
+  if(typeof P.study !== "boolean") P.study = false;           // 老档没有纯净学习模式
+  if(typeof P.studyDmg !== "number") P.studyDmg = 0;
+  if(typeof P.studyTop !== "number") P.studyTop = 0;
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -6448,6 +6567,7 @@ function resumeRun(s){
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, layer:m.ly || 1,
                  dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
+    if(def.study) G.mobs[G.mobs.length - 1].art = studyArt();   // 书灵的立绘跟着这一章走
   });
   /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
      所以读档之后必须照 genFloor() 的规矩补一次，否则 coopDealDamage 的 m.cid 是 undefined、
@@ -6458,8 +6578,13 @@ function resumeRun(s){
   $("log").innerHTML = "";
   hideAll();
   fov(); buildGrid(); render(); renderHud();
-  say("—— " + CH.name + T(" 第 ") + G.floor + T(" 层") + (inAbyss() ? T(" · 深渊") : "") + " ——", "crit");
-  say(T("你回到了踏进这一层时的样子 —— 存档存在每层的入口。"), "sys");
+  if(P.study){
+    say("—— " + CH.name + L(" · 纯净学习 ——", " · Pure study ——"), "crit");
+    say(L("接着上次撤退时的进度 —— 累计伤害 " + (P.studyDmg || 0) + "。", "Picking up where you retreated — total damage " + (P.studyDmg || 0) + "."), "sys");
+  } else {
+    say("—— " + CH.name + T(" 第 ") + G.floor + T(" 层") + (inAbyss() ? T(" · 深渊") : "") + " ——", "crit");
+    say(T("你回到了踏进这一层时的样子 —— 存档存在每层的入口。"), "sys");
+  }
   lockInput(320);
 }
 /* ================= 结算 ================= */
@@ -6518,6 +6643,7 @@ function foldAcc(){
   }
 }
 function endRun(win, gaveUp){
+  if(P && P.study){ endStudy(gaveUp); return; }
   G.over = true;
   const M = meta();
   M.runs++;
@@ -6572,7 +6698,17 @@ function endRun(win, gaveUp){
     li(T("丢在洞里"), (P.relics.length || 0) + T(" 件遗物 · ") + P.gold + T(" 金币")) +
     li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
     li(T("这趟答错的词"), Object.keys(P.missN || {}).length + T(" 个")) +
-    li(T("累计掌握"), Object.keys(LEX).filter(function(k){ return lexWord(k) && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length);
+    li(T("累计掌握"), endLearned());
+  renderEndWords();
+  $("btnAgain").textContent = T("回到镇上");
+  hideAll();
+  $("veilEnd").hidden = false;
+  $("btnAgain").focus();
+  if(win && CH.boss) say(CH.boss.name + T("碎成了石块。第") + chNo() + T("章结束。"), "crit");
+}
+function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
+/* 结算底下那串词（普通结算和纯净学习共用）*/
+function renderEndWords(){
   /* 结算只列**这一趟答错的词**（用户 2026-09-27，原来列的是遇到的全部），错得多的排前面 */
   const box = $("endWords"), missN = P.missN || {};
   const missed = Object.keys(missN).filter(function(en){ return !!WMAP[en]; })
@@ -6592,13 +6728,57 @@ function endRun(win, gaveUp){
       box.appendChild(d);
     });
   }
+}
+function endLearned(){
+  return Object.keys(LEX).filter(function(k){ return lexWord(k) && (LEX[k].str||0) >= 3; }).length + " / " + WORDS.length;
+}
+/* ===== 纯净学习模式的结算（用户 2026-10-01）=====
+   不发宝石、不记探索 / 死亡 / 最深层、不并进按层的正确率（第 1 层的历史会被搅混）——
+   熟练度、错题本、今日学习照常记（那本来就是答题时记的）。
+   **历史最高伤害**记在 MET.studyBest（一个数，跟着 MET 落盘 / 合并取大，不进存档码）；
+   开着练习模式的那一趟不计纪录。倒下和「放弃」都会结算、都算纪录（HP 不回，迟早会倒）。*/
+function endStudy(gaveUp){
+  G.over = true;
+  const M = meta();
+  const dmg = P.studyDmg || 0, prev = M.studyBest || 0;
+  const counted = !P.practice;
+  const isBest = counted && dmg > prev;
+  if(isBest) M.studyBest = dmg;
+  commit(false);       // 这一趟结束，续玩档作废
+  const total = P.right + P.wrong;
+  const acc = total ? Math.round(P.right / total * 100) : 0;
+  $("endTitle").textContent = gaveUp ? L("学习结束", "Study session over") : L("书灵把你压了下去", "The Book Spirit wore you down");
+  $("endEyebrow").textContent = L("纯净学习 · 第" + chNo() + "章 ", "Pure study · Chapter " + chNo() + " ") + CH.level;
+  const gap = prev - dmg;
+  $("endAcc").innerHTML =
+    "<div class=\"accbox\">" +
+      "<div class=\"accone\"><i>" + L("本次伤害", "Damage this run") + "</i><b>" + dmg + "</b></div>" +
+      "<div class=\"accvs\">vs</div>" +
+      "<div class=\"accone\"><i>" + L("历史最高", "Best ever") + "</i><b>" + (prev ? prev : "—") + "</b></div>" +
+    "</div>" +
+    "<div class=\"accdiff " + (isBest ? "up" : "") + "\">" +
+      (!counted ? L("练习模式 · 这一趟不计纪录", "Practice mode · this run doesn't count")
+       : isBest ? (prev ? L("新纪录！比原来高 " + (dmg - prev), "New record! +" + (dmg - prev) + " over the old one")
+                        : L("第一笔纪录", "Your first record"))
+       : !prev ? L("还没有纪录 —— 打出伤害才算数", "No record yet — deal some damage to set one")
+       : gap === 0 ? L("跟纪录持平", "Tied with your record")
+       : L("离纪录还差 " + gap, gap + " short of your record")) +
+    "</div>";
+  $("endStats").innerHTML =
+    li(L("答对 / 答错", "Right / wrong"), P.right + " / " + P.wrong) +
+    li(T("正确率 ") , acc + "%") +
+    li(L("最大连击", "Best combo"), P.maxCombo || 0) +
+    li(L("单次最高伤害", "Biggest single hit"), P.studyTop || 0) +
+    (P.practice ? li(T("练习模式"), L("不掉血 · 不计纪录", "No HP loss · no record")) : "") +
+    li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
+    li(T("这趟答错的词"), Object.keys(P.missN || {}).length + T(" 个")) +
+    li(T("累计掌握"), endLearned());
+  renderEndWords();
   $("btnAgain").textContent = T("回到镇上");
   hideAll();
   $("veilEnd").hidden = false;
   $("btnAgain").focus();
-  if(win && CH.boss) say(CH.boss.name + T("碎成了石块。第") + chNo() + T("章结束。"), "crit");
 }
-function li(k,v){ return "<div class=\"li\"><span class=\"lb\">" + k + "</span><span class=\"am\">" + v + "</span></div>"; }
 
 /* ================= 图鉴 ================= */
 let cTab = "word";
@@ -7228,6 +7408,7 @@ function mergeData(o){
   M.runs = Math.max(M.runs||0, im.runs||0);
   M.clears = Math.max(M.clears||0, im.clears||0);
   M.deaths = Math.max(M.deaths||0, im.deaths||0);
+  if(im.studyBest > (M.studyBest || 0)) M.studyBest = im.studyBest;   // 纯净学习的历史最高伤害
   /* 今日学习：同一天取并集 / 取大值，不同天留日期新的那边（日期串按数字比）*/
   if(im.day && im.day.d && im.day.ws){
     const dn = function(x){ return x.split("-").map(Number).reduce(function(a, v){ return a * 100 + v; }, 0); };
@@ -7829,8 +8010,15 @@ $("btnPractice").addEventListener("click", function(){
 $("routeList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(!b || b.disabled) return;
-  askDiff(b.dataset.id);
+  if(COOP) askDiff(b.dataset.id);          // 联机没有纯净学习模式，照旧直接选难度
+  else askMode(b.dataset.id);
 });
+$("modeList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".route");
+  if(!b) return;
+  takeMode(b.dataset.mode);
+});
+$("btnCloseMode").addEventListener("click", closeMode);
 $("diffList").addEventListener("click", function(ev){
   const b = ev.target.closest(".route");
   if(!b) return;
@@ -8073,6 +8261,7 @@ function coopDealDamage(m, n){
      ⚠️ 联机里**这一刀不上报** —— 服务器那套是按「一条会被打空的血条」写的，
      报过去它会判这只怪死了、广播 dead 把它从场上抹掉。深渊里两人各打各的层。*/
   if(m.def && m.def.abyss){ abyssAbsorb(m, n); return; }
+  if(m.def && m.def.study){ studyAbsorb(m, n); return; }   // 书灵：血不动，伤害记在 P.studyDmg 上
   m.hp -= n;
   if(COOP && window.NET && m.cid != null){
     NET.send({t:"dmg", mob:m.cid, side:m.curSide || m.mySide, n:n});

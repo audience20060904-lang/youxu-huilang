@@ -677,6 +677,8 @@ Object.assign(I18N, {
 "回镇上": "Back to town",
 "洞窟 · 选难度": "Caves · choose difficulty",
 "用哪一档下去？": "Which difficulty?",
+"洞窟 · 选模式": "Caves · choose mode",
+"怎么下去？": "How do you want to go down?",
 "换条路": "Other path",
 "遭遇": "Encounter",
 "灰鼠": "Grey Rat",
@@ -2403,7 +2405,7 @@ function i18nApplyOrb(){
 
 var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spider", bone:"Bone Soldier",
   statue:"Gate Statue", ghost:"Whispering Ghost", clock:"Rusty Bell", warden2:"Wandering Shade",
-  dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade",
+  dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade", study:"Book Spirit",
   warden:"Stone Hall Warden", steward:"Rust Court Steward", priest:"Ember Priest", crown:"Crowned of the Ruin",
   scribe:"The Barrow Scribe"};
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
@@ -2416,7 +2418,7 @@ function i18nApplyContent(){
   if(!UI_EN) return;
   RELICS.forEach(function(r){ var e = RELIC_EN[r.id]; if(e){ r.n = e[0]; r.pw = e[1]; r.lore = e[2]; } });
   FOES.forEach(function(f){ if(FOE_EN[f.id]) f.name = FOE_EN[f.id]; });
-  GATEKEEPER.name = FOE_EN.gate; ABYSS.name = FOE_EN.abyss;
+  GATEKEEPER.name = FOE_EN.gate; ABYSS.name = FOE_EN.abyss; STUDY_FOE.name = FOE_EN.study;
   CHAPTERS.forEach(function(c){
     c.name = CH_EN[c.id] || c.name;
     if(c.boss && FOE_EN[c.boss.id]) c.boss.name = FOE_EN[c.boss.id];
