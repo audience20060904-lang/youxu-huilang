@@ -514,7 +514,9 @@ Boss 的技能引擎是**数据驱动**的（`BOSS_SKILLS` / `bossAim()` / `boss
 - 学习模式是一趟 **`P.study`** 的探索（模块级 `studyOn` → `newRun()` 写进去，难度固定 A 级）：**只有一层、一间屋**（`genFloor()` 分岔到 `genBossRoom()`），
   屋里只有一只**「书灵」`STUDY_FOE`**（`content.js`，血量无限、攻击 1，立绘现取章末 Boss 的 `studyArt()`，小图 `MOB_ART.study` 借守卫）。顶栏写 `1/1`。
 - **生命锁 `STUDY_HP`(100)**：`stats()` 最后一步。练习模式在这里**不给 +50 护甲、不减攻击**（`practiceStats()`），只表示**完全不掉血**（`studyNoHurt()`：答错 / 超时两处）。
-- 书灵的血不动：伤害走 `coopDealDamage()` → **`studyAbsorb()`** 记进 `P.studyDmg`（单次最高 `P.studyTop`），血条写「∞ · 累计伤害 N」。所以这一层永远清不空、没有经验 / 金币 / 遗物。
+- 书灵的血不动：伤害走 `coopDealDamage()` → **`studyAbsorb()`** 记进 `P.studyDmg`（单次最高 `P.studyTop`），血条写「∞ · 累计伤害 N · 攻击 M」。所以这一层永远清不空、没有经验 / 金币 / 遗物。
+- **书灵越打越凶**（用户 2026-10-01 第二轮）：每挨 `STUDY_RAMP_PER`(100) 伤害攻击 +1，最多 +`STUDY_RAMP_MAX`(9)（即 1~10），按 `P.studyDmg` 现算（`studyDmgNow()`，读档也对得上）。
+- **回血只有一条：每攒满 `STUDY_COMBO_PER`(10) 连击回 `STUDY_COMBO_HEAL`(5) 点**（`answer()` 里 maxCombo 那行之后，按跨过几个 10 算）；**学习模式里打心魔不回血**（`!P.study`）。地牢正常模式的心魔回血没动。
 - **撤退不掉血、随时能退，撤退那一下 `commit(true)`**（这一模式的额外存档点，用户要的「逃跑后自动保存」）；读档回到撤退时的样子。
 - **倒下或「放弃」走 `endStudy()`**（`endRun()` 开头分岔）：不发宝石、不记 runs / deaths / best、不并 `accF`；熟练度 / 错题本照常。
   **历史最高伤害 = `MET.studyBest`**（一趟的累计伤害，`mergeData()` 取大，**不进存档码**），练习模式那趟不计。结算底下的词跟普通结算共用 `renderEndWords()`。

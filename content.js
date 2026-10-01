@@ -437,6 +437,10 @@ var ABYSS = {id:"abyss", g:"渊", name:"无终之影", art:"crown", cat:"all",
    开着练习模式进来 = 完全不掉血，但不计纪录。逻辑全在 game.js 的「纯净学习模式」一节。
    art 只是兜底：真正用的是这一章章末 Boss 的立绘（跟深渊同一个路子）。*/
 var STUDY_HP  = 100;
+var STUDY_RAMP_PER = 100;   // 书灵每挨这么多伤害，攻击 +1（用户 2026-10-01）
+var STUDY_RAMP_MAX = 9;     // 最多 +9（攻击封在 1 + 9 = 10）
+var STUDY_COMBO_PER  = 10;  // 每攒满 10 连击……
+var STUDY_COMBO_HEAL = 5;   // ……回 5 点生命（学习模式里打心魔不再回血，回血全靠这一条）
 var STUDY_FOE = {id:"study", g:"书", name:"书灵", art:"warden", cat:"all",
                  hp:1, dmg:1, armor:0, xp:0, boss:true, fixed:true, study:true};
 
