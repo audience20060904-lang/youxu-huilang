@@ -589,3 +589,66 @@ MOB_ART.abyss = MOB_ART.crown;
 MOB_ART.study = MOB_ART.warden;          // 纯净学习模式的「书灵」：借守卫的小图（立绘现取章末 Boss 的）
 /* 学中文才有的第五章「书冢」的章末 Boss（content.js 的 scribe）：借祭司的小图，颜色在 style.css 的 m-scribe */
 MOB_ART.scribe = MOB_ART.priest;
+
+/* ===== 圣器（用户 2026-10-01）：信息页三个方格 / 二选一卡片上的小图 =====
+   一律 48×48、主体 currentColor（CSS 里染成圣金色），描边写死深金 #6E4A0A，高光白。简洁为主，格子只有六七十像素。*/
+var HOLY_ART = (function(){
+  var o = "#6E4A0A";
+  function svg(body){ return '<svg viewBox="0 0 48 48" aria-hidden="true">' + body + '</svg>'; }
+  return {
+    /* 圣光照耀：一轮太阳，八道光 */
+    radiance: svg(
+      '<g stroke="currentColor" stroke-width="3.2" stroke-linecap="round">' +
+        '<path d="M24 4v7M24 37v7M4 24h7M37 24h7M9.9 9.9l5 5M33.1 33.1l5 5M38.1 9.9l-5 5M14.9 33.1l-5 5"/></g>' +
+      '<circle cx="24" cy="24" r="9.5" fill="currentColor" stroke="' + o + '" stroke-width="1.6"/>' +
+      '<circle cx="21" cy="21" r="3" fill="#fff" opacity=".55"/>'),
+    /* 共鸣圣铃：一口钟 + 两道声波 */
+    chime: svg(
+      '<path d="M24 7c-7 0-11 5.5-11 13v8l-4 5h30l-4-5v-8c0-7.5-4-13-11-13z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<circle cx="24" cy="37" r="3.6" fill="currentColor" stroke="' + o + '" stroke-width="1.4"/>' +
+      '<rect x="22" y="3.5" width="4" height="4" rx="1" fill="' + o + '"/>' +
+      '<path d="M18.5 14c1.2-2.4 3-3.4 5-3.6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".6"/>' +
+      '<path d="M5 15c-2 3-2 7 0 10M43 15c2 3 2 7 0 10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>'),
+    /* 殉道者之冠：带刺的冠 */
+    crown: svg(
+      '<path d="M8 34 6 15l9 8 9-14 9 14 9-8-2 19z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<rect x="8" y="34" width="32" height="6" rx="1.5" fill="currentColor" stroke="' + o + '" stroke-width="1.6"/>' +
+      '<circle cx="24" cy="27" r="3" fill="#A93729" stroke="' + o + '" stroke-width="1"/>' +
+      '<path d="M12 37h2M18 37h2M28 37h2M34 37h2" stroke="' + o + '" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<path d="M13.5 28 15 24" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>'),
+    /* 审判之锤：斜着的一柄锤 */
+    judge: svg(
+      '<path d="M22 26 9.5 38.5" stroke="' + o + '" stroke-width="5" stroke-linecap="round"/>' +
+      '<path d="M22 26 9.5 38.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<rect x="20" y="6" width="14" height="24" rx="2.5" transform="rotate(45 27 18)" fill="currentColor" stroke="' + o + '" stroke-width="1.6"/>' +
+      '<path d="M22.5 12.5 33.5 23.5" stroke="' + o + '" stroke-width="1.3" opacity=".55"/>' +
+      '<path d="M24 9.5l3-3" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".6"/>'),
+    /* 试炼圣骸：一颗颅骨，额上一道光 */
+    trial: svg(
+      '<path d="M24 6C14.5 6 9 12.5 9 21c0 5 2.3 8.6 5.5 10.5V37a2 2 0 0 0 2 2h15a2 2 0 0 0 2-2v-5.5C36.7 29.6 39 26 39 21 39 12.5 33.5 6 24 6z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<ellipse cx="18" cy="22" rx="4" ry="4.4" fill="#2A2620"/><ellipse cx="30" cy="22" rx="4" ry="4.4" fill="#2A2620"/>' +
+      '<path d="M24 26.5l-2 4h4z" fill="#2A2620"/>' +
+      '<path d="M20 39v-4M24 39v-4M28 39v-4" stroke="' + o + '" stroke-width="1.4"/>' +
+      '<path d="M24 9v6M21 12h6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>'),
+    /* 公义天平：一根柱、一条梁、两只盘 */
+    scales: svg(
+      '<path d="M24 8v31M15 41h18" stroke="' + o + '" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M8 13h32" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M10 13 5 26M10 13l5 13M38 13l-5 13M38 13l5 13" stroke="' + o + '" stroke-width="1.2"/>' +
+      '<path d="M3.5 26h13a6.5 5 0 0 1-13 0zM31.5 26h13a6.5 5 0 0 1-13 0z" fill="currentColor" stroke="' + o + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<circle cx="24" cy="8" r="3" fill="currentColor" stroke="' + o + '" stroke-width="1.3"/>'),
+    /* 万言圣典：一本摊开的书 */
+    scripture: svg(
+      '<path d="M24 13c-5-3.5-12-4-18-2.5v26c6-1.5 13-1 18 2.5 5-3.5 12-4 18-2.5v-26c-6-1.5-13-1-18 2.5z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M24 13v26" stroke="' + o + '" stroke-width="1.6"/>' +
+      '<path d="M10 17c3.5-.7 7-.4 10 1M10 22c3.5-.7 7-.4 10 1M10 27c3.5-.7 7-.4 10 1M28 18c3-1.4 6.5-1.7 10-1M28 23c3-1.4 6.5-1.7 10-1M28 28c3-1.4 6.5-1.7 10-1" stroke="' + o + '" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".7"/>' +
+      '<path d="M24 4v5M21.5 6.5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+    /* 逆时沙漏：上下两只玻璃泡，沙子往上流 */
+    hourglass: svg(
+      '<rect x="10" y="5" width="28" height="4" rx="1.5" fill="' + o + '"/><rect x="10" y="39" width="28" height="4" rx="1.5" fill="' + o + '"/>' +
+      '<path d="M14 9h20c0 8-6 11-6 15s6 7 6 15H14c0-8 6-11 6-15s-6-7-6-15z" fill="#fff" fill-opacity=".35" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M16.5 11h15c-.8 4-4.5 6.5-7.5 9-3-2.5-6.7-5-7.5-9z" fill="currentColor"/>' +
+      '<path d="M20 37h8c-1-3-2.5-4-4-5-1.5 1-3 2-4 5z" fill="currentColor"/>' +
+      '<path d="M24 30v-8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="1.5 2"/>')
+  };
+})();

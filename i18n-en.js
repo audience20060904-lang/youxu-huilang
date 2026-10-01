@@ -7,6 +7,11 @@
    战场自己的界面文案和塔 / 怪 / 特殊遗物的英文在 i18n-bf.js。⚠️ 这个文件在战场里没有词库可读，碰 CAT_CN 这类全局先判 typeof。*/
 "use strict";
 Object.assign(I18N, {
+"圣器 Holy Relics": "Holy Relics",
+"守者倒下了": "The guardian falls",
+"圣器 · 二选一": "Holy relic · choose one",
+"都不要，留着现在的": "Neither — keep what I have",
+"圣器": "Holy relic",
 "这一层的怪还没清完 —— 两人先一起点「寻路」走。": "Monsters remain on this floor — both of you tap \"Path\" to move together.",
 "存档写不进去 —— 浏览器多半开了无痕模式，或者禁掉了本地存储。这一趟关掉页面就没了，换个普通窗口再来。": "Can't save — your browser is probably in private mode or blocks local storage. This run will be lost when you close the page; try a normal window.",
 "石门在身后合上。走廊里只有火把的回声。": "The stone door shuts behind you. Only the echo of torches fills the corridor.",
@@ -2408,6 +2413,17 @@ var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spi
   dread:"Fear Eater", prism:"Shattered Prism", gate:"Floor Warden", abyss:"The Endless Shade", study:"Book Spirit",
   warden:"Stone Hall Warden", steward:"Rust Court Steward", priest:"Ember Priest", crown:"Crowned of the Ruin",
   scribe:"The Barrow Scribe"};
+/* 圣器（2026-10-01）：按 id 覆盖 content.js 的 HOLY —— [名字, 词条, 铭文] */
+var HOLY_EN = {
+  radiance: ["Radiance", "Bless one relic: its numbers ×2. Lose or sell it and the blessing fades — pick another", "Light falls on one thing, and it becomes two."],
+  chime: ["Resonant Bell", "All relic numbers ×1.2", "Ring it once and everything you carry hums along."],
+  crown: ["Martyr's Crown", "Each boss or guardian you defeat this run: ATK, max HP and armor +8%", "Every thorn is a king who fell before you."],
+  judge: ["Hammer of Judgment", "After a correct answer, a foe under 25% HP (bosses 10%) is struck down outright; restore 5% max HP", "A verdict needn't wait for the last blow."],
+  trial: ["Reliquary of Trial", "Once per floor: survive a lethal blow at 1 HP and enter a trial — answer the next 3 right to restore 60% max HP; one slip and you fall", "The bones still hold a sentence. Finish it."],
+  scales: ["Scales of Justice", "Each −1% damage taken: damage +2%; each +10% damage: damage taken −1% more (up to −30%)", "What you block, you return."],
+  scripture: ["Scripture of Words", "Damage and max HP +30%; +5% more each for every 50 words you've mastered on this save (up to +300%)", "Every page you've learned is written inside."],
+  hourglass: ["Hourglass of Return", "3 times per floor: a wrong answer rewinds — no HP lost, combo kept (the word still counts as missed)", "For a moment the sand runs upward, and nothing has happened yet."]
+};
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
 var DIFF_EN = {A:["Tier A", "Original", "No ATK bonus", "The game as it was built"],
   B:["Tier B", "A bit easier", "ATK +25%"], C:["Tier C", "Easier still", "ATK +50%"],
@@ -2417,6 +2433,7 @@ function i18nApplyContent(){
   /* 学中文时章节的 HSK 标签、多出来的「书冢」、无尽的 HSK 4~6 都在 content.js 末尾那段定（跟界面语言无关）*/
   if(!UI_EN) return;
   RELICS.forEach(function(r){ var e = RELIC_EN[r.id]; if(e){ r.n = e[0]; r.pw = e[1]; r.lore = e[2]; } });
+  if(typeof HOLY !== "undefined") HOLY.forEach(function(h){ var e = HOLY_EN[h.id]; if(e){ h.n = e[0]; h.pw = e[1]; h.lore = e[2]; } });
   FOES.forEach(function(f){ if(FOE_EN[f.id]) f.name = FOE_EN[f.id]; });
   GATEKEEPER.name = FOE_EN.gate; ABYSS.name = FOE_EN.abyss; STUDY_FOE.name = FOE_EN.study;
   CHAPTERS.forEach(function(c){

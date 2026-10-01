@@ -1209,3 +1209,34 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .relic.own.borrowed{opacity:.72;border-style:dashed}
 .rfchip.q0{color:var(--q0)} .rfchip.q1{color:var(--q1)} .rfchip.q2{color:var(--q2)}
 .rfchip.q3{color:var(--q3)} .rfchip.q4{color:var(--q4)}
+
+/* ===== 圣器（用户 2026-10-01）=====
+   信息页「属性」下面三个正方形（.holyslots / .hslot），二选一和详情窗的卡片（.relic.holyc），
+   遗物页上被圣光照耀赐福的那件（.relic.own.sanct，金边）。颜色一律走 --holy（圣金），图标是 art.js 的 HOLY_ART。
+   ⚠️ 类名带 h / holy 前缀，别撞短名。*/
+:root{ --holy:#C99A1E; --holy-deep:#7A5508; --holy-bg:#FBF3DC; }
+.holyslots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:7px}
+.hslot{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  padding:5px 4px;border:1px solid var(--holy);border-radius:3px;background:var(--holy-bg);cursor:pointer;
+  font-family:var(--body);color:var(--holy-deep);min-width:0}
+.hslot .hicon{width:46%;max-width:56px;color:var(--holy);display:block}
+.hslot .hicon svg{width:100%;height:auto;display:block}
+.hslot .hname{font-family:var(--disp);font-size:12.5px;font-weight:600;line-height:1.15;text-align:center;
+  max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hslot .hsub{font-size:10px;color:var(--dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hslot.ask .hsub{color:var(--blood)}
+.hslot.empty{border-style:dashed;border-color:var(--edge);background:var(--stone-2);cursor:default}
+.hslot.empty .hname{color:var(--faint);font-family:var(--body);font-weight:400}
+@media (hover:hover){ .hslot:not(.empty):hover{border-color:var(--holy-deep)} }
+.relic.holyc{flex-direction:row;align-items:flex-start;gap:10px;border-color:var(--holy);background:var(--holy-bg);flex-shrink:0}
+@media (hover:hover){ .relic.holyc:hover{border-color:var(--holy-deep);background:#F8EBC5} }
+.relic.holyc.hot,.relic.holyc.hot:hover{border-color:var(--holy);background:var(--holy-bg);cursor:default}
+.relic.holyc .hicon{flex:none;width:46px;height:46px;color:var(--holy)}
+.relic.holyc .hicon svg{width:100%;height:100%;display:block}
+.relic.holyc .hcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.relic .hq{color:var(--holy-deep)}
+.relics.holypick{gap:8px}
+.relic.own.sanct{border-color:var(--holy);background:var(--holy-bg);box-shadow:0 0 0 1px var(--holy) inset}
+.relic.sanct{border-color:var(--holy);background:var(--holy-bg)}
+#holyBlessList .relic{flex-shrink:0}
+#holyBlessList .relic.off{opacity:.45}

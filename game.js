@@ -28,7 +28,8 @@ function inAbyss(){ return !!(G && isAbyssFloor(G.floor)); }
 function noShelterAt(f){ return !!(CH && ((CH.endless && f > ENDLESS_FROM) || isAbyssFloor(f))); }
 function noShelter(){ return !!(G && noShelterAt(G.floor)); }
 /* 无终之影第 n 层的血量和攻击：血量翻倍，攻击跟着血量走（10%，最少 1）——两条线是同一条。 */
-function abyssHp(layer){ return ABYSS_HP0 * Math.pow(ABYSS_X, Math.max(0, layer - 1)); }
+/* 深渊在第 51 层，吃「圣器」那一下的 ×HOLY_FOE_X（血量翻倍；攻击按血量的 10% 算，跟着翻倍）*/
+function abyssHp(layer){ return ABYSS_HP0 * Math.pow(ABYSS_X, Math.max(0, layer - 1)) * HOLY_FOE_X; }
 function abyssDmg(layer){ return Math.max(1, Math.round(abyssHp(layer) * ABYSS_DMG_PCT)); }
 
 /* ================= 联机（第一期 · 骨架）=================
@@ -348,7 +349,11 @@ function newRun(){
         tut: !!tutPending,
         /* 纯净学习模式（用户 2026-10-01）：一层、一只打不死的书灵、生命锁 100。
            studyDmg = 这一趟一共打了它多少，studyTop = 单次最高（结算 / 纪录用，跟着续玩档）*/
-        study: !!studyOn, studyDmg:0, studyTop:0 };
+        study: !!studyOn, studyDmg:0, studyTop:0,
+        /* 圣器（用户 2026-10-01）：holy = 带着的圣器（最多 HOLY_MAX 件），sanct = 圣光照耀赐福的那件遗物，
+           bossKills = 本局打倒过几只 Boss / 守者（殉道者之冠），holyWords = 进层时掌握了几个词（万言圣典），
+           trial = 试炼圣骸还差几题。全跟着续玩档。*/
+        holy:[], sanct:null, bossKills:0, holyWords:0, trial:0 };
   tutPending = false;
   studyOn = false;
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
@@ -381,11 +386,132 @@ function xpNeed(l){
   let n = 5 + l * 3;
   // 1~20 级的这一段 ×1.5（用户 2026-09）—— 前期升级太快，怪很快就打成纸糊的
   if(l <= CHAPTER.xpEarlyTo) n = Math.ceil(n * CHAPTER.xpEarlyMult);
-  return hasRelic("adept") ? Math.max(1, Math.ceil(n * 0.8)) : n;   // 速成
+  return hasRelic("adept") ? Math.max(1, Math.ceil(n * Math.max(0.2, 1 - hx("adept", 0.2)))) : n;   // 速成
 }
 /* 属性只有两个来源：等级 + 遗物。装备系统已删。
    幸运也一并去掉了 —— 它只影响过掉宝品质，现在没宝可掉。*/
+/* ================= 圣器（用户 2026-10-01）=================
+   洞窟里的特殊遗物，最多带 HOLY_MAX(3) 件，**不占遗物格**。P.holy = [id, …]（跟着续玩档）。
+   数值和规矩在 content.js 的 HOLY 那一段；拿法见 maybeRelic() / offerHoly()，信息页的三个方格见 renderHoly()。
+   「构成」逐件拿掉算差时，圣器在 RMASK 里叫 "holy:<id>"。*/
+function holyOn(id){
+  if(!P || !P.holy || P.holy.indexOf(id) < 0) return false;
+  if(RMASK && (RMASK === "all" || RMASK["holy:" + id])) return false;
+  return true;
+}
+function holyById(id){ for(let i = 0; i < HOLY.length; i++) if(HOLY[i].id === id) return HOLY[i]; return null; }
+/* 被赐福的那件（圣光照耀）：圣光照耀在身上、那件也真在身上（「构成」拿掉它时不算）*/
+function sanctId(){
+  if(!P || !P.sanct || !holyOn("radiance")) return null;
+  if(!P.relics || P.relics.indexOf(P.sanct) < 0) return null;
+  if(RMASK && (RMASK === "all" || RMASK[P.sanct])) return null;
+  return P.sanct;
+}
+function chimeX(){ return holyOn("chime") ? HOLY_CHIME_X : 1; }
+let RELIC_IDX = null;
+function isRelicId(id){
+  if(!RELIC_IDX){ RELIC_IDX = {}; RELICS.forEach(function(r){ RELIC_IDX[r.id] = true; }); }
+  return !!RELIC_IDX[id];
+}
+/* ---- 遗物的「数值倍率」：赐福 ×HOLY_BLESS_X、共鸣圣铃 ×HOLY_CHIME_X ----
+   两条路：
+   ① **常驻的**（stats / pctSteady / flatSteady / extraSteady / critSteady / cutState）—— 不用一件件改：
+      跟「构成」一样拿 RMASK 把那件（或全部）拿掉再算一遍，差多少就是它贡献多少，再按倍率加一截（ampOn / ampObj）。
+      **只放大好处**：贡献是负的（献身减生命、砺石减生命）不跟着翻。
+   ② **这一下才有的**（回血 / 护盾 / 金币 / 概率 / 这一刀的加成）—— 在那一处写 hx("遗物 id", 数)，tg() / ct() / luck(p, id) 自己会乘。
+   ⚠️ 以后加新遗物：常驻的照旧写进那几个 …Raw 函数，自动吃得到；一次性给东西的那一处记得包一层 hx()。*/
+let AMP_OFF = false;
+function rmul(id){
+  if(AMP_OFF || !P || !P.holy || !P.holy.length || !isRelicId(id)) return 1;
+  let k = chimeX();
+  if(id === sanctId()) k *= HOLY_BLESS_X;
+  return k;
+}
+function hx(id, n){
+  const k = rmul(id);
+  if(k === 1 || !n) return n;
+  const v = n * k;
+  return Number.isInteger(n) ? Math.round(v) : v;
+}
+/* 减半类（屏息 / 卸力 / 余温 / 残壁的那一下）：「减半」×2 = 减半两次（剩 25%），圣铃 ×1.2 ≈ 剩 44% */
+function halfOf(id, out){ return Math.max(1, Math.ceil(out * Math.pow(0.5, rmul(id)))); }
+function ampNeed(){ return !AMP_OFF && !!(P && P.holy && P.holy.length) && (chimeX() !== 1 || !!sanctId()); }
+/* 在「再拿掉 mask 那件（"all" = 全部遗物，数组 = 这几件，null = 不拿）」的状态下算 f()，算的时候不再套倍率 */
+function ampEval(mask, f){
+  const m0 = RMASK, a0 = AMP_OFF;
+  let m = m0;
+  if(mask === "all" || m0 === "all") m = "all";
+  else if(mask){
+    m = Object.assign({}, m0 || {});
+    (Array.isArray(mask) ? mask : [mask]).forEach(function(id){ m[id] = 1; });
+  }
+  RMASK = m; AMP_OFF = true;
+  try{ return f(); } finally { RMASK = m0; AMP_OFF = a0; }
+}
+/* 带代价的那几件（某一项是负的）：圣铃要单独拿掉它们算 —— 跟别的件一起拿掉的话，负的那截会把别人的正数抵掉 */
+const HOLY_COSTLY = ["grind", "vigor", "gird", "rustplate", "offer", "fate"];
+/* f() 返回 {键:数}：按倍率要加上去的那一截（每个键各算各的，负的不放大） */
+function ampDelta(f, keys){
+  const R = chimeX(), b = sanctId(), out = {};
+  const v = ampEval(null, f);
+  keys.forEach(function(k){ out[k] = 0; });
+  if(R !== 1){
+    /* 共鸣圣铃：没代价的那些一起拿掉算一次，带代价的逐件算（最多六件），各自只放大正的那截 */
+    const own = (P.relics || []).slice();
+    if(P.face && G && P.face.f === G.floor && own.indexOf("thousandface") >= 0)
+      P.face.ids.forEach(function(id){ if(own.indexOf(id) < 0) own.push(id); });
+    const plain = own.filter(function(id){ return HOLY_COSTLY.indexOf(id) < 0; });
+    const groups = [plain].concat(own.filter(function(id){ return HOLY_COSTLY.indexOf(id) >= 0; }).map(function(id){ return [id]; }));
+    groups.forEach(function(g){
+      if(!g.length) return;
+      const v0 = ampEval(g, f);
+      keys.forEach(function(k){ out[k] += (R - 1) * Math.max(0, v[k] - v0[k]); });
+    });
+  }
+  if(b){
+    const vb = ampEval(b, f);
+    keys.forEach(function(k){ out[k] += R * (HOLY_BLESS_X - 1) * Math.max(0, v[k] - vb[k]); });
+  }
+  return out;
+}
+/* 常驻的那几档：raw(s) 照旧算，再加上倍率那一截。s 是同一个（护甲 / 生命那些已经在 stats() 里放大过了，这里只放大这一档自己的） */
+function ampOn(raw, s){
+  const v = raw(s);
+  if(!ampNeed()) return v;
+  return v + Math.round(ampDelta(function(){ return {v: raw(s)}; }, ["v"]).v);
+}
+const ST_KEYS = ["atk", "maxHp", "def", "defGear", "crit"];
+/* 殉道者之冠：本局打倒过几只 Boss / 层间守者（P.bossKills 只是个事实，换算包在 holyOn 里）*/
+function crownPct(){ return holyOn("crown") ? (P.bossKills || 0) * HOLY_CROWN_PCT : 0; }
+/* 万言圣典：+30%，正在学的这门语言每掌握 50 个词再 +5%（掌握的词数每进一层量一次，存在 P.holyWords）*/
+function bookPct(){
+  if(!holyOn("scripture")) return 0;
+  return Math.min(HOLY_BOOK_MAX, HOLY_BOOK_BASE + Math.floor((P.holyWords || 0) / HOLY_BOOK_PER) * HOLY_BOOK_STEP);
+}
+function masteredCount(){
+  let n = 0;
+  Object.keys(LEX).forEach(function(k){ if((LEX[k].str || 0) >= 3 && lexWord(k)) n++; });
+  return n;
+}
+/* 面板：statsRaw() 是等级 + 遗物 + 练习 / 难度（原来的 stats()），这里再套圣器 ——
+   赐福 / 圣铃按倍率放大遗物给的那一截，殉道者之冠 / 万言圣典按百分比乘在最后。*/
 function stats(){
+  const s = statsRaw();
+  if(AMP_OFF || P.study) return s;
+  if(ampNeed()){
+    const add = ampDelta(function(){ return statsRaw(); }, ST_KEYS);
+    ST_KEYS.forEach(function(k){ s[k] = Math.round(s[k] + add[k]); });
+  }
+  const cp = crownPct(), bp = bookPct();
+  if(cp){
+    s.atk = Math.max(1, Math.round(s.atk * (1 + cp / 100)));
+    const dg = Math.round((s.defGear || 0) * cp / 100);
+    s.def += dg; s.defGear += dg;
+  }
+  if(cp || bp) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + cp / 100) * (1 + bp / 100)));
+  return s;
+}
+function statsRaw(){
   const pb = CHAPTER.playerBase, pl = CHAPTER.perLevel;
   const s = {atk: pb.atk + (P.lvl-1) * pl.atk, def:0, crit:pb.crit,
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
@@ -567,6 +693,7 @@ function nextFloor(){
      跟 withMaxHp() 一个规矩，不然第 50 → 51 层怪 ×10 的那一下，厚血的上限翻几倍、血却还是原来那么多。*/
   const hpCap0 = stats().maxHp;
   G.floor = from + 1;
+  if(holyOn("scripture")) P.holyWords = masteredCount();   // 万言圣典：每进一层量一次掌握了几个词（上限涨了下面跟着补血）
   { const hpCap1 = stats().maxHp; if(hpCap1 > hpCap0) P.hp += hpCap1 - hpCap0; }
   /* 汗巾／血锤要按「**这一层**回了多少血」给加成 —— 清零放在最前面，
      这样连油灯那一笔进层回血也算进这一层（G.healed 在 healUp() 里累）。*/
@@ -578,9 +705,9 @@ function nextFloor(){
   if(P.relics){                                    // 进层结算的普通遗物
     if(hasRelic("lamp")){                                              // 油灯：回最大生命的 5%
       const lm = stats().maxHp;
-      healUp(Math.max(1, Math.ceil(lm * CHAPTER.lampPct)));            // 走 healUp，泉涌才收得到溢出
+      healUp(hx("lamp", Math.max(1, Math.ceil(lm * CHAPTER.lampPct))));  // 走 healUp，泉涌才收得到溢出
     }
-    if(hasRelic("purse")) earnGold(30);                                // 钱袋
+    if(hasRelic("purse")) earnGold(hx("purse", 30));                   // 钱袋
   }
   G.echoUsed = false;      // 「回声」每层一次
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
@@ -610,6 +737,8 @@ function nextFloor(){
   /* 第十一批（2026-09-25）每层的次数和小数存钱罐 */
   G.deflectN = 0;          // 卸力：这一层减半过几次
   G.gaspUsed = false;      // 一息：每层一次
+  G.trialUsed = false;     // 试炼圣骸（圣器）：每层一次
+  G.rewindN = 0;           // 逆时沙漏（圣器）：这一层倒回过几次
   G.bwallGot = 0;          // 刃壁：这一层已经转了多少护盾（封在上限的 BWALL_MAX）
   G.wshGot = 0;            // 磨盾（第十五批）：这一层已经转了多少护盾
   G.wshBank = 0;
@@ -645,8 +774,8 @@ function nextFloor(){
   if(hasRelic("track")){
     const wrongNow = G.floorWrong || 0;
     if(from > 0 && typeof G.prevFloorWrong === "number" && wrongNow < G.prevFloorWrong){
-      P.shield = (P.shield || 0) + TRACK_SHIELD;
-      say(T("循迹 —— 这一层打错得比上一层少，多了 <b>") + TRACK_SHIELD + T("</b> 点护盾。"), "good");
+      P.shield = (P.shield || 0) + hx("track", TRACK_SHIELD);
+      say(T("循迹 —— 这一层打错得比上一层少，多了 <b>") + hx("track", TRACK_SHIELD) + T("</b> 点护盾。"), "good");
     }
     if(from > 0) G.prevFloorWrong = wrongNow;
   }
@@ -659,7 +788,7 @@ function nextFloor(){
     else P.roomFreeStreak = 0;
     if(P.roomFreeStreak >= PACE_STREAK){
       P.roomFreeStreak = 0;
-      const back = Math.max(1, Math.ceil(stats().maxHp * PACE_PCT));
+      const back = hx("pace", Math.max(1, Math.ceil(stats().maxHp * PACE_PCT)));
       healUp(back);
       say(T("稳步 —— 上一层没沾泉／坛／箱／商，回了 <b>") + back + T("</b> 点生命。"), "good");
     }
@@ -668,79 +797,79 @@ function nextFloor(){
   /* 惜盾：**上一层**结束时护盾还留着（没见底），这一层开局额外给一批。
      放在盾誓/厚盾**之前**算——用的是上一层带过来的护盾余量，跟这一层刚补的盾誓/厚盾无关。*/
   if(hasRelic("cherish") && from > 0 && (P.shield || 0) > 0){
-    const bonus = Math.max(1, Math.ceil(stats().maxHp * CHERISH_PCT));
+    const bonus = hx("cherish", Math.max(1, Math.ceil(stats().maxHp * CHERISH_PCT)));
     P.shield = (P.shield || 0) + bonus;
     say(T("惜盾 —— 护盾没破，多给你 <b>") + bonus + T("</b> 点。"), "good");
   }
   /* 盾誓：每进一层把护盾**补到**上限的 SHIELD_FLOOR_PCT —— 取大值而不是直接赋值，
      免得把「凝盾」辛苦攒下的一大堆盾按回去。*/
   if(hasRelic("vow")){
-    const want = Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT));
+    const want = hx("vow", Math.max(1, Math.ceil(stats().maxHp * SHIELD_FLOOR_PCT)));
     if((P.shield || 0) < want){ P.shield = want; say(T("盾誓在身前合拢 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("citywall")){                                                // 城垣（第十一批）：同样取大值
-    const want = Math.max(1, Math.ceil(stats().maxHp * CITY_FLOOR));
+    const want = hx("citywall", Math.max(1, Math.ceil(stats().maxHp * CITY_FLOOR)));
     if((P.shield || 0) < want){ P.shield = want; say(T("城垣补齐了 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
-  if(hasRelic("thick")) P.shield = (P.shield || 0) + THICK_SHIELD;   // 厚盾：每层白得一点
-  if(hasRelic("pillar")) healUp(Math.max(1, Math.ceil(stats().maxHp * PILLAR_HEAL)));   // 不周（第十六批）：进层回血
+  if(hasRelic("thick")) P.shield = (P.shield || 0) + hx("thick", THICK_SHIELD);   // 厚盾：每层白得一点
+  if(hasRelic("pillar")) healUp(hx("pillar", Math.max(1, Math.ceil(stats().maxHp * PILLAR_HEAL))));   // 不周（第十六批）：进层回血
   if(hasRelic("gauge")){                                              // 量敌（第十五批）：按这一层怪物的攻击给
-    const add = Math.max(1, Math.ceil(floorFoeDmg() * GAUGE_X));
+    const add = hx("gauge", Math.max(1, Math.ceil(floorFoeDmg() * GAUGE_X)));
     P.shield = (P.shield || 0) + add;
     say(T("量敌 —— 看清了这一层的牙口，护盾 +<b>") + add + T("</b>。"), "good");
   }
   /* 2026-09-21：这五件原来「独立价值恒为 0」——它们要么按护甲算（自己不产护甲），
      要么等着「护盾被打穿」（自己不产护盾），单带时永远触发不了。这一批各补了一条
      **每进一层自带的护盾**当种子。⚠️ 别把种子删掉，删了它们就又回到白板。*/
-  if(hasRelic("mirror"))  P.shield = (P.shield || 0) + MIRROR_SHIELD;   // 镜盾
-  if(hasRelic("cherish")) P.shield = (P.shield || 0) + CHERISH_SHIELD;  // 惜盾
-  if(hasRelic("shatter")) P.shield = (P.shield || 0) + SHATTER_SHIELD;  // 破盾余威
-  if(hasRelic("borrow"))  P.shield = (P.shield || 0) + BORROW_SHIELD;   // 借甲
-  if(hasRelic("veteran")) P.shield = (P.shield || 0) + VETERAN_SHIELD;  // 久经
+  if(hasRelic("mirror"))  P.shield = (P.shield || 0) + hx("mirror", MIRROR_SHIELD);   // 镜盾
+  if(hasRelic("cherish")) P.shield = (P.shield || 0) + hx("cherish", CHERISH_SHIELD);  // 惜盾
+  if(hasRelic("shatter")) P.shield = (P.shield || 0) + hx("shatter", SHATTER_SHIELD);  // 破盾余威
+  if(hasRelic("borrow"))  P.shield = (P.shield || 0) + hx("borrow", BORROW_SHIELD);   // 借甲
+  if(hasRelic("veteran")) P.shield = (P.shield || 0) + hx("veteran", VETERAN_SHIELD);  // 久经
   /* 候门（第十批）：**只在进 Boss 层的那一下**给。数字看着大是因为十层才吃一次
      （Boss 层是全游戏容错最低的地方，章末 Boss 只能挨三下出头）。*/
   if(hasRelic("gatewait") && isBossFloor(G.floor)){
-    P.shield = (P.shield || 0) + GATE_SHIELD;
-    const gh = healUp(Math.max(1, Math.ceil(stats().maxHp * GATE_HEAL)));
-    say(T("候门 —— 门后有东西在等你，护盾 <b>") + GATE_SHIELD + "</b>" +
+    P.shield = (P.shield || 0) + hx("gatewait", GATE_SHIELD);
+    const gh = healUp(hx("gatewait", Math.max(1, Math.ceil(stats().maxHp * GATE_HEAL))));
+    say(T("候门 —— 门后有东西在等你，护盾 <b>") + hx("gatewait", GATE_SHIELD) + "</b>" +
         (gh.hp ? T("，回 <b>") + gh.hp + T("</b> 点生命") : "") + T("。"), "good");
   }
   /* ===== 第九批「跨流派组合」的每层种子（2026-09-21）=====
      ⚠️ **种子别删** —— 这七件的另一半挂在护盾上，没有种子它们在不带护盾流时就是白板
      （跟附录 B2 那 11 件是同一个坑）。*/
-  if(hasRelic("shedge"))      P.shield = (P.shield || 0) + SHEDGE_SEED;    // 盾锋
-  if(hasRelic("mirroredge"))  P.shield = (P.shield || 0) + MEDGE_SEED;     // 镜锋
-  if(hasRelic("shieldheart")) P.shield = (P.shield || 0) + SHEART_SEED;    // 盾心
-  if(hasRelic("twin"))        P.shield = (P.shield || 0) + TWIN_SEED;      // 双生
-  if(hasRelic("shieldking"))  P.shield = (P.shield || 0) + SKING_SEED;     // 盾王
-  if(hasRelic("evervow"))     P.shield = (P.shield || 0) + EVERVOW_SEED;   // 恒甲
-  if(hasRelic("confluence"))  P.shield = (P.shield || 0) + CONF_SEED;      // 万流归宗
+  if(hasRelic("shedge"))      P.shield = (P.shield || 0) + hx("shedge", SHEDGE_SEED);    // 盾锋
+  if(hasRelic("mirroredge"))  P.shield = (P.shield || 0) + hx("mirroredge", MEDGE_SEED);     // 镜锋
+  if(hasRelic("shieldheart")) P.shield = (P.shield || 0) + hx("shieldheart", SHEART_SEED);    // 盾心
+  if(hasRelic("twin"))        P.shield = (P.shield || 0) + hx("twin", TWIN_SEED);      // 双生
+  if(hasRelic("shieldking"))  P.shield = (P.shield || 0) + hx("shieldking", SKING_SEED);     // 盾王
+  if(hasRelic("evervow"))     P.shield = (P.shield || 0) + hx("evervow", EVERVOW_SEED);   // 恒甲
+  if(hasRelic("confluence"))  P.shield = (P.shield || 0) + hx("confluence", CONF_SEED);      // 万流归宗
   // 甲垫：按**护甲**换这一层的护盾（读 defGear，练习模式那 +50 不算数）
   if(hasRelic("armpad")){
-    const gain = Math.min(ARMPAD_MAX, Math.max(0, stats().defGear || 0) * ARMPAD_PER);
+    const gain = hx("armpad", Math.min(ARMPAD_MAX, Math.max(0, stats().defGear || 0) * ARMPAD_PER));
     if(gain > 0) P.shield = (P.shield || 0) + gain;
   }
   /* 进层回血的三件：放在护盾后面 —— 它们回的血会记进 G.healed，
      「汗巾」「血锤」这一层的加成就是从这几笔起算的。*/
   if(hasRelic("clasp")){                                                   // 铜扣：金币→回血
     const pc = Math.min(CLASP_MAX, Math.floor((P.gold || 0) / CLASP_PER) * CLASP_PCT);
-    if(pc > 0) healUp(Math.max(1, Math.ceil(stats().maxHp * pc)));
+    if(pc > 0) healUp(hx("clasp", Math.max(1, Math.ceil(stats().maxHp * pc))));
   }
   if(hasRelic("underarmor")){                                              // 甲下：护甲→回血
     const s9 = stats();
     const pc = Math.min(UNDERARM_MAX, Math.max(0, s9.defGear || 0) * UNDERARM_PCT);
-    if(pc > 0) healUp(Math.max(1, Math.ceil(s9.maxHp * pc)), s9);
+    if(pc > 0) healUp(hx("underarmor", Math.max(1, Math.ceil(s9.maxHp * pc))), s9);
   }
-  if(hasRelic("towel"))     healUp(Math.max(1, Math.ceil(stats().maxHp * TOWEL_SEED)));   // 汗巾的种子
-  if(hasRelic("bloodmaul")) healUp(Math.max(1, Math.ceil(stats().maxHp * BMAUL_SEED)));   // 血锤的种子
+  if(hasRelic("towel"))     healUp(hx("towel", Math.max(1, Math.ceil(stats().maxHp * TOWEL_SEED))));   // 汗巾的种子
+  if(hasRelic("bloodmaul")) healUp(hx("bloodmaul", Math.max(1, Math.ceil(stats().maxHp * BMAUL_SEED))));   // 血锤的种子
   /* 泉涌：自带一笔每层回血当「溢出的来源」——它原来只吃别的件漏出来的溢出，单带几乎没用。*/
-  if(hasRelic("well")) healUp(Math.max(1, Math.ceil(stats().maxHp * WELL_HEAL_PCT)));
+  if(hasRelic("well")) healUp(hx("well", Math.max(1, Math.ceil(stats().maxHp * WELL_HEAL_PCT))));
   /* 未雨绸缪（用户 2026-09 提到史诗）：进层时**身上每 foresightPer 金币**回 3% 最大生命，
      一次最多 foresightMax（200%，用户 2026-09-26 加的上限）—— 超过上限的部分泉涌照样转盾。*/
   if(hasRelic("foresight")){
     const tier = Math.floor((P.gold || 0) / CHAPTER.foresightPer);
     const fp = Math.min(CHAPTER.foresightMax, CHAPTER.foresightPct * tier);
-    if(tier > 0) healUp(Math.max(1, Math.ceil(stats().maxHp * fp)));
+    if(tier > 0) healUp(hx("foresight", Math.max(1, Math.ceil(stats().maxHp * fp))));
   }
   /* 走过章末 Boss 那一层 = **这一章通关**（宝石里的「通关」和统计都照记，见 endRun 的 cleared），
      但这一趟不在这儿结束 —— 下面还有一层深渊，里面是打不完的「无终之影」。
@@ -1059,11 +1188,11 @@ function genFloor(){
     G.mobs.push(makeFoe(pick(pool), sp.x, sp.y));
   }
   // 金币堆 7~10 堆，「掘金」再多 3 堆
-  for(let i=0, k=ri(7,10) + (hasRelic("dig") ? 3 : 0); i<k; i++){
+  for(let i=0, k=ri(7,10) + (hasRelic("dig") ? hx("dig", 3) : 0); i<k; i++){
     const sp = take(); if(!sp) break;
     // 用户 2026-09：地上的金币减少 60%（CHAPTER.goldMult），最少留 1 枚
     let amt = Math.max(1, Math.round((ri(2,6) + G.floor) * CHAPTER.goldMult));
-    if(hasRelic("alms") && luck(ALMS_RATE)) amt *= 2;    // 施粥：这一堆直接翻倍
+    if(hasRelic("alms") && luck(ALMS_RATE, "alms")) amt *= 2;    // 施粥：这一堆直接翻倍
     G.things.push({x:sp.x, y:sp.y, kind:"gold", amt: amt});
   }
   const springs = G.floor >= 3 ? 2 : 1;
@@ -1105,14 +1234,14 @@ function floorFoeDmg(){ return G ? Math.max(1, Math.round(refFoe(G.floor).dmg)) 
 /* 山岳：每深入 MOUNT_EVERY 层最大生命 +MOUNT_PCT%，最多 MOUNT_MAX% */
 function mountainPct(){ return G ? Math.min(MOUNT_MAX, Math.floor(G.floor / MOUNT_EVERY) * MOUNT_PCT) : 0; }
 /* 减伤上限：底子 MIT_CUT_MAX(75)，金身抬到 GBODY_CAP(85) */
-function cutMax(){ return hasRelic("goldbody") ? GBODY_CAP : MIT_CUT_MAX; }
+function cutMax(){ return hasRelic("goldbody") ? Math.min(95, MIT_CUT_MAX + hx("goldbody", GBODY_CAP - MIT_CUT_MAX)) : MIT_CUT_MAX; }   // 赐福：多放宽的那 10% 跟着翻
 /* 不坏：+ADAMANT_BASE% + 「答错挨一口」时的减伤合计（不封顶那个数），最多 ADAMANT_MAX% */
 function adamantPct(s){
   const cut = Math.max(0, cutState({maxHp:s.maxHp, def:s.def, defGear:s.def}, true));
   return Math.min(ADAMANT_MAX, ADAMANT_BASE + cut);
 }
 /* 冒险失手的倍率：底子 ×2，托底 ×1.8，壮胆 ×1（不翻倍） */
-function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? CUSHION_MULT : 2; }
+function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? Math.max(1, 2 - hx("cushion", 2 - CUSHION_MULT)) : 2; }
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
    第 50 层 12%、第 60 层 19%、第 75 层 29%、第 100 层 56%、第 125 层 85%、第 140 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
@@ -1136,12 +1265,15 @@ function foeNums(def, floor){
   const deep = def.fixed ? 1 : endlessRamp(floor);
   // 深渊狂潮（2026-09-26）：第 51 层起血量和伤害一起 ×10 —— 见 endlessSurge
   const surge = def.fixed ? 1 : endlessSurge(floor);
+  /* 圣器（用户 2026-10-01）：「因为有圣器，第 50 层往后的怪物数值翻倍」—— 血量和伤害各 ×HOLY_FOE_X，
+     第 50 层那只（章末 Boss / 无尽第 50 层）还不吃。refFoe / floorFoeDmg 都从这儿过，Boss 房那只跟着翻。*/
+  const holy = floor > HOLY_FOE_FROM ? HOLY_FOE_X : 1;
   /* 怪物全局倍率（content.js 的 FOE_MULT，用户 2026-09-21）——**所有怪都吃，章末 Boss 也吃**。
      放在最后一步乘，取整、最低 1，跟 FOE_BANDS / endlessRamp 一个待遇。
      armor / xp 那两档默认是 1（为什么见 content.js 那段注释）。*/
   return {
-    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp * surge * FOE_MULT.hp)),
-    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep * surge * FOE_MULT.dmg)),
+    hp:  Math.max(1, Math.round((def.hp  + step * gw.hpPerFloor + fb.hp) * band.hp * surge * holy * FOE_MULT.hp)),
+    dmg: Math.max(1, Math.round((def.dmg + Math.floor(step / gw.dmgEvery) + fb.dmg) * band.dmg * deep * surge * holy * FOE_MULT.dmg)),
     armor: Math.round((def.armor + fb.armor) * FOE_MULT.armor),
     xp: Math.round((def.xp + Math.floor(step / gw.xpEvery) + fb.xp) * FOE_MULT.xp)
   };
@@ -1534,6 +1666,7 @@ function partName(k){
     "@crit":L("暴击", "Crit"), "@wager":L("冒险", "Risk"), "@weak":L("弱点", "Weakness"), "@mix":L("相互叠加", "Interplay"),
     "@other":L("其它", "Others"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
   if(sp[k]) return sp[k];
+  if(String(k).indexOf("holy:") === 0){ const h = holyById(k.slice(5)); return h ? h.n : k; }   // 圣器
   const r = relicById(k);
   return r ? r.n : k;
 }
@@ -1648,6 +1781,7 @@ function renderSheets(s){
                          st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
+  renderHoly();                         // 圣器的三个方格（属性下面，同样只在洞里露）
   $("panelRun").hidden = !inRun;
   $("panelStats").hidden = !inRun;      // 「属性」也一样：镇上没有这一趟，面板上全是 1 级的底子，没意义（用户 2026-09-25）
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
@@ -1914,8 +2048,8 @@ function onEnter(){
   if(th){
     if(th.kind === "gold"){
       let amt = th.amt;
-      if(hasRelic("greed")) amt = Math.round(amt * 1.2);                    // 拾荒者 +20%
-      if(hasRelic("rust")) amt = Math.round(amt * 1.1);                     // 铜锈 +10%
+      if(hasRelic("greed")) amt = Math.round(amt * (1 + hx("greed", 0.2)));  // 拾荒者 +20%
+      if(hasRelic("rust")) amt = Math.round(amt * (1 + hx("rust", 0.1)));   // 铜锈 +10%
       amt = earnGold(amt);                                                  // 百纳的 −N% 在这儿扣
       say(T("你拾起 <b>") + amt + T("</b> 金币。"), "sys");
       if(P.tut) tutEvent("gold");
@@ -2002,12 +2136,12 @@ function startBattle(m){
        wrongTimes:0, shatterUsed:false, shatterFree:false, deflectUsed:false};
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
   if(hasRelic("citywall")){
-    const w = Math.max(1, Math.ceil(stats().maxHp * CITY_FIGHT));
+    const w = hx("citywall", Math.max(1, Math.ceil(stats().maxHp * CITY_FIGHT)));
     if((P.shield || 0) < w) P.shield = w;
   }
   /* 镇岳（神圣，第十五批）：每场开始护盾补到这只怪攻击的 ANCHOR_PCT（同样取大值）*/
   if(hasRelic("anchor")){
-    const w = Math.max(1, Math.ceil((m.dmg || 0) * ANCHOR_PCT));
+    const w = hx("anchor", Math.max(1, Math.ceil((m.dmg || 0) * ANCHOR_PCT)));
     if((P.shield || 0) < w) P.shield = w;
   }
   /* 面熟：这一层同一类别的怪，每次真的撞上（不是路过）就记一次，nextFloor() 里清零。
@@ -2099,7 +2233,7 @@ function renderBattleBars(){
    ⚠️ 原来的固定门槛 `UNCHAIN_AT`/`UNCHAIN_CUT`(各 10) 已经删了，别找。
    ⚠️ 主城里没有 G，兜一个 1（那时候也用不到）。*/
 function unchainAt(){ return Math.max(1, (G && G.floor) || 1); }
-function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? SPARK_STEP : 0)); }
+function comboStep(){ return Math.max(1, CHAPTER.comboStep - (hasRelic("spark") ? hx("spark", SPARK_STEP) : 0)); }
 /* 现在这一串连击给多少百分比。**它进 answer() 的 pct 桶，不是独立乘区。** */
 function comboPct(combo){
   const c = combo == null ? ((P && P.combo) || 0) : combo;
@@ -2236,9 +2370,9 @@ function spellChance(){
    ⚠️ 盲斗以前吃这个数换伤害，2026-09 改成「一击必杀」之后就不吃了 —— 这里只管出题概率。 */
 function spellBonusPct(){
   let p = 0;
-  if(hasRelic("carve")) p += SPELL_RELIC_RATE * 100;      // 刻字 +15
-  if(hasRelic("recite")) p += RECITE_SPELL_RATE * 100;    // 默诵 +30
-  if(hasRelic("caution")) p += CAUTION_SPELL_RATE * 100;  // 慎笔 +5（2026-09-21 加：拼写题只占 5%，
+  if(hasRelic("carve")) p += hx("carve", SPELL_RELIC_RATE * 100);      // 刻字 +15
+  if(hasRelic("recite")) p += hx("recite", RECITE_SPELL_RATE * 100);    // 默诵 +30
+  if(hasRelic("caution")) p += hx("caution", CAUTION_SPELL_RATE * 100);  // 慎笔 +5（2026-09-21 加：拼写题只占 5%，
                                                           //   光靠「拼写答错减伤」这条永远吃不满一件稀有）
   return Math.round(p);
 }
@@ -2276,7 +2410,7 @@ function startQTimer(){
   /* 定心：血低于 25% 时**每道题**都多给几秒（2026-09 用户把「整趟一次」的限制去掉、品质降到稀有）。
      直接加在这道题的读条上，不改 qSeconds() 本身（沙漏还要读它）。
      ⚠️ 不写日志 —— 低血时每题都触发，写一行就把战斗日志刷满了，读条变长本身看得见。*/
-  if(hasRelic("steady") && P && P.hp <= stats().maxHp * 0.25) secs += STEADY_BONUS;
+  if(hasRelic("steady") && P && P.hp <= stats().maxHp * 0.25) secs += hx("steady", STEADY_BONUS);
   const total = Math.max(1, secs) * 1000, t0 = Date.now();
   t.hidden = false;
   t.classList.remove("hot");
@@ -2298,6 +2432,17 @@ function startQTimer(){
 function timeUp(){
   if(!B || !B.q || B.locked) return;
   B.q.slow = true;                // 读条走完过一圈，这题之后答对也只算「吃力」（FSRS 2 分）
+  /* 试炼圣骸：试炼中超时也算失手 —— 直接倒下 */
+  if((P.trial || 0) > 0){
+    P.trial = 0;
+    P.hp = 0;
+    say(L("时间到 —— 试炼失败，圣骸碎了。", "Time's up — the trial fails and the reliquary shatters."), "hurt");
+    renderBattleBars();
+    renderHud();
+    B.locked = true;
+    setTimeout(function(){ finishBattle(false); }, 480);
+    return;
+  }
   const m = B.mob, s = stats();
   /* 沙漏：超时那一下完全不掉血，代价是这一层的读条永久短一截。
      ⚠️ 要在减伤链之前就返回 —— 不然会白白吃掉屏息的次数、白掷一次错身。*/
@@ -2907,28 +3052,28 @@ function answer(btn, ok){
     /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
        原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
-    if(hasRelic("corrode")) G.corrodeArmor = Math.min(CORRODE_MAX, (G.corrodeArmor || 0) + 1);
+    if(hasRelic("corrode")) G.corrodeArmor = Math.min(hx("corrode", CORRODE_MAX), (G.corrodeArmor || 0) + hx("corrode", 1));
     /* **冒险答对记 2 点连击**（用户 2026-09）—— 押上了本来就更难 */
     P.combo += B.wager ? 2 : 1;
-    if(fast && hasRelic("offbeat")) P.combo += OFFBEAT_COMBO;   // 抢拍：答得快多记一点（在拼对那 +10 之前）
+    if(fast && hasRelic("offbeat")) P.combo += hx("offbeat", OFFBEAT_COMBO);   // 抢拍：答得快多记一点（在拼对那 +10 之前）
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
-    if(isSpell){ P.combo += SPELL_COMBO * (hasRelic("boom") ? 2 : 1); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
+    if(isSpell){ P.combo += SPELL_COMBO + (hasRelic("boom") ? hx("boom", SPELL_COMBO) : 0); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
     if(hitWeak && hasRelic("chase")){                       // 追猎：打中弱点多攒两下 + 回血
-      P.combo += 2;
-      const ch = healUp(Math.max(1, Math.ceil(stats().maxHp * CHASE_HEAL)));
+      P.combo += hx("chase", 2);
+      const ch = healUp(hx("chase", Math.max(1, Math.ceil(stats().maxHp * CHASE_HEAL))));
       if(ch.hp) relicLog += T(" <span class=\"sys\">(追猎 · 回 ") + ch.hp + T(" 点)</span>");
     }
     /* 续弦：5% 把连击接回这一趟最长的那一串。**必须在下面更新 maxCombo 之前判**，
        不然 P.combo 刚好就是 maxCombo，接回来等于没接。*/
-    if(hasRelic("restring") && luck(RESTRING_RATE)){
+    if(hasRelic("restring") && luck(RESTRING_RATE, "restring")){
       if(P.combo < (P.maxCombo || 0)) P.combo = P.maxCombo;
-      const rs = healUp(RESTRING_HEAL);
+      const rs = healUp(hx("restring", RESTRING_HEAL));
       relicLog += T(" <span class=\"sys\">(续弦 · 连击 ×") + P.combo +
         (rs.hp ? T("，回 ") + rs.hp + T(" 点") : "") + ")</span>";
     }
     if(P.combo > (P.maxCombo || 0)) P.maxCombo = P.combo;   // 结算按这个给宝石
-    if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(COUNTER_HEAL, s);   // 计数器
+    if(hasRelic("counter") && P.combo > 0 && P.combo % 10 === 0) healUp(hx("counter", COUNTER_HEAL), s);   // 计数器
     /* ===== 伤害：四层，顺序写死在这儿（品质阶梯见 content.js 顶上的注释）=====
          伤害 =（攻击 + 基础点伤 + 额外伤害）×（1 + 百分比合计）+ 点伤，再 ×暴击倍率，最后减护甲，最低 1
        ⚠️ **额外伤害现在进这条式子**（用户 2026-09 改的公式）——
@@ -2940,12 +3085,12 @@ function answer(btn, ok){
     let whim = "";
     if(hasRelic("whim")){
       const roll = ri(1, 3);
-      if(roll === 1){ B.whim = (B.whim || 0) + 8; whim = T("伤害 +8%（本场累计 ") + B.whim + T("%）"); }
+      if(roll === 1){ B.whim = (B.whim || 0) + hx("whim", 8); whim = T("伤害 +") + hx("whim", 8) + T("%（本场累计 ") + B.whim + T("%）"); }
       else if(roll === 2){
-        const back = Math.max(1, Math.ceil(s.maxHp * 0.05));
+        const back = hx("whim", Math.max(1, Math.ceil(s.maxHp * 0.05)));
         healUp(back, s);
         whim = T("回 ") + back + T(" 点生命");
-      } else { whim = "+" + earnGold(60) + T(" 金"); }
+      } else { whim = "+" + earnGold(hx("whim", 60)) + T(" 金"); }
       relicLog += T(" <span class=\"sys\">(无常 · ") + whim + ")</span>";
     }
 
@@ -2958,7 +3103,7 @@ function answer(btn, ok){
        信息页「属性」那一格读的是同一个函数，两边口径只有一个。这里只加**这一刀才有**的。*/
     const cbo = comboPct();
     let pct = pctSteady(s);
-    const inl = [], tg = function(k, id, n){ if(n) inl.push([k, id, n]); return n; };   // 「构成」：这一刀才有的那几档记名字
+    const inl = [], tg = function(k, id, n){ n = hx(id, n); if(n) inl.push([k, id, n]); return n; };   // hx：赐福 / 圣铃   // 「构成」：这一刀才有的那几档记名字
     const recoil = hasRelic("recoil") ? (P.recoil || 0) * RECOIL_PCT : 0;   // 反震：已经算在 pctSteady 里了，这里只留着给下面打完清零、写日志
     if(isSpell && hasRelic("carve")) pct += tg("p", "carve", CARVE_PCT);                      // 刻字：拼对的那一刀
     if(isSpell && hasRelic("boom"))  pct += tg("p", "boom", BOOM_PCT);                       // 破音：同上（连击翻倍在上面）
@@ -2966,7 +3111,7 @@ function answer(btn, ok){
     if(hitWeak && hasRelic("scent")) pct += tg("p", "scent", SCENT_PCT);                      // 嗅迹
     if(hitWeak && hasRelic("synes")) pct += tg("p", "synes", SYNES_PCT);                      // 通感
     if(hasRelic("slay") && m.boss) pct += tg("p", "slay", SLAY_PCT);                         // 弑主：对 Boss 再加（对谁都加的那一档在 pctSteady）
-    if(B.whim) pct += tg("p", "whim", B.whim);                                               // 无常：本场攒下的
+    if(B.whim){ pct += B.whim; inl.push(["p", "whim", B.whim]); }                        // 无常：本场攒下的（攒的时候已经乘过赐福了）                                               // 无常：本场攒下的
     /* 拼刃：拼对之后的 SBLADE_Q 题各 +SBLADE_PCT%。窗口记在 P.bladeLeft 上（跟着续玩档），
        **这里消耗一格**；答错那条分支也会消耗一格（"接下来 5 题"，不分对错）。*/
     if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0){ pct += tg("p", "spellblade", SBLADE_PCT); P.bladeLeft--; }
@@ -3003,7 +3148,7 @@ function answer(btn, ok){
     if(hitWeak) flat += tg("f", "@weak", 2);                                                  // 打中弱点：③点伤 +2
     if(B.wager && hasRelic("gambler")) flat += tg("f", "gambler", GAMBLER_FLAT);                // 赌徒：冒对了再加一笔点伤
     let surge = false;
-    if(hasRelic("surge") && luck(.25)){ flat += tg("f", "surge", SURGE_FLAT); surge = true; } // 潮汐
+    if(hasRelic("surge") && luck(.25, "surge")){ flat += tg("f", "surge", SURGE_FLAT); surge = true; } // 潮汐
     flat += flatSteady(s);                                                  // 镜盾 / 血锤 / 沉拳 / 血刃（信息页同一个口径）
     if(hasRelic("pursue")) flat += tg("f", "pursue", (m.struck || 0) * PURSUE_FLAT);           // 追斩（第十四批）：这只怪已经挨了几刀
     if(hasRelic("firststrike") && m.hp >= m.max) flat += tg("f", "firststrike", Math.round(P.lvl * FIRST_LV));   // 先手：还满血
@@ -3017,7 +3162,7 @@ function answer(btn, ok){
     if(hasRelic("avenge") && P.avenge) extra += tg("e", "avenge", Math.round(s.maxHp * AVENGE_PCT));   // 雪耻（第十四批）：答错后的第一次答对
     if(hasRelic("repay")) extra += tg("e", "repay", Math.round((m.dmg || 0) * REPAY_PCT));    // 还施：这只怪的攻击
     if(hasRelic("redirect") && (P.redirect || 0) > 0){                      // 化劲（第十三批）：上一次挡掉的，这一刀打回去
-      extra += tg("e", "redirect", P.redirect);
+      extra += P.redirect; inl.push(["e", "redirect", P.redirect]);   // 攒的时候（redirectStore）已经乘过赐福了
       relicLog += T(" <span class=\"sys\">(化劲 +") + P.redirect + ")</span>";
       P.redirect = 0;
     }
@@ -3056,7 +3201,7 @@ function answer(btn, ok){
     m.struck = (m.struck || 0) + 1;          // 追斩：这只怪挨了几刀
     P.avenge = false;                        // 雪耻：这一次答对把「答错后」用掉了
     if(G) G.honeN = (G.honeN || 0) + 1;      // 磨砺：本层答对几题
-    if(crit && hasRelic("vamp")) healUp(VAMP_HEAL, s);                      // 饮血
+    if(crit && hasRelic("vamp")) healUp(hx("vamp", VAMP_HEAL), s);                      // 饮血
     // 记仇看的是"连续挨你打了几刀"——每一次真的落下的攻击都算一刀，跟这次是不是暴击/额外伤害无关
     if(hasRelic("grudge")) m.hitsLanded = (m.hitsLanded || 0) + 1;
     /* 吸血（第十一批）只算**真的打进血条**的那部分：一刀 2 万打一只剩 1600 血的怪，按 1600 算 ——
@@ -3067,7 +3212,7 @@ function answer(btn, ok){
     /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
        （不重新掷暴击、不再算额外伤害、不加连击），所以还是那两个乘区。*/
     let hall = 0;
-    if(hasRelic("hall") && luck(0.5)){
+    if(hasRelic("hall") && luck(0.5, "hall")){
       hall = dmg;
       dealt += hall;
       if(lastDmgRec) lastDmgRec.more.push(["hall", hall]);
@@ -3080,7 +3225,7 @@ function answer(btn, ok){
        单独一笔，**不吃百分比、不吃暴击、不减护甲**，所以乘区还是两个（跟赤鳞的反弹一个写法）。
        怪已经被上面那一刀砍倒了就不凿。深渊那只按当前那一层的血算。*/
     if(hasRelic("chisel") && m.hp > 0){
-      const chip = Math.max(1, Math.round((m.max || 0) * (m.boss ? CHISEL_BOSS : CHISEL_PCT)));
+      const chip = Math.max(1, Math.round((m.max || 0) * hx("chisel", m.boss ? CHISEL_BOSS : CHISEL_PCT)));
       dealt += chip;
       if(lastDmgRec) lastDmgRec.more.push(["chisel", chip]);
       landed += landedOn(m, chip);
@@ -3088,23 +3233,37 @@ function answer(btn, ok){
       setTimeout(function(){ floatNum("foe", "-" + chip, "dmg"); }, 260);
       relicLog += T(" <span class=\"sys\">(凿骨 +") + chip + ")</span>";
     }
+    /* 审判之锤（圣器）：这一刀（连同回响之厅 / 凿骨）打完，怪剩下的生命不到 HOLY_JUDGE_AT（Boss / 守者 / 深渊那一层 HOLY_JUDGE_BOSS）
+       就直接打倒 —— 补的那一下就是它剩下的血，单独一笔（不吃百分比、不吃暴击、不减护甲），乘区还是两个。书灵不处决。*/
+    if(holyOn("judge") && m.hp > 0 && !(m.def && m.def.study) &&
+       m.hp <= (m.max || 0) * (m.boss ? HOLY_JUDGE_BOSS : HOLY_JUDGE_AT)){
+      const ex = m.hp;
+      dealt += ex;
+      landed += landedOn(m, ex);
+      if(lastDmgRec) lastDmgRec.more.push(["holy:judge", ex]);
+      coopDealDamage(m, ex);
+      setTimeout(function(){ floatNum("foe", "-" + ex, "dmg"); }, 320);
+      const jh = healUp(Math.max(1, Math.ceil(s.maxHp * HOLY_JUDGE_HEAL)), s);
+      relicLog += L(" <span class=\"sys\">(审判之锤 · 处决 " + ex + (jh.hp ? "，回 " + jh.hp + " 点" : "") + ")</span>",
+                    " <span class=\"sys\">(Hammer of Judgment · executed " + ex + (jh.hp ? ", +" + jh.hp + " HP" : "") + ")</span>");
+    }
     /* 余劲（第十三批）：这一刀把怪砍倒了，溢出的 ×MOMENTUM_X 存进 G.carry，下一场开战先扣（startBattle）。
        联机不做（两条血条 + 服务器判死）；深渊那只打不倒，没有溢出。*/
     if(hasRelic("momentum") && !COOP && m.hp <= 0 && !(m.def && m.def.abyss) && dealt > landed){
-      G.carry = Math.round((dealt - landed) * MOMENTUM_X);
+      G.carry = Math.round((dealt - landed) * hx("momentum", MOMENTUM_X));
       relicLog += T(" <span class=\"sys\">(余劲 ") + G.carry + T(" 留给下一只)</span>");
     }
     if(recoil){ P.recoil = 0; relicLog += T(" <span class=\"sys\">(反震 +") + recoil + T("% 打了出去)</span>"); }
     /* ===== 第十一批：按「这一刀」长的四件（2026-09-25）=====
        前期一刀只值零点几点，每刀取整会全被吃掉，所以都按小数攒在 G 上、攒满 1 点给 1 点（每层清零）。*/
-    const sipPct = (hasRelic("thirst") ? THIRST_PCT : 0) + ((crit && hasRelic("bloodmoon")) ? MOON_PCT : 0);
+    const sipPct = (hasRelic("thirst") ? hx("thirst", THIRST_PCT) : 0) + ((crit && hasRelic("bloodmoon")) ? hx("bloodmoon", MOON_PCT) : 0);
     if(sipPct > 0 && landed > 0){                                            // 渴刃 / 血月：吸血
       G.sipBank = (G.sipBank || 0) + landed * sipPct / 100;
       const n = Math.floor(G.sipBank);
       if(n > 0){ G.sipBank -= n; healUp(n, s); }
     }
     if(hasRelic("bloodriver") && landed > 0){                                // 血河：吸血，溢出的一半转盾
-      G.riverBank = (G.riverBank || 0) + landed * RIVER_PCT / 100;
+      G.riverBank = (G.riverBank || 0) + landed * hx("bloodriver", RIVER_PCT) / 100;
       const n = Math.floor(G.riverBank);
       if(n > 0){
         G.riverBank -= n;
@@ -3117,9 +3276,9 @@ function answer(btn, ok){
     /* 刃壁：按这一刀**打出去的数**（溢出的也算 —— 它就是给后期「一刀几万、怪一千多血」那部分溢出找的出口），
        每层累计封在上限的 BWALL_MAX。刹车踩在产量上，跟凝盾那条规矩一样。回响之厅补的那一刀不算。*/
     if(hasRelic("bladewall")){
-      const capW = Math.ceil(s.maxHp * BWALL_MAX);
+      const capW = Math.ceil(s.maxHp * hx("bladewall", BWALL_MAX));
       if((G.bwallGot || 0) < capW){
-        G.bwallBank = (G.bwallBank || 0) + dmg * BWALL_PCT;
+        G.bwallBank = (G.bwallBank || 0) + dmg * hx("bladewall", BWALL_PCT);
         let n = Math.floor(G.bwallBank);
         if(n > 0){
           G.bwallBank -= n;
@@ -3131,9 +3290,9 @@ function answer(btn, ok){
     }
     /* 磨盾（第十五批）：跟刃壁一个写法，封顶换成「这一层怪物攻击 ×WSHIELD_CAP」—— 怪越凶封得越高，不跟着生命上限卡死 */
     if(hasRelic("whetshield")){
-      const capM = Math.ceil(floorFoeDmg() * WSHIELD_CAP);
+      const capM = Math.ceil(floorFoeDmg() * hx("whetshield", WSHIELD_CAP));
       if((G.wshGot || 0) < capM){
-        G.wshBank = (G.wshBank || 0) + dmg * WSHIELD_PCT;
+        G.wshBank = (G.wshBank || 0) + dmg * hx("whetshield", WSHIELD_PCT);
         let n = Math.floor(G.wshBank);
         if(n > 0){
           G.wshBank -= n;
@@ -3143,39 +3302,39 @@ function answer(btn, ok){
         }
       }
     }
-    if(hasRelic("drain") && luck(DRAIN_RATE)) healUp(DRAIN_HEAL, s);  // 吞噬
+    if(hasRelic("drain") && luck(DRAIN_RATE, "drain")) healUp(hx("drain", DRAIN_HEAL), s);  // 吞噬
     // 搏动：按百分比回血 —— 定额那几件（吞噬 +2）在深层等于零
-    if(hasRelic("pulse")) healUp(Math.max(1, Math.ceil(s.maxHp * PULSE_PCT)), s);
+    if(hasRelic("pulse")) healUp(hx("pulse", Math.max(1, Math.ceil(s.maxHp * PULSE_PCT))), s);
     /* 不死鸟：血掉到 PHOENIX_AT 以下之后，每答对回一大口。
        ⚠️ 判断放在饮血/吞噬**之后** —— 那两件先垫一口，还在线下才轮到它 */
     if(hasRelic("phoenix") && P.hp <= s.maxHp * PHOENIX_AT){
-      const r = healUp(Math.max(1, Math.ceil(s.maxHp * PHOENIX_HEAL)), s);
+      const r = healUp(hx("phoenix", Math.max(1, Math.ceil(s.maxHp * PHOENIX_HEAL))), s);
       if(r.hp) relicLog += T(" <span class=\"sys\">(不死鸟回了 ") + r.hp + T(" 点)</span>");
     }
     /* 燎原（第十二批）：生命低于 WILD_AT 时每答对回一口。不用封次数 —— 回上来过了线就自己停了。*/
     if(hasRelic("wildfire") && P.hp < s.maxHp * WILD_AT){
-      const wf = healUp(Math.max(1, Math.ceil(s.maxHp * WILD_HEAL)), s);
+      const wf = healUp(hx("wildfire", Math.max(1, Math.ceil(s.maxHp * WILD_HEAL))), s);
       if(wf.hp) relicLog += T(" <span class=\"sys\">(燎原 · 回 ") + wf.hp + T(" 点)</span>");
     }
-    if(hasRelic("dice") && luck(DICE_RATE)) G.dice = (G.dice || 0) + 1;  // 赌骰：答对 50% 叠一层（本层内）
-    if(B.wager && hasRelic("allin") && luck(.10)){                // 孤注
-      healUp(Math.max(1, Math.round(s.maxHp * ALLIN_PCT)), s);
+    if(hasRelic("dice") && luck(DICE_RATE, "dice")) G.dice = (G.dice || 0) + 1;  // 赌骰：答对 50% 叠一层（本层内）
+    if(B.wager && hasRelic("allin") && luck(.10, "allin")){       // 孤注
+      healUp(hx("allin", Math.max(1, Math.round(s.maxHp * ALLIN_PCT))), s);
     }
-    if(hasRelic("midas") && luck(0.25)) earnGold(10);             // 点金：固定 10 金
+    if(hasRelic("midas") && luck(0.25, "midas")) earnGold(hx("midas", 10));             // 点金：固定 10 金
     /* ===== 第九批「跨流派组合」的答对触发（2026-09-21）=====
        拼写和连击那两条线带齐之后触发频率会翻十倍，所以**每件都有每层次数上限** ——
        计数挂在 G 上、nextFloor() 里清零。别把上限删了（算法见 遗物数据表.md 附录 C）。*/
     if(isSpell){
       if(hasRelic("needle") && (G.needleN || 0) < NEEDLE_N){               // 粗针：拼写→护盾
         G.needleN = (G.needleN || 0) + 1;
-        P.shield = (P.shield || 0) + NEEDLE_SHIELD;
+        P.shield = (P.shield || 0) + hx("needle", NEEDLE_SHIELD);
       }
       if(hasRelic("cap") && (G.capN || 0) < CAP_N){                        // 学徒帽：拼写→回血
         G.capN = (G.capN || 0) + 1;
-        const ch2 = healUp(Math.max(1, Math.ceil(s.maxHp * CAP_HEAL)), s);
+        const ch2 = healUp(hx("cap", Math.max(1, Math.ceil(s.maxHp * CAP_HEAL))), s);
         if(ch2.hp) relicLog += T(" <span class=\"sys\">(学徒帽 · 回 ") + ch2.hp + T(" 点)</span>");
       }
-      if(hasRelic("glyph")) G.glyphArmor = Math.min(GLYPH_MAX, (G.glyphArmor || 0) + GLYPH_ARMOR);  // 咒文：拼写→本层护甲
+      if(hasRelic("glyph")) G.glyphArmor = Math.min(GLYPH_MAX, (G.glyphArmor || 0) + GLYPH_ARMOR);   // 护甲在 stats() 里读，赐福在那儿翻  // 咒文：拼写→本层护甲
       if(hasRelic("spellblade") && (G.bladeN || 0) < SBLADE_N){            // 拼刃：开一扇 5 题的窗口
         G.bladeN = (G.bladeN || 0) + 1;
         P.bladeLeft = SBLADE_Q;
@@ -3183,13 +3342,13 @@ function answer(btn, ok){
     }
     if(hasRelic("oldrope") && P.combo > 0 && P.combo % ROPE_AT === 0 && (G.ropeN || 0) < ROPE_N){   // 旧绳：连击→护盾
       G.ropeN = (G.ropeN || 0) + 1;
-      P.shield = (P.shield || 0) + ROPE_SHIELD;
+      P.shield = (P.shield || 0) + hx("oldrope", ROPE_SHIELD);
     }
     if(hasRelic("longsong") && P.combo > 0 && P.combo % SONG_AT === 0 && (G.songN || 0) < SONG_N){  // 长歌：连击→护盾＋回血
       G.songN = (G.songN || 0) + 1;
-      P.shield = (P.shield || 0) + SONG_SHIELD;
-      const sg = healUp(Math.max(1, Math.ceil(s.maxHp * SONG_HEAL)), s);
-      relicLog += T(" <span class=\"sys\">(长歌 · 护盾 +") + SONG_SHIELD +
+      P.shield = (P.shield || 0) + hx("longsong", SONG_SHIELD);
+      const sg = healUp(hx("longsong", Math.max(1, Math.ceil(s.maxHp * SONG_HEAL))), s);
+      relicLog += T(" <span class=\"sys\">(长歌 · 护盾 +") + hx("longsong", SONG_SHIELD) +
         (sg.hp ? T("，回 ") + sg.hp + T(" 点") : "") + ")</span>";
     }
     /* ===== 第十批「答对就给盾／给血」的五件（2026-09-21）=====
@@ -3197,21 +3356,21 @@ function answer(btn, ok){
        不封的话「秒针」一层能产 80 点盾、「长考」150 点，各是本档的三到六倍。*/
     if(fast && hasRelic("secondhand") && (G.tickN || 0) < TICK_N){          // 秒针：速答→护盾
       G.tickN = (G.tickN || 0) + 1;
-      P.shield = (P.shield || 0) + TICK_SHIELD;
+      P.shield = (P.shield || 0) + hx("secondhand", TICK_SHIELD);
     }
     if(wordLen(word) >= LONGW_AT && hasRelic("ponder") && (G.longN || 0) < PONDER_N){   // 长考：长词→护盾
       G.longN = (G.longN || 0) + 1;
-      P.shield = (P.shield || 0) + PONDER_SHIELD;
+      P.shield = (P.shield || 0) + hx("ponder", PONDER_SHIELD);
     }
     if(B.q.haunted){
       if(hasRelic("exorcise") && (G.exorN || 0) < EXOR_N){                  // 驱邪：答对心魔词→回血
         G.exorN = (G.exorN || 0) + 1;
-        const ex = healUp(Math.max(1, Math.ceil(s.maxHp * EXOR_HEAL)), s);
+        const ex = healUp(hx("exorcise", Math.max(1, Math.ceil(s.maxHp * EXOR_HEAL))), s);
         if(ex.hp) relicLog += T(" <span class=\"sys\">(驱邪 · 回 ") + ex.hp + T(" 点)</span>");
       }
       if(hasRelic("calmsoul") && (G.calmsN || 0) < CALMS_N){                // 镇魂：答对心魔词→护盾
         G.calmsN = (G.calmsN || 0) + 1;
-        P.shield = (P.shield || 0) + CALMS_SHIELD;
+        P.shield = (P.shield || 0) + hx("calmsoul", CALMS_SHIELD);
       }
     }
     /* 刹那（神圣）：连续 INSTANT_RUN 次速答攒满，下一刀 +INSTANT_PCT%（上面那条吃它）。
@@ -3227,7 +3386,7 @@ function answer(btn, ok){
     }
     if(crit && hasRelic("critshield") && (G.critShN || 0) < CRITSH_N){     // 暴盾：暴击→护盾
       G.critShN = (G.critShN || 0) + 1;
-      P.shield = (P.shield || 0) + CRITSH_SHIELD;
+      P.shield = (P.shield || 0) + hx("critshield", CRITSH_SHIELD);
     }
     /* 凝盾：每答对 AEGIS_EVERY 题给最大生命 AEGIS_PCT 的护盾，**不封顶**
        （用户 2026-09-26：先从「10 点 / 最多 300」改成按比例，又把上限整个拿掉了）。*/
@@ -3236,12 +3395,12 @@ function answer(btn, ok){
       if(P.aegisN >= AEGIS_EVERY){
         P.aegisN = 0;
         const before = P.shield || 0;
-        P.shield = before + Math.max(1, Math.round(s.maxHp * AEGIS_PCT));
+        P.shield = before + hx("aegis", Math.max(1, Math.round(s.maxHp * AEGIS_PCT)));
         if(P.shield > before) relicLog += T(" <span class=\"sys\">(凝盾 · 护盾 ") + P.shield + ")</span>";
       }
     }
-    if(wasStrong && hasRelic("tome")) earnGold(8);                          // 典藏：答对掌握过的词
-    if(firstSeen && hasRelic("lesson")) earnGold(10);                       // 课业：这个存档第一次见的生词
+    if(wasStrong && hasRelic("tome")) earnGold(hx("tome", 8));                          // 典藏：答对掌握过的词
+    if(firstSeen && hasRelic("lesson")) earnGold(hx("lesson", 10));                       // 课业：这个存档第一次见的生词
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
     head = "<span class=\"big ok\">" +
@@ -3254,13 +3413,21 @@ function answer(btn, ok){
     /* 反刍：上一题答错了，这一题答对就回一口血 */
     if(P.chew && hasRelic("chew")){
       P.chew = false;
-      const back = Math.max(1, Math.ceil(s.maxHp * CHEW_PCT));
+      const back = hx("chew", Math.max(1, Math.ceil(s.maxHp * CHEW_PCT)));
       healUp(back, s);
       relicLog += T(" <span class=\"sys\">(反刍回了 ") + back + T(" 点生命)</span>");
     }
+    /* 试炼圣骸：试炼中每答对一题数一次，数满 HOLY_TRIAL_Q 就过关回血 */
+    if((P.trial || 0) > 0){
+      P.trial--;
+      if(P.trial <= 0){
+        const tr = healUp(Math.max(1, Math.ceil(stats().maxHp * HOLY_TRIAL_HEAL)));
+        say(L("试炼过了 —— 圣骸的光收了回去，回复 <b>" + tr.hp + "</b> 点生命。", "Trial passed — the reliquary's light recedes. Restored <b>" + tr.hp + "</b> HP."), "good");
+      } else relicLog += L(" <span class=\"sys\">(试炼 · 还差 " + P.trial + " 题)</span>", " <span class=\"sys\">(Trial · " + P.trial + " to go)</span>");
+    }
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
     if(B.q.haunted && hauntGone){
-      const back = hasRelic("bind") ? Math.max(1, Math.round(s.maxHp * BIND_HEAL)) : 2;
+      const back = hasRelic("bind") ? hx("bind", Math.max(1, Math.round(s.maxHp * BIND_HEAL))) : 2;
       healUp(back, s);
       note += T(" <span style=\"color:var(--venom)\">心魔散了，回 ") + back + T(" 点生命。</span>");
     }
@@ -3285,13 +3452,19 @@ function answer(btn, ok){
        归位：连击真的要清零那一刻，如果原本 ≥REBOUND_AT(10) 就返还一半并回血，
        只在"真清零"这条分支里算，而且**每层只有一次**。
        ⚠️ **必须在下面动 P.combo 之前判**，不然连击已经清零/减半了，条件就永远不成立。*/
+    /* 试炼圣骸：试炼中失手一次就倒下（下面挨完打直接判倒，不再走 deathSave）。
+       逆时沙漏：每层前 HOLY_REWIND_N 次答错时间倒回 —— 连击不动、不掉血（试炼中不算）。熟练度 / 错题本 / 心魔照记。*/
+    const trialFail = (P.trial || 0) > 0;
+    const rewind = !trialFail && holyOn("hourglass") && (G.rewindN || 0) < HOLY_REWIND_N;
+    if(rewind) G.rewindN = (G.rewindN || 0) + 1;
     const unchain = hasRelic("unchain") && P.combo >= unchainAt();
     const inertia = hasRelic("inertia") && P.combo >= INERTIA_AT;
     const beforeCombo = P.combo;
     /* 铁胆的保护 2026-09-21 封成**每层 NERVE_N(2) 次**（G.nerveN，nextFloor/resumeRun 里清零）——
        次数用完就照常往下走长链/惯性/清零那条链，不再白保。*/
     const nerveOk = B.wager && hasRelic("nerve") && (G.nerveN || 0) < NERVE_N;
-    if(nerveOk){
+    if(rewind){ /* 逆时沙漏：连击原样留着 */ }
+    else if(nerveOk){
       G.nerveN = (G.nerveN || 0) + 1;                                  // 连击保住
       relicLog += T(" <span class=\"sys\">(铁胆 · 连击留住 ×") + P.combo +
         T("，本层还剩 ") + (NERVE_N - G.nerveN) + T(" 次)</span>");
@@ -3304,8 +3477,8 @@ function answer(btn, ok){
       /* 归位 2026-09-21 也封成**每层一次**（G.reboundUsed）—— 一层能断六次链，不封就是一层多回三成血 */
       if(hasRelic("rebound") && beforeCombo >= REBOUND_AT && !G.reboundUsed){
         G.reboundUsed = true;
-        P.combo = Math.round(beforeCombo * REBOUND_KEEP);
-        const rb = healUp(Math.max(1, Math.ceil(stats().maxHp * REBOUND_HEAL)));
+        P.combo = Math.round(beforeCombo * Math.min(1, hx("rebound", REBOUND_KEEP)));
+        const rb = healUp(hx("rebound", Math.max(1, Math.ceil(stats().maxHp * REBOUND_HEAL))));
         relicLog += T(" <span class=\"sys\">(归位 · 连击缓冲回 ×") + P.combo +
           (rb.hp ? T("，回 ") + rb.hp + T(" 点") : "") + ")</span>";
       }
@@ -3316,7 +3489,7 @@ function answer(btn, ok){
     G.dice = 0;                       // 赌骰：答错把这一层攒的暴击率清零
     if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
     if(hasRelic("build")){                  // 筑盾：错了也不白错
-      P.shield = (P.shield || 0) + BUILD_SHIELD;
+      P.shield = (P.shield || 0) + hx("build", BUILD_SHIELD);
       relicLog += T(" <span class=\"sys\">(筑盾 · 护盾 ") + P.shield + ")</span>";
     }
     const wasHaunted = B.q.haunted;
@@ -3339,6 +3512,13 @@ function answer(btn, ok){
          （靠 opt.haunted 传进去），所以它现在跟别的百分比减伤一起相加、一起吃 MIT_CUT_MAX。*/
       /* 无惧：心魔词答错一律不掉血。排在断链之后、默诵之前 ——
          它是「这一下本来就不该疼」，同样不该去消耗默诵/回声/屏息的次数。*/
+      /* 逆时沙漏排在最前面：这一下本来就「没发生」*/
+      if(dmg > 0 && rewind){
+        hurtRow("holy:hourglass", -dmg); dmg = 0;
+        head = L("<span class=\"big no\">逆时 —— 沙子倒流了</span>", "<span class=\"big no\">Rewind — the sand flows back</span>");
+        note = L("这一下没落到身上，连击也还在（这一层还剩 " + (HOLY_REWIND_N - G.rewindN) + " 次）。",
+                 "That blow never landed and your combo holds (" + (HOLY_REWIND_N - G.rewindN) + " left this floor).");
+      }
       /* 断链排在所有免伤的最前面：它是拿连击换来的，不该去消耗默诵/回声/屏息的次数 */
       if(dmg > 0 && unchain){
         hurtRow("unchain", -dmg); dmg = 0;
@@ -3371,7 +3551,7 @@ function answer(btn, ok){
       if(dmg > 0 && hasRelic("echo") && !G.echoUsed){           // 回声：每层第一次答错不掉血 + 回一口
         G.echoUsed = true;
         hurtRow("echo", -dmg); dmg = 0;
-        const eh = healUp(Math.max(1, Math.ceil(stats().maxHp * ECHO_HEAL)));
+        const eh = healUp(hx("echo", Math.max(1, Math.ceil(stats().maxHp * ECHO_HEAL))));
         head = T("<span class=\"big no\">回声替你挡下了</span>");
         note = T("这一层的第一次失手，不掉血") + (eh.hp ? T("，还回了 ") + eh.hp + T(" 点") : "") + T("。");
       }
@@ -3394,15 +3574,22 @@ function answer(btn, ok){
       }
       hurtEnd(dmg);
       if(hasRelic("thorns")){                 // 赤鳞：额外伤害层，无视护甲
-        coopDealDamage(m, THORNS_EXTRA);
-        note += T(" 赤鳞反弹了 <b>") + THORNS_EXTRA + T("</b> 点。");
-        floatNum("foe", "-" + THORNS_EXTRA, "dmg");
+        const th = hx("thorns", THORNS_EXTRA);
+        coopDealDamage(m, th);
+        note += T(" 赤鳞反弹了 <b>") + th + T("</b> 点。");
+        floatNum("foe", "-" + th, "dmg");
       }
       const rd = redirectStore(rawHit);
       if(rd) relicLog += T(" <span class=\"sys\">(化劲攒下 ") + P.redirect + ")</span>";
     }
-    const saved = deathSave();
-    if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
+    if(trialFail){
+      P.trial = 0;
+      P.hp = 0;
+      relicLog += L(" <span class=\"sys\">(试炼失败 —— 圣骸碎了)</span>", " <span class=\"sys\">(Trial failed — the reliquary shatters)</span>");
+    } else {
+      const saved = deathSave();
+      if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
+    }
   }
   LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
@@ -3461,16 +3648,27 @@ function deathSave(){
     P.undying = true;
     /* 2026-09-21：原来是把血钉在 1 点 —— 钉在 1 点等于下一下还是死，
        一件神圣只值「多挨一下」。现在直接回 UNDYING_HEAL 的上限。*/
-    P.hp = Math.max(1, Math.ceil(stats().maxHp * UNDYING_HEAL));
+    P.hp = Math.max(1, Math.ceil(stats().maxHp * Math.min(1, hx("undying", UNDYING_HEAL))));
     if(hasRelic("warmth")) P.warmthLeft = WARMTH_HITS;   // 余温：薪火之后接下来几次答错单独再减半
     return T("薪火在胸口炸开 —— 你带着 ") + P.hp + T(" 点生命站住了。");
   }
   // 回魂：本局 REVIVE_N 次（P.revived 从布尔改成计数，老续玩档存的 true/false 会被 JS 当 1/0 比）
   if(hasRelic("revive") && (P.revived || 0) < REVIVE_N){
     P.revived = (P.revived || 0) + 1;
-    P.hp = Math.max(1, Math.ceil(stats().maxHp * REVIVE_PCT));
+    P.hp = Math.max(1, Math.ceil(stats().maxHp * Math.min(1, hx("revive", REVIVE_PCT))));
     return T("回魂 —— 你数到第二次心跳，又站了起来（") + P.hp + T(" 点生命，本局还剩 ") +
            (REVIVE_N - P.revived) + T(" 次）。");
+  }
+  /* 试炼圣骸（圣器）：排在最后 —— 别的保险都用完了才轮到它。每层一次，留 1 点进入试炼（P.trial 题），
+     答对数满在 answer() 里回血，试炼中失手（答错 / 超时）直接倒下。*/
+  if(holyOn("trial") && G && !G.trialUsed){
+    G.trialUsed = true;
+    P.hp = 1;
+    P.trial = HOLY_TRIAL_Q;
+    return L("试炼圣骸 —— 骨头替你挡下了这一下，留住 1 点生命。接下来 " + HOLY_TRIAL_Q + " 题全答对就回复 " +
+             Math.round(HOLY_TRIAL_HEAL * 100) + "% 生命，失手一次就倒下。",
+             "Reliquary of Trial — the bones take the blow; you keep 1 HP. Answer the next " + HOLY_TRIAL_Q +
+             " correctly to restore " + Math.round(HOLY_TRIAL_HEAL * 100) + "% HP — one slip and you fall.");
   }
   return "";
 }
@@ -3490,7 +3688,7 @@ function healUp(n, s0, force){
   if(up > 0 && G) G.healed = (G.healed || 0) + up;
   let sh = 0;
   if(spill > 0 && (force || hasRelic("well"))){
-    sh = Math.floor(spill / SPILL_RATE);
+    sh = Math.floor(spill * (hasRelic("well") ? rmul("well") : 1) / SPILL_RATE);   // 赐福泉涌：同样的溢出换两倍的盾
     if(sh > 0) P.shield = (P.shield || 0) + sh;
   }
   return {hp:up, sh:sh};
@@ -3508,11 +3706,11 @@ function healUp(n, s0, force){
    ⚠️ 新加带概率的遗物一律走 `luck(p)`，别再直接写 `Math.random() < p` ——
    那两件神圣/史诗就是靠这个口子吃饭的，漏一处就少一处。
    ⚠️ 地图生成、出题、洗牌那些**不是遗物效果**的随机照旧用 Math.random()，别一起收进来。*/
-function luck(p){
-  let q = p;
-  if(hasRelic("fortune")) q = Math.min(1, q * (1 + FORTUNE_X / 100));      // 幸运：相对加成
+function luck(p, id){
+  let q = id ? Math.min(1, p * rmul(id)) : p;                               // 圣器：被赐福的那件，概率跟着 ×2（传 id 才乘）
+  if(hasRelic("fortune")) q = Math.min(1, q * (1 + hx("fortune", FORTUNE_X) / 100));      // 幸运：相对加成
   if(Math.random() < q) return true;
-  if(hasRelic("reshake") && Math.random() < RESHAKE_P) return Math.random() < q;   // 再摇：再掷一次
+  if(hasRelic("reshake") && Math.random() < Math.min(1, hx("reshake", RESHAKE_P))) return Math.random() < q;   // 再摇：再掷一次
   return false;
 }
 /* ===== 常驻的那几档（信息页「属性」和 answer() / mitigate() 共用，2026-09-25）=====
@@ -3520,7 +3718,7 @@ function luck(p){
    拼对 / 打中弱点 / 冒险 / 答得快 / 对 Boss / 每层前几次 这类「这一刀才有」的留在 answer() 里现加。
    ⚠️ 这几个函数**不许有副作用**（信息页一刷新就要调一次）——会扣次数的（开场 / 拼刃 / 锐进 / 全盛）别搬进来。
    ⚠️ 新加一件「常驻」的伤害 / 暴击 / 减伤遗物，加在这里，信息页自动就显示了。 */
-function pctSteady(s){
+function pctSteadyRaw(s){
   let pct = comboPct();                                                   // 连击：每 comboStep 次一档
   if(hasRelic("quick")) pct += Math.min(QUICK_MAX, Math.floor(P.combo / 5) * QUICK_PER); // 速记
   if(hasRelic("ember") && P.hp <= s.maxHp / 3) pct += EMBER_PCT;          // 残焰
@@ -3573,6 +3771,33 @@ function pctSteady(s){
   if(G && hasRelic("lunar") && G.floor % 2 === 1) pct += LUNAR_PCT;         // 朔望：奇数层（减伤那半在 cutStatic）
   return pct;
 }
+/* ===== 常驻那几档的入口（圣器那一层套在这儿，2026-10-01）=====
+   …Raw 是原来的写法（遗物照旧往里加）；这几个函数在外面套：赐福 / 圣铃的倍率（ampOn），
+   再加公义天平 / 万言圣典这种不是遗物的。信息页和 answer() / mitigate() 都只调这几个。*/
+function pctCore(s){ return ampOn(pctSteadyRaw, s); }
+function cutCore(s, wrong){ return ampOn(function(sx){ return cutStateRaw(sx, wrong); }, s); }
+function pctSteady(s){
+  let pct = pctCore(s);
+  if(holyOn("scales")) pct += HOLY_SCALE_PCT * Math.max(0, Math.floor(cutCore(s, true)));   // 公义天平：减伤 → 伤害（堆过封顶的那截也算）
+  pct += bookPct();                                                                            // 万言圣典
+  return pct;
+}
+function cutState(s, wrong){
+  let cut = cutCore(s, wrong);
+  if(holyOn("scales")) cut += Math.min(HOLY_SCALE_MAX, Math.floor(Math.max(0, pctCore(s)) / HOLY_SCALE_DIV));   // 公义天平：伤害 → 减伤
+  return cut;
+}
+function flatSteady(s){ return ampOn(flatSteadyRaw, s); }
+function extraSteady(s){ return ampOn(extraSteadyRaw, s); }
+function critSteady(s, pct){
+  const c = critSteadyRaw(s, pct);
+  if(!ampNeed()) return c;
+  const add = ampDelta(function(){ const x = critSteadyRaw(s, pct); return {rate:x.rate, mult:x.mult}; }, ["rate", "mult"]);
+  let rate = c.rate + Math.round(add.rate), mult = c.mult + add.mult;
+  /* 放大之后暴击率又过了 100：多出来的照旧每 5 点换暴击伤害（溢锋那一档也照算）*/
+  if(rate > 100){ mult += Math.floor((rate - 100) / 5) * (hasRelic("overcrit") ? OVERCRIT_STEP : 0.1); rate = 100; }
+  return {rate: rate, mult: Math.round(mult * 100) / 100};
+}
 /* 积学：本局答对过的不同的词每 ERUDITE_PER 个一档，不封顶 */
 function eruditeTier(){ return Math.floor((P.learnN || 0) / ERUDITE_PER); }
 /* 群星：身上史诗以上（品质 ≥ 2）的遗物有几件，算它自己，最多 STARS_MAX 件 */
@@ -3591,7 +3816,7 @@ function addSpent(n){
   else P.spent = (P.spent || 0) + n;
 }
 /* ③点伤里常驻的两件（不被百分比放大，吃暴击、被护甲减）*/
-function flatSteady(s){
+function flatSteadyRaw(s){
   let flat = 0;
   /* 镜盾：每 MIRROR_PER 点护盾 +1 点伤。⚠️ 2026-09 用户把它从「每 2 点」改成「每 5 点」并加了 MIRROR_MAX 封顶 ——
      凝盾现在是每题 8 点盾，不封的话堆盾流的点伤会一路飞出去。*/
@@ -3604,7 +3829,7 @@ function flatSteady(s){
   return flat;
 }
 /* ④额外伤害里常驻的三件（跟攻击同一个桶，吃百分比、吃暴击）*/
-function extraSteady(s){
+function extraSteadyRaw(s){
   let extra = 0;
   if(hasRelic("rend")) extra += REND_EXTRA;                               // 割裂（自伤在 answer，每题一次）
   if(hasRelic("snow")) extra += Math.floor(P.combo / SNOW_PER) * SNOW_EXTRA;  // 滚雪球：连击每满 10 一档，不封顶
@@ -3617,7 +3842,7 @@ function extraSteady(s){
 }
 /* 暴击率 / 暴击倍率：整段都是常驻的。pct 传「这一刀算完的百分比」（叠浪要读它），信息页传 pctSteady()。
    返回的 rate 已经封在 100（溢出的部分换成了倍率）。*/
-function critSteady(s, pct){
+function critSteadyRaw(s, pct){
   let critRate = s.crit, critMult = 2;
   if(hasRelic("maul")){ critMult += MAUL_MULT; critRate += MAUL_CRIT; }   // 重锤：暴击率 + 暴击伤害
   if(hasRelic("edge")) critMult += EDGE_MULT;                             // 薄刃：暴击伤害 ×2 → ×2.5
@@ -3637,7 +3862,7 @@ function critSteady(s, pct){
 /* 「受到的伤害 −N%」里按**当前状态**算的那部分：cutStatic() + 看血量 / 护甲 / 护盾 / Boss 层的几件，
    wrong = true 时再加上「答错挨打」都有的几件（长链 / 后劲 / 老对手 / 苦行）。
    每层一次的（粗布 / 缓坠）、看这只怪的（镇压 / 记仇 / 面熟）、看这道题的（稳答 / 心镜 / 二见）留在 mitigate() 里。*/
-function cutState(s, wrong){
+function cutStateRaw(s, wrong){
   let cut = cutStatic();
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
   /* 第十批：余裕跟逆鳞正好相反（血还满着才有）；叩关只在 Boss 层生效（那一层的容错是全游戏最低的）。*/
@@ -3730,6 +3955,7 @@ function partsOf(wrong, pin){
   const ids = P.relics.slice();
   if(P.face && G && P.face.f === G.floor && ids.indexOf("thousandface") >= 0)
     P.face.ids.forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
+  (P.holy || []).forEach(function(id){ ids.push("holy:" + id); });   // 圣器也逐件拿掉算一遍（holyOn 认 "holy:<id>"）
   let all, base;
   const per = {};
   try{
@@ -3825,7 +4051,7 @@ function mitigate(dmg, s0, opt){
   /* 常驻那一档（软甲／皮甲／脱壳／老茧／不动／深潜／镇压的全局档 + 第九批的五件）
      统一从 cutStatic() 起算 —— 「苦胆」「双面」「恒甲」要读同一个数，口径只能有一个。*/
   let cut = cutState(s, wrong);      // 常驻 + 看血量/护甲/护盾 + 答错都有的几件（信息页同一个口径）
-  const cin = [], ct = function(id, n){ cin.push([id, n]); return n; };   // 「构成」：这一下才有的那几档记名字
+  const cin = [], ct = function(id, n){ n = hx(id, n); cin.push([id, n]); return n; };   // hx：赐福 / 圣铃   // 「构成」：这一下才有的那几档记名字
   /* 粗布 2026-09-21 从「每场一次减半」改成「**每层**一次 −BURLAP_CUT%」，并挪进 cut 桶 ——
      一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
      一件**普通**品质比传奇「不动」还强，是全表最大的一处定价事故。*/
@@ -3869,7 +4095,7 @@ function mitigate(dmg, s0, opt){
   if(cut){ const o0 = out; out = Math.floor(out * (100 - cut) / 100); hurtSplit("cut", out - o0, cin); }
   if(hasRelic("hold") && (G.holdUsed || 0) < HOLD_FREE){                  // 屏息：每层前两次减半
     G.holdUsed = (G.holdUsed || 0) + 1;
-    const o0 = out; out = Math.max(1, Math.ceil(out / 2)); hurtRow("hold", out - o0);
+    const o0 = out; out = halfOf("hold", out); hurtRow("hold", out - o0);
     why += T(" <span class=\"sys\">(屏息卸掉一半，这一层还剩 ") + (HOLD_FREE - G.holdUsed) + T(" 次)</span>");
   }
   /* 卸力（第十一批）：每场第一次**真的要掉血**的那一下减半，每层最多 DEFLECT_N 次。
@@ -3877,7 +4103,7 @@ function mitigate(dmg, s0, opt){
   if(hasRelic("deflect") && B && !B.deflectUsed && (G.deflectN || 0) < DEFLECT_N){
     B.deflectUsed = true;
     G.deflectN = (G.deflectN || 0) + 1;
-    const o0 = out; out = Math.max(1, Math.ceil(out / 2)); hurtRow("deflect", out - o0);
+    const o0 = out; out = halfOf("deflect", out); hurtRow("deflect", out - o0);
     why += T(" <span class=\"sys\">(卸力卸掉一半，这一层还剩 ") + (DEFLECT_N - G.deflectN) + T(" 次)</span>");
   }
   /* 余温：不灭薪火触发之后才有 P.warmthLeft（在 deathSave() 里发），接下来这几次答错单独再减半，
@@ -3890,15 +4116,17 @@ function mitigate(dmg, s0, opt){
   }
   if(wrong && hasRelic("warmth") && (P.warmthLeft || 0) > 0){
     P.warmthLeft--;
-    const o0 = out; out = Math.max(1, Math.ceil(out / 2)); hurtRow("warmth", out - o0);
+    const o0 = out; out = halfOf("warmth", out); hurtRow("warmth", out - o0);
     why += T(" <span class=\"sys\">(余温还护着你，减半，剩 ") + P.warmthLeft + T(" 次)</span>");
   }
   /* 钝痛 10% / 石胎 5%：两件都是「单次封顶」，一起带就按**低的那个**算，不叠乘 */
   let capPct = 0;
-  if(hasRelic("blunt")) capPct = BLUNT_PCT;
-  if(hasRelic("womb")) capPct = capPct ? Math.min(capPct, WOMB_PCT) : WOMB_PCT;
+  /* 赐福 / 圣铃：封顶线按倍率往下压（×2 = 封顶线减半）*/
+  const bluntP = BLUNT_PCT / rmul("blunt"), wombP = WOMB_PCT / rmul("womb");
+  if(hasRelic("blunt")) capPct = bluntP;
+  if(hasRelic("womb")) capPct = capPct ? Math.min(capPct, wombP) : wombP;
   if(capPct){
-    const byWomb = capPct === WOMB_PCT;
+    const byWomb = capPct === wombP;
     /* 无尽深处封顶线跟着一半的深渊压迫往上抬（方案 B，capRamp()）—— 不抬的话它是全游戏唯一越深越强的东西 */
     const cap = Math.max(1, Math.ceil(s.maxHp * capPct * capRamp()));
     if(out > cap){
@@ -3911,12 +4139,13 @@ function mitigate(dmg, s0, opt){
      算到最后才比，是为了拿"你真正要挨的那个数"去对门槛。
      ⚠️ 2026-09 用户把「整趟一次」的限制去掉了，现在每一记重击都吃得到。*/
   if(hasRelic("endure") && out > s.maxHp * ENDURE_PCT){
-    const o0 = out; out = Math.max(1, Math.floor(out * (100 - ENDURE_CUT) / 100)); hurtRow("endure", out - o0);
-    why += T(" <span class=\"sys\">(尚存削掉了这记重击的 ") + ENDURE_CUT + "%)</span>";
+    const ec = Math.min(90, hx("endure", ENDURE_CUT));
+    const o0 = out; out = Math.max(1, Math.floor(out * (100 - ec) / 100)); hurtRow("endure", out - o0);
+    why += T(" <span class=\"sys\">(尚存削掉了这记重击的 ") + ec + "%)</span>";
   }
   out = Math.max(1, out);
-  if(hasRelic("slip") && luck(SLIP_RATE)){ hurtRow("slip", -out); return {dmg:0, dodged:true, why:"", by:"slip"}; }   // 错身
-  if(hasRelic("glimmer") && luck(GLIMMER_RATE)){ hurtRow("glimmer", -out); return {dmg:0, dodged:true, why:"", by:"glimmer"}; }   // 浮光：各掷各的
+  if(hasRelic("slip") && luck(SLIP_RATE, "slip")){ hurtRow("slip", -out); return {dmg:0, dodged:true, why:"", by:"slip"}; }   // 错身
+  if(hasRelic("glimmer") && luck(GLIMMER_RATE, "glimmer")){ hurtRow("glimmer", -out); return {dmg:0, dodged:true, why:"", by:"glimmer"}; }   // 浮光：各掷各的
   return {dmg:out, dodged:false, why:why};
 }
 /* ---- 挨一下：先扣护盾、剩下的才扣血，跳数字，返回写进 verdict 的那句话 ----
@@ -3948,7 +4177,7 @@ function payOwe(ok, m){
   if(!P.owe.some(function(x){ return x > 0; })) P.owe = [];
   if(due <= 0) return "";
   const full = due;
-  if(ok && hasRelic("reprieve")) due = Math.floor(due * (1 - REPRIEVE_OFF));
+  if(ok && hasRelic("reprieve")) due = Math.floor(due * (1 - Math.min(0.9, hx("reprieve", REPRIEVE_OFF))));
   if(due <= 0) return T(" <span class=\"sys\">(缓刑 · 这一份免了)</span>");
   landHit(due, m, false);
   let out = T(" <span class=\"sys\">(缓刑 · 扣了 ") + due + (due < full ? T("，少扣 ") + (full - due) : "") + T(" 点)</span>");
@@ -3960,7 +4189,7 @@ function payOwe(ok, m){
    最多攒到攻击的 REDIRECT_MAX 倍，下一次答对并进④层额外伤害。返回这一下攒了多少。*/
 function redirectStore(raw){
   if(!hasRelic("redirect")) return 0;
-  const got = Math.max(0, raw - hitLost) * REDIRECT_X;
+  const got = Math.max(0, raw - hitLost) * hx("redirect", REDIRECT_X);
   if(got <= 0) return 0;
   P.redirect = Math.min(stats().atk * REDIRECT_MAX, (P.redirect || 0) + got);
   return got;
@@ -3991,7 +4220,7 @@ function landHit(dmg, m, haunted){
     if(hasRelic("borrow") && !G.borrowUsed){                 // 借甲：每层一次，白送一批新盾
       G.borrowUsed = true;
       // 2026-09-21：加了 BORROW_SHIELD 保底 —— 裸装护甲是 0，原来这一笔恒为 0
-      const gain = Math.max(BORROW_SHIELD, Math.round((stats().defGear || 0) * BORROW_MULT));
+      const gain = hx("borrow", Math.max(BORROW_SHIELD, Math.round((stats().defGear || 0) * BORROW_MULT)));
       if(gain > 0){ P.shield = gain; say(T("借甲趁护盾破的那一下，立刻又撑起 <b>") + gain + T("</b> 点。"), "good"); }
     }
     if(hasRelic("shatter") && B && !B.shatterUsed){          // 破盾余威：这场一次，免下一下答错伤害
@@ -4007,7 +4236,7 @@ function landHit(dmg, m, haunted){
     const sw = stats();
     if(P.hp < sw.maxHp * WHOLE_AT){
       G.wholeUsed = true;
-      const back = Math.max(1, Math.ceil(sw.maxHp * WHOLE_TO) - P.hp);
+      const back = Math.max(1, Math.ceil(sw.maxHp * Math.min(1, hx("whole", WHOLE_TO))) - P.hp);
       const rw = healUp(back, sw);
       say(T("圆满 —— 裂口自己合上了，回 <b>") + rw.hp + T("</b> 点生命（这一层就这一次）。"), "good");
     }
@@ -4048,29 +4277,32 @@ function closeBattleWin(){
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
   P.killStreak = (P.killStreak || 0) + 1;   // 连杀线（第十批）：掉血在 takeHit() 里清零
+  /* 殉道者之冠：本局打倒过几只 Boss / 层间守者（只是个事实，换算在 stats() 里包着 holyOn）。
+     上限跟着涨，所以从 withMaxHp 过 —— 涨出来的那截当前血跟着补。*/
+  if(m.boss && !(m.def && (m.def.abyss || m.def.study))) withMaxHp(function(){ P.bossKills = (P.bossKills || 0) + 1; });
   const xp = gainXp(m.xp * xpx);     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
   // Boss 房一整层就它一只，身上压着一层份的金币（m.loot，makeBossFoe 里定的）
-  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (hasRelic("greed") ? 1.2 : 1)));   // 拾荒者 +20%；百纳的 −N% 在 earnGold
+  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (hasRelic("greed") ? 1 + hx("greed", 0.2) : 1)));   // 拾荒者 +20%；百纳的 −N% 在 earnGold
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
-  if(hasRelic("reap")) heal += REAP_HEAL;
+  if(hasRelic("reap")) heal += hx("reap", REAP_HEAL);
   // 药膏（用户 2026-09 提到稀有）：75% 概率回 4 点，不是每次都给
-  if(hasRelic("salve") && luck(SALVE_RATE)) heal += SALVE_HEAL;
-  if(hasRelic("breath")) heal += Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT));  // 喘息：每打倒一只
-  if(hasRelic("mend")) heal += Math.max(1, Math.ceil(s0.maxHp * MEND_PCT));      // 归血：收割的百分比版
-  if(hasRelic("drinkwar")) heal += Math.max(1, Math.ceil((m.dmg || 0) * DRINK_PCT)); // 饮战（第十五批）：按这只怪的攻击
-  if(hasRelic("reapfull")) heal += Math.max(1, Math.ceil(s0.maxHp * REAPF_PCT)); // 收势：收割的百分比版（第十批）
+  if(hasRelic("salve") && luck(SALVE_RATE, "salve")) heal += hx("salve", SALVE_HEAL);
+  if(hasRelic("breath")) heal += hx("breath", Math.max(1, Math.ceil(s0.maxHp * BREATH_PCT)));  // 喘息：每打倒一只
+  if(hasRelic("mend")) heal += hx("mend", Math.max(1, Math.ceil(s0.maxHp * MEND_PCT)));      // 归血：收割的百分比版
+  if(hasRelic("drinkwar")) heal += hx("drinkwar", Math.max(1, Math.ceil((m.dmg || 0) * DRINK_PCT))); // 饮战（第十五批）：按这只怪的攻击
+  if(hasRelic("reapfull")) heal += hx("reapfull", Math.max(1, Math.ceil(s0.maxHp * REAPF_PCT))); // 收势：收割的百分比版（第十批）
   const got = healUp(heal, s0);                                           // 泉涌要收溢出，所以走 healUp
-  if(hasRelic("disarm")) P.shield = (P.shield || 0) + Math.max(1, Math.round(s0.maxHp * DISARM_PCT));   // 缴械（第十一批）
+  if(hasRelic("disarm")) P.shield = (P.shield || 0) + hx("disarm", Math.max(1, Math.round(s0.maxHp * DISARM_PCT)));   // 缴械（第十一批）
   /* 无瑕（第十二批）：一题没错就打倒的那一只，回血 + 护盾。一层 11.5 只 = 天然封顶，不用再封次数。*/
   if(clean && hasRelic("flawless")){
-    const fh = healUp(Math.max(1, Math.ceil(s0.maxHp * FLAWLESS_HEAL)), s0);
+    const fh = healUp(hx("flawless", Math.max(1, Math.ceil(s0.maxHp * FLAWLESS_HEAL))), s0);
     got.hp += fh.hp;
-    P.shield = (P.shield || 0) + Math.max(1, Math.round(s0.maxHp * FLAWLESS_SH));
+    P.shield = (P.shield || 0) + hx("flawless", Math.max(1, Math.round(s0.maxHp * FLAWLESS_SH)));
   }
   /* 战利品（第十二批）：Boss / 层间守者倒下，清层那次五选一之后再挑一次（maybeRelic 里接着开）。*/
-  if(m.boss && !(m.def && m.def.abyss) && hasRelic("spoils")) G.spoils = (G.spoils || 0) + 1;
+  if(m.boss && !(m.def && m.def.abyss) && hasRelic("spoils")) G.spoils = (G.spoils || 0) + hx("spoils", 1);
   const gained = got.hp;
   say(m.name + T(" 化成了灰。<span class=\"sys\">(+") + xp + " EXP" + (xpx > 1 ? " ×" + xpx : "") +
       T("，+") + g + T(" 金") +
@@ -4084,13 +4316,13 @@ function closeBattleWin(){
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     spawnGild();          // 无尽章 50 层往下的 Boss 房：阶梯旁边立起金坛
     if(hasRelic("finale")){                       // 收尾：清完一层回 FINALE_PCT 的上限
-      const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
+      const back = hx("finale", Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT)));
       const r = healUp(back);
       if(r.hp || r.sh) say(T("这一层干净了 —— 收尾替你补了 <b>") + r.hp + T("</b> 点生命") +
         (r.sh ? T("，溢出的化成 <b>") + r.sh + T("</b> 点护盾") : "") + T("。"), "good");
     }
     if(hasRelic("welfare")){                       // 均富：清空这一层再单独发一笔
-      const wg = earnGold(G.floor * 2);
+      const wg = earnGold(hx("welfare", G.floor * 2));
       say(T("均富 —— 这一层清空了，回廊分给你 <b>") + wg + T("</b> 金。"), "good");
     }
   }
@@ -4143,7 +4375,7 @@ function flee(){
 }
 /* 返回**实际到手**的经验（求知加成之后），调用方拿它去写日志 */
 function gainXp(n){
-  if(hasRelic("study")) n = Math.round(n * STUDY_MULT);  // 求知
+  if(hasRelic("study")) n = Math.round(n * (1 + hx("study", STUDY_MULT - 1)));  // 求知
   P.xp += n;
   while(P.xp >= xpNeed(P.lvl)){
     P.xp -= xpNeed(P.lvl);
@@ -4151,17 +4383,17 @@ function gainXp(n){
     /* 烙印/铭心按当前等级在 stats() 里现算，这儿不再攒 P.bonusAtk / P.bonusHp
        （那是永久面板加成，卖掉遗物也不还 —— 2026-09 已经改掉）。
        铭心涨的是上限，按老规矩当前血也跟着补上。*/
-    if(hasRelic("engrave") && P.lvl * 3 <= ENGRAVE_MAX) P.hp += 3;   // 封顶之后不再补（见 stats()）
+    if(hasRelic("engrave") && P.lvl * 3 <= ENGRAVE_MAX) P.hp += hx("engrave", 3);   // 封顶之后不再补（见 stats()）
     const s = stats();
     healUp(CHAPTER.levelHeal, s);
     /* ===== 第十批「升级那一刻」的四件（2026-09-21）=====
        ⚠️ 频率是**每层约 1.8 次**（31 层升到 56 级），比「每层一次」还密，估价别按每层一次算。*/
-    if(hasRelic("sprout")) healUp(Math.max(1, Math.ceil(s.maxHp * SPROUT_PCT)), s);   // 拔节
-    if(hasRelic("satori")) P.shield = (P.shield || 0) + SATORI_SHIELD;                // 开悟
+    if(hasRelic("sprout")) healUp(hx("sprout", Math.max(1, Math.ceil(s.maxHp * SPROUT_PCT))), s);   // 拔节
+    if(hasRelic("satori")) P.shield = (P.shield || 0) + hx("satori", SATORI_SHIELD);                // 开悟
     if(hasRelic("keenrise")) P.riseLeft = RISE_Q;                                     // 锐进：开一扇 5 题的窗
     if(hasRelic("ascend") && G){                                                      // 拾级：本层护甲 + 回血
-      G.stepArmor = Math.min(ASCEND_MAX, (G.stepArmor || 0) + ASCEND_ARMOR);
-      healUp(Math.max(1, Math.ceil(s.maxHp * ASCEND_HEAL)), s);
+      G.stepArmor = Math.min(ASCEND_MAX, (G.stepArmor || 0) + ASCEND_ARMOR);   // 护甲在 stats() 里读，赐福在那儿翻
+      healUp(hx("ascend", Math.max(1, Math.ceil(s.maxHp * ASCEND_HEAL))), s);
     }
     fxLevelUp();
     say(T("<b>等级提升！</b>你现在是 ") + P.lvl + T(" 级 —— 攻击 ") + s.atk + T("，生命上限 ") + s.maxHp + T("。"), "good");
@@ -4196,7 +4428,7 @@ function drinkAll(){
   const s = stats();
   let hp = 0, sh = 0;
   springs.forEach(function(th){
-    const r = healUp(springHeal(s), s, true);
+    const r = healUp(hx("water", springHeal(s)), s, true);   // 赐福：每口泉的量跟着翻
     hp += r.hp; sh += r.sh;
     removeThing(th);
   });
@@ -4209,7 +4441,7 @@ function openSpring(th){
   const s = stats(), room = s.maxHp - P.hp, full = springHeal(s);
   const heal = Math.min(room, full);
   /* 「泉涌」把喝不下的那部分变成护盾 —— 所以满血时它也值得喝，按钮不能再禁掉 */
-  const spill = hasRelic("well") ? Math.floor(Math.max(0, full - room) / SPILL_RATE) : 0;
+  const spill = hasRelic("well") ? Math.floor(Math.max(0, full - room) * rmul("well") / SPILL_RATE) : 0;
   $("springLedger").innerHTML =
     li(T("你现在"), P.hp + " / " + s.maxHp + ((P.shield || 0) ? T("　盾 ") + P.shield : "")) +
     li(T("喝下去"), (heal > 0 ? T("回复 ") + heal + T(" 点（上限的 ") + Math.round(CHAPTER.springPct * 100) + T("%）") : T("你已经是满的了")) +
@@ -4671,7 +4903,7 @@ function shopMarkup(r){
   return SHOP_MARKUP * ((((r && r.r) || 0) >= SHOP_HI_FROM) ? SHOP_HI_X : 1);
 }
 function shopPrice(row){
-  return Math.max(1, Math.round(row.price * (hasRelic("regular") ? 0.85 : 1)));
+  return Math.max(1, Math.round(row.price * (hasRelic("regular") ? Math.max(0.5, 1 - hx("regular", 0.15)) : 1)));
 }
 function renderShop(){
   const th = pendingRoom;
@@ -4781,7 +5013,7 @@ function capByFloor(fl){
   const f = (fl == null) ? (G ? G.floor : 1) : fl;
   return f > RELIC_CAP_FROM ? Math.floor((f - RELIC_CAP_FROM) / RELIC_CAP_EVERY) : 0;
 }
-function relicCap(){ return RELIC_MAX + (hasRelic("pack") ? 3 : 0) + capByFloor(); }
+function relicCap(){ return RELIC_MAX + (hasRelic("pack") ? hx("pack", 3) : 0) + capByFloor(); }
 let pendingSwap = null;           // 等着被换进来的那件
 /* 刚拿到、还没在遗物页上点开看过的那几件 —— 卡片左上角挂个「new」小红点。
    **纯界面状态，不进存档**：回主城 / 重开一趟就清掉。 */
@@ -4809,7 +5041,8 @@ function faceRoll(){
   if(!P.relics || P.relics.indexOf("thousandface") < 0){ P.face = null; return; }
   const pool = relicPool().filter(function(r){ return (r.r || 0) === 3 && FACE_BAN.indexOf(r.id) < 0; });
   const ids = [];
-  while(ids.length < FACE_N && pool.length) ids.push(pool.splice(ri(0, pool.length - 1), 1)[0].id);
+  const faceN = hx("thousandface", FACE_N);
+  while(ids.length < faceN && pool.length) ids.push(pool.splice(ri(0, pool.length - 1), 1)[0].id);
   withMaxHp(function(){ P.face = {f: G.floor, ids: ids}; });
   if(ids.length) say(T("千面 —— 这一层借来了 ") + ids.map(function(id){ return rc(relicById(id)); }).join(T("、")) + T("。"), "crit");
 }
@@ -4841,6 +5074,13 @@ function earnGold(n){
 function withMaxHp(fn){
   const before = stats().maxHp;
   fn();
+  /* 圣光照耀：被赐福的那件不在身上了（换掉 / 分解 / 合成 / 熔炉 / 易货）—— 赐福就散了（用户 2026-10-01）*/
+  if(P.sanct && P.relics.indexOf(P.sanct) < 0){
+    const gone = relicById(P.sanct);
+    P.sanct = null;
+    if(gone) say(L("「" + gone.n + "」离开了你 —— 圣光照耀的赐福散了。到信息页的圣器格里可以再选一件。",
+                   gone.n + " left you — Radiance's blessing fades. Pick another from the holy relic slot on the Info tab."), "sys");
+  }
   const after = stats().maxHp;
   if(after > before){
     const up = after - before;
@@ -4882,7 +5122,7 @@ function rollRelic(floor, up){
   /* 吉兆（第十批）：OMEN_RATE 的概率把这一次的品质**往上抬一档**。
      ⚠️ 抬不到神圣 —— 那一档按设计恒为 0（只能靠合成和游商），
      所以门槛是 want < 3，跟祝福「偏爱」的神圣槽是同一个道理。*/
-  if(hasRelic("omen") && want < 3 && luck(OMEN_RATE)) want++;
+  if(hasRelic("omen") && want < 3 && luck(OMEN_RATE, "omen")) want++;
   const pool = relicPool();
   if(!pool.length) return null;
   for(let d = 0; d < 5; d++){
@@ -4908,7 +5148,7 @@ function sellPrice(r){
 function sellRelicGold(r){
   const g = sellPrice(r);
   if(hasRelic("deposit") && g > 0){
-    const sh = Math.floor(g * DEPOSIT_PCT);
+    const sh = Math.floor(g * hx("deposit", DEPOSIT_PCT));
     if(sh > 0){
       P.shield = (P.shield || 0) + sh;
       say(T("寄存把这份钱的一角存成了 <b>") + sh + T("</b> 点护盾。"), "sys");
@@ -5172,7 +5412,7 @@ function rerollBudget(){
   if(hasRelic("fullset")){
     const q = {};
     (P.relics || []).forEach(function(id){ const r = relicById(id); if(r) q[r.r || 0] = true; });
-    if(q[0] && q[1] && q[2]) n++;
+    if(q[0] && q[1] && q[2]) n += hx("fullset", 1);
   }
   return n;
 }
@@ -5239,7 +5479,7 @@ function maybeRelic(){
   if(!G || G.over) return false;
   if(G.mobs.length > 0) return false;
   if(pendingLoot) return false;
-  if(!G.relicDone) return offerRelics();
+  if(!G.relicDone) return holyFloor() ? offerHoly() : offerRelics();   // 每 20 层的 Boss 层：换成圣器二选一
   /* 战利品（第十二批）：清层那次挑完（取舍窗也关了）再开一次五选一 */
   if((G.spoils || 0) > 0 && !pendingSwap){
     G.spoils--;
@@ -5248,6 +5488,181 @@ function maybeRelic(){
     return offerRelics();
   }
   return false;
+}
+/* ===== 圣器：二选一 / 带满了换 / 信息页的三个方格 / 圣光照耀挑赐福（用户 2026-10-01）=====
+   每 HOLY_EVERY 层那只 Boss（20 / 40 …）倒下之后，清层那次五选一换成这里的二选一；战利品那次照旧是五选一。
+   纯净学习 / 教程 / 深渊不给。挑的时候带满 HOLY_MAX 件就先选新的、再选换下哪一件，也可以都不要。*/
+function holyFloor(){
+  return !!(G && P && !P.tut && !P.study && G.floor > 0 && G.floor % HOLY_EVERY === 0 &&
+            isBossFloor(G.floor) && !isAbyssFloor(G.floor));
+}
+let holyOffer = [], holyPending = null;   // 这一次摆出来的两件 / 带满时先挑中的那件（纯界面状态）
+function holyCard(h, extra){
+  return "<span class=\"hicon\">" + (HOLY_ART[h.id] || "") + "</span>" +
+    "<span class=\"hcol\"><span class=\"rt hq\">" + L("圣器", "Holy relic") + (extra || "") + "</span>" +
+    "<span class=\"rn hq\">" + h.n + "</span><span class=\"rp\">" + h.pw + "</span>" +
+    "<span class=\"rl\">" + h.lore + "</span></span>";
+}
+function offerHoly(){
+  const own = P.holy || [];
+  const pool = HOLY.filter(function(h){ return own.indexOf(h.id) < 0; });
+  if(!pool.length) return offerRelics();          // 八件全带过（带满只能 3 件，正常走不到）：退回五选一
+  holyOffer = [];
+  while(holyOffer.length < HOLY_OFFER_N && pool.length) holyOffer.push(pool.splice(ri(0, pool.length - 1), 1)[0].id);
+  holyPending = null;
+  G.paused = true;
+  renderHolyOffer();
+  hideAll();
+  $("veilHoly").hidden = false;
+  return true;
+}
+function renderHolyOffer(){
+  const full = (P.holy || []).length >= HOLY_MAX;
+  const box = $("holyList");
+  box.innerHTML = "";
+  if(holyPending){
+    /* 第二步：带满了，挑一件换下来 */
+    const nw = holyById(holyPending);
+    $("holyEyebrow").textContent = L("拿起「" + nw.n + "」", "Taking " + nw.n);
+    $("holyTitle").textContent = L("换下哪一件圣器？", "Which holy relic goes?");
+    P.holy.forEach(function(id){
+      const h = holyById(id);
+      const d = document.createElement("button");
+      d.type = "button"; d.className = "relic holyc"; d.dataset.drop = id;
+      d.innerHTML = holyCard(h, L(" · 点它 → 换成「" + nw.n + "」", " · tap → swap for " + nw.n));
+      box.appendChild(d);
+    });
+    $("btnHolySkip").textContent = L("算了，不换", "Never mind, keep mine");
+  } else {
+    $("holyEyebrow").textContent = CH.name + L(" 第 " + G.floor + " 层 · 守者倒下了", " · Floor " + G.floor + " · the guardian falls");
+    $("holyTitle").textContent = L("圣器 · 二选一", "Holy relic · choose one");
+    holyOffer.forEach(function(id){
+      const h = holyById(id);
+      const d = document.createElement("button");
+      d.type = "button"; d.className = "relic holyc"; d.dataset.id = id;
+      d.innerHTML = holyCard(h);
+      box.appendChild(d);
+    });
+    $("btnHolySkip").textContent = L("都不要，留着现在的", "Neither — keep what I have");
+  }
+  $("holyNote").textContent = full
+    ? L("圣器不占遗物格，最多带 " + HOLY_MAX + " 件 —— 你已经带满了，拿新的就得换下一件。",
+        "Holy relics take no relic slot; you can carry " + HOLY_MAX + " — you're full, so a new one replaces one.")
+    : L("圣器不占遗物格，最多带 " + HOLY_MAX + " 件，这一趟一直有效。", "Holy relics take no relic slot; carry up to " + HOLY_MAX + " for this run.");
+  $("btnHolySkip").parentNode.hidden = !full;
+}
+function pickHoly(id){
+  if(holyOffer.indexOf(id) < 0) return;
+  if((P.holy || []).length >= HOLY_MAX){ holyPending = id; renderHolyOffer(); return; }
+  takeHoly(id, null);
+}
+/* 拿下一件（drop = 带满时换下来的那件）。面板会变（殉道者之冠 / 万言圣典），所以从 withMaxHp 过。*/
+function takeHoly(id, drop){
+  const h = holyById(id);
+  if(!h) return;
+  $("veilHoly").hidden = true;
+  holyOffer = []; holyPending = null;
+  G.relicDone = true;
+  G.paused = false;
+  withMaxHp(function(){
+    if(drop){
+      const i = P.holy.indexOf(drop);
+      if(i >= 0) P.holy.splice(i, 1);
+      if(drop === "radiance") P.sanct = null;      // 圣光照耀走了，赐福跟着散
+    }
+    P.holy.push(id);
+    if(id === "scripture") P.holyWords = masteredCount();
+  });
+  const old = drop ? holyById(drop) : null;
+  say(L((old ? "你放下「" + old.n + "」，" : "") + "拿起了圣器 <b>" + h.n + "</b> —— " + h.pw + "。",
+        (old ? "You set down " + old.n + " and take up " : "You take up the holy relic ") + "<b>" + h.n + "</b> — " + h.pw + "."), "crit");
+  renderHud(); render();
+  /* 圣光照耀：拿到就请玩家挑一件赐福（身上没遗物就先空着，信息页的方格里随时能挑）*/
+  if(id === "radiance" && P.relics.length){ openHolyInfo("radiance"); return; }
+  maybeRelic();          // 战利品：还欠着一次五选一就接着开
+}
+function skipHoly(){
+  if(holyPending){ holyPending = null; renderHolyOffer(); return; }
+  $("veilHoly").hidden = true;
+  holyOffer = [];
+  G.relicDone = true;
+  G.paused = false;
+  say(L("你没动身上的圣器，那两件沉回了地底。", "You keep your holy relics; the two offered sink back into the dark."), "sys");
+  renderHud(); render();
+  maybeRelic();
+}
+/* ---- 信息页：三个方格 ---- */
+function renderHoly(){
+  const panel = $("panelHoly"), box = $("holySlots");
+  if(!panel || !box) return;
+  const inRun = (SCENE === "run" && G && !G.over && P && !P.study && !P.tut);
+  panel.hidden = !inRun;
+  if(!inRun) return;
+  let h = "";
+  for(let i = 0; i < HOLY_MAX; i++){
+    const id = (P.holy || [])[i], it = id ? holyById(id) : null;
+    if(!it){ h += "<button type=\"button\" class=\"hslot empty\" disabled><span class=\"hname\">" + L("空", "Empty") + "</span></button>"; continue; }
+    const sub = id === "radiance"
+      ? (sanctId() ? "✦ " + relicById(P.sanct).n : L("点我选赐福", "Tap to bless"))
+      : "";
+    h += "<button type=\"button\" class=\"hslot" + (id === "radiance" && !sanctId() ? " ask" : "") + "\" data-id=\"" + id + "\">" +
+         "<span class=\"hicon\">" + (HOLY_ART[id] || "") + "</span>" +
+         "<span class=\"hname\">" + it.n + "</span>" + (sub ? "<span class=\"hsub\">" + sub + "</span>" : "") + "</button>";
+  }
+  box.innerHTML = h;
+}
+/* ---- 点一个方格：看词条；圣光照耀在这里挑 / 换赐福的那件 ---- */
+let holyInfoId = null;
+function openHolyInfo(id){
+  const h = holyById(id);
+  if(!h) return;
+  holyInfoId = id;
+  $("holyInfoCard").innerHTML = holyCard(h);
+  const rad = id === "radiance";
+  $("holyBlessHead").hidden = !rad;
+  $("holyBlessList").hidden = !rad;
+  $("veilHolyInfo").querySelector(".sheet").classList.toggle("tall", rad);
+  if(rad) renderHolyBless();
+  $("veilHolyInfo").hidden = false;
+}
+function renderHolyBless(){
+  const cur = sanctId();
+  const fighting = !!(B && !B.won);
+  $("holyBlessHead").textContent = fighting
+    ? L("战斗中不能换赐福。", "You can't change the blessing mid-fight.")
+    : cur ? L("赐福在「" + relicById(cur).n + "」上 —— 点另一件可以换过去。", "Blessing: " + relicById(cur).n + " — tap another to move it.")
+          : L("挑一件遗物赐福，它的数值 ×2（只放大好处，不放大代价；次数和门槛不变）。", "Pick a relic to bless: its numbers ×2 (benefits only — costs, counts and thresholds stay).");
+  const box = $("holyBlessList");
+  box.innerHTML = "";
+  const own = (P.relics || []).slice().sort(function(a, b){ return relicRar(b) - relicRar(a); });
+  if(!own.length){ box.innerHTML = "<div class=\"bagempty\">" + L("身上还没有遗物。", "You carry no relics yet.") + "</div>"; return; }
+  own.forEach(function(rid){
+    const r = relicById(rid);
+    if(!r) return;
+    const q = r.r || 0, no = HOLY_NO_BLESS.indexOf(rid) >= 0, on = rid === cur;
+    const d = document.createElement("button");
+    d.type = "button";
+    d.className = "relic" + (on ? " sanct" : "") + (no ? " off" : "");
+    d.dataset.id = rid;
+    d.disabled = no || on || fighting;
+    d.innerHTML = "<span class=\"rt q" + q + "\">" + RAR_CN[q] +
+      (on ? L(" · 赐福 ×2", " · Blessed ×2") : no ? L(" · 没有能翻倍的数值", " · nothing to double") : "") + "</span>" +
+      "<span class=\"rn q" + q + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>";
+    box.appendChild(d);
+  });
+}
+function holyBless(rid){
+  if(!holyOn("radiance") || HOLY_NO_BLESS.indexOf(rid) >= 0 || (P.relics || []).indexOf(rid) < 0) return;
+  if(B && !B.won) return;
+  withMaxHp(function(){ P.sanct = rid; });
+  say(L("圣光落在「" + relicById(rid).n + "」上 —— 它的数值 ×2。", "Radiance settles on " + relicById(rid).n + " — its numbers are doubled."), "crit");
+  closeHolyInfo();
+}
+function closeHolyInfo(){
+  $("veilHolyInfo").hidden = true;
+  holyInfoId = null;
+  renderHud();
+  if(SCENE === "run" && G && !G.over && !B) maybeRelic();   // 刚拿到圣光照耀那一下：挑完赐福再接着开战利品
 }
 /* 遗物页的品质筛选（用户 2026-09-26：「遗物数量大于 20，遗物栏上方添加筛选，按品质分类显示」）。
    -1 = 全部。纯界面状态，不进存档；件数掉回 20 以下筛选条收起、自动回到「全部」。*/
@@ -5307,13 +5722,14 @@ function renderRelics(){
     // 挑选状态：整张卡可点，品质对不上（或已是神圣）的压暗；分解按钮收起来免得误触
     const off = fuseOn && !picked && (q >= 4 || (fuseSel.length && q !== fuseRar()));
     const isNew = newRelics.indexOf(id) >= 0;
+    const holy = id === sanctId();          // 圣光照耀赐福的那件：金边 + 品质后面写「赐福 ×2」
     d.className = "relic own" + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") +
-                  (off ? " off" : "") + (isNew ? " fresh" : "");
+                  (off ? " off" : "") + (isNew ? " fresh" : "") + (holy ? " sanct" : "");
     d.dataset.id = id;
     d.innerHTML =
       (isNew ? "<span class=\"newdot\">new</span>" : "") +
       "<div class=\"col\">" +
-        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? T(" · 已选") : "") + "</span>" +
+        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? T(" · 已选") : "") + (holy ? L(" · ✦ 赐福 ×2", " · ✦ Blessed ×2") : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
         "<span class=\"rp\">" + r.pw + "</span>" +
       "</div>" +
@@ -6502,6 +6918,13 @@ function resumeRun(s){
   if(typeof P.study !== "boolean") P.study = false;           // 老档没有纯净学习模式
   if(typeof P.studyDmg !== "number") P.studyDmg = 0;
   if(typeof P.studyTop !== "number") P.studyTop = 0;
+  /* 圣器（2026-10-01）：老档没有 —— 带的圣器 / 被赐福的那件 / 打倒过几只 Boss / 进层时掌握了几个词 / 试炼还差几题 */
+  if(!Array.isArray(P.holy)) P.holy = [];
+  P.holy = P.holy.filter(function(id){ return !!holyById(id); }).slice(0, HOLY_MAX);
+  if(P.sanct && (typeof P.sanct !== "string" || !relicById(P.sanct))) P.sanct = null;
+  if(typeof P.bossKills !== "number") P.bossKills = 0;
+  if(typeof P.holyWords !== "number") P.holyWords = 0;
+  if(typeof P.trial !== "number") P.trial = 0;
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -6528,6 +6951,8 @@ function resumeRun(s){
   /* 第十一批的每层计数，同理按新一层初始化 */
   G.deflectN = 0;
   G.gaspUsed = false;
+  G.trialUsed = false;     // 试炼圣骸（圣器）
+  G.rewindN = 0;           // 逆时沙漏（圣器）
   G.bwallGot = 0;
   G.bwallBank = 0;
   G.wshGot = 0;            // 磨盾（第十五批）
@@ -6896,12 +7321,12 @@ function openCodex(tab){
 }
 function hideAll(){
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo"];
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -7632,6 +8057,7 @@ document.addEventListener("keydown", function(ev){
       if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
       else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
+      else if(v.id === "veilHolyInfo") closeHolyInfo();     // 圣器详情
     }
     return;
   }
@@ -7958,6 +8384,24 @@ $("swapList").addEventListener("click", function(ev){
 $("btnSwapSkip").addEventListener("click", function(){ doSwap(null); });
 // 点上面那件新的 = 直接卖掉它（跟「不要了，折成金币」一个意思）
 $("swapNew").addEventListener("click", function(){ if(pendingSwap) doSwap(null); });
+
+/* ---- 圣器（2026-10-01）：二选一 / 带满换下一件 / 信息页的方格 / 圣光照耀挑赐福 ---- */
+$("holyList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".holyc");
+  if(!b) return;
+  if(b.dataset.drop && holyPending) takeHoly(holyPending, b.dataset.drop);
+  else if(b.dataset.id) pickHoly(b.dataset.id);
+});
+$("btnHolySkip").addEventListener("click", skipHoly);
+$("holySlots").addEventListener("click", function(ev){
+  const b = ev.target.closest(".hslot");
+  if(b && b.dataset.id) openHolyInfo(b.dataset.id);
+});
+$("holyBlessList").addEventListener("click", function(ev){
+  const b = ev.target.closest(".relic");
+  if(b && b.dataset.id && !b.disabled) holyBless(b.dataset.id);
+});
+$("btnCloseHolyInfo").addEventListener("click", closeHolyInfo);
 
 /* ---- 遗物五选一 ---- */
 $("relicList").addEventListener("click", function(ev){
@@ -8301,13 +8745,13 @@ function coopHandleDead(cid){
     coopUnlockMove();     // 联机：怪清完了，移动锁解除（联机方案.md）
     spawnGild();          // 金坛各人一座（金币和加成本来就是各算各的）
     if(hasRelic("finale")){    // 收尾：清完一层回 FINALE_PCT 的上限——清场是共识事件，没亲手补最后一刀也该有
-      const back = Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT));
+      const back = hx("finale", Math.max(1, Math.ceil(stats().maxHp * FINALE_PCT)));
       const r = healUp(back);
       if(r.hp || r.sh) say(T("这一层干净了 —— 收尾替你补了 <b>") + r.hp + T("</b> 点生命") +
         (r.sh ? T("，溢出的化成 <b>") + r.sh + T("</b> 点护盾") : "") + T("。"), "good");
     }
     if(hasRelic("welfare")){                       // 均富：清空这一层再单独发一笔
-      const wg = earnGold(G.floor * 2);
+      const wg = earnGold(hx("welfare", G.floor * 2));
       say(T("均富 —— 这一层清空了，回廊分给你 <b>") + wg + T("</b> 金。"), "good");
     }
   }

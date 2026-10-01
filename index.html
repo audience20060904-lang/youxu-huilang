@@ -155,6 +155,11 @@
         <div class="stats" id="stats"></div>
         <button class="btn ghost partsbtn" id="btnParts" type="button">构成</button>
       </div>
+      <!-- 圣器（用户 2026-10-01）：属性下面三个方格，没带就写「空」；同样只在洞里露 -->
+      <div class="panel" id="panelHoly" hidden>
+        <div class="phead">圣器 Holy Relics</div>
+        <div class="holyslots" id="holySlots"></div>
+      </div>
       <!-- 没进冒险时整块藏起来（用户 2026-09）——「本局」在镇上没有意义 -->
       <div class="panel" id="panelRun" hidden>
         <div class="phead">本局战绩</div>
@@ -509,6 +514,27 @@
     <div class="rfilt" id="swapFilter" hidden></div>
     <div class="relics sx" id="swapList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn ghost" id="btnSwapSkip" type="button">不要了，折成金币</button></div>
+  </div>
+</div>
+
+<!-- 圣器二选一（每 20 层的 Boss 倒下之后，换掉那一次遗物五选一）。带满了先挑新的、再挑换下哪件 -->
+<div class="veil" id="veilHoly" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="holyEyebrow">守者倒下了</div>
+    <h2 id="holyTitle">圣器 · 二选一</h2>
+    <p class="note" id="holyNote"></p>
+    <div class="relics holypick sx" id="holyList"></div>
+    <div class="rowb" hidden><span class="sp"></span><button class="btn ghost" id="btnHolySkip" type="button">都不要，留着现在的</button></div>
+  </div>
+</div>
+<!-- 圣器详情（信息页点一个方格）；圣光照耀在这里挑 / 换赐福的那件遗物 -->
+<div class="veil" id="veilHolyInfo" hidden>
+  <div class="sheet">
+    <div class="eyebrow">圣器</div>
+    <div class="relic holyc hot" id="holyInfoCard"></div>
+    <p class="note" id="holyBlessHead" hidden></p>
+    <div class="relics sx" id="holyBlessList" hidden></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseHolyInfo" type="button">关闭</button></div>
   </div>
 </div>
 
