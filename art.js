@@ -649,6 +649,46 @@ var HOLY_ART = (function(){
       '<path d="M14 9h20c0 8-6 11-6 15s6 7 6 15H14c0-8 6-11 6-15s-6-7-6-15z" fill="#fff" fill-opacity=".35" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
       '<path d="M16.5 11h15c-.8 4-4.5 6.5-7.5 9-3-2.5-6.7-5-7.5-9z" fill="currentColor"/>' +
       '<path d="M20 37h8c-1-3-2.5-4-4-5-1.5 1-3 2-4 5z" fill="currentColor"/>' +
-      '<path d="M24 30v-8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="1.5 2"/>')
+      '<path d="M24 30v-8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="1.5 2"/>'),
+    /* ---- 流派圣器（2026-10-02）---- */
+    /* 血之圣杯：一只高脚杯，杯口一滴血 */
+    grail: svg(
+      '<path d="M11 8h26c0 10-5 17-13 17S11 18 11 8z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M13.5 11h21c-.8 5.5-4.6 9.5-10.5 9.5S14.3 16.5 13.5 11z" fill="#A93729"/>' +
+      '<path d="M22 25h4v9h-4z" fill="currentColor" stroke="' + o + '" stroke-width="1.4"/>' +
+      '<path d="M14 40c0-3.5 4.5-6 10-6s10 2.5 10 6z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M17 13.5c1 2.5 2.5 4 4.5 4.8" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".55"/>'),
+    /* 不朽圣铠：一片胸甲，两道横纹 */
+    bulwark: svg(
+      '<path d="M10 9l8-3c2 3 10 3 12 0l8 3-2 9v14c0 5-5 9-12 10-7-1-12-5-12-10V18z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M14 21c6 2 14 2 20 0M14 28c6 2 14 2 20 0M24 13v28" stroke="' + o + '" stroke-width="1.3" fill="none" opacity=".7"/>' +
+      '<path d="M15 12.5l3-1" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".6"/>'),
+    /* 战神之刃：一柄竖起来的剑 */
+    warblade: svg(
+      '<path d="M24 3l4 6v21h-8V9z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M24 7v22" stroke="' + o + '" stroke-width="1.1" opacity=".55"/>' +
+      '<rect x="13" y="30" width="22" height="4" rx="1.5" fill="currentColor" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<rect x="22" y="34" width="4" height="7" fill="' + o + '"/>' +
+      '<circle cx="24" cy="43" r="2.6" fill="currentColor" stroke="' + o + '" stroke-width="1.3"/>' +
+      '<path d="M22 11v13" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>'),
+    /* 天命之眼：一只眼，瞳孔里一颗星 */
+    fateeye: svg(
+      '<path d="M3 24c5-8 12-12 21-12s16 4 21 12c-5 8-12 12-21 12S8 32 3 24z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<circle cx="24" cy="24" r="8" fill="#FBF6E7" stroke="' + o + '" stroke-width="1.4"/>' +
+      '<circle cx="24" cy="24" r="5" fill="#2A2620"/>' +
+      '<path d="M24 20.5l1 2.4 2.5.2-1.9 1.6.6 2.5-2.2-1.4-2.2 1.4.6-2.5-1.9-1.6 2.5-.2z" fill="#E0A83A"/>' +
+      '<path d="M24 4v4M10 8l2.5 3M38 8l-2.5 3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
+    /* 圣徒之盾：一面盾，正中一个十字 */
+    saintshield: svg(
+      '<path d="M24 4l16 5v13c0 10-7 17-16 21C15 39 8 32 8 22V9z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M24 11v24M15 20h18" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".85"/>' +
+      '<path d="M24 11v24M15 20h18" stroke="' + o + '" stroke-width="1.2" stroke-linecap="round" opacity=".45"/>'),
+    /* 永恒之链：三环相扣 */
+    eternal: svg(
+      '<g fill="none" stroke-width="5.5"><rect x="3" y="17" width="17" height="14" rx="7" stroke="' + o + '"/>' +
+      '<rect x="15.5" y="17" width="17" height="14" rx="7" stroke="' + o + '"/>' +
+      '<rect x="28" y="17" width="17" height="14" rx="7" stroke="' + o + '"/></g>' +
+      '<g fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="17" width="17" height="14" rx="7"/>' +
+      '<rect x="15.5" y="17" width="17" height="14" rx="7"/><rect x="28" y="17" width="17" height="14" rx="7"/></g>')
   };
 })();

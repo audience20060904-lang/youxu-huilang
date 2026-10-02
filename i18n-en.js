@@ -2416,13 +2416,18 @@ var FOE_EN = {rat:"Corridor Rat", slime:"Pantry Slime", spider:"Longleg Cave Spi
 /* 圣器（2026-10-01）：按 id 覆盖 content.js 的 HOLY —— [名字, 词条, 铭文] */
 var HOLY_EN = {
   radiance: ["Radiance", "Bless one relic: its numbers ×2. Lose or sell it and the blessing fades — pick another", "Light falls on one thing, and it becomes two."],
-  chime: ["Resonant Bell", "All relic numbers ×1.2", "Ring it once and everything you carry hums along."],
   crown: ["Martyr's Crown", "Each boss or guardian you defeat this run: ATK, max HP and armor +8%", "Every thorn is a king who fell before you."],
-  judge: ["Hammer of Judgment", "After a correct answer, a foe under 25% HP (bosses 10%) is struck down outright; restore 5% max HP", "A verdict needn't wait for the last blow."],
   trial: ["Reliquary of Trial", "Once per floor: survive a lethal blow at 1 HP and enter a trial — answer the next 3 right to restore 60% max HP; one slip and you fall", "The bones still hold a sentence. Finish it."],
   scales: ["Scales of Justice", "Each −1% damage taken: damage +2%; each +10% damage: damage taken −1% more (up to −30%)", "What you block, you return."],
   scripture: ["Scripture of Words", "Damage and max HP +30%; +5% more each for every 50 words you've mastered on this save (up to +300%)", "Every page you've learned is written inside."],
-  hourglass: ["Hourglass of Return", "3 times per floor: a wrong answer rewinds — no HP lost, combo kept (the word still counts as missed)", "For a moment the sand runs upward, and nothing has happened yet."]
+  hourglass: ["Hourglass of Return", "3 times per floor: a wrong answer rewinds — no HP lost, combo kept (the word still counts as missed)", "For a moment the sand runs upward, and nothing has happened yet."],
+  /* 流派圣器（2026-10-02）：第 4 项是流派名 */
+  grail: ["Blood Grail", "Max HP +30%; extra damage + 20% of max HP", "The fuller the cup, the hotter the splash.", "HP build"],
+  bulwark: ["Undying Plate", "Armor +10, then ×1.5; extra damage + armor ×1", "Plate upon plate, until a wall comes crashing forward.", "Armor build"],
+  warblade: ["Blade of the War God", "ATK ×1.5; armor + 15% of ATK", "The best guard is a foe too afraid to swing.", "ATK build"],
+  fateeye: ["Eye of Fate", "Crit chance +20%, crit damage +100%; each crit this floor adds +10% more crit damage (up to +200%)", "It saw the gap long ago, and waits for your blade.", "Crit build"],
+  saintshield: ["Saint's Shield", "Each floor gain a shield of 40% max HP; extra damage + 30% of current shield", "What you block and what you strike with are the same slab.", "Shield build"],
+  eternal: ["Eternal Chain", "Combo damage bonus ×5; correct answers add 1 more combo; wrong answers only halve combo", "Link by link — where it breaks, it grows back.", "Combo build"]
 };
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
 var DIFF_EN = {A:["Tier A", "Original", "No ATK bonus", "The game as it was built"],
@@ -2433,7 +2438,7 @@ function i18nApplyContent(){
   /* 学中文时章节的 HSK 标签、多出来的「书冢」、无尽的 HSK 4~6 都在 content.js 末尾那段定（跟界面语言无关）*/
   if(!UI_EN) return;
   RELICS.forEach(function(r){ var e = RELIC_EN[r.id]; if(e){ r.n = e[0]; r.pw = e[1]; r.lore = e[2]; } });
-  if(typeof HOLY !== "undefined") HOLY.forEach(function(h){ var e = HOLY_EN[h.id]; if(e){ h.n = e[0]; h.pw = e[1]; h.lore = e[2]; } });
+  if(typeof HOLY !== "undefined") HOLY.forEach(function(h){ var e = HOLY_EN[h.id]; if(e){ h.n = e[0]; h.pw = e[1]; h.lore = e[2]; if(e[3]) h.flow = e[3]; } });
   FOES.forEach(function(f){ if(FOE_EN[f.id]) f.name = FOE_EN[f.id]; });
   GATEKEEPER.name = FOE_EN.gate; ABYSS.name = FOE_EN.abyss; STUDY_FOE.name = FOE_EN.study;
   CHAPTERS.forEach(function(c){
