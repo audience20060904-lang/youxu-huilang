@@ -1593,7 +1593,20 @@ var RELICS = [
  {id:"warcry", r:3, n:"战意", nobf:true, pw:"伤害 +35%",
   lore:"喊出来的那一声，手上就多了三分力。"},
  {id:"torrent", r:4, n:"狂澜", nobf:true, pw:"伤害 +50%",
-  lore:"一浪接一浪，挡不住的。"}
+  lore:"一浪接一浪，挡不住的。"},
+ /* ===== 第十八批（2026-10-02，用户挑的）：熔铸流 / 雷匣流的配套，只在地牢（nobf）===== */
+ {id:"remelt", r:2, n:"回炉", nobf:true, pw:"分解遗物时回复 10% 最大生命，并获得 5% 最大生命的护盾",
+  lore:"旧东西化开的那股热，先暖了手。"},
+ {id:"overload", r:2, n:"过载", nobf:true, pw:"一刀打出这只怪最大生命两倍以上的伤害时，回复 5% 最大生命",
+  lore:"多出来的那一截力气，流回了自己身上。"},
+ {id:"embers", r:3, n:"余烬", nobf:true, pw:"本局每分解过一件遗物，护甲 +1（最多 +30）",
+  lore:"每一件烧掉的东西，都在炉底留下一层灰。"},
+ {id:"capacitor", r:3, n:"电容", nobf:true, pw:"这一刀打不倒小怪时，把匣子里存的伤害放出去",
+  lore:"存着的电，总要找个地方落下。"},
+ {id:"forgecore", r:4, n:"炉心", nobf:true, pw:"合成时被吃掉的遗物也算分解，并返还它们一半的分解价",
+  lore:"炉子的心是热的，扔进去的都不算白扔。"},
+ {id:"tempest", r:4, n:"雷暴", nobf:true, pw:"打倒小怪时，溢出伤害的 2% 存进匣子；匣子放出的伤害不超过怪剩下的血",
+  lore:"雷不乱劈，劈一个是一个。"}
 ];
 /* 第十七批的数值（2026-10-02）*/
 var GOLDHAND_PCT  = 50;    // 点金手：击败敌人的金币 +50%
@@ -1619,6 +1632,14 @@ var IRONCUT_LV    = 0.4;   // 斩铁：④额外伤害 + 等级 × 0.4
 var BREAKARMY_PCT = 0.4;   // 破军：④额外伤害 + 攻击 × 0.4
 var WARCRY_PCT    = 35;    // 战意：②伤害 +35%
 var TORRENT_PCT   = 50;    // 狂澜：②伤害 +50%
+/* 第十八批的数值（2026-10-02）：熔铸流 / 雷匣流的配套。「匣子」= 雷霆之匣那只（P.thunder），不带圣器也照样能往里存、往外放 */
+var REMELT_HEAL    = 0.10;  // 回炉：分解时回复 10% 最大生命……
+var REMELT_SHIELD  = 0.05;  //        ……并获得 5% 最大生命的护盾
+var OVERLOAD_X     = 2;     // 过载：一刀（追加攻击 / 凿骨 / 匣子都算）打出这只怪最大生命 2 倍以上……
+var OVERLOAD_HEAL  = 0.05;  //        ……回复 5% 最大生命
+var EMBERS_MAX     = 30;    // 余烬：本局每分解过一件（P.sellN），护甲 +1，最多 +30
+var FORGECORE_RATE = 0.5;   // 炉心：合成吃掉的材料也走一遍分解，返还一半分解价（带熔铸之心时分解是 0 金，这一半也是 0）
+var TEMPEST_PCT    = 0.02;  // 雷暴：打倒小怪的溢出 2% 存进匣子；匣子放出去的那一笔封在怪剩下的血（深渊不封，它是一层层穿的）
 
 /* =====================================================================
    圣器（用户 2026-10-01）—— 洞窟里的「特殊遗物」，最多带 HOLY_MAX(3) 件
@@ -1647,7 +1668,7 @@ var HOLY_DEEP_SPAN = 100;
    **只放大好处、不放大代价**（献身的「生命减半」、砺石的「生命 −5」不跟着翻）。
    没有数值可翻的那几件（HOLY_NO_BLESS）挑不了。*/
 var HOLY_BLESS_X  = 2;
-var HOLY_NO_BLESS = ["key", "stroke", "clean", "atone", "wellread", "hoardbox", "keeneye", "barter", "unchain", "recipe", "spare"];
+var HOLY_NO_BLESS = ["key", "stroke", "clean", "atone", "wellread", "hoardbox", "keeneye", "barter", "unchain", "recipe", "spare", "capacitor"];
 var HOLY_CROWN_PCT  = 8;     // 殉道者之冠：本局每打倒一只 Boss / 层间守者，攻击、最大生命、护甲各 +8%
 var HOLY_TRIAL_Q    = 3;     // 试炼圣骸：致命那一下留 1 点，接下来 3 题全对……
 var HOLY_TRIAL_HEAL = 0.6;   //            ……回复 60% 最大生命；失手（答错 / 超时）一次就倒下。每层一次

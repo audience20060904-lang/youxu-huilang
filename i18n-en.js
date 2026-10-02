@@ -2163,7 +2163,13 @@ var RELIC_EN = {
 "ironcutter": ["Ironcutter", "Extra damage + 40% of your level", "Train long enough and iron splits in one cut."],
 "breakarmy": ["Army Breaker", "Extra damage + 40% of ATK", "One man charges in like a whole army."],
 "warcry": ["War Cry", "Damage +35%", "The shout puts thirty percent more into the arm."],
-"torrent": ["Raging Torrent", "Damage +50%", "Wave after wave, nothing holds."]
+"torrent": ["Raging Torrent", "Damage +50%", "Wave after wave, nothing holds."],
+"remelt": ["Remelt", "Breaking down a relic restores 10% max HP and grants a shield of 5% max HP", "The heat of melting the old warms your hands first."],
+"overload": ["Overload", "When one hit deals over twice the foe's max HP, restore 5% max HP", "The strength left over flows back into you."],
+"embers": ["Embers", "Each relic broken down this run: armor +1 (max +30)", "Everything burned leaves a layer of ash at the bottom of the forge."],
+"capacitor": ["Capacitor", "When a hit fails to kill a regular foe, the box releases its stored damage", "Stored lightning has to land somewhere."],
+"forgecore": ["Forge Core", "Fusion materials count as broken down; refund half their value", "The forge's heart is warm; nothing thrown in is wasted."],
+"tempest": ["Tempest", "Kills store 2% of overkill in the box; box hits never exceed the foe's HP", "The lightning never strikes at random — one bolt, one foe."]
 };
 
 /* 数据表：按 id 换掉名字和说明（content.js 本身一个字不动 —— 战场那边还要读中文）。*/

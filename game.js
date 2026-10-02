@@ -353,7 +353,7 @@ function newRun(){
         /* 圣器（用户 2026-10-01）：holy = 带着的圣器（最多 HOLY_MAX 件），sanct = 圣光照耀赐福的那件遗物，
            bossKills = 本局打倒过几只 Boss / 守者（殉道者之冠），holyWords = 进层时掌握了几个词（万言圣典），
            trial = 试炼圣骸还差几题。全跟着续玩档。*/
-        holy:[], sanct:null, bossKills:0, holyWords:0, trial:0, eyeStack:0, melted:0, thunder:0 };
+        holy:[], sanct:null, bossKills:0, holyWords:0, trial:0, eyeStack:0, melted:0, thunder:0, sellN:0 };
   tutPending = false;
   studyOn = false;
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
@@ -622,6 +622,7 @@ function statsRaw(){
      放在乘法之前，会被 ×4 ×1.2 放大。*/
   if(hasRelic("silt"))   s.def += SILT_ARMOR + Math.floor((G ? G.floor : 0) / SILT_EVERY);  // 沉积：按层数
   if(hasRelic("layers")) s.def += Math.floor(P.lvl / LAYERS_EVERY);                       // 千层：按等级（×1.25 在下面）
+  if(hasRelic("embers")) s.def += Math.min(EMBERS_MAX, P.sellN || 0);                      // 余烬：本局每分解过一件 +1（第十八批）
   // 重装：护甲 ×3（平减的护甲在深层等于没有，乘一下才跟得上。练习模式那 +50 不在里面）
   if(hasRelic("heavy")) s.def = (s.def + HEAVY_ARMOR) * HEAVY_MULT;   // 重装：自带底数 + 乘法
   // 硬茧：护甲 +20%（乘法档，跟重装/叠甲排在一起；取整放到最后由 defGear 那一步兜）
@@ -3256,6 +3257,7 @@ function answer(btn, ok){
        所以一层能回多少有天然封顶（一层怪的血就那么多）。深渊那只血是一层层的，打进去多少就算多少。*/
     let landed = landedOn(m, dmg);
     let dealt = dmg;                 // 余劲：这一刀一共打出去多少（回响之厅 / 凿骨也算），减掉真打进血条的就是溢出
+    const maxAt = m.max || 0;        // 过载：按这一刀落下之前的最大生命比（深渊那只每穿一层会换）
     coopDealDamage(m, dmg);
     /* ===== 追加攻击（用户 2026-10-02 定义）=====
        答对、这一刀打完之后，按 followChance()（回响之厅 / 疾风相加）掷一次：中了就把这一刀**原样再打一次**
@@ -3293,21 +3295,33 @@ function answer(btn, ok){
       setTimeout(function(){ floatNum("foe", "-" + chip, "dmg"); }, 260);
       relicLog += T(" <span class=\"sys\">(凿骨 +") + chip + ")</span>";
     }
-    /* 雷霆之匣（圣器 · 雷匣流）：Boss 房里（层间守者 / 章末 Boss / 深渊）第一次答对，把匣子里攒的全部打出去 ——
-       单独一笔，跟凿骨一样不吃百分比、不吃暴击、不减护甲。那一刀已经把它砍倒了就留着，等下一间 Boss 房。*/
-    if(holyOn("thunderbox") && m.boss && m.hp > 0 && (P.thunder || 0) >= 1){
-      const bolt = Math.floor(P.thunder);
+    /* ===== 匣子（雷霆之匣 / 雷暴 / 电容共用 P.thunder）=====
+       放出去的那一笔单独打（跟凿骨一样不吃百分比 / 暴击 / 护甲）；雷暴在身上时封在怪剩下的血（深渊那只不封，它是一层层穿的）。
+       ① 电容（第十八批）：这一刀打不倒小怪 → 放；② 雷霆之匣（圣器）：Boss 房里答对、怪还活着 → 放。那一刀已经把 Boss 砍倒了就留着。*/
+    function boltOut(src){
+      let bolt = Math.floor(P.thunder || 0);
+      if(hasRelic("tempest") && !(m.def && m.def.abyss)) bolt = Math.min(bolt, Math.max(0, m.hp));
+      if(bolt < 1) return;
       P.thunder -= bolt;
       dealt += bolt;
-      if(lastDmgRec) lastDmgRec.more.push(["holy:thunderbox", bolt]);
+      if(lastDmgRec) lastDmgRec.more.push([src, bolt]);
       landed += landedOn(m, bolt);
       coopDealDamage(m, bolt);
       setTimeout(function(){ floatNum("foe", "-" + bolt, "dmg"); }, 320);
-      relicLog += L(" <span class=\"sys\">(雷霆之匣 +" + bolt + ")</span>", " <span class=\"sys\">(Thunder Box +" + bolt + ")</span>");
+      relicLog += " <span class=\"sys\">(" + (src === "capacitor" ? L("电容", "Capacitor") : L("雷霆之匣", "Thunder Box")) + " +" + bolt + ")</span>";
     }
-    /* 打倒小怪（不是 Boss / 守者 / 深渊）时，溢出伤害的 HOLY_THUNDER_PCT 存进匣子（按小数攒，P.thunder 跟着续玩档）*/
-    if(holyOn("thunderbox") && !m.boss && m.hp <= 0 && dealt > landed)
-      P.thunder = (P.thunder || 0) + (dealt - landed) * HOLY_THUNDER_PCT;
+    if(hasRelic("capacitor") && !m.boss && m.hp > 0 && (P.thunder || 0) >= 1) boltOut("capacitor");
+    if(holyOn("thunderbox") && m.boss && m.hp > 0 && (P.thunder || 0) >= 1) boltOut("holy:thunderbox");
+    /* 打倒小怪（不是 Boss / 守者 / 深渊）时，溢出伤害按比例存进匣子：雷霆之匣 5% + 雷暴 2%（按小数攒，P.thunder 跟着续玩档）*/
+    if(!m.boss && m.hp <= 0 && dealt > landed){
+      const rate = (holyOn("thunderbox") ? HOLY_THUNDER_PCT : 0) + (hasRelic("tempest") ? hx("tempest", TEMPEST_PCT) : 0);
+      if(rate > 0) P.thunder = (P.thunder || 0) + (dealt - landed) * rate;
+    }
+    /* 过载（第十八批）：这一刀一共打出去的（追加攻击 / 凿骨 / 匣子都算）超过这只怪最大生命 2 倍 → 回 5% 最大生命 */
+    if(hasRelic("overload") && dealt >= OVERLOAD_X * maxAt){
+      const oh = healUp(Math.max(1, Math.ceil(s.maxHp * hx("overload", OVERLOAD_HEAL))), s).hp;
+      if(oh) relicLog += L(" <span class=\"sys\">(过载 +" + oh + ")</span>", " <span class=\"sys\">(Overload +" + oh + ")</span>");
+    }
     /* 余劲（第十三批）：这一刀把怪砍倒了，溢出的 ×MOMENTUM_X 存进 G.carry，下一场开战先扣（startBattle）。
        联机不做（两条血条 + 服务器判死）；深渊那只打不倒，没有溢出。*/
     if(hasRelic("momentum") && !COOP && m.hp <= 0 && !(m.def && m.def.abyss) && dealt > landed){
@@ -5239,6 +5253,14 @@ function sellRelicGold(r){
       say(T("寄存把这份钱的一角存成了 <b>") + sh + T("</b> 点护盾。"), "sys");
     }
   }
+  P.sellN = (P.sellN || 0) + 1;            // 本局分解过几件（余烬读它；只是个事实，换算包在 hasRelic 里）
+  if(hasRelic("remelt")){                  // 回炉：分解时回 10% 最大生命 + 5% 最大生命的护盾
+    const s = stats();
+    const hp = healUp(Math.max(1, Math.ceil(s.maxHp * hx("remelt", REMELT_HEAL))), s).hp;
+    const sh = Math.max(1, Math.floor(s.maxHp * hx("remelt", REMELT_SHIELD)));
+    P.shield = (P.shield || 0) + sh;
+    say(L("回炉：回复 " + hp + " 点生命，护盾 +" + sh + "。", "Remelt: +" + hp + " HP, shield +" + sh + "."), "heal");
+  }
   /* 熔铸之心（圣器 · 熔铸流）：分解不再给金币，记一件（伤害 / 生命的换算在 pctSteady / stats，包在 holyOn 里）。
      寄存照旧按分解价算 —— 那是这件遗物的价，不是到手的钱。*/
   if(holyOn("meltheart")){
@@ -5328,9 +5350,16 @@ function fuseGo(){
   const cost = fuseCost();
   P.gold -= cost;
   addSpent(cost);                         // 散财 / 千金：合成的钱也算花出去了
+  /* 炉心（第十八批）：吃掉的材料也走一遍分解（寄存 / 回炉 / 余烬 / 熔铸之心都吃得到），返还一半分解价。
+     要在把它们拿掉之前算 —— sellRelicGold() 里的回炉要读 stats()。炉心是神圣，自己当不了材料。*/
+  let back = 0;
+  if(hasRelic("forgecore")){
+    eat.forEach(function(id){ back += Math.floor(sellRelicGold(relicById(id)) * hx("forgecore", FORGECORE_RATE)); });
+  }
   withMaxHp(function(){
     eat.forEach(function(id){ P.relics.splice(P.relics.indexOf(id), 1); });
   });
+  if(back){ P.gold += back; say(L("炉心把材料的一半分解价退了回来：<b>" + back + "</b> 金。", "Forge Core refunds half their value: <b>" + back + "</b> gold."), "sys"); }
   fuseOn = false; fuseSel = [];
   say(T("你付了 <b>") + cost + T("</b> 金，把 ") + fuseN() + T(" 件") + RAR_CN[rar] + T("遗物砸在一起。"), "sys");
   const picks = blessPickN(up, FUSE_PICK);    // 祝福·偏爱在候选里加权（神圣那个偏爱槽主要吃这条）
@@ -7031,6 +7060,7 @@ function resumeRun(s){
   if(typeof P.eyeStack !== "number") P.eyeStack = 0;          // 天命之眼：本局涨过几次暴击伤害
   if(typeof P.melted !== "number") P.melted = 0;              // 熔铸之心：带着它分解过几件
   if(typeof P.thunder !== "number") P.thunder = 0;            // 雷霆之匣：匣子里存了多少（小数攒着）
+  if(typeof P.sellN !== "number") P.sellN = 0;                // 余烬：本局分解过几件
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
