@@ -101,14 +101,16 @@ var CHAPTERS = [
          hp:560, dmg:26, armor:6, xp:150, boss:true, fixed:true}},
   /* 第五章「无尽」（用户 2026-09）—— **这一章没有底**：
      没有第 50 层，没有章末 Boss，也永远不会「通关」，一直往下走到倒下为止。
-       · **wordLv 是数组** [3,4,5]：B1 / B2 / B2–C1 三档混着出，是全游戏唯一一章
-         多难度的路线（别的章都是一个数字）。难度 5 那 2000 词是它专属的。
+       · **wordLv 是数组** [3,4,5,6]：B1 / B2 / B2–C1 / 雅思四档混着出，是全游戏唯一一章
+         多难度的路线（别的章都是一个数字）。难度 5、6 各 2000 词是它专属的。
        · **boss 是 null**：每 10 层照旧是一间 Boss 房，里面永远是「层间守者」
          （GATEKEEPER，跟着层数长）。读 CH.boss 的地方都要兜一下 null。
        · 怪的成长：50 层之内跟第四章同一套分段倍率（FOE_BANDS 的最后一档兜到底），
          **50 层往下再吃一层「深渊压迫」**（见下面的 ENDLESS_RAMP）——
          不加这一层的话，经验和等级会把曲线拉平，300 层和 60 层一样好打，无尽就没有尽头压力了。 */
-  {id:5, name:"无尽", level:"B1–C1", wordLv:[3,4,5], gemMult:2.00, endless:true,
+  /* 2026-10-02：wordLv 加了 6 = 雅思 2000 词（words-a1.js 末尾）；**lateLv 那一档（C1）第 lateFrom 层才开始出**
+     （用户：「无尽前 25 关不会出现 C1 词汇」，game.js 的 quizLvs()）。学别的语言时下面那几段改 wordLv / lateLv。*/
+  {id:5, name:"无尽", level:"B1–C1 · 雅思", wordLv:[3,4,5,6], lateLv:5, lateFrom:26, gemMult:2.00, endless:true,
    foeBonus:{hp:16, dmg:4, armor:0, xp:8},
    boss:null},
   /* 第六条（2026-09-23）：**只有学中文时才有**（learn:"zh"）—— HSK 5 一章，排在无尽前面，
@@ -474,8 +476,8 @@ var ROUTES = [
   {id:"tomb", ch:6, name:"书冢", tag:"第五章 · HSK 5",
    desc:"HSK 5 词 · 50 层", learn:"zh",
    open:true},
-  {id:"endless", ch:5, name:"无尽", tag:"第五章 · B1–C1",
-   desc:"B1 / B2 / C1 混出 · 走到倒下为止",
+  {id:"endless", ch:5, name:"无尽", tag:"第五章 · B1–C1 · 雅思",
+   desc:"B1 / B2 / C1 / 雅思 · 走到倒下为止",
    open:true}
 ];
 
@@ -486,7 +488,7 @@ var ROUTES = [
 if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
   CHAPTERS.forEach(function(c){
     c.level = {1:"HSK 1", 2:"HSK 2", 3:"HSK 3", 4:"HSK 4", 5:"HSK 4–6", 6:"HSK 5"}[c.id] || c.level;
-    if(c.id === 5){ c.wordLv = [4, 5, 6]; c.no = 6; }
+    if(c.id === 5){ c.wordLv = [4, 5, 6]; c.lateLv = 6; c.no = 6; }   // 雅思那一档只有学英语才有；前 25 层不出 HSK 6
     if(c.id === 6) c.no = 5;
   });
   ROUTES.forEach(function(r){
@@ -501,12 +503,19 @@ if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "zh"){
 if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "ja"){
   CHAPTERS.forEach(function(c){
     c.level = {1:"N5", 2:"N4", 3:"N3", 4:"N2", 5:"N3–N1"}[c.id] || c.level;
+    if(c.id === 5) c.wordLv = [3, 4, 5];       // 雅思那一档只有学英语才有；lateLv 5 = N1，前 25 层不出
   });
   ROUTES.forEach(function(r){
     var lv = {1:"N5", 2:"N4", 3:"N3", 4:"N2"}[r.ch];
     if(lv){ r.tag = r.tag.replace(/[AB][12]$/, "JLPT " + lv); r.desc = "JLPT " + lv + " 词 · 50 层"; }
     if(r.ch === 5){ r.tag = "第五章 · N3–N1"; r.desc = "N3 / N2 / N1 混出 · 走到倒下为止"; }
   });
+}
+
+/* ===== 学西班牙语时（2026-10-02）：雅思那一档只有学英语才有，无尽退回 B1 / B2 / C1 三档（C1 照样前 25 层不出）===== */
+if(typeof LANG_LEARN !== "undefined" && LANG_LEARN === "es"){
+  CHAPTERS.forEach(function(c){ if(c.id === 5){ c.wordLv = [3, 4, 5]; c.level = "B1–C1"; } });
+  ROUTES.forEach(function(r){ if(r.ch === 5){ r.tag = "第五章 · B1–C1"; r.desc = "B1 / B2 / C1 混出 · 走到倒下为止"; } });
 }
 
 /* ===== 难度等级 =====

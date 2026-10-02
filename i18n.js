@@ -29,7 +29,7 @@ var LANG_NAME = {zh:"中文", en:"English"};
    lv 是这门语言的分级。**以后加一门学习语言：这里加一条 + LANG_PAIRS 加一对 + 一份词库**。
    词数不写死，game.js 现数（learnWordCount）。*/
 var LEARN_INFO = {
-  en: {name:{zh:"英语", en:"English"}, self:"English", lv:"A1 → C1"},
+  en: {name:{zh:"英语", en:"English"}, self:"English", lv:"A1 → C1 · 雅思"},
   zh: {name:{zh:"中文", en:"Chinese"}, self:"中文", lv:"HSK 1 → 6"},
   es: {name:{zh:"西班牙语", en:"Spanish"}, self:"Español", lv:"A1 → C1"},
   ja: {name:{zh:"日语", en:"Japanese"}, self:"日本語", lv:"JLPT N5 → N1"}

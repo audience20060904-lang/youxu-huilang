@@ -1,0 +1,494 @@
+# 雅思 · 第 1 段（词库难度 6，按 words-a1.js 里的顺序：动物 / 食物 / 颜色 / 身体 / 人 / 物品前段）
+veterinary|about the medical care of animals
+genus|a group of closely related kinds of plants or animals
+mutant|a living thing that has changed from the normal type
+aquatic|living or growing in water
+mare|a female horse
+colt|a young male horse
+rhino|a large heavy animal with one or two horns on its nose
+jaguar|a large wild cat with spots that lives in South America
+leash|a long strap you use to hold and walk a dog
+horseback|the back of a horse, where a rider sits
+bulldog|a strong dog with a wide head and short legs
+scorpion|a small animal with a long tail that can sting
+fleece|the wool coat of a sheep
+catfish|a fish with long hairs near its mouth
+pedigree|the record of an animal's parents and family
+canine|about dogs or animals like dogs
+alligator|a large reptile like a crocodile with a wide nose
+reindeer|a deer with large horns that lives in cold northern places
+feral|wild, after once living with people
+husky|a strong dog with thick fur that pulls sledges
+nightingale|a small brown bird famous for its beautiful song
+grizzly|a large brown bear of North America
+raccoon|a grey animal with a black mask and a striped tail
+tortoise|a slow animal with a hard shell that lives on land
+brood|a group of young birds born at the same time
+rabies|a deadly illness that dogs can pass on by biting
+terrier|a small, lively dog first used for hunting
+equestrian|about riding horses
+plume|a large soft feather
+carp|a large fish that lives in lakes and rivers
+greyhound|a thin, very fast dog used in races
+infestation|a large number of insects or rats in a place
+incubation|keeping eggs warm until they hatch
+avian|about birds
+firefly|a flying insect whose tail gives off light at night
+hippo|a very large African animal that lives near rivers
+equine|about horses
+amphibious|able to live or work both on land and in water
+beagle|a small dog with long ears, often used for hunting
+ostrich|a very large bird that cannot fly but runs fast
+koala|an Australian animal like a small bear that eats leaves
+starter|a small dish you eat before the main meal
+champagne|a French wine with lots of bubbles
+fatty|containing a lot of fat
+glucose|a kind of sugar that gives the body energy
+dietary|about the food you eat
+pulp|the soft inside part of a fruit
+nutritional|about the good things in food that help the body
+citrus|fruits like oranges, lemons and limes
+kernel|the soft part inside a nut or seed
+rosemary|a plant with thin leaves used in cooking
+culinary|about cooking
+salsa|a spicy sauce made with tomatoes and onions
+nutrient|something in food that living things need to grow
+caramel|sugar heated until it turns brown and sticky
+herring|a small silver sea fish often eaten salted
+sweetness|the taste of sugar
+brunch|a meal eaten late in the morning
+sesame|a plant with small seeds used in cooking
+espresso|strong black coffee in a small cup
+crispy|hard and dry in a nice way, like fried food
+cookbook|a book of recipes
+cupcake|a small cake for one person
+palate|your sense of taste
+acidic|sour, like lemon juice
+additive|something put into food to keep it fresh or add colour
+takeaway|a cooked meal you buy and eat at home
+luncheon|a formal meal in the middle of the day
+latte|coffee made with a lot of hot milk
+cheddar|a hard yellow cheese from England
+fruity|tasting or smelling of apples, berries and so on
+smoothie|a thick drink made from blended fruit
+mayonnaise|a thick white sauce made from eggs and oil
+cauliflower|a vegetable with a large hard white head
+nutty|tasting like nuts
+cranberry|a small sour red berry
+doughnut|a small round fried cake, often with a hole
+grapefruit|a large round yellow fruit with a sour taste
+lager|a light yellow beer
+mulberry|a dark purple berry that grows on a tree
+lactose|a kind of sugar found in milk
+cookery|the skill of preparing food
+macaroni|small tubes of pasta
+jerky|dried strips of meat
+mozzarella|a soft white Italian cheese used on pizza
+peppermint|a plant used to give food a cool fresh taste
+soybean|a bean used to make tofu and oil
+mackerel|an oily sea fish with a striped back
+tortilla|a thin, flat Mexican bread
+platinum|a valuable silver-white metal
+metallic|looking shiny like metal
+infrared|light you cannot see that gives off heat
+neon|very bright, glowing colour
+blond|having pale yellow hair
+stripe|a long narrow line of colour
+gloss|a bright shine on a surface
+spectral|about the colours of light
+plaid|cloth with a pattern of coloured squares
+ultraviolet|light from the sun that can burn your skin
+opal|a white stone that shows many colours
+garnet|a dark red stone used in jewellery
+brownish|a little brown
+radiance|a bright warm light or glow
+spinal|about the line of bones down your back
+cardiac|about the heart
+receptor|a part of the body that receives signals
+bodily|about the human body
+iris|the coloured part of your eye
+neural|about the nerves or brain
+coma|a deep state like sleep after an illness or injury
+serum|a liquid from blood used to make medicines
+obese|very fat in an unhealthy way
+sensory|about the senses like sight and touch
+mole|a small dark spot on your skin
+metabolic|about how your body turns food into energy
+cerebral|about the brain
+cortex|the outer layer of the brain
+abdominal|about the stomach area
+wellness|being healthy in body and mind
+brow|the hair above your eyes
+impairment|weakness in a part of the body or mind
+backbone|the most important part that holds a group together
+dysfunction|when a part of the body does not work normally
+hepatitis|a disease of the liver
+starvation|suffering or death from having no food
+influenza|a common illness with fever and aches; the flu
+vascular|about the tubes that carry blood
+hangover|a headache and sick feeling after drinking too much
+pulmonary|about the lungs
+exhaustion|the state of being extremely tired
+fingerprint|the mark made by the end of your finger
+implant|something put inside the body by doctors
+digestive|about breaking down food in the body
+epilepsy|an illness of the brain that causes sudden fits
+fetal|about a baby before it is born
+barefoot|without shoes or socks
+pelvic|about the bones around your hips
+amnesia|loss of memory
+itchy|making you want to scratch
+agility|the ability to move quickly and easily
+hairstyle|the way your hair is cut and arranged
+hormonal|about chemicals in the body that control growth
+measles|an illness that gives children red spots
+prognosis|a doctor's opinion of how an illness will develop
+intestinal|about the long tube below the stomach
+miscarriage|losing a baby before it is ready to be born
+skincare|looking after your skin
+biopsy|taking a small piece of tissue to test for illness
+dehydration|not having enough water in the body
+urinary|about passing water out of the body
+gastric|about the stomach
+cholera|a serious disease caught from dirty water
+congenital|present since birth
+detox|a time when you remove harmful things from your body
+lipid|a fat in the body
+physique|the size and shape of a person's body
+regimen|a fixed plan of diet, exercise or medicine
+dialysis|cleaning the blood with a machine when kidneys fail
+smallpox|a deadly disease that leaves marks on the skin
+auditory|about hearing
+collagen|a protein that keeps skin firm
+moustache|hair growing above a man's top lip
+meningitis|a serious illness that affects the brain
+recurrence|when an illness comes back
+slumber|sleep
+stiffness|being hard to bend or move
+aerobic|exercise that makes your heart and lungs work hard
+clot|a thick lump of blood
+remission|a time when an illness gets better for a while
+hydration|having enough water in your body
+infertility|not being able to have children
+melanoma|a dangerous skin cancer
+sleepless|without any sleep
+autoimmune|when the body attacks its own healthy cells
+anorexia|an illness where a person will not eat enough
+incision|a cut made by a doctor during an operation
+menopause|the time when a woman stops having monthly periods
+painless|causing no pain
+vertigo|a feeling that everything is spinning around you
+cancerous|having cancer
+unwell|ill or sick
+intravenous|put directly into a vein
+puffy|looking swollen
+retinal|about the back part of the eye that senses light
+transfusion|giving blood from one person to another
+cyst|a small bag of liquid that grows in the body
+inhalation|breathing in
+acupuncture|treatment with thin needles put into the skin
+respiration|the process of breathing
+symptomatic|showing signs of an illness
+developer|a person or company that makes new software or buildings
+defender|a player whose job is to stop the other team scoring
+trainer|a person who teaches skills, often in sport
+adviser|a person whose job is to give advice
+seller|a person who offers something for money
+infantry|soldiers who fight on foot
+nominee|a person chosen as a candidate for a prize or job
+treasurer|the person who looks after a group's money
+alcoholic|a person who cannot stop drinking alcohol
+nationalist|a person who wants their country to rule itself
+builder|a person whose job is to make houses
+cowboy|a man who looks after cattle on horseback
+supplier|a company that provides goods to other firms
+murderer|a person who has killed someone on purpose
+cavalry|soldiers who fight on horses
+capitalist|a person who uses money to make more money
+constable|a police officer of the lowest rank
+banker|a person with an important job in finance
+incumbent|the person who holds an office at the moment
+presenter|a person who introduces a TV or radio show
+viewer|a person who watches TV
+duchess|the wife of a duke
+retailer|a shop or company that sells goods to the public
+ethnicity|belonging to a group with a shared culture
+proxy|a person allowed to act or vote for someone else
+magistrate|an official who judges small crimes in court
+footballer|a person who plays soccer, often as a job
+solicitor|a lawyer who gives advice and prepares documents
+protector|a person or thing that keeps others safe
+hacker|a person who breaks into computer systems
+distributor|a company that supplies goods to shops
+electorate|all the people allowed to vote
+lender|a bank or person that gives loans
+broadcaster|a person who speaks on radio or TV
+atheist|a person who believes there is no God
+heavyweight|an important and powerful person
+bloc|a group of countries working together
+caste|a social class in Hindu society
+consul|an official who helps their citizens in a foreign city
+grad|a person who has finished a university course
+mystic|a person who seeks truth through spiritual means
+weaver|a person who makes cloth
+attacker|a person who uses violence against someone
+buff|a person who knows a lot about a hobby
+muse|a person who gives an artist ideas
+adolescent|a young person between a child and an adult
+columnist|a journalist who writes a regular article
+constituent|a voter in a particular area
+foreman|a worker who is in charge of other workers
+fraternity|a club for male university students
+programmer|a person who writes computer programs
+promoter|a person who organises concerts or sports events
+educator|a teacher or person who works in education
+academia|the world of universities and research
+fugitive|a person who is running away from the police
+runaway|a young person who has left home
+insurer|a company that sells cover against loss or damage
+planner|a person who designs how towns should grow
+vanguard|the leading group in new ideas or change
+examiner|a person who marks exams
+listener|a person who hears a radio programme
+subscriber|a person who pays to receive a service regularly
+wrestler|a person who fights by holding and throwing others
+fandom|all the fans of a show or star
+interviewer|a person who asks the questions at a meeting for a job
+parenthood|being a mother or father
+syndicate|a group of companies or people working together
+ancestry|the people in your family who lived long ago
+bartender|a person who serves drinks in a bar
+handler|a person who trains or controls an animal
+swimmer|a person who swims
+teller|a bank worker who takes and gives out money
+traveller|a person who goes on a journey
+bidder|a person who offers money at an auction
+bowler|the cricket player who throws the ball
+contestant|a person who takes part in a competition
+goalie|the player who stops the ball going into the net
+pianist|a person who plays the piano
+nobility|the people of the highest social class
+reviewer|a person who writes opinions of books or films
+enthusiast|a person who is very interested in something
+illustrator|a person who draws pictures for books
+lineage|the line of your family over many years
+manpower|the number of workers available
+underworld|people involved in serious crime
+hypocrite|a person who says one thing but does another
+newcomer|a person who has recently arrived
+stylist|a person who cuts hair or chooses clothes
+vocalist|a singer in a band
+robber|a person who steals using force
+thinker|a person known for deep and new ideas
+advertiser|a company that pays to show its products
+surrogate|a woman who carries a baby for another couple
+barrister|a lawyer who speaks in higher courts
+firefighter|a person whose job is to put out fires
+motherhood|being a mother
+registrar|an official who keeps records at a university
+smoker|a person who uses cigarettes
+umpire|a person who makes sure the rules are followed in sport
+mastermind|a person who plans a clever scheme
+purchaser|a person who buys something
+breeder|a person who raises animals to sell
+cadet|a young person training to join the army or police
+genealogy|the study of family history
+golfer|a person who hits a small ball into holes on a course
+learner|a person who is studying something
+burglar|a person who breaks into houses to steal
+nemesis|an enemy you can never beat
+carver|a person who cuts shapes in wood or stone
+cheerleader|a person who shouts and dances to support a team
+informant|a person who gives secret facts to the police
+millennial|a person born in the 1980s or 1990s
+voyager|a person who goes on long trips by sea
+antagonist|the bad character in a story
+eyewitness|a person who saw a crime happen
+gunman|a man who uses a gun to commit a crime
+outpatient|a person who visits hospital but does not stay
+perpetrator|a person who commits a crime
+skater|a person who moves on ice in special boots
+surfer|a person who rides waves on a board
+exporter|a company that sells goods to other countries
+navigator|a person who plans the route of a ship or plane
+barbarian|a wild and cruel person
+dreamer|a person with ideas that are not practical
+maestro|a great musician or artist
+realist|a person who accepts things as they are
+recruiter|a person who finds new workers for companies
+strategist|a person skilled at making plans
+borrower|a person who takes a loan
+cricketer|a person who plays a bat-and-ball game popular in England
+headmaster|a man in charge of a school
+troupe|a group of actors or dancers who travel
+paternity|being the father of a child
+sidekick|a helper who follows someone around
+tester|a person whose job is to check if things work
+fireman|a man who puts out fires
+homeowner|a person who owns their house
+legislator|a member of a group that makes laws
+newbie|a person who is new to something
+seaman|a sailor, often of low rank, who works on a ship
+skier|a person who slides down snow on long boards
+admirer|a person who likes and respects someone
+gentry|rich people who own land
+shopper|a person who buys things in stores
+sprinter|a runner in short fast races
+adventurer|a person who looks for exciting journeys
+drinker|a person who often has alcohol
+sitter|a person who looks after children for a short time
+undertaker|a person whose job is to arrange funerals
+absentee|a person who is not where they should be
+chauffeur|a person paid to drive someone's car
+climber|a person who goes up mountains
+felon|a person found guilty of a serious crime
+valet|a hotel worker who parks guests' cars
+inpatient|a person who stays in hospital for treatment
+sportsman|a man who plays sport
+auctioneer|the person who runs a sale where people bid
+chairperson|the person in charge of a meeting
+clique|a small group of friends who keep others out
+naturalist|a person who studies plants and animals
+pathologist|a doctor who studies diseases and finds causes of death
+claimant|a person who asks for money from the state or in court
+ombudsman|an official who deals with complaints against companies
+concierge|a hotel worker who helps guests with bookings
+grandchild|a child of your son or daughter
+kinship|being related by family
+negotiator|a person who talks with others to reach a deal
+reformer|a person who works to improve society
+custodian|a person who looks after a building or collection
+readership|the people who read a newspaper or magazine
+separatist|a person who wants a region to leave a country
+spokeswoman|a woman who speaks for a group
+caregiver|a person who looks after a sick or old person
+protester|a person who shows strong public disagreement
+landowner|a person who owns land
+humankind|all people
+debtor|a person who owes money
+dropout|a person who leaves school before finishing
+importer|a company that brings goods into a country to sell
+motorist|a person who drives a car
+lifeguard|a person whose job is to save swimmers in danger
+storyteller|a person who tells tales
+economics|the study of money, trade and jobs
+healthcare|the service of looking after people's health
+enforcement|making sure that a law is obeyed
+evaluation|judging how good or useful something is
+laser|a narrow, strong beam of light
+electronics|devices like phones and computers
+graphics|pictures and designs, often on a computer
+compliance|obeying a rule or law
+legislature|the group of people who make a country's laws
+controller|a device used to play video games
+mechanics|the science of movement and force
+reminder|something that helps you remember
+governance|the way a country or company is run
+receiver|the part of a phone you hold to your ear
+setup|the way things are arranged and organised
+dynamics|the way people or things affect each other
+nomination|the act of choosing someone for a prize or job
+quantum|about the behaviour of the smallest parts of matter
+submission|the act of giving in work for others to judge
+prosecution|taking someone to court for a crime
+orientation|training for new students or workers
+withdrawal|taking money out of a bank
+placement|a period of work that is part of a course
+fusion|joining two or more things into one
+resignation|leaving your job by choice
+workout|a session of physical exercise
+harassment|annoying or threatening someone again and again
+upside|the good part of a situation
+void|a large empty space
+coup|a sudden, illegal taking of power by force
+drone|a small plane with no pilot, controlled from far away
+vinyl|old-style music records
+sequel|a film or book that continues an earlier one
+merger|joining two companies into one
+succession|one coming after another
+wholesale|selling goods in large amounts to shops
+automobile|a car
+scam|a clever trick to get money
+elimination|removing something completely
+litigation|taking a case to court
+overhead|the regular costs of running a business
+soundtrack|the music of a film
+reliability|being trusted to work well
+subsidiary|a company owned by a larger one
+deployment|sending soldiers or tools to where they are needed
+liberation|being set free
+nickname|a friendly name used instead of your real name
+discretion|the freedom to decide what to do
+shuttle|a bus or plane that goes between two places often
+farewell|saying goodbye
+leverage|power to influence people
+node|a point where lines or connections meet
+processor|the part of a computer that does the work
+correlation|a link between two things that change together
+fellowship|money paid to a scholar to do research
+fringe|the outer edge of something
+judiciary|all the judges of a country
+logistics|planning how goods are moved and stored
+compilation|a collection of songs or writings in one place
+genesis|the very beginning of something
+proposition|an idea or plan offered for others to consider
+genetics|the study of how features pass from parents to children
+synthesis|combining parts into a whole
+treason|the crime of helping your country's enemies
+activation|making something start working
+discourse|serious talk or writing on a subject
+dominance|power over others
+imagery|pictures painted in words in a poem or story
+manners|polite ways of behaving
+oversight|a mistake made by not noticing something
+reactor|a large machine that makes nuclear power
+startup|a new small company
+athletics|sports like running and jumping
+citation|words taken from a book or writer to support a point
+compression|making something smaller by pressing it
+dividend|part of a company's profit paid to shareholders
+methodology|the set of methods used in research
+redemption|being saved from sin or evil
+replay|a game played again, or a scene shown again
+memo|a short note sent inside an office
+taxation|the system of collecting money for the state
+extraction|taking something out, like oil from the ground
+font|a style of printed letters
+tutorial|a small class with a teacher
+oppression|cruel and unfair control of people
+pitcher|a large jug for water
+probation|a period of testing a new worker
+remake|a new version of an old film
+alignment|being in a straight line
+notch|a small V-shaped cut
+parole|letting a prisoner go free early
+phantom|a ghost
+sociology|the study of society
+traction|the grip of a wheel on the road
+variant|a different form of something
+audition|a short test performance for an actor or singer
+felony|a serious crime
+packet|a small paper or plastic container
+stereo|equipment that plays music through two speakers
+velvet|soft cloth with a thick smooth surface
+catalyst|something that causes an important change
+designation|an official name or title
+geology|the study of rocks and the earth
+payroll|the list of workers a company pays
+conception|an idea of what something is like
+eligibility|the right to have or do something
+endorsement|public approval or support
+liner|a large ship that carries passengers
+spacecraft|a vehicle that travels into space
+allocation|an amount given for a purpose
+baggage|bags you take on a journey
+groove|a long narrow cut in a surface
+renovation|repairing an old building
+aerospace|the industry that builds planes and spaceships
+contention|disagreement
+covenant|a serious formal promise or agreement
+termination|ending something
+apparel|clothing
+arbitration|settling a dispute with a neutral judge
+pixel|one tiny dot of colour on a screen
+sponsorship|money given to support an event

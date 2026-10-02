@@ -23,7 +23,7 @@ ROOT = os.path.join(HERE, '..')
 MAX_LEN = 70
 import glob
 # en1.txt、en3_01.txt、en3_02.txt …：文件名里 en 后面那个数字就是难度，一档可以拆成好几个文件
-FILES = [(os.path.basename(f), int(os.path.basename(f)[2])) for f in sorted(glob.glob(os.path.join(HERE, 'en[1-5]*.txt')))]
+FILES = [(os.path.basename(f), int(os.path.basename(f)[2])) for f in sorted(glob.glob(os.path.join(HERE, 'en[1-6]*.txt')))]
 
 # 词库：借 node 把 words-a1.js 跑一遍，拿 [英文, 中文, 类别, 难度, 词性]
 js = ("const vm=require('vm'),fs=require('fs');const c={window:{}};vm.createContext(c);"
@@ -85,11 +85,11 @@ if errs:
 by_lv = {}
 for w in out:
     by_lv[LV[w]] = by_lv.get(LV[w], 0) + 1
-total = {lv: sum(1 for w in WORDS if w[3] == lv) for lv in range(1, 6)}
+total = {lv: sum(1 for w in WORDS if w[3] == lv) for lv in range(1, 7)}
 head = ('/* 「哪一句在说这个词」那一题的英文释义句（用户 2026-09-28）。\n'
         '   ⚠️ 这个文件是 def-words/build.py 生成的，别手改 —— 改 def-words/en*.txt 再跑一遍。\n'
         '   没写释义的词不出这种题（game.js 的 defOf()）。按词做键，不按下标，所以不碰存档码。\n'
-        '   覆盖：' + ' / '.join(f'难度{lv} {by_lv.get(lv, 0)}/{total[lv]}' for lv in range(1, 6)) + ' */\n')
+        '   覆盖：' + ' / '.join(f'难度{lv} {by_lv.get(lv, 0)}/{total[lv]}' for lv in range(1, 7)) + ' */\n')
 body = 'var DEFS_EN = {\n' + ',\n'.join(f'  {json.dumps(w)}: {json.dumps(d, ensure_ascii=False)}' for w, d in out.items()) + '\n};\n'
 body += '/* 意思太近、不许出在同一道题里的组（def-words/apart.txt）*/\nvar DEFS_APART = ' + json.dumps(apart) + ';\n'
 open(os.path.join(ROOT, 'defs-en.js'), 'w', encoding='utf-8').write(head + body)

@@ -2289,7 +2289,8 @@ function renderCombo(){
 /* **前四章都是一章一个难度**（第一章 A1、第二章 A2、第三章 B1、第四章 B2）——
    用户定的「每章词不要重复」。以前是一章里从 A1 混到 B1，那样两章必然重叠。
    难度写在 content.js 的 CHAPTERS[].wordLv 上。
-   ⚠️ **第五章「无尽」的 wordLv 是数组 [3,4,5]**（用户 2026-09）：B1 / B2 / B2–C1 三档一起出。
+   ⚠️ **第五章「无尽」的 wordLv 是数组 [3,4,5,6]**（用户 2026-09 三档，2026-10-02 加了 6 = 雅思）：B1 / B2 / B2–C1 / 雅思一起出，
+      **C1 那一档前 25 层不出**（见下面的 quizLvs()）。
    所以取词这一路全部改成了**按一组难度**算 —— 单个数字会被包成一个一元数组，
    前四章的行为一个字没变。想读「当前这一章有哪几档词」只能走 chapterLvs()。*/
 function chapterLvs(ch){
@@ -2297,10 +2298,22 @@ function chapterLvs(ch){
   if(Array.isArray(v)) return v.length ? v.slice() : [1];
   return [v || 1];
 }
+/* **这一层**真正会出的那几档（用户 2026-10-02：「无尽前 25 关不会出现 C1 词汇」）——
+   章节上挂 lateLv（最难那一档：英语 / 西语 C1、日语 N1、中文 HSK 6）+ lateFrom（26），没到那一层就把那一档拿掉。
+   出题（scopeByLevel）和 Boss 弱点（chapterPos）走它；遇见百分比、无尽全遇到过那两处还是按整章算（chapterLvs）。
+   纯净学习模式永远是第 1 层，不卡（不然它一辈子出不了 C1）。*/
+function quizLvs(){
+  const lvs = chapterLvs();
+  if(CH && CH.lateLv && G && !(P && P.study) && G.floor < (CH.lateFrom || 1)){
+    const out = lvs.filter(function(l){ return l !== CH.lateLv; });
+    if(out.length) return out;
+  }
+  return lvs;
+}
 /* 这一章**真的有词**的词性（Boss 弱点只在这里面挑，用户 2026-09 从「按类别」改过来的）。
    每个难度的每个词性都补到了 ≥6（词库文件顶上的规矩），所以正常不会退回全表。*/
 function chapterPos(){
-  const lvs = chapterLvs(), out = [];
+  const lvs = quizLvs(), out = [];
   Object.keys(BYPOS).forEach(function(p){
     if(BYPOS[p].filter(function(w){ return lvs.indexOf(w.lv || 1) >= 0; }).length >= 6) out.push(p);
   });
@@ -2324,7 +2337,7 @@ function scopeToLevels(pool, want){
   return out.length >= 6 ? out : pool;
 }
 function scopeByLevel(pool){
-  return scopeToLevels(pool, chapterLvs());
+  return scopeToLevels(pool, quizLvs());
 }
 /* **一趟之内答对过的词不再出第二次**（用户 2026-09）——「除了答错的」：
    答对就记进 `P.used`，答错（或先对后错）就从里面拿掉，于是错过的词照样会再来找你。
@@ -6724,7 +6737,7 @@ function renderPractice(){
   if(mv && !mv.hidden) renderModeList();
 }
 /* 这一章的词见过多少（用户 2026-09 要在洞窟的卡片上显示）——
-   分母是这一章那几档难度的全部词（BYLV[难度]，无尽章是 3+4+5 三桶加起来），
+   分母是这一章那几档难度的全部词（BYLV[难度]，无尽章是 3+4+5+6 四桶加起来），
    分子是**熟练度表 LEX 里已经有记录**的那些，
    也就是这个存档真的遇到过的。返回 0~100 的整数。
    ⚠️ 老存档里可能留着已经删掉的词（比如整类删掉的虚词），所以要过一遍 WMAP。*/
