@@ -689,6 +689,21 @@ var HOLY_ART = (function(){
       '<rect x="15.5" y="17" width="17" height="14" rx="7" stroke="' + o + '"/>' +
       '<rect x="28" y="17" width="17" height="14" rx="7" stroke="' + o + '"/></g>' +
       '<g fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="17" width="17" height="14" rx="7"/>' +
-      '<rect x="15.5" y="17" width="17" height="14" rx="7"/><rect x="28" y="17" width="17" height="14" rx="7"/></g>')
+      '<rect x="15.5" y="17" width="17" height="14" rx="7"/><rect x="28" y="17" width="17" height="14" rx="7"/></g>'),
+    /* 黄金圣像（经济流，2026-10-02）：一摞金币，顶上一颗星 */
+    goldidol: svg(
+      '<ellipse cx="24" cy="40" rx="14" ry="4.5" fill="currentColor" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<path d="M10 40v-5M38 40v-5" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<ellipse cx="24" cy="35" rx="14" ry="4.5" fill="currentColor" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<path d="M12 35v-5M36 35v-5" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<ellipse cx="24" cy="30" rx="12" ry="4" fill="currentColor" stroke="' + o + '" stroke-width="1.5"/>' +
+      '<ellipse cx="24" cy="30" rx="6" ry="1.8" fill="none" stroke="' + o + '" stroke-width="1" opacity=".6"/>' +
+      '<path d="M24 4l3 6.5 7 .8-5.2 4.8 1.5 7-6.3-3.6-6.3 3.6 1.5-7L14 11.3l7-.8z" fill="currentColor" stroke="' + o + '" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M21 11l2-3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>'),
+    /* 风暴之翼（攻击次数流）：一只翅膀，三道风刃 */
+    storm: svg(
+      '<path d="M6 34C10 18 22 8 40 6c-4 4-6 8-6 12 4-1 7-1 9 0-5 3-8 7-9 11 3 0 5 1 6 2-8 4-18 6-34 3z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M12 31c6-9 14-15 24-19M14 33c7-4 14-6 22-6" stroke="' + o + '" stroke-width="1.2" fill="none" opacity=".55"/>' +
+      '<path d="M8 41h14M14 45h16M4 37h8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>')
   };
 })();

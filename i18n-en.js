@@ -1177,7 +1177,7 @@ var RELIC_EN = {
 ],
 "crush": [
 "Skullcrusher",
-"Crits ignore armor; crit damage +350% (×2 → ×5.5)",
+"Crits ignore armor; crit chance +20%",
 "The shell's use ends here."
 ],
 "spare": [
@@ -2151,7 +2151,22 @@ var RELIC_EN = {
 "Sky Pillar",
 "Max HP + 2.5× this floor's monster attack; each new floor: restore 15% max HP",
 "The pillar holding up the sky doesn't fall first."
-]
+],
+/* 第十七批（2026-10-02）*/
+"goldhand": ["Midas Hand", "Gold from defeated enemies +50%", "Whatever it touches sheds a little gold dust."],
+"compound": ["Compound Interest", "Each new floor: gain 10% of your gold as interest (max floor ×20)", "Money left alone grows on its own."],
+"goldspear": ["Golden Spear", "Extra damage + 5% of your gold", "The tip is real gold, and so is the pain."],
+"treasurebowl": ["Treasure Bowl", "Gold income +100%; every 500 gold you carry: damage taken −2% (max −20%)", "The higher the coins pile, the more they shield you."],
+"gale": ["Gale", "Correct answers: 20% chance to strike 1 more time", "The wind arrives first; the blade follows."],
+"twinblade": ["Twin Blades", "Correct answers strike 1 more time (that strike deals 35%)", "As one blade lands, the other is already on its way."],
+"lingering": ["Lingering Echo", "Follow-up strikes deal +40% damage; each follow-up restores 1% max HP", "The blade stops; its echo keeps cutting."],
+"chainstab": ["Chain Thrust", "Correct answers strike 2 more times (25% each)", "Three thrusts as one — no telling which one killed."],
+"hammers": ["Thousand Hammers", "Damage + 50% of your level", "Every level, a thousand more strokes on the anvil."],
+"apex": ["Keen Apex", "Damage + 50% of ATK", "The thinnest line of the edge is everything."],
+"ironcutter": ["Ironcutter", "Extra damage + 40% of your level", "Train long enough and iron splits in one cut."],
+"breakarmy": ["Army Breaker", "Extra damage + 40% of ATK", "One man charges in like a whole army."],
+"warcry": ["War Cry", "Damage +35%", "The shout puts thirty percent more into the arm."],
+"torrent": ["Raging Torrent", "Damage +50%", "Wave after wave, nothing holds."]
 };
 
 /* 数据表：按 id 换掉名字和说明（content.js 本身一个字不动 —— 战场那边还要读中文）。*/
@@ -2422,12 +2437,14 @@ var HOLY_EN = {
   scripture: ["Scripture of Words", "Damage and max HP +30%; +5% more each for every 50 words you've mastered on this save (up to +300%)", "Every page you've learned is written inside."],
   hourglass: ["Hourglass of Return", "3 times per floor: a wrong answer rewinds — no HP lost, combo kept (the word still counts as missed)", "For a moment the sand runs upward, and nothing has happened yet."],
   /* 流派圣器（2026-10-02）：第 4 项是流派名 */
-  grail: ["Blood Grail", "Max HP +30%; extra damage + 20% of max HP", "The fuller the cup, the hotter the splash.", "HP build"],
+  grail: ["Blood Grail", "Max HP +50%; every 10 kills this run: max HP +2", "The fuller the cup, the hotter the splash.", "HP build"],
   bulwark: ["Undying Plate", "Armor +10, then ×1.5; extra damage + armor ×1", "Plate upon plate, until a wall comes crashing forward.", "Armor build"],
   warblade: ["Blade of the War God", "ATK ×1.5; armor + 15% of ATK", "The best guard is a foe too afraid to swing.", "ATK build"],
-  fateeye: ["Eye of Fate", "Crit chance +20%, crit damage +100%; each crit this floor adds +10% more crit damage (up to +200%)", "It saw the gap long ago, and waits for your blade.", "Crit build"],
-  saintshield: ["Saint's Shield", "Each floor gain a shield of 40% max HP; extra damage + 30% of current shield", "What you block and what you strike with are the same slab.", "Shield build"],
-  eternal: ["Eternal Chain", "Combo damage bonus ×5; correct answers add 1 more combo; wrong answers only halve combo", "Link by link — where it breaks, it grows back.", "Combo build"]
+  fateeye: ["Eye of Fate", "Crit chance +20%, crit damage +100%; each crit: crit damage +1% (at most +2% per floor)", "It saw the gap long ago, and waits for your blade.", "Crit build"],
+  saintshield: ["Saint's Shield", "Each floor gain a shield of 20% max HP; extra damage + 10% of current shield", "What you block and what you strike with are the same slab.", "Shield build"],
+  eternal: ["Eternal Chain", "Combo damage bonus ×5; combo gained from correct answers ×2; wrong answers only halve combo", "Link by link — where it breaks, it grows back.", "Combo build"],
+  goldidol: ["Golden Idol", "Gold income +100%; each new floor: gain floor ×10 gold; every 100 gold you carry: damage +3%", "It says nothing, only grows brighter.", "Gold build"],
+  storm: ["Wings of the Storm", "Correct answers strike 2 more times (40% each); all follow-up strikes deal +25%", "One beat of the wing, a rain of blades.", "Multi-hit build"]
 };
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
 var DIFF_EN = {A:["Tier A", "Original", "No ATK bonus", "The game as it was built"],

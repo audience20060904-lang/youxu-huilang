@@ -989,7 +989,7 @@ function reindex(){
 /* 千面：进一波就从传奇里借 2 件身上没有的（行囊 / 集齐不借），这一波有效 */
 function faceRoll(){
   if(P.relics.indexOf("thousandface") < 0){ if(P.face){ withMaxHp(function(){ P.face = null; reindex(); }); } return; }
-  var pool = RELICS.filter(function(r){ return r.r === 3 && P.relics.indexOf(r.id) < 0 && FACE_BAN.indexOf(r.id) < 0; });
+  var pool = RELICS.filter(function(r){ return r.r === 3 && !r.nobf && P.relics.indexOf(r.id) < 0 && FACE_BAN.indexOf(r.id) < 0; });
   var ids = [];
   while(ids.length < FACE_N && pool.length) ids.push(pool.splice(ri(0, pool.length - 1), 1)[0].id);
   withMaxHp(function(){ P.face = {w:P.wave, ids:ids}; reindex(); });
@@ -1158,7 +1158,7 @@ function bstats(){
   if(has("edge"))  s.critMult += 0.5;
   if(has("clean")) s.critMult += 0.4;                               // 战场改写
   if(has("maul"))  s.critMult += 1.0;
-  if(has("crush")) s.critMult += 3.5;
+  if(has("crush")) s.crit += 20;                                     // 碎颅：暴击率 +20（2026-10-02 用户从「暴击伤害 +350%」改的）
   if(has("boom"))  s.critMult += 1.2;                                // 战场改写
 
   /* --- ④ 加法：护甲 --- */
@@ -6669,6 +6669,7 @@ function relicPool(rar){
   var out = [], i, r;
   for(i = 0; i < RELICS.length; i++){ r = RELICS[i];
     if(has(r.id)) continue;
+    if(r.nobf) continue;                       // 第十七批（地牢 2026-10-02）：只在地牢出现，战场还没做映射
     if(rar !== undefined && r.r !== rar) continue;
     out.push(r); }
   return out;
