@@ -963,6 +963,20 @@ a.place{text-decoration:none}
 .bslot.armed{border-color:var(--torch-deep);background:#F6E6C4}
 .bslot.armed .bn,.bslot.armed .bgo{color:var(--torch-deep)}
 .bslot.set{border-left:3px solid var(--torch-deep)}
+/* 偏爱那一行：槽位 + 右边一颗定宽的「升级」（三行：等级 / 现在的概率 / 下一级的价钱），点完只换字不变形 */
+.brow{display:flex;gap:6px;align-items:stretch}
+.brow .bslot{flex:1;min-width:0;width:auto}
+.bup{flex:none;width:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  border:1px solid var(--edge);background:var(--stone-2);border-radius:3px;padding:4px 2px;cursor:pointer;
+  font-family:var(--mono);color:var(--torch-deep);line-height:1.15}
+.bup b{font-size:12px;font-weight:700}
+.bup em{font-style:normal;font-size:10.5px;color:var(--bone);white-space:nowrap}
+.bup i{font-style:normal;font-size:10.5px;color:var(--torch);white-space:nowrap}
+.bup:disabled{opacity:.55;cursor:default}
+.bup.max{opacity:1;border-color:var(--torch-deep);background:#F6E6C4}
+.bup.max i{color:var(--torch-deep)}
+.bup.armed{border-color:var(--torch-deep);background:#F6E6C4}
+@media (hover:hover){.bup:hover:not(:disabled){border-color:var(--torch-deep);background:#FDF6E7}}
 /* 挑遗物那一页：一个品质最多四十几张卡，列表自己滚 */
 
 .relic.cur{border-color:var(--torch-deep);background:#F6E6C4}

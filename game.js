@@ -4617,7 +4617,7 @@ function resolveAltar(pay){
     if(hasRelic("shrine")){
       const picks = [];
       for(let g = 0; g < 30 && picks.length < SHRINE_PICK; g++){
-        const c = rollRelic();
+        const c = rollRelic(null, 0, picks);
         if(c && picks.indexOf(c) < 0) picks.push(c);
       }
       if(picks.length > 1){
@@ -4922,7 +4922,7 @@ function closeChest(){
     if(spelled && hasRelic("key")){
       const picks = [];
       for(let i=0; i<2; i++){
-        const c = rollRelic(null, boxUp);
+        const c = rollRelic(null, boxUp, picks);
         if(c && picks.indexOf(c) < 0) picks.push(c);
       }
       if(picks.length > 1){
@@ -4956,7 +4956,7 @@ function rollShopStock(){
   for(let i=0;i<5;i++){
     let r = null;
     for(let g=0; g<30 && !r; g++){
-      const c = rollRelic();
+      const c = rollRelic(null, 0, stock.map(function(x){ return x.relic; }));
       if(c && !stock.some(function(x){ return x.relic === c; })) r = c;
     }
     if(!r) break;
@@ -5213,8 +5213,9 @@ function rarityWeights(floor){
      无尽章没有底，再往深处抬就是白送传奇。神圣照旧不掉，只能靠合成/游商。*/
   return rarWt(7, 9, 3, 1, 0);                    // 普通 35% · 稀有 45% · 史诗 15% · 传奇 5%
 }
-/* 按当前层数抽一件还没拿过的遗物；那个品质抽干了就逐级往下找 */
-function rollRelic(floor, up){
+/* 按当前层数抽一件还没拿过的遗物；那个品质抽干了就逐级往下找。
+   skip：这一批已经摆出来的（五选一 / 游商 / 神龛 / 钥匙），不再抽它们 */
+function rollRelic(floor, up, skip){
   let want = pick(rarityWeights(floor == null ? (G ? G.floor : 1) : floor));
   /* 秘匣（第十二批）：箱底那件高一档（up = 1）。跟吉兆一个规矩，抬不到神圣。*/
   if(up && want < 3) want++;
@@ -5222,7 +5223,7 @@ function rollRelic(floor, up){
      ⚠️ 抬不到神圣 —— 那一档按设计恒为 0（只能靠合成和游商），
      所以门槛是 want < 3，跟祝福「偏爱」的神圣槽是同一个道理。*/
   if(hasRelic("omen") && want < 3 && luck(OMEN_RATE, "omen")) want++;
-  const pool = relicPool();
+  const pool = relicPool().filter(function(x){ return !skip || skip.indexOf(x) < 0; });
   if(!pool.length) return null;
   for(let d = 0; d < 5; d++){
     for(const r of [want - d, want + d]){
@@ -5548,7 +5549,7 @@ function offerRelics(){
   for(let i = 0; i < RELIC_OFFER_N; i++){
     let r = null;
     for(let g = 0; g < 30 && !r; g++){
-      const c = rollRelic();
+      const c = rollRelic(null, 0, picks);
       if(c && picks.indexOf(c) < 0) r = c;
     }
     if(r) picks.push(r);
@@ -5975,7 +5976,7 @@ function addGems(n){
    一共 **10 个槽位 = 偏爱 5 + 封印 5**，每一组**每个品质各一个**（普通/稀有/史诗/传奇/神圣），
    所以一个品质最多同时有「偏爱一件 + 封印一件」。
 
-   - **偏爱**：那件遗物在**同品质的候选里权重 ×BLESS_FAV_X（300%）**，
+   - **偏爱**：那件遗物在**同品质的候选里权重 ×BLESS_FAV_XS[等级]**（1 级 300%，能花宝石升到 5 级 = 同品质里必出），
      **本局拿到过一次就歇了**（P.blessGot 记着，卖掉也不会再涨回来）。
      ⚠️ 只改「同品质里抽哪一件」，**不动 rarityWeights 那张掉率表** ——
      所以神圣那个偏爱槽在掉落里没用（神圣本来就不掉），它吃的是**合成候选和游商**。
@@ -5995,7 +5996,9 @@ function fixBless(b){
   if(!b || typeof b !== "object") return out;
   ["fav", "ban"].forEach(function(k){
     for(let r = 0; r < 5; r++){
-      if(b.open && b.open[k] && b.open[k][r]) out.open[k][r] = 1;
+      /* open 存的就是等级：封印恒为 1，偏爱 1~BLESS_LV_MAX（老档只有 1） */
+      const o = b.open && b.open[k] ? b.open[k][r] : 0;
+      if(o) out.open[k][r] = k === "fav" ? Math.max(1, Math.min(BLESS_LV_MAX, Math.floor(+o) || 1)) : 1;
       const id = (b.pick && b.pick[k] && b.pick[k][r]) || "";
       const R = id ? relicById(id) : null;
       if(R && (R.r || 0) === r && out.open[k][r]) out.pick[k][r] = id;
@@ -6018,18 +6021,28 @@ function blessHas(kind, id){
 }
 /* 封印：这一局根本不出现 */
 function blessBanned(id){ return blessHas("ban", id); }
-/* 偏爱：还在生效吗 —— 本局已经拿到过一次就歇了（P.blessGot） */
+/* 偏爱槽的等级（没开 = 0）—— open 数组里存的就是它 */
+function blessLv(rar){ return blessOpen("fav", rar) ? (TOWN.bless.open.fav[rar] || 1) : 0; }
+/* 偏爱：还在生效的话返回它那个槽位的等级，不生效返回 0 ——
+   本局已经拿到过一次就歇了（P.blessGot） */
 function blessFavored(id){
-  if(!blessHas("fav", id)) return false;
-  return !(P && P.blessGot && P.blessGot.indexOf(id) >= 0);
+  if(!blessHas("fav", id)) return 0;
+  if(P && P.blessGot && P.blessGot.indexOf(id) >= 0) return 0;
+  const R = relicById(id);
+  return R ? blessLv(R.r || 0) : 0;
 }
-/* 从一串遗物里抽一件，偏爱的那件占 BLESS_FAV_X 份。
-   ⚠️ 所有「随机抽一件遗物」的地方都走它，别再直接 pick()。*/
+/* 从一串遗物里抽一件，偏爱的那件按等级占 BLESS_FAV_XS[等级] 份；
+   **满级（BLESS_LV_MAX）的那件只要在这串里就一定是它**（用户 2026-10-02：5 级必出）。
+   ⚠️ 所有「随机抽一件遗物」的地方都走它，别再直接 pick()。
+   ⚠️ 一次要摆好几件的地方（五选一 / 游商 / 神龛 / 钥匙）都给 rollRelic() 传 skip，
+      不然满级那件每次都被抽中、去重循环就只能靠换品质凑，品质分布会被带歪。*/
 function blessPick(list){
   if(!list || !list.length) return null;
+  const must = list.filter(function(r){ return blessFavored(r.id) >= BLESS_LV_MAX; });
+  if(must.length) return pick(must);
   const bag = [];
   list.forEach(function(r){
-    const n = blessFavored(r.id) ? BLESS_FAV_X : 1;
+    const lv = blessFavored(r.id), n = lv ? BLESS_FAV_XS[lv] : 1;
     for(let i = 0; i < n; i++) bag.push(r);
   });
   return pick(bag);
@@ -6059,6 +6072,31 @@ function blessBuy(kind, rar){
   TOWN.bless.open[kind][rar] = 1;
   addGems(-BLESS_SLOT_COST);                          // 它自己 commitPerm()，bless 跟着一起落盘
   renderBless();
+}
+/* 偏爱槽升一级：L → L+1 花 L × BLESS_UP_STEP 宝石（满级返回 0） */
+function blessUpCost(rar){
+  const lv = blessLv(rar);
+  return lv && lv < BLESS_LV_MAX ? lv * BLESS_UP_STEP : 0;
+}
+function blessUp(rar){
+  const c = blessUpCost(rar);
+  if(!c || (TOWN.gem || 0) < c) return;              // 按钮本来就是禁的，这儿再兜一层
+  TOWN.bless.open.fav[rar]++;
+  addGems(-c);                                       // 它自己 commitPerm()
+  renderBless();
+}
+/* 在祝福上一共花了多少宝石（合并存档时比这个，见 mergeData） */
+function blessWorth(b){
+  let n = 0;
+  ["fav", "ban"].forEach(function(k){
+    for(let r = 0; r < 5; r++){
+      const lv = b.open[k][r] || 0;
+      if(!lv) continue;
+      n += BLESS_SLOT_COST;
+      for(let l = 1; l < lv; l++) n += l * BLESS_UP_STEP;
+    }
+  });
+  return n;
 }
 function blessSet(kind, rar, id){
   if(!blessOpen(kind, rar)) return;
@@ -6093,7 +6131,7 @@ function renderBless(){
     const h = document.createElement("div");
     h.className = "eyebrow bhead";
     h.textContent = kind === "fav"
-      ? (T("偏爱 · 同品质里出现概率 ") + (BLESS_FAV_X * 100) + T("%，拿到一次失效"))
+      ? T("偏爱 · 同品质里更常出现，5 级必出，拿到一次失效")
       : T("封印 · 本局永不出现");
     box.appendChild(h);
     for(let rar = 0; rar < 5; rar++){
@@ -6114,7 +6152,26 @@ function renderBless(){
         "<span class=\"bcol\"><b class=\"bn" + (R ? " q" + rar : "") + "\">" + title + "</b>" +
         "<em>" + sub + "</em></span>" +
         "<span class=\"bgo\">" + (open ? "▸" : (armed ? T("确认") : (afford ? T("开启") : T("锁")))) + "</span>";
-      box.appendChild(d);
+      if(kind !== "fav"){ box.appendChild(d); continue; }
+      /* 偏爱那一行右边挂一颗定宽的「升级」（两步确认，跟开槽位一个套路）。
+         没开的槽位它用 visibility 占着位，五行一样宽。*/
+      const row = document.createElement("div");
+      row.className = "brow";
+      row.appendChild(d);
+      const lv = blessLv(rar), cost = blessUpCost(rar), upArmed = blessArmed === ("up:" + rar);
+      const u = document.createElement("button");
+      u.type = "button";
+      u.className = "bup" + (upArmed ? " armed" : "") + (lv >= BLESS_LV_MAX ? " max" : "");
+      u.dataset.up = rar;
+      if(!open) u.style.visibility = "hidden";
+      if(!cost || ((TOWN.gem || 0) < cost && !upArmed)) u.disabled = true;
+      u.innerHTML = "<b>Lv " + (lv || 1) + "</b><em>" +
+        (lv >= BLESS_LV_MAX ? T("必出")
+          : upArmed ? T("再点确认")
+          : (BLESS_FAV_XS[lv || 1] * 100) + "%") + "</em>" +
+        "<i>" + (lv >= BLESS_LV_MAX ? T("满级") : "↑ " + (cost / 10000) + T("万")) + "</i>";
+      row.appendChild(u);
+      box.appendChild(row);
     }
   });
 }
@@ -7737,6 +7794,14 @@ function codeIO(io){
           }
         });
       });
+    },
+    function(){                                            // 偏爱槽的等级（2026-10-02）：开着的偏爱槽各存「等级 − 1」，老码没这段 = 全是 1 级
+      const B = out.town.bless;
+      for(let r = 0; r < 5; r++){
+        if(!B.open.fav[r]) continue;
+        const lv = io.num("bl", E ? (TOWN.bless.open.fav[r] || 1) - 1 : 0) + 1;
+        if(!E) B.open.fav[r] = Math.max(1, Math.min(BLESS_LV_MAX, lv));
+      }
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
@@ -8005,9 +8070,7 @@ function mergeData(o){
   /* 祝福：**整份取开得多的那一边**，不做并集 —— 跟存款同一个道理，
      两边各开一半再并起来，等于一次的钱开出两个槽位。 */
   const inBless = fixBless(o.town && o.town.bless);
-  let inN = 0, myN = blessSlots();
-  ["fav", "ban"].forEach(function(k){ for(let r = 0; r < 5; r++) if(inBless.open[k][r]) inN++; });
-  if(inN > myN) TOWN.bless = inBless;
+  if(blessWorth(inBless) > blessWorth(TOWN.bless)) TOWN.bless = inBless;   // 按花掉的宝石比（开槽 + 升级）
   /* 宝珠：**整份取「在宝珠上花得多」的那一边**（spent = 买 + 刷新 + 强化花掉的宝石累计），
      不做并集 —— 并起来就是一份钱买出两份宝珠。本机的商店货架不动（码里本来也不带）。 */
   if(o.town && o.town.orb){
@@ -8564,6 +8627,15 @@ $("btnBless").addEventListener("click", openBless);
 $("btnCloseBless").addEventListener("click", closeBless);
 /* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */
 $("blessList").addEventListener("click", function(ev){
+  const up = ev.target.closest(".bup");
+  if(up){
+    if(up.disabled) return;
+    const key = "up:" + up.dataset.up;
+    if(blessArmed !== key){ blessArmed = key; renderBless(); return; }
+    blessArmed = "";
+    blessUp(+up.dataset.up);
+    return;
+  }
   const b = ev.target.closest(".bslot");
   if(!b) return;
   const kind = b.dataset.kind, rar = +b.dataset.rar, key = kind + ":" + rar;
