@@ -704,6 +704,20 @@ var HOLY_ART = (function(){
     storm: svg(
       '<path d="M6 34C10 18 22 8 40 6c-4 4-6 8-6 12 4-1 7-1 9 0-5 3-8 7-9 11 3 0 5 1 6 2-8 4-18 6-34 3z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
       '<path d="M12 31c6-9 14-15 24-19M14 33c7-4 14-6 22-6" stroke="' + o + '" stroke-width="1.2" fill="none" opacity=".55"/>' +
-      '<path d="M8 41h14M14 45h16M4 37h8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>')
+      '<path d="M8 41h14M14 45h16M4 37h8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
+    /* 熔铸之心（熔铸流，2026-10-02）：一颗心坐在坩埚里，上面三条火舌 */
+    meltheart: svg(
+      '<path d="M7 26h34l-3 13c-.6 2.6-2.6 4-5.2 4H15.2c-2.6 0-4.6-1.4-5.2-4z" fill="currentColor" stroke="' + o + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M5 26h38" stroke="' + o + '" stroke-width="2.2" stroke-linecap="round"/>' +
+      '<path d="M24 38c-6-4-9-7-9-10.5 0-2.4 1.8-4 4-4 2 0 3.6 1.2 5 3 1.4-1.8 3-3 5-3 2.2 0 4 1.6 4 4 0 3.5-3 6.5-9 10.5z" fill="#fff" opacity=".55"/>' +
+      '<path d="M16 21c-2-4 1-6 0-10 4 2 5 6 3 10M24 20c-2.5-5 1-8-.5-14 5 3 6.5 9 3.5 14M32 21c-2-4 1-6 0-10 4 2 5 6 3 10" fill="currentColor" stroke="' + o + '" stroke-width="1.3" stroke-linejoin="round"/>'),
+    /* 雷霆之匣（雷匣流）：一只方匣，盖子掀开一道缝，里面劈出一道闪电 */
+    thunderbox: svg(
+      '<rect x="7" y="24" width="34" height="18" rx="2.5" fill="currentColor" stroke="' + o + '" stroke-width="1.6"/>' +
+      '<path d="M7 31h34" stroke="' + o + '" stroke-width="1.2" opacity=".6"/>' +
+      '<rect x="20" y="29" width="8" height="5" rx="1" fill="none" stroke="' + o + '" stroke-width="1.3"/>' +
+      '<path d="M6 22l35-6 1 4-35 6z" fill="currentColor" stroke="' + o + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<path d="M27 2l-9 11h6l-5 10 12-13h-6l5-8z" fill="currentColor" stroke="' + o + '" stroke-width="1.4" stroke-linejoin="round"/>' +
+      '<path d="M25 6l-3 4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>')
   };
 })();

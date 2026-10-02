@@ -353,7 +353,7 @@ function newRun(){
         /* 圣器（用户 2026-10-01）：holy = 带着的圣器（最多 HOLY_MAX 件），sanct = 圣光照耀赐福的那件遗物，
            bossKills = 本局打倒过几只 Boss / 守者（殉道者之冠），holyWords = 进层时掌握了几个词（万言圣典），
            trial = 试炼圣骸还差几题。全跟着续玩档。*/
-        holy:[], sanct:null, bossKills:0, holyWords:0, trial:0, eyeStack:0 };
+        holy:[], sanct:null, bossKills:0, holyWords:0, trial:0, eyeStack:0, melted:0, thunder:0 };
   tutPending = false;
   studyOn = false;
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
@@ -505,6 +505,8 @@ function stats(){
   }
   if(holyOn("warblade")){ const d = Math.round(s.atk * HOLY_BLADE_DEF); s.def += d; s.defGear += d; } // 战神之刃：攻击 → 护甲
   if(holyOn("fateeye")) s.crit += HOLY_EYE_CRIT;                                                     // 天命之眼
+  if(holyOn("meltheart") && P.melted)                                                                 // 熔铸之心：每分解过一件 +1%
+    s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + P.melted * HOLY_MELT_HP / 100)));
   return s;
 }
 function statsRaw(){
@@ -3291,6 +3293,21 @@ function answer(btn, ok){
       setTimeout(function(){ floatNum("foe", "-" + chip, "dmg"); }, 260);
       relicLog += T(" <span class=\"sys\">(凿骨 +") + chip + ")</span>";
     }
+    /* 雷霆之匣（圣器 · 雷匣流）：Boss 房里（层间守者 / 章末 Boss / 深渊）第一次答对，把匣子里攒的全部打出去 ——
+       单独一笔，跟凿骨一样不吃百分比、不吃暴击、不减护甲。那一刀已经把它砍倒了就留着，等下一间 Boss 房。*/
+    if(holyOn("thunderbox") && m.boss && m.hp > 0 && (P.thunder || 0) >= 1){
+      const bolt = Math.floor(P.thunder);
+      P.thunder -= bolt;
+      dealt += bolt;
+      if(lastDmgRec) lastDmgRec.more.push(["holy:thunderbox", bolt]);
+      landed += landedOn(m, bolt);
+      coopDealDamage(m, bolt);
+      setTimeout(function(){ floatNum("foe", "-" + bolt, "dmg"); }, 320);
+      relicLog += L(" <span class=\"sys\">(雷霆之匣 +" + bolt + ")</span>", " <span class=\"sys\">(Thunder Box +" + bolt + ")</span>");
+    }
+    /* 打倒小怪（不是 Boss / 守者 / 深渊）时，溢出伤害的 HOLY_THUNDER_PCT 存进匣子（按小数攒，P.thunder 跟着续玩档）*/
+    if(holyOn("thunderbox") && !m.boss && m.hp <= 0 && dealt > landed)
+      P.thunder = (P.thunder || 0) + (dealt - landed) * HOLY_THUNDER_PCT;
     /* 余劲（第十三批）：这一刀把怪砍倒了，溢出的 ×MOMENTUM_X 存进 G.carry，下一场开战先扣（startBattle）。
        联机不做（两条血条 + 服务器判死）；深渊那只打不倒，没有溢出。*/
     if(hasRelic("momentum") && !COOP && m.hp <= 0 && !(m.def && m.def.abyss) && dealt > landed){
@@ -3828,6 +3845,7 @@ function pctSteady(s){
   if(holyOn("scales")) pct += HOLY_SCALE_PCT * Math.max(0, Math.floor(cutCore(s, true)));   // 公义天平：减伤 → 伤害（堆过封顶的那截也算）
   pct += bookPct();                                                                            // 万言圣典
   if(holyOn("goldidol")) pct += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_PCT;    // 黄金圣像：金币 → 伤害
+  if(holyOn("meltheart")) pct += (P.melted || 0) * HOLY_MELT_PCT;                             // 熔铸之心：每分解过一件 +2%
   return pct;
 }
 function cutState(s, wrong){
@@ -4757,7 +4775,7 @@ function forgePick(id){
     const g = sellRelicGold(old);
     withMaxHp(function(){ P.relics.splice(P.relics.indexOf(id), 1); });
     P.gold += g;
-    say(T("炉火吞了 ") + rc(old) + T("，什么也没吐出来 —— 只剩 <b>") + g + T("</b> 金币。"), "sys");
+    if(g) say(T("炉火吞了 ") + rc(old) + T("，什么也没吐出来 —— 只剩 <b>") + g + T("</b> 金币。"), "sys");
   } else {
     withMaxHp(function(){
       P.relics.splice(P.relics.indexOf(id), 1);
@@ -5221,8 +5239,18 @@ function sellRelicGold(r){
       say(T("寄存把这份钱的一角存成了 <b>") + sh + T("</b> 点护盾。"), "sys");
     }
   }
+  /* 熔铸之心（圣器 · 熔铸流）：分解不再给金币，记一件（伤害 / 生命的换算在 pctSteady / stats，包在 holyOn 里）。
+     寄存照旧按分解价算 —— 那是这件遗物的价，不是到手的钱。*/
+  if(holyOn("meltheart")){
+    withMaxHp(function(){ P.melted = (P.melted || 0) + 1; });
+    say(L("熔铸之心吞下了 " + r.n + "：伤害 +" + HOLY_MELT_PCT + "%、最大生命 +" + HOLY_MELT_HP + "%（已熔 " + P.melted + " 件）。",
+          "The Melting Heart swallows " + r.n + ": damage +" + HOLY_MELT_PCT + "%, max HP +" + HOLY_MELT_HP + "% (" + P.melted + " melted)."), "crit");
+    return 0;
+  }
   return g;
 }
+/* 分解按钮 / 取舍窗上写「能换多少金」：带着熔铸之心是 0（只是显示，没有副作用）*/
+function sellGain(r){ return holyOn("meltheart") ? 0 : sellPrice(r); }
 function sellRelic(id){
   const i = P.relics.indexOf(id);
   if(i < 0) return;
@@ -5231,7 +5259,7 @@ function sellRelic(id){
   clearNewRelic(id);
   withMaxHp(function(){ P.relics.splice(i, 1); });
   P.gold += g;
-  say(T("你拆了 ") + rc(r) + T("，换成 <b>") + g + T("</b> 金币。"), "sys");
+  if(g) say(T("你拆了 ") + rc(r) + T("，换成 <b>") + g + T("</b> 金币。"), "sys");
   renderHud();
 }
 /* ---- 合成：玩家自己挑 3 件同品质的，换一件高一档的（换到哪一件仍是随机） ----
@@ -5398,7 +5426,7 @@ function offerSwap(r, how, barter){
   $("swapNew").innerHTML = "<span class=\"rt q" + (r.r||0) + "\">" + RAR_CN[r.r||0] + "</span>" +
     "<span class=\"rn q" + (r.r||0) + "\">" + r.n + "</span><span class=\"rp\">" + r.pw + "</span>" +
     (barter ? T("<span class=\"rl\">点它 → 算了，不换</span>")
-            : T("<span class=\"rl\">点它 → 直接卖掉，换 ") + sellPrice(r) + T(" 金</span>"));
+            : T("<span class=\"rl\">点它 → 直接卖掉，换 ") + sellGain(r) + T(" 金</span>"));
   swapFilter = -1;
   renderSwapList();
   hideAll();
@@ -5456,7 +5484,7 @@ function doSwap(dropId){
   } else {
     const g = sellRelicGold(ps.relic);      // 不换就当场分解，跟分解价一样
     P.gold += g;
-    say(T("你没动手上的东西，") + ps.relic.n + T(" 折成了 <b>") + g + T("</b> 金币。"), "sys");
+    if(g) say(T("你没动手上的东西，") + ps.relic.n + T(" 折成了 <b>") + g + T("</b> 金币。"), "sys");
   }
   renderHud(); render();
   maybeRelic();
@@ -5659,6 +5687,11 @@ function skipHoly(){
   maybeRelic();
 }
 /* ---- 信息页：三个方格 ---- */
+/* 方格里那行小字放不下长数字：1.2万 / 12.3k */
+function shortNum(n){
+  if(n < 10000) return String(n);
+  return LANG_UI === "zh" ? (Math.round(n / 1000) / 10) + "万" : (n < 1e6 ? Math.round(n / 100) / 10 + "k" : Math.round(n / 1e5) / 10 + "M");
+}
 function renderHoly(){
   const panel = $("panelHoly"), box = $("holySlots");
   if(!panel || !box) return;
@@ -5671,6 +5704,8 @@ function renderHoly(){
     if(!it){ h += "<button type=\"button\" class=\"hslot empty\" disabled><span class=\"hname\">" + L("空", "Empty") + "</span></button>"; continue; }
     const sub = id === "radiance"
       ? (sanctId() ? "✦ " + relicById(P.sanct).n : L("点我选赐福", "Tap to bless"))
+      : id === "meltheart" ? L("已熔 ", "Melted ") + (P.melted || 0)                   // 熔铸之心：分解过几件
+      : id === "thunderbox" ? L("匣中 ", "Stored ") + shortNum(Math.floor(P.thunder || 0))   // 雷霆之匣：攒了多少
       : (it.flow || "");                  // 流派圣器：名字下面写它带哪条流派
     h += "<button type=\"button\" class=\"hslot" + (id === "radiance" && !sanctId() ? " ask" : "") + "\" data-id=\"" + id + "\">" +
          "<span class=\"hicon\">" + (HOLY_ART[id] || "") + "</span>" +
@@ -5803,7 +5838,7 @@ function renderRelics(){
       (fuseOn
         ? "<span class=\"tick\">" + (picked ? "✓" : "") + "</span>"
         : "<button type=\"button\" class=\"melt\" data-sell=\"" + id + T("\">分解<em>") +
-          sellPrice(r) + T(" 金</em></button>"));
+          sellGain(r) + T(" 金</em></button>"));
     box.appendChild(d);
   });
   ghosts.forEach(function(id){
@@ -6994,6 +7029,8 @@ function resumeRun(s){
   if(typeof P.holyWords !== "number") P.holyWords = 0;
   if(typeof P.trial !== "number") P.trial = 0;
   if(typeof P.eyeStack !== "number") P.eyeStack = 0;          // 天命之眼：本局涨过几次暴击伤害
+  if(typeof P.melted !== "number") P.melted = 0;              // 熔铸之心：带着它分解过几件
+  if(typeof P.thunder !== "number") P.thunder = 0;            // 雷霆之匣：匣子里存了多少（小数攒着）
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
