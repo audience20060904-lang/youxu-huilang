@@ -464,6 +464,10 @@ function ampOn(raw, s){
 }
 const ST_KEYS = ["atk", "maxHp", "def", "defGear", "crit"];
 /* 殉道者之冠：本局打倒过几只 Boss / 层间守者（P.bossKills 只是个事实，换算包在 holyOn 里）*/
+/* 追加攻击概率（%）：回响之厅 / 疾风相加，赐福照翻。过 100 就是必中（一题仍然只追加一次，风暴之翼除外）。*/
+function followChance(){
+  return (hasRelic("hall") ? hx("hall", HALL_RATE) : 0) + (hasRelic("gale") ? hx("gale", GALE_RATE) : 0);
+}
 function crownPct(){ return holyOn("crown") ? (P.bossKills || 0) * HOLY_CROWN_PCT : 0; }
 /* 万言圣典：+30%，正在学的这门语言每掌握 50 个词再 +5%（掌握的词数每进一层量一次，存在 P.holyWords）*/
 function bookPct(){
@@ -704,10 +708,6 @@ function nextFloor(){
       const it = earnGold(Math.min(G.floor * COMPOUND_PER, Math.floor((P.gold || 0) * hx("compound", COMPOUND_PCT))));
       if(it) say(L("利滚利 —— 利息 +<b>" + it + "</b> 金。", "Compound Interest — +<b>" + it + "</b> gold."), "good");
     }
-  }
-  if(holyOn("goldidol")){                                              // 黄金圣像（圣器）：每层 层数 ×10 金币
-    const ig = earnGold(G.floor * HOLY_IDOL_FLOOR);
-    say(L("黄金圣像 —— +<b>" + ig + "</b> 金。", "Golden Idol — +<b>" + ig + "</b> gold."), "good");
   }
   G.echoUsed = false;      // 「回声」每层一次
   G.reciteFree = 0;        // 「默诵」每层 RECITE_FREE 次
@@ -1683,7 +1683,7 @@ let partsTab = "dmg";
 function partName(k){
   const sp = {"@base":L("基础属性", "Base stats"), "@combo":L("连击", "Combo"), "@gild":L("金坛", "Gold altar"),
     "@crit":L("暴击", "Crit"), "@wager":L("冒险", "Risk"), "@weak":L("弱点", "Weakness"), "@mix":L("相互叠加", "Interplay"),
-    "@other":L("其它", "Others"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
+    "@other":L("其它", "Others"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
   if(sp[k]) return sp[k];
   if(String(k).indexOf("holy:") === 0){ const h = holyById(k.slice(5)); return h ? h.n : k; }   // 圣器
   const r = relicById(k);
@@ -3242,47 +3242,29 @@ function answer(btn, ok){
     let landed = landedOn(m, dmg);
     let dealt = dmg;                 // 余劲：这一刀一共打出去多少（回响之厅 / 凿骨也算），减掉真打进血条的就是溢出
     coopDealDamage(m, dmg);
-    /* 回响之厅（神圣）：50% 立刻再打一刀 —— 就是把刚才那一刀**原样再来一次**
-       （不重新掷暴击、不再算额外伤害、不加连击），所以还是那两个乘区。*/
-    let hall = 0;
-    if(hasRelic("hall") && luck(0.5, "hall")){
-      hall = dmg;
-      dealt += hall;
-      if(lastDmgRec) lastDmgRec.more.push(["hall", hall]);
-      landed += landedOn(m, hall);
-      coopDealDamage(m, hall);
-      setTimeout(function(){ floatNum("foe", "-" + hall, "dmg"); }, 380);
-      relicLog += T(" <span class=\"sys\">(回响之厅又补了 ") + hall + T(" 点)</span>");
+    /* ===== 追加攻击（用户 2026-10-02 定义）=====
+       答对、这一刀打完之后，按 followChance()（回响之厅 / 疾风相加）掷一次：中了就把这一刀**原样再打一次**
+       （不重新掷暴击、不再算额外伤害、不加连击 —— 还是那两个乘区）。**一题最多追加一次**，概率过了 100% 也只是必中。
+       风暴之翼（圣器）：追加之后还能再掷，概率是上一次的一半（90% → 45% → 22.5% …），封 FOLLOW_MAX 次。
+       余韵：每一下伤害 +30%、回 3% 最大生命。跟原来的回响之厅一样，怪倒了也照打（溢出算进余劲）。*/
+    let fp = followChance(), fn = 0, fsum = 0;
+    const fdmg = Math.max(1, Math.round(dmg * (100 + (hasRelic("lingering") ? hx("lingering", LINGER_BONUS) : 0)) / 100));
+    while(fp > 0 && fn < FOLLOW_MAX && luck(Math.min(1, fp / 100))){
+      dealt += fdmg;
+      landed += landedOn(m, fdmg);
+      coopDealDamage(m, fdmg);
+      if(lastDmgRec) lastDmgRec.more.push([fn ? "holy:storm" : "@follow", fdmg]);
+      const at = 380 + 150 * fn;
+      setTimeout(function(){ floatNum("foe", "-" + fdmg, "dmg"); }, at);
+      fsum += fdmg; fn++;
+      if(!holyOn("storm")) break;            // 没有风暴之翼：一题最多一次
+      fp *= HOLY_STORM_HALF;
     }
-    /* ===== 追加攻击（攻击次数流，第十七批 + 风暴之翼，2026-10-02）=====
-       答对时多攻击几次：每一下 = 这一刀的 N%（不重新掷暴击、不再算额外伤害、不加连击，跟回响之厅一个写法，乘区还是两个）。
-       「余韵」/ 风暴之翼 再给所有追加攻击 +N%。怪倒了就不再追（深渊 / 书灵照追 —— 它们的血是一层层 / 无限的）。*/
-    const fol = [];
-    if(hasRelic("gale") && luck(GALE_RATE, "gale")) fol.push(["gale", GALE_PCT]);
-    if(hasRelic("twinblade")) fol.push(["twinblade", hx("twinblade", TWINB_PCT)]);
-    if(hasRelic("chainstab")) for(let i = 0; i < CHAINSTAB_N; i++) fol.push(["chainstab", hx("chainstab", CHAINSTAB_PCT)]);
-    if(holyOn("storm")) for(let i = 0; i < HOLY_STORM_N; i++) fol.push(["holy:storm", HOLY_STORM_PCT]);
-    if(fol.length){
-      const fb = (hasRelic("lingering") ? hx("lingering", LINGER_BONUS) : 0) + (holyOn("storm") ? HOLY_STORM_BONUS : 0);
-      const endless = m.def && (m.def.abyss || m.def.study);
-      let fsum = 0, fn = 0;
-      fol.forEach(function(f){
-        if(m.hp <= 0 && !endless) return;
-        const n = Math.max(1, Math.round(dmg * f[1] * (100 + fb) / 10000));
-        dealt += n;
-        landed += landedOn(m, n);
-        coopDealDamage(m, n);
-        if(lastDmgRec) lastDmgRec.more.push([f[0], n]);
-        const at = 200 + 140 * fn;
-        setTimeout(function(){ floatNum("foe", "-" + n, "dmg"); }, at);
-        fsum += n; fn++;
-      });
-      if(fn){
-        let lh = 0;
-        if(hasRelic("lingering")) lh = healUp(fn * hx("lingering", Math.max(1, Math.ceil(s.maxHp * LINGER_HEAL))), s).hp;
-        relicLog += L(" <span class=\"sys\">(追加攻击 ×" + fn + "，共 " + fsum + (lh ? "，回 " + lh + " 点" : "") + ")</span>",
-                      " <span class=\"sys\">(Follow-up ×" + fn + ", " + fsum + " total" + (lh ? ", +" + lh + " HP" : "") + ")</span>");
-      }
+    if(fn){
+      let lh = 0;
+      if(hasRelic("lingering")) lh = healUp(fn * hx("lingering", Math.max(1, Math.ceil(s.maxHp * LINGER_HEAL))), s).hp;
+      relicLog += L(" <span class=\"sys\">(追加攻击" + (fn > 1 ? " ×" + fn : "") + " +" + fsum + (lh ? "，回 " + lh + " 点" : "") + ")</span>",
+                    " <span class=\"sys\">(Follow-up" + (fn > 1 ? " ×" + fn : "") + " +" + fsum + (lh ? ", +" + lh + " HP" : "") + ")</span>");
     }
     /* 凿骨（第十二批）：另外扣这只怪最大生命的 CHISEL_PCT（Boss / 守者 / 深渊 CHISEL_BOSS）——
        单独一笔，**不吃百分比、不吃暴击、不减护甲**，所以乘区还是两个（跟赤鳞的反弹一个写法）。
