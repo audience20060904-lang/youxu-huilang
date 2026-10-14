@@ -1519,7 +1519,7 @@ function swing(mult){
   /* 刻字 / 默诵的「暴击时」那半句（2026-09-23 补：以前只给了暴击率）*/
   if(crit && has("carve"))  pct += 90;
   if(crit && has("recite")) extra += 35;
-  if(has("billow")) cm += 0.1 * Math.floor(pct / 100);             // 叠浪：② 层每满 100% 暴击倍率 +0.1（读这一刀算完的 pct）
+  if(has("billow")) cm += Math.min(3, 0.1 * Math.floor(pct / 100));             // 叠浪：② 层每满 100% 暴击倍率 +0.1（读这一刀算完的 pct）
 
   var pre = (s.atk + base + extra) * (1 + pct / 100) + flat;
   /* ⚠️ 塔的伤害跟玩家挂钩（用户 2026-09-22）：把**没吃暴击的那一下**平滑记下来，

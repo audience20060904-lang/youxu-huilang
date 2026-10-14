@@ -1887,7 +1887,7 @@ var RELIC_EN = {
 ],
 "billow": [
 "Billow",
-"Damage +20%; every full 100% damage bonus: crit damage +10%",
+"Damage +20%; every full 100% damage bonus: crit damage +10% (max +300%)",
 "Wave upon wave — the last one hits the shore hardest."
 ],
 "overcrit": [

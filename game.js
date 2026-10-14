@@ -3954,7 +3954,7 @@ function critSteadyRaw(s, pct){
   if(critRate > 100){ critMult += Math.floor((critRate - 100) / 5) * (hasRelic("overcrit") ? OVERCRIT_STEP : 0.1); critRate = 100; }
   /* 叠浪（第十一批）：②层那个百分比桶每满 100%，暴击倍率 +0.2 —— ②层是加法、堆得越高越不值钱，
      这件把溢出来的那部分挪进暴击乘区。读的是**这一刀全部算完**的 pct（冒险那 +100% 也算）。*/
-  if(hasRelic("billow")) critMult += Math.floor(pct / BILLOW_PER) * BILLOW_CRIT;
+  if(hasRelic("billow")) critMult += Math.min(BILLOW_MAX, Math.floor(pct / BILLOW_PER) * BILLOW_CRIT);   // 最多 +300%
   if(hasRelic("fate")) critMult -= FATE_CUT;                              // 定数：必定暴击，倍率 ×2 → ×1.6
   return {rate: critRate, mult: critMult};
 }
