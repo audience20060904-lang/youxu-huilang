@@ -496,6 +496,7 @@ function stats(){
   }
   if(cp || bp) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + cp / 100) * (1 + bp / 100)));
   /* 流派圣器（2026-10-02）：每件把一种资源再放大一截，另一半（换成伤害 / 护甲）在 extraSteady / critSteady / 下面 */
+  if(holyOn("goldidol")) s.atk += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_ATK;         // 黄金圣像：每 100 金攻击 +1（排在战神之刃前面，会被它放大）
   if(holyOn("grail")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + HOLY_GRAIL_HP / 100)) +
                                  Math.floor((P.kills || 0) / HOLY_GRAIL_KILLS) * HOLY_GRAIL_PER);     // 血之圣杯：+50%，每 10 杀 +2
   if(holyOn("warblade")) s.atk = Math.max(1, Math.round(s.atk * HOLY_BLADE_X));                      // 战神之刃
@@ -3867,7 +3868,11 @@ function cutState(s, wrong){
   if(holyOn("scales")) cut += Math.min(HOLY_SCALE_MAX, Math.floor(Math.max(0, pctCore(s)) / HOLY_SCALE_DIV));   // 公义天平：伤害 → 减伤
   return cut;
 }
-function flatSteady(s){ return ampOn(flatSteadyRaw, s); }
+function flatSteady(s){
+  let f = ampOn(flatSteadyRaw, s);
+  if(holyOn("goldidol")) f += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_FLAT;   // 黄金圣像：每 100 金点伤 +1
+  return f;
+}
 function extraSteady(s){
   let e = ampOn(extraSteadyRaw, s);
   if(holyOn("bulwark")) e += Math.round((s.defGear || 0) * HOLY_PLATE_EXTRA);      // 不朽圣铠：护甲 → 额外伤害（练习模式那 +50 不算）
@@ -3929,7 +3934,7 @@ function extraSteadyRaw(s){
   if(G && hasRelic("hone")) extra += Math.min(HONE_MAX, G.honeN || 0);
   if(G && hasRelic("crumble")) extra += Math.floor(Math.max(0, P.kills - (G.killsAt || 0)) * P.lvl * CRUMBLE_LV);
   /* 第十七批 */
-  if(hasRelic("goldspear")) extra += Math.floor((P.gold || 0) * GOLDSPEAR_PCT);           // 金戈：金币
+  if(hasRelic("goldspear")) extra += Math.min(GOLDSPEAR_MAX, Math.floor((P.gold || 0) * GOLDSPEAR_PCT));   // 金戈：金币，封 1000
   if(hasRelic("ironcutter")) extra += Math.floor(P.lvl * IRONCUT_LV);                     // 斩铁：等级
   if(s && hasRelic("breakarmy")) extra += Math.floor(Math.max(0, s.atk) * BREAKARMY_PCT); // 破军：攻击
   return extra;

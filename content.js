@@ -1580,7 +1580,7 @@ var RELICS = [
   lore:"摸过的东西，都会掉点金粉下来。"},
  {id:"compound", r:3, n:"利滚利", nobf:true, pw:"每进一层，获得身上金币 10% 的利息（最多 层数 ×20）",
   lore:"钱放着不动，也会自己长。"},
- {id:"goldspear", r:3, n:"金戈", nobf:true, pw:"额外伤害 +身上金币的 5%",
+ {id:"goldspear", r:3, n:"金戈", nobf:true, pw:"额外伤害 +身上金币的 5%（最多 +1000）",
   lore:"矛尖镀的是真金，砸下去也是真疼。"},
  {id:"treasurebowl", r:4, n:"聚宝盆", nobf:true, pw:"金币收入 +100%；身上每 500 金币，受到的伤害 −2%（最多 −20%）",
   lore:"盆里的钱越堆越高，挡在你身前。"},
@@ -1618,7 +1618,8 @@ var RELICS = [
 var GOLDHAND_PCT  = 50;    // 点金手：击败敌人的金币 +50%
 var COMPOUND_PCT  = 0.10;  // 利滚利：进层时身上金币的 10%……
 var COMPOUND_PER  = 20;    //          ……最多 层数 ×20
-var GOLDSPEAR_PCT = 0.05;  // 金戈：额外伤害 + 金币 5%
+var GOLDSPEAR_PCT = 0.05;  // 金戈：额外伤害 + 金币 5%……
+var GOLDSPEAR_MAX = 1000;  //       ……最多 +1000（2026-10-14 用户加的上限）
 var BOWL_GOLD     = 100;   // 聚宝盆：金币收入 +100%
 var BOWL_PER      = 500;   //          身上每 500 金……
 var BOWL_CUT      = 2;     //          ……受到的伤害 −2%
@@ -1706,7 +1707,9 @@ var HOLY_CHAIN_X     = 5;     // 永恒之链（连击流）：连击的伤害�
 var HOLY_CHAIN_GAIN  = 2;
 var HOLY_IDOL_GOLD   = 100;   // 黄金圣像（经济流）：金币收入 +100%……
 var HOLY_IDOL_PER    = 100;   //            ……身上每 100 金币……
-var HOLY_IDOL_PCT    = 2;     //            ……伤害 +2%（2026-10-02 用户改，进层金删了）
+var HOLY_IDOL_PCT    = 1;     //            ……伤害 +1%、攻击 +1、点伤 +1（2026-10-14 用户从「伤害 +2%」改的）
+var HOLY_IDOL_ATK    = 1;
+var HOLY_IDOL_FLAT   = 1;
 var HOLY_STORM_HALF  = 0.5;   // 风暴之翼（攻击次数流）：追加攻击之后还能再追加，概率是上一次的一半
 var HOLY_MELT_PCT    = 2;     // 熔铸之心（熔铸流，2026-10-02 用户定）：分解不再给金币；本局每分解过一件，伤害 +2%……
 var HOLY_MELT_HP     = 1;     //            ……最大生命 +1%（P.melted 只记带着它时分解了几件）
@@ -1738,7 +1741,7 @@ var HOLY = [
   lore:"举着它往前走，挡下的和砸出去的是同一块。"},
  {id:"eternal", flow:"连击流", n:"永恒之链", pw:"连击的伤害加成 ×5；答对获得的连击 ×2；答错连击只减半",
   lore:"一环扣一环，断的地方也会自己长回去。"},
- {id:"goldidol", flow:"经济流", n:"黄金圣像", pw:"金币收入 +100%；身上每 100 金币，伤害 +2%",
+ {id:"goldidol", flow:"经济流", n:"黄金圣像", pw:"金币收入 +100%；身上每 100 金币，伤害 +1%、攻击 +1、伤害 +1",
   lore:"它不说话，只是越来越亮。"},
  {id:"storm", flow:"攻击次数流", n:"风暴之翼", pw:"追加攻击之后还能再追加一次，概率是上一次的一半（90% → 45% → 22.5% …）",
   lore:"一扇翅膀，就是一阵刀雨。"},
