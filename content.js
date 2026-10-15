@@ -1811,8 +1811,13 @@ var HERO_RATE     = [0, 0.70, 0.25, 0.05];   // 按品质：稀有 / 史诗 / �
 var HERO_PITY     = 50;        // 50 抽之内必出传奇（出了就重新数，TOWN.hero.pity）
 var HERO_REFUND   = [0, 200, 500, 2000];     // ★5 之后再抽到：退多少宝石
 var HERO_STAR_MAX = 5;
+/* 养成变难（用户 2026-10-15：「角色养成变难」）：
+   升星：从 ★n 升到 ★n+1 要 n × HERO_STAR_STEP 张重复的（★5 一共要 10 张重复，原来 4 张），攒着的张数记在 own[id].cp 上。
+   升级：从 n 级升到 n+1 级要 n × (HERO_XP_A + HERO_XP_B × n) 经验（满级累计 21460，原来 15 × n、累计 6525）。*/
+var HERO_STAR_STEP = 1;
 var HERO_LV_MAX   = 30;
-var HERO_XP_STEP  = 15;        // 从 n 级升到 n+1 级要 15 × n 经验（满级累计 6525）
+var HERO_XP_A     = 10;
+var HERO_XP_B     = 2;
 var HERO_XP_RIGHT = 1;         // 出战时答对一题
 var HERO_XP_SPELL = 2;         // 拼对一题（代替上面那 1）
 var HERO_XP_MASTER = 10;       // 一个词的熟练度升到 3（「已掌握」）

@@ -1268,6 +1268,8 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrbar{display:inline-block;width:40px;height:4px;background:var(--stone-3);border-radius:2px;overflow:hidden;vertical-align:middle}
 .hrbar > i{display:block;height:100%;background:var(--coin)}
 .hrstar{font-size:11px;color:var(--torch);letter-spacing:.5px;white-space:nowrap}
+.hrstar i{font-style:normal;color:var(--faint);letter-spacing:0;margin-left:4px}   /* 升下一星还差几张（养成变难，2026-10-15）*/
+.hrname .hrstar i{display:block;margin:2px 0 0;font-size:11.5px}
 /* 名册：定死大小的方格 */
 .hrgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 @media (min-width:460px){.hrgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -1329,6 +1331,7 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrgc em{font-style:normal;font-size:10.5px;line-height:15px;color:var(--dim);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .hrgc em.new{color:#FFF9EC;background:var(--blood);padding:0 5px;border-radius:2px}
 .hrgc em.gem{color:var(--q3)}
+.hrgc em.up{color:var(--torch-deep);font-weight:700}
 /* 十连：名字允许折成两行（英文名长），字收一号；同一排的卡片照样等高（grid 默认拉伸）*/
 .hrgot.ten{gap:6px}
 .hrgot.ten .hrgc{padding:6px 1px 5px}

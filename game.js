@@ -6815,7 +6815,8 @@ function fixHero(h){
     for(const id in own){
       if(!heroById(id)) continue;                       // 删掉的角色不认
       const x = own[id] || {};
-      o.own[id] = {star: Math.max(1, Math.min(HERO_STAR_MAX, int(x.star) || 1)), xp: int(x.xp)};
+      const star = Math.max(1, Math.min(HERO_STAR_MAX, int(x.star) || 1));
+      o.own[id] = {star: star, xp: int(x.xp), cp: star < HERO_STAR_MAX ? Math.min(heroStarNeed(star) - 1, int(x.cp)) : 0};
     }
     o.pity = Math.min(HERO_PITY - 1, int(h.pity));
     o.spent = int(h.spent);
@@ -6825,12 +6826,16 @@ function fixHero(h){
   if(!o.own[o.cur]) o.cur = HERO_DEFAULT;
   return o;
 }
-/* 经验 → 等级：从 n 级升到 n+1 级要 HERO_XP_STEP × n。返回 {lv, cur:这一级攒了多少, need:这一级要多少（满级是 0）} */
+/* 经验 → 等级：从 n 级升到 n+1 级要 n × (HERO_XP_A + HERO_XP_B × n)（2026-10-15 用户要「养成变难」改成这条更陡的）。
+   返回 {lv, cur:这一级攒了多少, need:这一级要多少（满级是 0）} */
+function heroXpNeed(lv){ return lv * (HERO_XP_A + HERO_XP_B * lv); }
 function heroLvOf(xp){
   let lv = 1, left = Math.max(0, xp || 0);
-  while(lv < HERO_LV_MAX && left >= HERO_XP_STEP * lv){ left -= HERO_XP_STEP * lv; lv++; }
-  return {lv:lv, cur:lv < HERO_LV_MAX ? left : 0, need:lv < HERO_LV_MAX ? HERO_XP_STEP * lv : 0};
+  while(lv < HERO_LV_MAX && left >= heroXpNeed(lv)){ left -= heroXpNeed(lv); lv++; }
+  return {lv:lv, cur:lv < HERO_LV_MAX ? left : 0, need:lv < HERO_LV_MAX ? heroXpNeed(lv) : 0};
 }
+/* 升星：从 ★n 升到 ★n+1 要 n 张重复的（攒着的记在 own[id].cp 上）*/
+function heroStarNeed(star){ return star * HERO_STAR_STEP; }
 /* 被动里那个数：pv:[1 级, 30 级] 之间按等级线性取，留一位小数 */
 function heroValAt(h, lv){
   const t = (Math.max(1, Math.min(HERO_LV_MAX, lv || 1)) - 1) / (HERO_LV_MAX - 1);
@@ -6970,7 +6975,7 @@ function heroWrong(){
 /* ---- 抽卡 ----
    单抽 / 十连。每一抽先看保底（离上一次传奇满 HERO_PITY − 1 抽，这一抽必是传奇），再按 HERO_RATE 掷品质，
    同品质里平均挑一个；十连一个史诗以上都没有就把最后一抽换成史诗。
-   没有的 → 拿到（★1）；有了 → ★+1；★5 了 → 退 HERO_REFUND 宝石。返回每一抽的结果（结果窗照着画）。*/
+   没有的 → 拿到（★1）；有了 → 攒一张，攒够 ★n 张升一星（heroStarNeed）；★5 了 → 退 HERO_REFUND 宝石。返回每一抽的结果（结果窗照着画）。*/
 function heroPull(n){
   const cost = n >= 10 ? HERO_PULL10 : HERO_PULL * n;
   if((TOWN.gem || 0) < cost) return null;
@@ -6990,8 +6995,12 @@ function heroPull(n){
   const out = rars.map(function(r){
     const pool = HEROES.filter(function(h){ return h.r === r; });
     const h = pool[Math.floor(Math.random() * pool.length)], rec = H.own[h.id];
-    if(!rec){ H.own[h.id] = {star:1, xp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
-    if(rec.star < HERO_STAR_MAX){ rec.star++; return {id:h.id, r:r, kind:"star", star:rec.star}; }
+    if(!rec){ H.own[h.id] = {star:1, xp:0, cp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
+    if(rec.star < HERO_STAR_MAX){
+      rec.cp = (rec.cp || 0) + 1;                          // 重复的先攒着，攒够 ★n 张升一星
+      if(rec.cp >= heroStarNeed(rec.star)){ rec.star++; rec.cp = 0; return {id:h.id, r:r, kind:"star", star:rec.star}; }
+      return {id:h.id, r:r, kind:"copy", star:rec.star, cp:rec.cp, need:heroStarNeed(rec.star)};
+    }
     refund += HERO_REFUND[r];
     return {id:h.id, r:r, kind:"gem", gem:HERO_REFUND[r]};
   });
@@ -7024,7 +7033,8 @@ function renderHero(){
       const lv = heroLvOf(rec.xp), pc = lv.need ? Math.round(lv.cur / lv.need * 100) : 100;
       return "<button class=\"hrcell hq" + h.r + (H.cur === h.id ? " cur" : "") + "\" type=\"button\" data-id=\"" + h.id + "\">" +
         (H.cur === h.id ? "<em class=\"hrcur\">" + L("出战", "Active") + "</em>" : "") + heroArtHtml(h.id) +
-        "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) + "</span>" +
+        "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) +
+          (rec.star < HERO_STAR_MAX ? "<i>" + (rec.cp || 0) + "/" + heroStarNeed(rec.star) + "</i>" : "") + "</span>" +
         "<span class=\"hrlv\">Lv " + lv.lv + "<i class=\"hrbar\"><i style=\"width:" + pc + "%\"></i></i></span></button>";
     }).join("") + "</div>";
   } else {
@@ -7045,7 +7055,8 @@ function renderHero(){
     box.innerHTML = "<div class=\"hrpull\">" +
       "<div class=\"hrpity\">" + L("再 <b>" + left + "</b> 抽必出传奇", "Legendary guaranteed within <b>" + left + "</b> pulls") + "</div>" +
       "<div class=\"hrbtns\">" + btn(1, HERO_PULL) + btn(10, HERO_PULL10) + "</div>" +
-      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 抽到重复的升星，★5 之后退宝石", "Ten-pull: at least one Epic · Duplicates add a star; past ★5 they refund gems") + "</div>" +
+      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 重复的攒着升星（★n 升 ★n+1 要 n 张），★5 之后退宝石",
+                                       "Ten-pull: at least one Epic · Duplicates stack toward stars (★n→★n+1 needs n), past ★5 they refund gems") + "</div>" +
       pool + "</div>";
   }
 }
@@ -7067,7 +7078,8 @@ function renderHeroGot(res){
     /* 十连的卡片窄（360 宽上一格五十来像素），标签写短的：升星只写升到几星、退宝石只写数 */
     const ten = res.length > 1;
     const tag = x.kind === "new" ? "<em class=\"new\">" + L("新", "New") + "</em>"
-              : x.kind === "star" ? "<em>" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
+              : x.kind === "star" ? "<em class=\"up\">" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
+              : x.kind === "copy" ? "<em>★" + x.star + " · " + x.cp + "/" + x.need + "</em>"
               : "<em class=\"gem\">+" + x.gem + (ten ? "" : L(" 宝石", " gems")) + "</em>";
     return "<div class=\"hrgc hq" + x.r + "\" style=\"animation-delay:" + (i * 90) + "ms\">" + heroArtHtml(x.id) +
       "<b>" + (h ? h.n : x.id) + "</b>" + tag + "</div>";
@@ -7081,7 +7093,7 @@ function openHeroInfo(id){
 function renderHeroInfo(){
   const h = heroById(heroInfoId);
   if(!h) return;
-  const rec = TOWN.hero.own[h.id], lv = rec ? heroLvOf(rec.xp) : {lv:1, cur:0, need:HERO_XP_STEP}, star = rec ? rec.star : 0;
+  const rec = TOWN.hero.own[h.id], lv = rec ? heroLvOf(rec.xp) : {lv:1, cur:0, need:heroXpNeed(1)}, star = rec ? rec.star : 0;
   $("heroInfoEyebrow").textContent = L("角色 · ", "Hero · ") + HERO_RAR(h.r);
   const pctU = h.p.indexOf("{v}%") >= 0 ? "%" : "";
   const next = rec && lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)) + pctU + L("）", ")") : "";
@@ -7091,14 +7103,17 @@ function renderHeroInfo(){
   $("heroInfoBody").innerHTML =
     "<div class=\"hrhead hq" + h.r + "\">" + heroArtHtml(h.id, "big") +
       "<div class=\"hrname\"><b>" + h.n + "</b><i>" + h.line + "</i>" +
-      "<span class=\"hrstar\">" + (rec ? heroStars(star) : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
+      "<span class=\"hrstar\">" + (rec ? heroStars(star) +
+        (star < HERO_STAR_MAX ? "<i>" + L("再抽到 " + (heroStarNeed(star) - (rec.cp || 0)) + " 张升 ★" + (star + 1),
+                                           (heroStarNeed(star) - (rec.cp || 0)) + " more to ★" + (star + 1)) + "</i>" : "")
+        : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
     (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + " / " + HERO_LV_MAX + "</span>" +
              "<i class=\"hrbar\"><i style=\"width:" + (lv.need ? Math.round(lv.cur / lv.need * 100) : 100) + "%\"></i></i>" +
              "<span>" + (lv.need ? lv.cur + " / " + lv.need : L("满级", "Max")) + "</span></div>" : "") +
     "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1) + "<em>" + next + "</em></p></div>" +
     sline(3, h.s3) + sline(5, h.s5) +
-    "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 抽到重复的升星",
-                                  "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · Duplicates add stars") + "</div>";
+    "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 重复的攒着升星",
+                                  "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · Duplicates stack toward stars") + "</div>";
   const go = $("btnHeroGo"), cur = TOWN.hero.cur === h.id;
   go.textContent = cur ? L("出战中", "Active") : L("出战", "Set active");
   go.disabled = !rec || cur;
@@ -8171,6 +8186,7 @@ function codeIO(io){
   let relOk = true;
   const many = function(n){ if(n > 99999) throw new Error(T("码坏了")); return n; };
   const lexSeen = [];      // 每门语言读 / 写过哪些下标 —— 最后那段「复习日期 + 错题次数」照着它走
+  let heroBits = [];       // 角色那段读 / 写过哪几个下标有（升星张数那段照着它走，新版本多出来的角色也对得齐）
   /* 一门语言的熟练度：词数 + 前缀校验 + 哪些词有记录 + 每个词（见过几次 → 熟练度 → 上次错没错，前一个给后一个当上下文）*/
   function lex(list, pre){
     const n = io.num("wn", list.length), h = io.raw(E ? wordsHash(n, list) : 0, 16);
@@ -8298,9 +8314,11 @@ function codeIO(io){
     function(){                                            // 角色（2026-10-15）：按 HEROES 下标 —— 有没有 1 位，有的存「星级 − 1」+ 经验；再存保底、花了多少、出战的是第几个
       const src = E ? TOWN.hero : null, hd = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0};
       const n = io.num("hn", HEROES.length);
+      heroBits = [];
       for(let i = 0; i < n; i++){
         const h = HEROES[i], rec = E ? src.own[h.id] : null;
-        if(!io.bit("ho", !!rec)) continue;
+        heroBits.push(io.bit("ho", !!rec));
+        if(!heroBits[i]) continue;
         const star = io.num("hs", E ? rec.star - 1 : 0) + 1, xp = io.num("hx", E ? rec.xp : 0);
         if(!E && h) hd.own[h.id] = {star:star, xp:xp};
       }
@@ -8309,6 +8327,14 @@ function codeIO(io){
       const ci = io.num("hc", E ? Math.max(0, HEROES.findIndex(function(h){ return h.id === src.cur; })) : 0);
       if(!E && HEROES[ci]) hd.cur = HEROES[ci].id;
       out.town.hero = hd;
+    },
+    function(){                                            // 角色升星攒着的张数（2026-10-15 养成变难）：上一段里有的那几个各存一个数
+      for(let i = 0; i < heroBits.length; i++){
+        if(!heroBits[i]) continue;
+        const h = HEROES[i], rec = E ? TOWN.hero.own[h.id] : null;
+        const cp = io.num("hk", E ? rec.cp || 0 : 0);
+        if(!E && h && out.town.hero.own[h.id]) out.town.hero.own[h.id].cp = cp;
+      }
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
