@@ -7522,6 +7522,9 @@ function openHero(tab){
   $("veilHero").hidden = false;
 }
 function closeHero(){ $("veilHero").hidden = true; heroArmed = ""; renderTown(); }
+/* 名册 / 合成的方格按品质从稀有排到传奇（用户 2026-10-15），同品质照 HEROES 的顺序 */
+function heroesByRar(){ return HEROES.map(function(h, i){ return [h, i]; }).sort(function(a, b){ return a[0].r - b[0].r || a[1] - b[1]; })
+  .map(function(x){ return x[0]; }); }
 function renderHero(){
   Array.prototype.forEach.call(document.querySelectorAll(".hrsub"), function(b){ b.classList.toggle("on", b.dataset.hrsub === heroTab); });
   $("heroGem").innerHTML = L("宝石 ", "Gems ") + "<b>" + (TOWN.gem || 0) + "</b>" +
@@ -7529,7 +7532,7 @@ function renderHero(){
   const H = TOWN.hero, box = $("heroBody");
   if(heroTab === "craft"){ renderHeroCraft(box); return; }
   if(heroTab === "roster"){
-    box.innerHTML = "<div class=\"hrgrid\">" + HEROES.map(function(h){
+    box.innerHTML = "<div class=\"hrgrid\">" + heroesByRar().map(function(h){
       const rec = H.own[h.id];
       if(!rec) return "<button class=\"hrcell locked hq" + h.r + "\" type=\"button\" data-id=\"" + h.id + "\">" + heroArtHtml(h.id) +
         "<b>" + h.n + "</b><span class=\"hrstar\">" + L("未招募", "Not yet") + "</span><span class=\"hrlv\">" + HERO_RAR(h.r) + "</span></button>";
@@ -7588,7 +7591,7 @@ function renderHeroCraft(box){
       "<b>" + label + "</b><i>" + HERO_CRAFT + L(" 碎片", " shards") + "</i></button>" +
     "<div class=\"hrnote\">" + L("★5 之后再抽到重复的：稀有 +" + HERO_SHARD[1] + " · 史诗 +" + HERO_SHARD[2] + " · 传奇 +" + HERO_SHARD[3],
                                    "Duplicates past ★5: Rare +" + HERO_SHARD[1] + " · Epic +" + HERO_SHARD[2] + " · Legendary +" + HERO_SHARD[3]) + "</div>" +
-    "<div class=\"hrgrid\">" + HEROES.map(function(h){
+    "<div class=\"hrgrid\">" + heroesByRar().map(function(h){
       const rec = H.own[h.id], full = !!rec && rec.star >= HERO_STAR_MAX;
       return "<button class=\"hrcell hq" + h.r + (rec ? "" : " locked") + (heroCraftSel === h.id ? " sel" : "") + "\" type=\"button\" data-craft=\"" + h.id + "\"" + (full ? " disabled" : "") + ">" +
         heroArtHtml(h.id) + "<b>" + h.n + "</b>" +
