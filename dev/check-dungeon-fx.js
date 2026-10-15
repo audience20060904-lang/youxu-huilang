@@ -51,7 +51,7 @@ check('Reduced motion, hidden documents, and hidden battle skip effects and clea
 // Extract real settlement functions so effects cannot drift from damage semantics.
 const source=fs.readFileSync(path.join(root,'game.js'),'utf8').replace(/\r\n/g,'\n'),calls=[];
 Object.assign(c,{DungeonFX:{hurt:(...v)=>calls.push(['hurt',...v]),block:()=>calls.push(['block']),dodge:()=>calls.push(['dodge']),heal:()=>calls.push(['heal'])},
- studyNoHurt:()=>false,HR:null,lastHurtRec:null,clampShield(){},hasRelic:()=>false,heroOn:()=>false,flaskDrink(){},floatNum(){},T:x=>x,P:{},G:{},B:{},stats:()=>({maxHp:100})});
+ studyNoHurt:()=>false,HR:null,lastHurtRec:null,clampShield(){},hasRelic:()=>false,heroOn:()=>false,heirEvent(){},flaskDrink(){},floatNum(){},T:x=>x,P:{},G:{},B:{},stats:()=>({maxHp:100})});
 window.DungeonFX=c.DungeonFX;
 for(const name of ['hurtEnd','landHit','healUp']){const i=source.indexOf('function '+name+'('),j=source.indexOf('\n}',i);assert(i>=0&&j>i);vm.runInContext(source.slice(i,j+2),c);}
 check('Actual damage hook reports HP and shield amounts without changing damage',()=>{

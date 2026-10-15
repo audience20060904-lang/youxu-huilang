@@ -6,13 +6,13 @@ const c=vm.createContext({T:x=>x,L:(a,b)=>a,UI_EN:false,console,TextEncoder,Text
   P:null,B:null,G:{},RMASK:null,SCENE:'town',COOP:false,TOWN:{gem:1e9},commitPerm(){},renderHero(){},renderHeroInfo(){},renderTown(){},toast(){},heroInfoId:'adv',
   addGems(n){c.TOWN.gem+=n;},ri(a){return a;},say(){},hideAll(){},blessBanned(){return false;},hasRelic(){return false;},rerollBudget(){return 0;},
   CH:{name:'Test'},heroArmed:'',heroTab:'roster'});
-vm.runInContext(read('content.js'),c);vm.runInContext(read('hero-system.js'),c);
+vm.runInContext(read('content.js'),c);vm.runInContext(read('hero-system.js'),c);vm.runInContext(read('heirlooms.js'),c);
 const source=read('game.js').replace(/\r\n/g,'\n');
 function load(name){const i=source.indexOf('function '+name+'('),line=source.indexOf('\n',i),j=source.slice(i,line).trimEnd().endsWith('}')?line-2:source.indexOf('\n}',i);assert(i>=0&&j>i,name);vm.runInContext(source.slice(i,j+2),c);}
-['heroById','heroRec','heroStarNeed','fixHero','heroGrant','heroPull','heroUpgrade','heroValAt','heroGuest','heroOn','heroV','heroRelicRank','statusN','statusCap','statusGain','statusDamagePct','statusCutPct','heroRoundEnd','relicById','relicPool','fixBless','blessSet','offerRelics','takeRelic','maybeRelic'].forEach(load);
+['heroById','heroRec','heroStarNeed','fixHero','heroGrant','heroPull','heroUpgrade','heroValAt','heroGuest','heroOn','heroV','statusN','statusCap','statusGain','statusDamagePct','statusCutPct','heroRoundEnd','relicById','relicPool','fixBless','blessSet','offerRelics','takeRelic','maybeRelic'].forEach(load);
 let groups=0;function check(n,f){f();groups++;console.log('PASS '+n);}
 check('30 heroes: six growth tiers and exclusive relics, stable IDs',()=>{
- assert.equal(c.HEROES.length,30);assert.equal(c.RELICS.filter(r=>r.heroOnly).length,30);
+ assert.equal(c.HEROES.length,30);assert.equal(c.RELICS.filter(r=>r.heroOnly).length,150);
  for(const h of c.HEROES){assert.equal(h.growth.length,6);assert.equal(new Set(h.growth).size,6);assert(c.relicById('hx_'+h.id));}
 });
 check('Old copies preserved; overflow converted once; old five-star may reach six',()=>{
@@ -47,9 +47,9 @@ check('Old charge ticks once, decays one; new grants survive until next answer',
  c.heroRoundEnd(true,{},c.B.mob,s);assert.equal(p.hp,74);assert.equal(p.shield,6);assert.equal(p.status.stone,2);
  c.heroRoundEnd(true,{},c.B.mob,s);assert.equal(p.status.stone,3);assert.equal(p.status.renew,undefined);assert.equal(p.statusTurn,2);
 });
-check('Caps increase with stars/relic rank; damage and mitigation buckets',()=>{
- const p=player('adv',1);assert.equal(c.statusCap(),4);p.heroStar=4;assert.equal(c.statusCap(),5);p.relics=['hx_adv'];p.heroRelicRanks={hx_adv:3};assert.equal(c.statusCap(),8);
- c.statusGain(p,'stone',99);assert.equal(p.status.stone,8);c.statusGain(p,'poison',99);assert.equal(p.status.poison,4);p.relics=[];assert.equal(c.statusN(p,'stone'),5);p.status={stone:4,fury:2,weak:2,clarity:1};c.B.mob.status={exposed:2,weak:1};assert.equal(c.statusDamagePct(),17);assert.equal(c.statusCutPct(),26);
+check('Caps increase with stars; old ranks no longer grant stats or cap',()=>{
+ const p=player('adv',1);assert.equal(c.statusCap(),4);p.heroStar=4;assert.equal(c.statusCap(),5);p.relics=['hx_adv'];p.heroRelicRanks={hx_adv:3};assert.equal(c.statusCap(),5);
+ c.statusGain(p,'stone',99);assert.equal(p.status.stone,5);c.statusGain(p,'poison',99);assert.equal(p.status.poison,4);p.relics=[];assert.equal(c.statusN(p,'stone'),5);p.status={stone:4,fury:2,weak:2,clarity:1};c.B.mob.status={exposed:2,weak:1};assert.equal(c.statusDamagePct(),17);assert.equal(c.statusCutPct(),26);
 });
 check('Damage over time respects shield and death cannot heal itself',()=>{
  const p=player();p.hp=1;p.status={poison:2,renew:4};c.heroRoundEnd(true,{},c.B.mob,s);assert.equal(p.hp,-1);
@@ -58,14 +58,14 @@ check('Damage over time respects shield and death cannot heal itself',()=>{
 check('All legendary six-star finishers execute and differ',()=>{
  for(const h of c.HEROES.filter(h=>h.r===3)){const p=player(h.id);for(let i=0;i<4;i++)c.heroRoundEnd(true,{},c.B.mob,s);assert(Object.keys(p.status).length,h.id);assert.equal(p.statusTurn,4);}
 });
-check('Normal pool excludes all exclusive relics; five-choice includes exactly own exclusive',()=>{
+check('Normal pool excludes all exclusive relics; five-choice includes one global exclusive',()=>{
  player();assert(c.relicPool().every(r=>!r.heroOnly));
  const nodes={};c.$=id=>nodes[id]||(nodes[id]={hidden:true,children:[],appendChild(el){this.children.push(el);},set innerHTML(v){this.children=[];this.html=v;},get innerHTML(){return this.html;}});
  c.document={createElement(){return {dataset:{}};}};c.rollRelic=(rar,boost,skip)=>c.relicPool().find(r=>!skip.includes(r));c.G={floor:1};c.offerRelics();
- const picks=nodes.relicList.children.map(b=>c.relicById(b.dataset.id));assert.equal(picks.length,5);assert.equal(picks.filter(r=>r.heroOnly).length,1);assert.equal(picks[0].heroOnly,'adv');
+ const picks=nodes.relicList.children.map(b=>c.relicById(b.dataset.id));assert.equal(picks.length,5);assert.equal(picks.filter(r=>r.heroOnly).length,1);assert(picks[0].heroOnly);assert(picks[0].r<=1);
 });
-check('Exclusive repeats upgrade without duplicate or full-bag swap',()=>{
- player();c.P.relics=['hx_adv'];c.G={floor:1,mobs:[{}]};c.rc=r=>r.n;c.renderHud=()=>{};c.render=()=>{};c.relicFull=()=>{throw Error('Must not need a new slot');};c.takeRelic('hx_adv');assert.equal(c.P.heroRelicRanks.hx_adv,2);assert.equal(c.P.relics.length,1);
+check('Exclusive duplicate is rejected without upgrading or taking another slot',()=>{
+ player();c.P.relics=['hx_adv'];c.G={floor:1,mobs:[{}]};c.relicFull=()=>{throw Error('Duplicate must not enter swap');};c.takeRelic('hx_adv');assert.equal(c.P.relics.length,1);assert(!c.P.heroRelicRanks||!c.P.heroRelicRanks.hx_adv);
 });
 check('Codec binary round trips, corruption and truncation rejected',()=>{
  const crypto=require('node:crypto');for(const n of [0,1,2,3,15,100,1000,20000])for(const a of [crypto.randomBytes(n),Buffer.alloc(n,7)]){const txt=codec.pack('YX4',a);assert.deepEqual(Buffer.from(codec.unpack('YX4',txt)),a);if(n>20){assert.throws(()=>codec.unpack('YX4',txt.slice(0,-2)));const i=Math.floor(txt.length/2);assert.throws(()=>codec.unpack('YX4',txt.slice(0,i)+String.fromCharCode(txt.charCodeAt(i)^1)+txt.slice(i+1)));}}
@@ -79,7 +79,9 @@ check('Permanent YX4 and legacy YX3 round trips preserve six stars and copies',(
  vm.runInContext(source.slice(begin,end),c);vm.runInContext(read('orb.js'),c);
  Object.assign(c,{EN_WORDS:[['apple']],ZH_WORDS:[['苹果']],ES_WORDS:[['uno']],JA_WORDS:[['猫']],LEX:{apple:{str:2,seen:4,miss:1}},CODEX:{},MET:{tut:1},dayNo:()=>20000,lexMiss:r=>r.miss||0,FSRS_MAX_DAYS:36500,meta:()=>({accF:{}}),blankBless:()=>({open:{fav:[0,0,0,0,0],ban:[0,0,0,0,0]},pick:{fav:[],ban:[]}})});
  c.TOWN={gem:123456,hero:c.fixHero({own:{adv:{star:6,xp:500,cp:0},saint:{star:3,xp:100,cp:2}},pity:79,spent:100000}),orb:{bag:[],eq:[]},bless:c.blankBless()};
+ const newest=c.Heirlooms.id('saint',4);c.CODEX[newest]={depth:100,times:2};
  const code=c.makeCode(),decoded=c.codeIO(new c.RcIO(Array.from(codec.unpack('YX4',code))));
+ assert.equal(decoded.codex[newest].times,2);assert.equal(decoded.codex[newest].depth,100);
  assert.equal(decoded.town.hero.own.adv.star,6);assert.equal(decoded.town.hero.own.saint.cp,2);assert.equal(decoded.town.hero.pity,79);assert.equal(decoded.town.gem,123456);assert.equal(decoded.lex.apple.seen,4);
  const io=new c.RcIO(null);c.codeIO(io);const old=c.bytesToCode('YX3',io.finish());assert.equal(c.parseCode3(old).town.hero.own.saint.cp,2);
  assert(code.length<old.length);console.log('  permanent fixture '+old.length+' → '+code.length+' chars');

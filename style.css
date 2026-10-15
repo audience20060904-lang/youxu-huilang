@@ -190,7 +190,32 @@ body{
   border:1px solid var(--edge);background:var(--unseen);border-radius:3px;
   box-shadow:inset 0 1px 5px rgba(90,76,50,.28)}
 .map{position:absolute;top:0;left:0;display:grid;gap:0;width:max-content;
-  will-change:transform}
+  will-change:transform;transition:transform .16s cubic-bezier(.2,.65,.35,1)}
+.map-pawn,.map-pet{position:absolute;top:0;left:0;z-index:3;pointer-events:none;user-select:none;
+  color:var(--hero);transition:transform .16s cubic-bezier(.2,.65,.35,1);will-change:transform}
+.map-pawn svg{display:block;width:100%;height:100%}
+.map-pet{z-index:2;transition-duration:.2s}.map-pet svg{width:70%;height:70%;display:block;filter:drop-shadow(0 1px 1px #3c302547)}
+.map .c.you{background:transparent}
+.stage{isolation:isolate}.stage::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 46px 12px #30291d24}
+.map .c.floor{background-color:#e8dfca;background-image:linear-gradient(135deg,#fff5 0%,#fff0 56%),linear-gradient(0deg,#8f775214 1px,transparent 1px),linear-gradient(90deg,#8f775214 1px,transparent 1px);
+  box-shadow:inset 1px 1px #fff2,inset -1px -1px #836e4b0c}
+.map .c.wall{background-color:#736a5c;background-image:linear-gradient(0deg,#2e291e38 2px,transparent 2px),linear-gradient(90deg,#c7b99c2b 1px,transparent 1px),linear-gradient(135deg,#fff1,#0001);
+  box-shadow:inset 0 3px #b6a88a44,inset 0 -4px #2b241e33;border-color:#52493c}
+.map .c.dark{background:#39362e}
+.map .c.dot::before{width:3px;height:2px;background:#87735133;border-radius:70%;transform:rotate(-25deg)}
+.map .c.dot[data-detail="3"]::before,.map .c.dot[data-detail="11"]::before{width:45%;height:25%;border:1px solid #9c8a6829;border-width:0 0 1px 1px;background:transparent;transform:rotate(-22deg)}
+.map .c.dot[data-detail="17"]::before{width:4px;height:5px;background:#8b9a632f;box-shadow:4px -2px #8b9a6322,-2px 3px #8b9a6322}
+.map[data-biome="2"] .c.floor{background-color:#d9dec6}.map[data-biome="2"] .c.wall{background-color:#677360}
+.map[data-biome="3"] .c.floor{background-color:#dfccba}.map[data-biome="3"] .c.wall{background-color:#786357}
+.map[data-biome="4"] .c.floor{background-color:#d8d9dc}.map[data-biome="4"] .c.wall{background-color:#626779}
+.map[data-biome="5"] .c.floor{background-color:#d5cfe0}.map[data-biome="5"] .c.wall{background-color:#655c75}
+.map .c.gold svg,.map .c.chest svg{filter:drop-shadow(0 1px 1px #73552a44)}
+.map .c.feat svg{filter:drop-shadow(0 0 3px #77ccd366)}
+.battle-pet{position:absolute;right:-14px;bottom:-2px;width:26px;height:26px;pointer-events:none;z-index:2}
+.battle-pet svg{display:block;width:100%;height:100%}
+.dfx-skill{animation:dfx-sigil .65s ease-out both}.dfx-skill.pet-strike{animation-name:dfx-slash}
+@keyframes dfx-sigil{0%{opacity:0;transform:translate(-50%,-50%) rotate(-15deg) scale(.45)}30%{opacity:.8}100%{opacity:0;transform:translate(-50%,-70%) rotate(15deg) scale(1.3)}}
+@media (prefers-reduced-motion:reduce){.map,.map-pawn,.map-pet{transition:none!important}}
 
 /* ===== 地图上的状态浮层 =====
    层/等级/金/敌 + 血条压在取景窗顶上，不再吃纵向预算 —— 地图因此大一圈。

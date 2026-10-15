@@ -54,9 +54,5 @@ if(typeof HEROES!=='undefined') HEROES.forEach(function(h){
     h.s5,
     HeroRules.finales[h.id]?HeroRules.finales[h.id][en?1:0]:en?'Every 3 right answers gain 3 '+name(k[2])+' and '+name(k[3])+'; apply 2 Weakness':'每答对 3 题获得'+name(k[2])+'、'+name(k[3])+'各 3 层，并使敌人衰弱 2 层'];
   if(['mage','tamer','debater'].includes(h.id))h.growth[1]+=en?'; every 3 right answers apply 2 '+(h.id==='mage'?'rotating Scorch / Weakness / Exposed':h.id==='tamer'?'Bleed':'Weakness'):'；每答对 3 题施加 2 层'+(h.id==='mage'?'灼蚀／衰弱／破绽（轮转）':h.id==='tamer'?'裂伤':'衰弱');
-  if(typeof HOLY_NO_BLESS!=='undefined')HOLY_NO_BLESS.push('hx_'+h.id);
-  RELICS.push({id:'hx_'+h.id,r:h.r===3?3:2,n:en?h.n+' · Heirloom':k[1],heroOnly:h.id,nobf:true,
-    pw:en?'Exclusive · each rank: ATK +1; blessing caps +1 (max +3). Every right answer grants 1 '+name(k[0])+' (2 at rank 3). Every 3 right answers apply 2 Exposed. Reselect to rank up (max 999).':'角色专属 · 每阶攻击 +1、祝福上限 +1（上限最多 +3）；每次答对获得'+name(k[0])+' 1 层（三阶起 2 层）；每答对 3 题施加破绽 2 层。重复选择升阶，最高 999 阶。',
-    lore:en?'Bound to '+h.n+'; only found in floor rewards.':'属于'+h.n+'的印记，只在清层五选一中出现。'});
 });
 if(typeof module!=='undefined') module.exports=HeroRules;

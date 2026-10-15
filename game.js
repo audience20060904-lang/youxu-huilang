@@ -559,7 +559,6 @@ function stats(){
     s.atk = Math.max(1, Math.round(s.atk * (1 + hv / 100)));
     hpMul(1 + hv / 100);
   }
-  s.atk+=heroRelicRank();
   s.crit+=statusN(P,"edge")*5;
   if(heroOn("reader", 5) && readerAccOk()) s.crit += HERO_READ_CRIT;
   if(heroSkyOn(2)) s.crit += astroS();                                   // 星象师（暮月）：暴击率 + 强度
@@ -569,6 +568,8 @@ function statsRaw(){
   const pb = CHAPTER.playerBase, pl = CHAPTER.perLevel;
   const s = {atk: pb.atk + (P.lvl-1) * pl.atk, def:0, crit:pb.crit,
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
+  s.atk += Heirlooms.bonus(P,"atk",RMASK); s.maxHp += Heirlooms.bonus(P,"hp",RMASK);
+  s.def += Heirlooms.bonus(P,"def",RMASK); s.crit += Heirlooms.bonus(P,"crit",RMASK);
   /* 金坛（无尽章 50 层往下的 Boss 房，2026-09-25）：投金币换的加成跟等级同一档，是**底子** ——
      它不是遗物，本局一直有效；放在最前面，后面铁躯 / 重装那些乘法件照样放大它。*/
   s.atk += gildGet("atk"); s.maxHp += gildGet("hp"); s.def += gildGet("def"); s.crit += gildGet("crit");
@@ -976,6 +977,7 @@ function nextFloor(){
   lockInput(320);
   if(P.tut){ tutBegin(); commitPerm(); return; }   // 教程关不写续玩档：半路关掉页面，下次重新走一遍
   sayFloorIntro();
+  heirEvent("floor");  // 所有穿戴者均可触发，不能放在回溯者专用的快照分支里。
   clampShield();         // 护盾封顶：进层发的那一堆种子收一次再存档
   heroSnapFloor();       // 回溯者：记下进这一层时的样子（生命 / 护盾 / 连击）
   commit(true);          // 存档点之二：下一层
@@ -1576,7 +1578,8 @@ function camera(){
      以前这里把 cx/cy 夹在 [0, 地图-视野] 里，走到地图上下/左右边缘时镜头就顶住不动了，
      人会跑到画面边上。现在宁可让取景窗露出地图外的空白，也要保证视角始终居中。 */
   const cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
-  m.style.transform = "translate(" + (-cx * cell) + "px," + (-cy * cell) + "px)";
+  DungeonScene.camera(m,-cx*cell,-cy*cell,G.map,cell);
+  DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id);
 }
 function mobAt(x,y){
   for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y) return G.mobs[i];
@@ -1586,13 +1589,18 @@ function thingAt(x,y){
   for(let i=0;i<G.things.length;i++) if(G.things[i].x===x && G.things[i].y===y) return G.things[i];
   return null;
 }
+function paintMapCell(c,html){
+  if(c._sceneHtml!==html){c.innerHTML=html;c._sceneHtml=html;}
+  const mate=c.querySelector(".matepawn");if(mate)mate.remove();
+}
+function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer");}
 function render(){
   const cleared = G.mobs.length === 0;
   const tutAt = (P && P.tut) ? tutTarget() : null;
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const c = cells[y*W + x];
     const isGoal = G.goal && G.goal.x === x && G.goal.y === y;
-    if(!G.seen[y][x]){ c.textContent = ""; c.className = "c dark"; continue; }
+    if(!G.seen[y][x]){ paintMapCell(c,""); c.className = "c dark"; continue; }
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
     // 离地板两格以上的实心墙不画，露出取景框的底（见上面 wallEdge）
@@ -1627,12 +1635,12 @@ function render(){
       glyph = art ? "" : mo.g;
     }
     if(x === P.x && y === P.y){
-      c.innerHTML = heroArt(P.hero);                 // 角色：出战的那个人（主城里 P 没有 hero，就是原来那张）
+      paintMapCell(c,""); // 人物独立于格子，和镜头以同样的曲线连续移动。
       c.className = "c floor you walkable" + heroCls(P.hero) + (isGoal ? " goal" : "");
       continue;
     }
     // 地图上的东西全是画出来的。glyph 只在某只怪没配图时才派上用场
-    if(art) c.innerHTML = art; else c.textContent = glyph;
+    paintMapCell(c,art || glyph);
     c.className = "c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
     if(tutAt && tutAt.x === x && tutAt.y === y) c.classList.add("tutmark");   // 新手教程：这一步要点的那一格
@@ -2273,6 +2281,7 @@ function startBattle(m){
   $("foeArt").innerHTML = ART[m.art];
   $("meArt").innerHTML = heroArt(P.hero);
   $("meArt").className = "me" + heroCls(P.hero);
+  DungeonScene.battlePet(hasPetCompanion());
   if(window.DungeonFX) DungeonFX.resetBattle();
   $("foeName").textContent = m.name;
   $("foeTag").textContent = (m.def && m.def.study) ? L("纯净学习 · 血量无限，随时能撤退", "Pure study · endless HP, retreat any time")
@@ -2282,6 +2291,8 @@ function startBattle(m){
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("btnFlee").textContent = P.study ? L("撤退 · 不掉血", "Retreat · no HP lost") : T("撤退 · 掉一半血");
   $("veilBattle").hidden = false;
+  heirEvent("battle",{mob:m});
+  if(heroOn("tamer") && window.DungeonFX)DungeonFX.skill("tamer","pet");
   say(T("你撞上了 ") + m.name + T("。"), "hurt");
   if(P.combo > 0) say(T("上一场的连击 <b>×") + P.combo + T("</b> 还留着 —— 别断。"), "crit");
   renderBattleBars();
@@ -3283,8 +3294,10 @@ function answer(btn, ok){
 
     /* 角色：博物学者的类别 / 造句者的词性 / 乐师的节拍先记上 —— 下面 pctSteady() 读到的就是算上这一题的层数 */
     const hr = heroRight(word, s, untimed, usedSec);
+    if(window.DungeonFX)DungeonFX.skill(P.hero,"passive");
     relicLog += hr.log;
     const mageSp = heroMageTick(isSpell);      // 法师（第二批）：攒满法力就放下一个法术（火球 / 陨星落在这一刀上，霜甲 / 回春打完再给）
+    if(mageSp && window.DungeonFX)DungeonFX.skill("mage",mageSp);
 
     // 第一层 · 基础点伤（会被百分比放大）
     let base = s.atk;
@@ -3376,6 +3389,7 @@ function answer(btn, ok){
     if(hr.poet5 && heroOn("poet", 3)) extra += tg("e", "hero", Math.round(s.atk * HERO_POET_EXTRA));
     /* 招魂者：每个魂跟着砍一下；法师：火球 / 陨星落在这一刀上（都是④层额外伤害，还是那两个乘区）*/
     if(heroOn("necro") && (P.heroSouls || 0) > 0) extra += tg("e", "hero", Math.round(s.atk * P.heroSouls * heroV("necro") / 100));
+    if(heroOn("necro") && (P.heroSouls || 0)>0 && window.DungeonFX)DungeonFX.skill("necro","strike");
     if(mageSp === "fire" || mageSp === "meteor")
       extra += tg("e", "hero", Math.round(s.atk * heroV("mage") / 100 * (mageSp === "meteor" ? HERO_MAGE_METEOR : 1)));
 
@@ -3435,6 +3449,7 @@ function answer(btn, ok){
        战吼者：这一刀的一部分震到这一层别的怪身上（震不死）；剑圣：必定追加一刀（★5 两刀）；驯兽师 ★5：每 5 题宠物再咬一口。
        追加的那几下跟下面遗物的追加攻击一个写法（单独一笔，打倒了也照打，溢出算进余劲）。*/
     if(heroOn("warcrier") && !COOP){
+      if(window.DungeonFX)DungeonFX.skill("warcrier","strike");
       const sp = Math.round(dmg * heroV("warcrier") * (heroOn("warcrier", 5) ? 2 : 1) / 100);
       let nShook = 0;
       if(sp > 0) G.mobs.forEach(function(o){
@@ -3444,6 +3459,7 @@ function answer(btn, ok){
       if(nShook) relicLog += L(" <span class=\"sys\">(战吼 · 震到 " + nShook + " 只，各 −" + sp + ")</span>", " <span class=\"sys\">(War cry · " + nShook + " foes −" + sp + " each)</span>");
     }
     if(heroOn("saint")){
+      if(window.DungeonFX)DungeonFX.skill("saint","strike");
       let sd = Math.max(1, Math.round(dmg * heroV("saint") / 100));
       if(heroOn("saint", 3) && !crit) sd = Math.round(sd * critMult);
       const nS = heroOn("saint",6) ? 3 : heroOn("saint", 5) ? 2 : 1;
@@ -3916,6 +3932,7 @@ function answer(btn, ok){
     }
   }
   heroRoundEnd(ok,word,m,s);
+  heirEvent(ok?"right":"wrong",{mob:m,word:word.en,cat:word.cat,pos:word.pos,spell:isSpell,fast:fastAns,seconds:usedSec,left:leftSec,untimed:untimed,fresh:firstSeen,due:wasDue,haunt:!!B.q.haunted,wager:!!B.wager});
   LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   $("verdict").innerHTML = head +
@@ -3964,6 +3981,8 @@ function answer(btn, ok){
    返回要显示的那句话；没救下来就是空字符串。*/
 function deathSave(){
   if(P.hp > 0) return "";
+  const heirSave=Heirlooms.rescue(P,G.floor,RMASK);
+  if(heirSave){P.hp=Math.max(1,Math.round(stats().maxHp*heirSave.pct));if(window.DungeonFX)DungeonFX.skill(heirSave.item.heroOnly,"rewind");return heirSave.item.n+L("锚住了时间，你重新站稳。"," anchors time; you stand again.");}
   /* 一息（第十一批）：排在**最前面** —— 先用最便宜的这一次（只留 1 点），薪火和回魂留给下一下。*/
   if(hasRelic("lastgasp") && G && !G.gaspUsed){
     G.gaspUsed = true;
@@ -4430,6 +4449,7 @@ function hurtEnd(final){
 function mitigate(dmg, s0, opt){
   const s = s0 || stats();
   let out = dmg, why = "";
+  if((P.heirGuard||0)>0){P.heirGuard--;hurtRow("@heirloom",-out);return {dmg:0,dodged:false,why:L("（专属遗物格挡）"," (Heirloom guard)")};}
   const wrong = !!(opt && opt.wrong);        // 这一下是不是「答错」挨的（超时不算）
   /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
@@ -4554,6 +4574,7 @@ function mitigate(dmg, s0, opt){
 /* 化劲：上一次 takeHit() 真正要落到血上的数（护盾吃掉的不算；缓刑挂上的账整笔算，免得拿「还没扣」当「挡掉了」）*/
 let hitLost = 0;
 function takeHit(dmg, m, haunted){
+  if(!(dmg>0))return L("这一下被挡住了，没有掉血。","The blow was blocked; no HP lost.");
   /* 缓刑（第十三批）：这一口先不扣，拆成 REPRIEVE_N 份挂在 P.owe 上，之后每答一题扣一份（payOwe）。
      护盾、连杀、叠甲、反震、圆满这些「真的挨了打」才算的事，都等真扣的那一下（landHit）再算。*/
   if(hasRelic("reprieve") && dmg > 0){
@@ -4615,6 +4636,8 @@ function landHit(dmg, m, haunted){
   if(hasRelic("corrode")) G.corrodeArmor = Math.max(0, (G.corrodeArmor || 0) - CORRODE_LOSS);
   // 护盾从"有"变成"没有"的那一下（真的被打穿，不是本来就没盾）：借甲 / 破盾余威 / 久经 都挂在这个事件上
   const brokeNow = hadShield && (P.shield || 0) <= 0;
+  if(ate>0)heirEvent("blocked",{mob:m});
+  if(brokeNow)heirEvent("wardbreak",{mob:m});
   if(brokeNow){
     P.shieldBrokenCount = (P.shieldBrokenCount || 0) + 1;    // 久经：累计次数，stats() 里按门槛判
     if(hasRelic("borrow") && !G.borrowUsed){                 // 借甲：每层一次，白送一批新盾
@@ -4677,6 +4700,7 @@ function closeBattleWin(){
   const i = G.mobs.indexOf(m);
   if(i >= 0) G.mobs.splice(i,1);
   P.kills++;
+  heirEvent("kill",{mob:m});
   /* 招魂者（角色第二批）：收下它的魂（★5 打倒 Boss 一次收 5 个）*/
   if(heroOn("necro")) P.heroSouls = Math.min(necroCap(), (P.heroSouls || 0) + (m.boss && heroOn("necro", 5) ? HERO_NECRO_BOSS : 1));
   if(holyOn("grail") && P.kills % HOLY_GRAIL_KILLS === 0) P.hp += HOLY_GRAIL_PER;   // 血之圣杯：上限涨了，当前血跟着补
@@ -5719,7 +5743,8 @@ function fuseTake(id){
   fuseVia = null; fuseHow = T("合成出");
   const ok = fusePicks.indexOf(id) >= 0 || (fusePicks.length === 0 && id);
   fusePicks = [];
-  const got = ok ? relicById(id) : null;
+  const candidate = ok ? relicById(id) : null;
+  const got = candidate && !candidate.heroOnly ? candidate : null;
   if(via === "grant"){
     if(G) G.paused = false;      // grantRelic 里要是弹取舍窗，它自己会再 paused 回去
     if(got) grantRelic(got, how);
@@ -5864,7 +5889,7 @@ function rerollBudget(){
 }
 function offerRelics(){
   const pool = relicPool();      // ⚠️ 走这一个口，封印/已拥有/联机禁用件都在里面滤掉了
-  const exclusive=relicById("hx_"+P.hero);
+  const exclusive=Heirlooms.roll(G.floor,P.relics||[]);
   if(!pool.length && !exclusive){ G.relicDone = true; return false; }
   // 每一件都按层数权重单抽，互不重复（2026-09 从三选一改成五选一，RELIC_OFFER_N）
   const picks = exclusive ? [exclusive] : [];
@@ -5893,7 +5918,7 @@ function offerRelics(){
   picks.forEach(function(r){
     const d = document.createElement("button");
     d.type = "button"; d.className = "relic"; d.dataset.id = r.id;
-    d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + (r.heroOnly?L("专属 · 阶 ","Exclusive · Rank ")+Math.min(999,1+(P.heroRelicRanks&&P.heroRelicRanks[r.id]||((P.relics||[]).includes(r.id)?1:0))):RAR_CN[r.r || 0]) + "</span>" +
+    d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + RAR_CN[r.r || 0] + (r.heroOnly?" · "+heroById(r.heroOnly).n+L("专属"," Heirloom"):"") + "</span>" +
       "<span class=\"rn q" + (r.r || 0) + "\">" + r.n + "</span>" +
       "<span class=\"rp\">" + r.pw + "</span>" +
       "<span class=\"rl\">" + r.lore + "</span>";
@@ -5908,13 +5933,7 @@ function offerRelics(){
 }
 function takeRelic(id){
   const r = relicById(id);
-  if(!r || (r.heroOnly && r.heroOnly!==P.hero)) return;
-  if(r.heroOnly && P.relics.indexOf(id)>=0){
-    if(!P.heroRelicRanks)P.heroRelicRanks={};
-    P.heroRelicRanks[id]=Math.min(999,(P.heroRelicRanks[id]||1)+1);
-    G.relicDone=true;G.spoilsOn=false;G.paused=false;$("veilRelic").hidden=true;
-    say(r.n+L("强化至 "," upgraded to ")+P.heroRelicRanks[id]+L(" 阶。","."),"crit");renderHud();render();maybeRelic();return;
-  }
+  if(!r || P.relics.indexOf(id)>=0) return;
   G.relicDone = true;
   G.spoilsOn = false;
   $("veilRelic").hidden = true;
@@ -6193,7 +6212,7 @@ function renderRelics(){
     d.innerHTML =
       (isNew ? "<span class=\"newdot\">new</span>" : "") +
       "<div class=\"col\">" +
-        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (picked ? T(" · 已选") : "") + (holy ? L(" · ✦ 赐福 ×2", " · ✦ Blessed ×2") : "") +
+        "<span class=\"rt q" + q + "\">" + RAR_CN[q] + (r.heroOnly?" · "+heroById(r.heroOnly).n+L("专属"," Heirloom"):"") + (picked ? T(" · 已选") : "") + (holy ? L(" · ✦ 赐福 ×2", " · ✦ Blessed ×2") : "") +
           (temp ? L(" · 淬火 +", " · Tempered +") + heroFmt(heroV("smith")) + "%" : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
         "<span class=\"rp\">" + r.pw + "</span>" +
@@ -6991,17 +7010,39 @@ function renderOrbShop(){
    - 一趟一个人：进洞那一刻的 id / 等级 / 星级定死在 P.hero / P.heroLv / P.heroStar 上，这一趟攒的经验记在 P.heroXp，
      **结算 / 回镇上那一下**才并进 TOWN（heroFoldXp）—— 洞里面板不会突然跳，续玩档也对得上。
    - 判定一律 heroOn(id, 星级)：认 RMASK 的 "hero"（「构成」逐件拿掉算差时它单列一行）。*/
-function heroRelicRank(){
-  if(!P || !(P.relics||[]).includes("hx_"+P.hero)) return 0;
-  if(RMASK && (RMASK==="all" || RMASK["hx_"+P.hero]))return 0;
-  return Math.max(1,Math.min(999,Math.floor((P.heroRelicRanks||{})["hx_"+P.hero])||1));
+function heirEvent(event,details){
+  if(!P || !G || P.study || P.tut || P.hp<=0)return;
+  const s=stats(),m=details&&details.mob||B&&B.mob;
+  const ctx=Object.assign({event:event,p:P,mob:m,stats:s,mask:RMASK,floor:G.floor,rarity:id=>relicRar(id)},details||{});
+  ctx.act=function(item,key,n){
+    if(P.hp<=0)return;
+    if(HeroRules.effects[key]){statusGain(P,key,n);return;}
+    if(key.startsWith("foe.")){if(m&&m.hp>0)statusGain(m,key.slice(4),n);return;}
+    const hit=function(amount,kind){if(m&&m.hp>0){let dmg=Math.max(1,Math.round(amount));if(event==="battle")dmg=Math.min(dmg,m.hp-1);if(dmg<=0)return;coopDealDamage(m,dmg);floatNum("foe","-"+dmg,"dmg");if(window.DungeonFX)DungeonFX.skill(item.heroOnly,kind);}};
+    switch(key){
+      case "hit":case "echohit":hit(s.atk*n,"strike");break;
+      case "pet":hit(s.atk*n,"pet");break;
+      case "heal":healUp(Math.max(1,Math.round(s.maxHp*n)),s);break;
+      case "shield":P.shield=Math.min(shieldCap(s),(P.shield||0)+Math.max(1,Math.round(s.maxHp*n)));break;
+      case "cleanse":{let left=n;for(const k of HeroRules.negative){const v=Math.min(left,P.status&&P.status[k]||0);if(v){P.status[k]-=v;left-=v;if(!P.status[k])delete P.status[k];}}break;}
+      case "guard":P.heirGuard=Math.min(2,(P.heirGuard||0)+n);break;
+      case "extend":for(const k in P.status)if(!HeroRules.negative.includes(k)&&P.status[k]>0)statusGain(P,k,n);break;
+      case "mirror":if(m&&m.hp>0)for(const k of HeroRules.negative)if(P.status&&P.status[k]){statusGain(m,k,P.status[k]);delete P.status[k];break;}break;
+      case "gold":earnGold(n);break;
+      case "spendgold":if(P.gold>=n){P.gold-=n;addSpent(n);hit(s.atk,"coin");statusGain(m,"exposed",2);}break;
+      case "spendshield":{const spent=Math.min(P.shield||0,Math.max(1,Math.round(s.maxHp*.1)));if(spent>0&&m&&m.hp>0){P.shield-=spent;hit(spent*n,"forge");}break;}
+      case "spread":for(const foe of G.mobs)if(foe!==m&&foe.hp>1){const damage=Math.min(foe.hp-1,Math.max(1,Math.round(s.atk*n)));coopDealDamage(foe,damage);}break;
+    }
+  };
+  ctx.fx=function(item){if(window.DungeonFX&&B)DungeonFX.skill(item.heroOnly,item.trigger);};
+  Heirlooms.settle(ctx);
 }
 function statusN(owner,key){
   if(RMASK && (RMASK==="all" || RMASK["@status"]))return 0;
   const cap=owner===P && !HeroRules.negative.includes(key)?statusCap():4;
   return owner && owner.status ? Math.min(cap,owner.status[key]||0) : 0;
 }
-function statusCap(){ return Math.min(8,4+((P&&P.heroStar||1)>=4?1:0)+Math.min(3,heroRelicRank())); }
+function statusCap(){ return 4+((P&&P.heroStar||1)>=4?1:0); }
 function statusGain(owner,key,n){
   if(!owner || !n) return;
   if(!owner.status)owner.status={};
@@ -7019,10 +7060,11 @@ function statusCutPct(){
 function statusLabel(k){return HeroRules.effects[k][UI_EN?1:0];}
 function statusChips(owner){
   if(!owner || !owner.status)return "";
-  return Object.keys(HeroRules.effects).filter(k=>statusN(owner,k)>0).map(function(k){
+  const chips=Object.keys(HeroRules.effects).filter(k=>statusN(owner,k)>0).map(function(k){
     const debuff=HeroRules.negative.includes(k),n=statusN(owner,k);
     return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+statusLabel(k)+" <b>"+n+"</b></button>";
   }).join("");
+  return chips+(owner===P && (P.heirGuard||0)>0?'<span class="status-chip" title="下次实际受到的攻击被专属遗物格挡，最多储存两次">'+L("专属格挡","Heirloom guard")+' <b>'+P.heirGuard+'</b></span>':'');
 }
 function renderStatuses(){
   [{id:"playerStatuses",owner:P},{id:"foeStatuses",owner:B&&B.mob}].forEach(function(row){
@@ -7060,9 +7102,8 @@ function heroRoundEnd(ok,word,m,s){
   const kit=HeroRules.kits[P.hero];if(!kit)return;
   if(ok){
     P.heroFlow=(P.heroFlow||0)+1;
-    const t=P.heroFlow,st=P.heroStar||1,rank=heroRelicRank();
+    const t=P.heroFlow,st=P.heroStar||1;
     if(st>=2 && t%2===0)statusGain(P,kit[0],st>=4?3:2);
-    if(rank){statusGain(P,kit[0],rank>=3?2:1);if(t%3===0)statusGain(m,"exposed",2);}
     if(st>=6){
       if(P.hero==="bard" && t%4===0){for(const k of ["renew","ward","fury"])statusGain(P,k,4);}
       else if(t%3===0){
@@ -7161,7 +7202,7 @@ function heroStart(){
   P.hero = id;
   P.heroLv = P.tut ? 1 : heroLvOf(rec.xp).lv;
   P.heroStar = P.tut ? 1 : rec.star;
-  P.status={}; P.statusTurn=0; P.heroFlow=0; P.heroRelicRanks={};
+  P.status={}; P.statusTurn=0; P.heroFlow=0; P.heirState={}; P.heirGuard=0;
   P.heroXp = 0;
   P.heroStack = 0; P.heroPos = null;          // 造句者
   P.heroBeat = 0; P.heroBeatT = null;         // 乐师
@@ -7187,7 +7228,7 @@ function heroStart(){
 /* 读老续玩档：没有这些字段的一律当冒险者 1 级（RUN_V 不动）*/
 function heroResume(){
   P.status=HeroRules.clean(P.status); P.statusTurn=Math.max(0,Math.floor(P.statusTurn||0)); P.heroFlow=Math.max(0,Math.floor(P.heroFlow||0));
-  P.heroRelicRanks=P.heroRelicRanks&&typeof P.heroRelicRanks==="object"?P.heroRelicRanks:{};
+  Heirlooms.normalize(P);
   if(!heroById(P.hero)){ P.hero = HERO_DEFAULT; P.heroLv = 1; P.heroStar = 1; }
   if(typeof P.heroLv !== "number") P.heroLv = 1;
   P.heroStar = Math.max(1,Math.min(6,Math.floor(P.heroStar)||1));
