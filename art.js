@@ -874,6 +874,56 @@ var HERO_ART = (function(){
       '<path d="M13.4 2.6c1.6 0 2.8 1.3 2.8 2.9 0 1.1-.6 2-1.4 2.6 2.3.8 3.5 3.6 3.7 8.4h-6.8" fill="currentColor" opacity=".28"/>',
       '<circle cx="10" cy="13.6" r="2.3" fill="#C9B6F0" opacity=".9" stroke="#5A3F8A" stroke-width=".4"/>' +
       '<circle cx="9.3" cy="12.9" r=".55" fill="#fff" opacity=".8"/>' +
-      '<path d="M8.3 15.9h3.4l-.4.9H8.7z" fill="#5A4424"/>')
+      '<path d="M8.3 15.9h3.4l-.4.9H8.7z" fill="#5A4424"/>'),
+    /* ===== 第三批（2026-10-15）===== */
+    /* 药剂师：右手一只圆肚药瓶 */
+    apothecary: svg("",
+      '<rect x="15.1" y="9.4" width="1.6" height="1.6" rx=".3" fill="#C9B47E" stroke="#6B5A3A" stroke-width=".35"/>' +
+      '<path d="M15.2 10.9h1.4v1c1.3.5 2.1 1.6 2.1 2.9 0 1.8-1.4 3.1-2.8 3.1s-2.8-1.3-2.8-3.1c0-1.3.8-2.4 2.1-2.9z" fill="#E8F2EA" stroke="#3E6B44" stroke-width=".4"/>' +
+      '<path d="M13.4 14.6c1.6-.5 3.3.4 5 0 0 1.6-1.1 2.8-2.5 2.8s-2.5-1.1-2.5-2.8z" fill="#5DBB6A"/>' +
+      '<circle cx="15.1" cy="13.4" r=".35" fill="#fff" opacity=".8"/>'),
+    /* 辩手：举着一根手指，头边一个感叹号气泡 */
+    debater: svg("",
+      '<path d="M14.6 1.4h4.1c.6 0 1 .4 1 1v2.7c0 .6-.4 1-1 1h-2.3l-1.2 1.1.2-1.1h-.8c-.6 0-1-.4-1-1V2.4c0-.6.4-1 1-1z" fill="#FBF6E7" stroke="#8A5A2E" stroke-width=".4"/>' +
+      '<path d="M16.65 2.3v2" stroke="#B8322A" stroke-width=".7" stroke-linecap="round"/><circle cx="16.65" cy="5.1" r=".35" fill="#B8322A"/>' +
+      '<path d="M13.2 12.4 14.6 8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+      '<path d="M14.6 8.4l.3-1.3" stroke="#E8C7A0" stroke-width=".7" stroke-linecap="round"/>'),
+    /* 导师：一把白胡子 + 圆眼镜 */
+    mentor: svg("",
+      '<path d="M8.3 7.4c.4 2.6 1 4.2 1.7 4.6.7-.4 1.3-2 1.7-4.6-1.1.5-2.3.5-3.4 0z" fill="#F2EFE6" stroke="#B8B2A0" stroke-width=".3"/>' +
+      '<circle cx="9.1" cy="5.9" r=".75" fill="none" stroke="#E0A83A" stroke-width=".35"/><circle cx="10.9" cy="5.9" r=".75" fill="none" stroke="#E0A83A" stroke-width=".35"/>' +
+      '<path d="M9.85 5.9h.3" stroke="#E0A83A" stroke-width=".35"/>'),
+    /* 商人：背后一只大钱袋 */
+    merchant: svg(
+      '<path d="M3.8 8.6c.4-.6 1-.9 1.6-.9h.6c.6 0 1.2.3 1.6.9-.4.3-.6.6-.6 1 2.1.9 2.6 3.2 2.3 5.4-.3 1.4-1.6 2.2-3.5 2.2s-3.2-.8-3.5-2.2c-.3-2.2.2-4.5 2.3-5.4 0-.4-.2-.7-.6-1z" fill="#B58A4A" stroke="#6B4A1E" stroke-width=".45"/>',
+      '<circle cx="5.7" cy="13.6" r="1.25" fill="#E8C36A" stroke="#8A6A16" stroke-width=".35"/>' +
+      '<path d="M5.7 12.9v1.4" stroke="#8A6A16" stroke-width=".35"/>'),
+    /* 驯兽师：脚边蹲着一只小狼 */
+    tamer: svg("",
+      '<path d="M13.2 17.6v-2.4c0-1.3.9-2.1 2-2.1h1.2l.9-1.3.5 1.3c.8.3 1.2 1 1.2 1.8l-.6.5-.5-.2v2.4h-.9v-1.6h-2.4v1.6z" fill="#8E8A82" stroke="#4A4640" stroke-width=".35" stroke-linejoin="round"/>' +
+      '<circle cx="17.3" cy="14" r=".28" fill="#2A2620"/>' +
+      '<path d="M13.2 15.4c-.8-.2-1.3-.9-1.4-1.7" fill="none" stroke="#8E8A82" stroke-width=".7" stroke-linecap="round"/>'),
+    /* 战吼者：一顶带角的头盔，嘴边几道声浪 */
+    warcrier: svg("",
+      '<path d="M6.6 4.2c.2-1.9 1.6-3 3.4-3s3.2 1.1 3.4 3c-2.2.4-4.6.4-6.8 0z" fill="#8E969C" stroke="#4A5058" stroke-width=".35"/>' +
+      '<path d="M6.8 3.6C5.4 3.2 4.6 2 4.6.6c.9 1 1.8 1.4 2.8 1.6z" fill="#F2EFE6" stroke="#8A8270" stroke-width=".3"/>' +
+      '<path d="M13.2 3.6c1.4-.4 2.2-1.6 2.2-3-.9 1-1.8 1.4-2.8 1.6z" fill="#F2EFE6" stroke="#8A8270" stroke-width=".3"/>' +
+      '<path d="M14.6 6.2c.7.6.7 1.6 0 2.2M16 5.4c1.3 1.1 1.3 2.8 0 3.9M17.4 4.6c1.8 1.6 1.8 4 0 5.6" fill="none" stroke="#B8322A" stroke-width=".45" stroke-linecap="round" opacity=".8"/>'),
+    /* 收藏家：单片眼镜，手里一颗宝石 */
+    collector: svg("",
+      '<circle cx="10.9" cy="5.9" r=".85" fill="#CFE6F5" opacity=".5" stroke="#E0A83A" stroke-width=".4"/>' +
+      '<path d="M11.7 6.3c.5.9.6 2 .3 3" fill="none" stroke="#E0A83A" stroke-width=".25"/>' +
+      '<path d="M15.6 11.6l1.6 1.4-1.6 2.6-1.6-2.6z" fill="#7FC4E8" stroke="#2B5C9C" stroke-width=".4" stroke-linejoin="round"/>' +
+      '<path d="M14 13l1.6.1 1.6-.1" fill="none" stroke="#2B5C9C" stroke-width=".3"/>'),
+    /* 回溯者：一道往回绕的箭头圈着他 */
+    rewinder: svg(
+      '<path d="M16.8 13.6a7 7 0 1 0-1.4 3" fill="none" stroke="#5EC4C4" stroke-width=".7" stroke-linecap="round" opacity=".7"/>',
+      '<path d="M15.4 16.6l.2-1.9 1.6 1z" fill="#5EC4C4" opacity=".9"/>'),
+    /* 剑圣：背后交叉两把剑 */
+    saint: svg(
+      '<path d="M3.2 2.4 15.8 14.8M16.8 2.4 4.2 14.8" stroke="#E1E7EC" stroke-width=".9" stroke-linecap="round"/>' +
+      '<path d="M3.2 2.4 15.8 14.8M16.8 2.4 4.2 14.8" stroke="#6E7B86" stroke-width=".25" opacity=".7"/>' +
+      '<path d="M3.9 4.5 5.3 3.1M14.7 3.1 16.1 4.5" stroke="#8A6A16" stroke-width=".9" stroke-linecap="round"/>' +
+      '<path d="M3.2 2.4 4.1 3.3M16.8 2.4 15.9 3.3" stroke="#5E3E1C" stroke-width="1.1" stroke-linecap="round"/>', "")
   };
 })();

@@ -804,7 +804,7 @@ function nextFloor(){
   G.bwallBank = 0;         // 刃壁 / 渴刃·血月 / 血河：按小数攒、攒满 1 点给 1 点
   G.sipBank = 0;
   G.riverBank = 0;
-  G.spoils = 0;            // 战利品（第十二批）：这一层还欠着几次五选一
+  G.spoils = heroOn("collector", 5) ? 1 : 0;   // 战利品（第十二批）：这一层还欠着几次五选一（收藏家 ★5 每层多挑一次）
   G.spoilsOn = false;
   G.carry = 0;             // 余劲（第十三批）：上一只溢出来、留给下一只的伤害，不带进下一层
   G.honeN = 0;             // 磨砺（第十四批）：这一层答对几题
@@ -974,6 +974,7 @@ function nextFloor(){
   if(P.tut){ tutBegin(); commitPerm(); return; }   // 教程关不写续玩档：半路关掉页面，下次重新走一遍
   sayFloorIntro();
   clampShield();         // 护盾封顶：进层发的那一堆种子收一次再存档
+  heroSnapFloor();       // 回溯者：记下进这一层时的样子（生命 / 护盾 / 连击）
   commit(true);          // 存档点之二：下一层
   const lk = $("btnLockWager"); if(lk) lk.classList.remove("tipmark");   // 「锁定冒险」那一闪只留一层
   if(G.floor === 1) tip("path");                   // 第一趟的提示：寻路
@@ -1280,7 +1281,7 @@ function genFloor(){
   if(hasRelic("hoardbox") || Math.random() < 0.45){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"chest"}); }
   // 祭坛 ALTAR_FROM 层之后才出（用户 2026-09）；有一成概率长成「熔炉」，在 openAltar 里定
   if(G.floor >= ALTAR_FROM && (hasRelic("shrine") || Math.random() < 0.30)){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"altar"}); }
-  if(G.floor >= 2 && Math.random() < 0.35){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"shop"}); }
+  if(G.floor >= 2 && (heroOn("merchant") || Math.random() < 0.35)){ const sp = take(); if(sp) G.things.push({x:sp.x, y:sp.y, kind:"shop"}); }   // 商人（角色）：每层必有
 }
 /* 这一层落在哪一段（content.js 的 FOE_BANDS）。只有会成长的怪吃这个倍率 */
 function foeBand(floor){
@@ -2257,6 +2258,11 @@ function startBattle(m){
     G.carry = 0;
     if(hit > 0){ m.hp -= hit; say(T("余劲 —— 上一刀没收住，先砸掉 ") + m.name + T(" <b>") + hit + T("</b> 点。"), "good"); }
   }
+  /* 驯兽师（角色第三批）：开战宠物先咬一口 —— 跟余劲一样永远给怪留 1 点（不会不答题就打死一只）。深渊 / 书灵 / 联机不走这条 */
+  if(heroOn("tamer") && !COOP && !(m.def && (m.def.abyss || m.def.study))){
+    const bite = Math.min(petBite(stats()), m.hp - 1);
+    if(bite > 0){ m.hp -= bite; say(L("宠物先扑了上去，咬掉 " + m.name + " <b>" + bite + "</b> 点。", "Your pet pounces first — " + m.name + " loses <b>" + bite + "</b>."), "good"); }
+  }
   clearQTimer();          // 上一场要是被别的路子掐断了，读条可能还挂着
   G.paused = true;
   $("foeArt").className = "portrait" + (m.boss ? " boss" : "");
@@ -2592,6 +2598,14 @@ function timeUp(){
     say(L("时间到 —— 钟表匠从怀表里拨出 " + lap + " 秒顶上，没挨咬（还剩 " + P.heroSand + " 秒）。题还在，接着答。",
           "Time's up — the Clockmaker pays " + lap + "s from the watch; no bite (" + P.heroSand + "s left). Same question, keep going."), "good");
     renderBattleBars();
+    startQTimer();
+    return;
+  }
+  /* 辩手（角色第三批）：怪还愣着，超时这一口也咬不出来 */
+  if(m.stun && heroOn("debater")){
+    m.stun = false;
+    hurtBegin(m, s, false); hurtRow("hero", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
+    say(L("时间到 —— " + m.name + " 还愣着，没咬上。题还在，接着答。", "Time's up — " + m.name + " is still stunned and doesn't bite. Same question, keep going."), "good");
     startQTimer();
     return;
   }
@@ -3320,6 +3334,8 @@ function answer(btn, ok){
       if(B.wager && heroOn("rogue")) pct += tg("p", "hero", heroV("rogue"));                  // 狂徒：冒险答对
       if(B.heroFirst && heroOn("adv", 3)) pct += tg("p", "hero", HERO_ADV_FIRST);      // 冒险者 ★3：每层第一场
       if(B.q.ask && heroOn("examiner")) pct += tg("p", "hero", HERO_ASK_PCT);          // 追问者：追问答对
+      if(m.stun && heroOn("debater", 3)) pct += tg("p", "hero", HERO_DEBATE_PCT);      // 辩手 ★3：愣住的怪
+      if(G.heroRewoundHere && heroOn("rewinder")) pct += tg("p", "hero", heroV("rewinder"));   // 回溯者：回溯过的这一层
     }
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
@@ -3405,6 +3421,40 @@ function answer(btn, ok){
     let dealt = dmg;                 // 余劲：这一刀一共打出去多少（回响之厅 / 凿骨也算），减掉真打进血条的就是溢出
     const maxAt = m.max || 0;        // 过载：按这一刀落下之前的最大生命比（深渊那只每穿一层会换）
     coopDealDamage(m, dmg);
+    /* ===== 角色第三批：这一刀落下之后 =====
+       战吼者：这一刀的一部分震到这一层别的怪身上（震不死）；剑圣：必定追加一刀（★5 两刀）；驯兽师 ★5：每 5 题宠物再咬一口。
+       追加的那几下跟下面遗物的追加攻击一个写法（单独一笔，打倒了也照打，溢出算进余劲）。*/
+    if(heroOn("warcrier") && !COOP){
+      const sp = Math.round(dmg * heroV("warcrier") * (heroOn("warcrier", 5) ? 2 : 1) / 100);
+      let nShook = 0;
+      if(sp > 0) G.mobs.forEach(function(o){
+        if(o === m || o.boss || !(o.hp > 1)) return;
+        o.hp = Math.max(1, o.hp - sp); o.shook = true; nShook++;
+      });
+      if(nShook) relicLog += L(" <span class=\"sys\">(战吼 · 震到 " + nShook + " 只，各 −" + sp + ")</span>", " <span class=\"sys\">(War cry · " + nShook + " foes −" + sp + " each)</span>");
+    }
+    if(heroOn("saint")){
+      let sd = Math.max(1, Math.round(dmg * heroV("saint") / 100));
+      if(heroOn("saint", 3) && !crit) sd = Math.round(sd * critMult);
+      const nS = heroOn("saint", 5) ? 2 : 1;
+      for(let k = 0; k < nS; k++){
+        dealt += sd; landed += landedOn(m, sd); coopDealDamage(m, sd);
+        if(lastDmgRec) lastDmgRec.more.push(["hero", sd]);
+        setTimeout(function(){ floatNum("foe", "-" + sd, "dmg"); }, 300 + 140 * k);
+      }
+      relicLog += L(" <span class=\"sys\">(剑圣 +" + sd * nS + ")</span>", " <span class=\"sys\">(Sword Saint +" + sd * nS + ")</span>");
+    }
+    if(heroOn("tamer", 5)){
+      P.heroPetN = (P.heroPetN || 0) + 1;
+      if(P.heroPetN >= HERO_PET_EVERY){
+        P.heroPetN = 0;
+        const bite = petBite(s);
+        dealt += bite; landed += landedOn(m, bite); coopDealDamage(m, bite);
+        if(lastDmgRec) lastDmgRec.more.push(["hero", bite]);
+        setTimeout(function(){ floatNum("foe", "-" + bite, "dmg"); }, 240);
+        relicLog += L(" <span class=\"sys\">(宠物 +" + bite + ")</span>", " <span class=\"sys\">(Pet +" + bite + ")</span>");
+      }
+    }
     /* ===== 追加攻击（用户 2026-10-02 定义）=====
        答对、这一刀打完之后，按 followChance()（回响之厅 / 疾风相加）掷一次：中了就把这一刀**原样再打一次**
        （不重新掷暴击、不再算额外伤害、不加连击 —— 还是那两个乘区）。**一题最多追加一次**，概率过了 100% 也只是必中。
@@ -3638,7 +3688,7 @@ function answer(btn, ok){
         const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_PIONEER_HEAL)), s).hp;
         if(hp) relicLog += L(" <span class=\"sys\">(拓荒者 · 回 " + hp + " 点)</span>", " <span class=\"sys\">(Pioneer · +" + hp + " HP)</span>");
       }
-      relicLog += heroAfterHit({word:word, s:s, mageSp:mageSp, landed:landed, untimed:untimed, leftSec:leftSec, fast:fast});   // 第二批
+      relicLog += heroAfterHit({word:word, s:s, mageSp:mageSp, landed:landed, untimed:untimed, leftSec:leftSec, fast:fast, m:m, hitWeak:hitWeak});   // 第二批 / 第三批
       if(wasDue && missBefore > 0 && heroOn("keeper", 3) && (G.heroDueN || 0) < HERO_KEEPER_N){   // 守夜人 ★3
         G.heroDueN = (G.heroDueN || 0) + 1;
         const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_KEEPER_HEAL)), s).hp;
@@ -3774,6 +3824,12 @@ function answer(btn, ok){
         hurtRow("unchain", -dmg); dmg = 0;
         head = T("<span class=\"big no\">断链 —— 链子替你挨了</span>");
         note = T("连击 −") + unchainAt() + T("，血一点没掉。");
+      }
+      if(dmg > 0 && m.stun && heroOn("debater")){   // 辩手（角色第三批）：怪还愣着，这一口咬不出来
+        m.stun = false;
+        hurtRow("hero", -dmg); dmg = 0;
+        head = L("<span class=\"big no\">它还愣着 —— 没咬上</span>", "<span class=\"big no\">Still stunned — no bite</span>");
+        note = L("辩手把它说愣了，这一下没落到身上。", "The Debater left it speechless; the blow never landed.");
       }
       if(dmg > 0 && studyNoHurt()){             // 纯净学习 + 练习模式：一律不掉血
         hurtRow("@practice", -dmg); dmg = 0;
@@ -3917,6 +3973,22 @@ function deathSave(){
     return T("回魂 —— 你数到第二次心跳，又站了起来（") + P.hp + T(" 点生命，本局还剩 ") +
            (REVIVE_N - P.revived) + T(" 次）。");
   }
+  /* 药剂师 ★5 / 回溯者（角色第三批）：排在遗物的保险后面、试炼圣骸前面 */
+  if(heroOn("apothecary", 5) && (P.heroFlask || 0) >= 1){
+    const s = stats(), drink = Math.min(s.maxHp, Math.floor(P.heroFlask));
+    P.heroFlask -= drink;
+    P.hp = Math.max(1, drink);
+    return L("药剂师 —— 倒下之前把药瓶灌了下去，带着 " + P.hp + " 点生命站住了。", "Apothecary — you down the flask before you fall and stand with " + P.hp + " HP.");
+  }
+  if(heroOn("rewinder") && rewindLeft() > 0){
+    const s = stats(), sn = P.heroSnap && G && P.heroSnap.f === G.floor ? P.heroSnap : null;
+    P.heroRewound = (P.heroRewound || 0) + 1;
+    P.hp = Math.max(1, Math.min(s.maxHp, sn ? sn.hp : Math.ceil(s.maxHp / 2)));
+    if(sn){ P.shield = sn.sh || 0; P.combo = sn.c || 0; }
+    if(G) G.heroRewoundHere = true;
+    return L("回溯者 —— 时间往回拨，你又站在了这一层的门口（" + P.hp + " 点生命，本局还剩 " + rewindLeft() + " 次）。",
+             "Rewinder — time winds back; you stand at this floor's doorway again (" + P.hp + " HP, " + rewindLeft() + " left this run).");
+  }
   /* 试炼圣骸（圣器）：排在最后 —— 别的保险都用完了才轮到它。每层一次，留 1 点进入试炼（P.trial 题），
      答对数满在 answer() 里回血，试炼中失手（答错 / 超时）直接倒下。*/
   if(holyOn("trial") && G && !G.trialUsed){
@@ -3944,6 +4016,8 @@ function healUp(n, s0, force){
   if(up > 0) P.hp += up;
   // 汗巾／血锤按「这一层回了多少血」给加成 —— 只算真的进了血条的那部分，转成护盾的不算
   if(up > 0 && G) G.healed = (G.healed || 0) + up;
+  /* 药剂师（角色第三批）：溢出的那部分存进药瓶（封顶 flaskCap）—— 跟泉涌各算各的 */
+  if(spill > 0 && heroOn("apothecary")) P.heroFlask = Math.min(flaskCap(s), (P.heroFlask || 0) + spill);
   let sh = 0;
   if(spill > 0 && (force || hasRelic("well"))){
     sh = Math.floor(spill * (hasRelic("well") ? rmul("well") : 1) / SPILL_RATE);   // 赐福泉涌：同样的溢出换两倍的盾
@@ -4346,6 +4420,7 @@ function mitigate(dmg, s0, opt){
      一层 11.5 场却只答错 6 次，「每场一次」等于近八成的答错都被砍半，
      一件**普通**品质比传奇「不动」还强，是全表最大的一处定价事故。*/
   if(wrong && hasRelic("burlap") && !G.burlapUsed){ G.burlapUsed = true; cut += ct("burlap", BURLAP_CUT); }
+  if(heroOn("warcrier", 3) && B && B.mob && B.mob.shook) cut += ct("hero", HERO_WAR_CUT);   // 战吼者 ★3：被震过的怪
   // 镇压：只挡 Boss 那一口（全局那一档在 cutStatic() 里；Boss 层的容错只有 3 下出头）
   if(hasRelic("quell") && B && B.mob && B.mob.boss) cut += ct("quell", QUELL_CUT);
   /* 稳答／慎笔：按题型分——mitigate() 只有两个调用点（timeUp() 不传 wrong，answer() 的答错分支传
@@ -4544,6 +4619,7 @@ function landHit(dmg, m, haunted){
       say(T("圆满 —— 裂口自己合上了，回 <b>") + rw.hp + T("</b> 点生命（这一层就这一次）。"), "good");
     }
   }
+  flaskDrink();             // 药剂师（角色第三批）：掉到 30% 以下自动喝药瓶
   floatNum("me", "-" + dmg, "ouch");
   return m.name + T(" 咬中你，") +
     (ate ? (T("护盾吃掉 <b>") + ate + T("</b> 点") + (left ? T("，你失去 <b>") + left + T("</b> 点生命") : T("，血一点没掉")) + "")
@@ -5168,7 +5244,7 @@ function closeChest(){
    会跟第一次进店的不是一个规矩。 */
 function rollShopStock(){
   const stock = [];
-  for(let i=0;i<5;i++){
+  for(let i = 0; i < 5 + (heroOn("merchant", 3) ? HERO_SHOP_EXTRA : 0); i++){   // 商人 ★3：货架多 2 件
     let r = null;
     for(let g=0; g<30 && !r; g++){
       const c = rollRelic(null, 0, stock.map(function(x){ return x.relic; }));
@@ -5187,7 +5263,7 @@ function openShop(th){
   if(!th.stock){
     // 进店那一刻定下货，存在物件上 —— 再进来不会重 roll
     th.stock = rollShopStock();
-    th.rerollsLeft = SHOP_REROLL_N;    // 每家店（每个 th）能刷新几次，见 content.js 的 SHOP_REROLL_N
+    th.rerollsLeft = SHOP_REROLL_N + (heroOn("merchant", 5) ? 1 : 0);    // 每家店（每个 th）能刷新几次，见 content.js 的 SHOP_REROLL_N（商人 ★5 多一次）
   }
   renderShop();
   hideAll();
@@ -5214,7 +5290,11 @@ function shopMarkup(r){
   return SHOP_MARKUP * ((((r && r.r) || 0) >= SHOP_HI_FROM) ? SHOP_HI_X : 1);
 }
 function shopPrice(row){
-  return Math.max(1, Math.round(row.price * (hasRelic("regular") ? Math.max(0.5, 1 - hx("regular", 0.15)) : 1)));
+  const p = Math.max(1, Math.round(row.price * (hasRelic("regular") ? Math.max(0.5, 1 - hx("regular", 0.15)) : 1)));
+  if(!heroOn("merchant")) return p;
+  /* 商人（角色第三批）：再便宜 {v}%，但**不低过分解价 +1** —— 不然买进来再拆掉就是白赚金币 */
+  const r = typeof row.relic === "string" ? relicById(row.relic) : row.relic;
+  return Math.max(Math.min(p, r ? sellPrice(r) + 1 : 1), Math.round(p * (1 - heroV("merchant") / 100)));
 }
 function renderShop(){
   const th = pendingRoom;
@@ -5754,6 +5834,7 @@ function rerollBudget(){
     (P.relics || []).forEach(function(id){ const r = relicById(id); if(r) q[r.r || 0] = true; });
     if(q[0] && q[1] && q[2]) n += hx("fullset", 1);
   }
+  if(heroOn("collector", 3)) n += 1;          // 收藏家 ★3（角色）：每层重抽一次
   return n;
 }
 function offerRelics(){
@@ -6957,6 +7038,10 @@ function heroStart(){
   P.heroBounty = 0;                           // 赏金猎人：本局完成过几张悬赏
   P.heroGuest = null; P.heroTemper = null; P.heroSky = null; P.heroSkyWk = false; P.heroQuest = null;   // 每层开始定（heroFloorPick）
   heroAskQ = null;                            // 追问者：待追问的那个词（不进存档）
+  /* 第三批（2026-10-15）*/
+  P.heroFlask = 0;                            // 药剂师：药瓶里存了多少点生命
+  P.heroRewound = 0; P.heroSnap = null;       // 回溯者：本局用掉几次 / 进这一层时的样子（nextFloor 末尾记）
+  P.heroPetN = 0;                             // 驯兽师 ★5：答对几题了（每 5 题宠物再咬一口）
   /* 后继者：开局接上一趟（TOWN.hero.last，endRun 里记的）—— 要用到面板，留到第一层的 heroFloorPick 里发 */
   P.heroHeirPend = (heroOn("heir") && TOWN.hero.last) ? JSON.parse(JSON.stringify(TOWN.hero.last)) : null;
   /* 晨读者 ★3：每天第一趟开局给盾 —— 今天发过没记在 MET.day.hd 上（跟着 MET.day 跨天清），盾在 nextFloor() 里发 */
@@ -6968,13 +7053,14 @@ function heroResume(){
   if(!heroById(P.hero)){ P.hero = HERO_DEFAULT; P.heroLv = 1; P.heroStar = 1; }
   if(typeof P.heroLv !== "number") P.heroLv = 1;
   if(typeof P.heroStar !== "number") P.heroStar = 1;
-  ["heroXp", "heroStack", "heroBeat", "heroRun", "heroSand", "heroMana", "heroSpell", "heroSouls", "heroBounty"].forEach(function(k){ if(typeof P[k] !== "number") P[k] = 0; });
+  ["heroXp", "heroStack", "heroBeat", "heroRun", "heroSand", "heroMana", "heroSpell", "heroSouls", "heroBounty", "heroFlask", "heroRewound", "heroPetN"].forEach(function(k){ if(typeof P[k] !== "number") P[k] = 0; });
   /* 第二批每层定的那几样：读档沿用进层时定好的（存档存的就是进层那一刻），坏的就当没有 */
   if(!Array.isArray(P.heroGuest)) P.heroGuest = null;
   else P.heroGuest = P.heroGuest.filter(function(g){ return g && heroById(g.id); });
   if(!Array.isArray(P.heroTemper)) P.heroTemper = null;
   if(!Array.isArray(P.heroSky)) P.heroSky = null;
   if(!Array.isArray(P.heroQuest)) P.heroQuest = null;
+  if(!P.heroSnap || typeof P.heroSnap !== "object") P.heroSnap = null;
   heroAskQ = null;
 }
 /* 攒经验（只算出战的那个人；教程不算）*/
@@ -6989,14 +7075,23 @@ function heroFoldXp(){
   P.heroXp = 0;
   if(!rec) return null;
   const from = heroLvOf(rec.xp).lv;
+  /* 导师（第三批）：★3 自己 +50%；这一趟经验的 50%（★5 100%）分给拥有的其它每个角色 */
+  let share = 0, shareN = 0;
+  if(P.hero === "mentor"){
+    const st = P.heroStar || 1;
+    share = Math.round(gain * (st >= 5 ? 1 : HERO_MENTOR_SHARE));
+    for(const id in TOWN.hero.own) if(id !== "mentor" && heroById(id)){ TOWN.hero.own[id].xp = (TOWN.hero.own[id].xp || 0) + share; shareN++; }
+    if(st >= 3) rec.xp += Math.round(gain * HERO_MENTOR_SELF);
+  }
   rec.xp += gain;
-  return {id:P.hero, gain:gain, from:from, to:heroLvOf(rec.xp).lv};
+  return {id:P.hero, gain:gain, from:from, to:heroLvOf(rec.xp).lv, share:share, shareN:shareN};
 }
 function heroFoldLine(f){
   if(!f) return "";
   const h = heroById(f.id);
   return li(L("出战 · ", "Hero · ") + (h ? h.n : f.id),
-            L("经验 +" + f.gain, "XP +" + f.gain) + (f.to > f.from ? " · Lv " + f.from + " → " + f.to : " · Lv " + f.to));
+            L("经验 +" + f.gain, "XP +" + f.gain) + (f.to > f.from ? " · Lv " + f.from + " → " + f.to : " · Lv " + f.to)) +
+         (f.shareN ? li(L("导师 · 带了 " + f.shareN + " 个角色", "Mentor · shared with " + f.shareN + " heroes"), L("各 +" + f.share, "+" + f.share + " each")) : "");
 }
 /* 今天答过的不同的词（只数正在学的这门）—— 晨读者读它 */
 function todayWordsN(){
@@ -7021,6 +7116,8 @@ function heroPctSteady(){
   if(heroOn("clock")) p += (P.heroSand || 0) * heroV("clock");                                   // 钟表匠：怀表里每 1 秒
   if(heroOn("bounty")) p += Math.min(HERO_BOUNTY_MAX, P.heroBounty || 0) * heroV("bounty");     // 赏金猎人：本局完成过几张
   if(heroSkyOn(1)) p += 2 * astroS();                                                             // 星象师（烈日）：伤害 +2 × 强度
+  if(heroOn("mentor")) p += Object.keys(TOWN.hero.own).filter(heroById).length * heroV("mentor");   // 导师：拥有的角色每个一份
+  if(heroOn("collector")) p += Math.floor(codexN() / HERO_COLLECT_PER) * heroV("collector");        // 收藏家：图鉴每 10 件
   return Math.round(p * 10) / 10;
 }
 /* 答对那一下先更新的状态（在算伤害之前，这一刀就吃得到）：博物学者的类别、造句者的词性、乐师的节拍。
@@ -7064,6 +7161,7 @@ function heroFloorReset(){
   G.heroFought = false; G.heroShN = 0; G.heroFresh = false; G.heroDueN = 0; G.heroExoN = 0; G.heroCats = {};
   G.heroSipBank = 0;       // 星象师（夜枭）：吸血按小数攒
   G.heroBCrit = false;     // 赏金猎人 ★5：这一层完成过悬赏，之后的答对都暴击
+  G.heroRewoundHere = false;   // 回溯者：这一层回溯过（之后的伤害 +{v}%）
 }
 /* 信息页「本局战绩」最后两格：出战的是谁（等级 · 星级）、这一趟攒了多少角色经验（回镇上才并进去）*/
 function heroRunCells(){
@@ -7082,6 +7180,10 @@ function heroRunCells(){
   if(heroOn("necro")) out += st(L("魂", "Souls"), (P.heroSouls || 0) + " / " + necroCap());
   if(heroOn("smith") && temperIds().length) out += st(L("淬火", "Tempered"), temperIds().map(function(id){ return relicById(id).n; }).join(L("、", ", ")));
   if(heroOn("astro") && P.heroSky) out += st(L("星象", "Sky"), P.heroSky.map(ASTRO_NAME).join("+"));
+  if(heroOn("apothecary")) out += st(L("药瓶", "Flask"), Math.floor(P.heroFlask || 0) + " / " + flaskCap());
+  if(heroOn("rewinder")) out += st(L("回溯", "Rewinds"), L("还剩 ", "") + rewindLeft() + L(" 次", " left"));
+  if(heroOn("tamer")) out += st(L("宠物一口", "Pet bite"), petBite());
+  if(heroOn("collector")) out += st(L("图鉴", "Codex"), codexN() + L(" 件", ""));
   if(heroOn("bounty")){
     const q = (P.heroQuest || []).map(function(x){ return x.done ? "✓" : x.got + "/" + x.n; }).join(" · ");
     out += st(L("悬赏", "Bounty"), (q || "—") + L(" · 完成 ", " · done ") + (P.heroBounty || 0));
@@ -7164,6 +7266,10 @@ function heroFloorPick(){
       P.shield = (P.shield || 0) + add;
       say(L("晨星 —— 护盾 +<b>" + add + "</b>。", "Dawn star — shield +<b>" + add + "</b>."), "good");
     }
+  }
+  if(heroOn("apothecary", 3)){                                           // 药剂师 ★3：每层开始药瓶先装一点
+    const s = stats(), cap = flaskCap(s);
+    P.heroFlask = Math.min(cap, (P.heroFlask || 0) + Math.max(1, Math.round(s.maxHp * HERO_FLASK_SEED)));
   }
   P.heroQuest = null;
   if(heroOn("bounty")){
@@ -7263,6 +7369,12 @@ function heroAfterHit(o){
     if(!B.q.ask && !P.tut && Math.random() * 100 < heroV("examiner")) heroAskQ = {w:o.word, t:askFlip(B.q.type)};
   }
   log += bountyTick(o.word, o.fast, s);
+  /* 辩手（第三批）：这一刀之后怪还活着，就掷一次让它愣住（★5 打中弱点必中）。愣住一直挂到它下一口（答错 / 超时）*/
+  if(heroOn("debater") && o.m && o.m.hp > 0 && !o.m.stun &&
+     ((o.hitWeak && heroOn("debater", 5)) || Math.random() * 100 < heroV("debater"))){
+    o.m.stun = true;
+    log += L(" <span class=\"sys\">(辩手 · " + o.m.name + " 愣住了)</span>", " <span class=\"sys\">(Debater · " + o.m.name + " is stunned)</span>");
+  }
   return log;
 }
 function paintHeroBadge(){
@@ -7274,6 +7386,40 @@ function paintHeroBadge(){
   if(!el){ el = document.createElement("i"); el.className = "hrbadge"; me.appendChild(el); }
   el.textContent = t;
 }
+/* ===== 角色第三批（用户 2026-10-15：「继续加」）===== */
+/* 药剂师：药瓶最多装多少（最大生命 × {v}%）*/
+function flaskCap(s){ return Math.max(1, Math.round((s || stats()).maxHp * heroV("apothecary") / 100)); }
+/* 药剂师：真掉了血、掉到 HERO_FLASK_AT 以下就自动喝（不走 healUp —— 不然喝下去的又溢回瓶子里）*/
+function flaskDrink(){
+  if(!heroOn("apothecary") || !(P.heroFlask >= 1) || P.hp <= 0) return;
+  const s = stats();
+  if(P.hp >= s.maxHp * HERO_FLASK_AT) return;
+  const amt = Math.min(Math.floor(P.heroFlask), s.maxHp - P.hp);
+  if(amt <= 0) return;
+  P.heroFlask -= amt; P.hp += amt;
+  if(G) G.healed = (G.healed || 0) + amt;
+  say(L("药剂师 —— 灌下一口药，回 <b>" + amt + "</b> 点生命（瓶里还剩 " + Math.floor(P.heroFlask) + "）。",
+        "Apothecary — a swig from the flask, +<b>" + amt + "</b> HP (" + Math.floor(P.heroFlask) + " left)."), "good");
+}
+/* 回溯者：本局还能回溯几次（★3 多一次，★5 每往下 10 层再多一次）*/
+function rewindLeft(){
+  const n = (heroOn("rewinder", 3) ? HERO_REWIND_N + 1 : HERO_REWIND_N) +
+            (heroOn("rewinder", 5) && G ? Math.floor(G.floor / HERO_REWIND_EVERY) : 0);
+  return Math.max(0, n - (P.heroRewound || 0));
+}
+/* 回溯者：进这一层时的样子（nextFloor 末尾、存档之前记 —— 跟续玩档是同一个时刻）*/
+function heroSnapFloor(){
+  if(!P || !G || !heroOn("rewinder")) return;
+  P.heroSnap = {f:G.floor, hp:P.hp, sh:P.shield || 0, c:P.combo || 0};
+}
+/* 驯兽师：宠物一口 = 攻击 × {v}%（★3 本局每 10 杀 +10%，最多 +100%）*/
+function petBite(s){
+  let pct = heroV("tamer");
+  if(heroOn("tamer", 3)) pct *= 1 + Math.min(HERO_PET_GROW_MAX, Math.floor((P.kills || 0) / HERO_PET_GROW) * HERO_PET_GROW_PCT);
+  return Math.max(1, Math.round((s || stats()).atk * pct / 100));
+}
+/* 收藏家：图鉴里拿到过几件遗物（删掉的不算）*/
+function codexN(){ let n = 0; for(const id in CODEX) if(isRelicId(id)) n++; return n; }   // isRelicId 有缓存（信息页 / 构成会反复调）
 /* 追问者：这一题的反方向（选择题的英译中 ↔ 中译英；拼写题考完问意思、释义句考完问怎么说）*/
 function askFlip(t){ return t === "en2zh" || t === "spell" ? "zh2en" : "en2zh"; }
 /* 后继者要接的「上一趟」：每一趟结算都记（不管出战的是谁；教程 / 纯净学习不记）。只存本机（存档码不带）*/
@@ -7287,6 +7433,8 @@ function heroBadge(){
   if(heroOn("mage")) return (P.heroMana || 0) + "/" + HERO_MAGE_COST;
   if(heroOn("necro")) return "×" + (P.heroSouls || 0);
   if(heroOn("clock")) return (P.heroSand || 0) + "s";
+  if(heroOn("apothecary")) return "♥" + Math.floor(P.heroFlask || 0);
+  if(heroOn("rewinder")) return "↺" + rewindLeft();
   if(heroOn("bounty") && P.heroQuest){
     const q = P.heroQuest.filter(function(x){ return !x.done; })[0];
     return q ? q.got + "/" + q.n : "✓";
@@ -7998,7 +8146,7 @@ function resumeRun(s){
   G.wshBank = 0;
   G.sipBank = 0;
   G.riverBank = 0;
-  G.spoils = 0;            // 战利品（第十二批）
+  G.spoils = heroOn("collector", 5) ? 1 : 0;   // 战利品（第十二批）/ 收藏家 ★5
   G.spoilsOn = false;
   G.carry = 0;             // 余劲（第十三批）
   G.honeN = 0;             // 磨砺（第十四批）
