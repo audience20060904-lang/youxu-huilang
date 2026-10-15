@@ -1316,6 +1316,13 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrs.main > span{color:var(--bone)}
 .hrs p{margin:0;line-height:1.45}
 .hrs em{font-style:normal;color:var(--faint);font-size:12px}
+/* 角色第二批（2026-10-15）：详情页被动下面的分项（法师的三个法术、星象师的四个星象）、
+   战斗窗小人像右下角的角标（法力 / 魂 / 怀表 / 悬赏，绝对定位不占布局）、锻造师淬火的那件遗物 */
+.hrs .hrex{display:block;font-style:normal;font-size:12px;color:var(--dim);margin-top:2px}
+.mybar .me{position:relative}
+.mybar .me .hrbadge{position:absolute;right:-10px;bottom:-4px;font-style:normal;font-family:var(--mono);font-size:9px;line-height:11px;
+  padding:0 2px;border-radius:5px;background:#2A2620;color:#FBF6E7;white-space:nowrap;pointer-events:none;opacity:.92}
+.relic.own.temper{border-color:#C2621E;box-shadow:0 0 0 1px #C2621E inset}
 .hrhow{font-size:11.5px;color:var(--faint);border-top:1px dashed var(--edge-soft);padding-top:8px}
 .hrgo{min-width:96px}
 /* 抽卡结果：十连 2×5 一屏装下、不滚（高频挑选窗那条规矩）*/

@@ -815,6 +815,65 @@ var HERO_ART = (function(){
       '<rect x="12" y="7.2" width="1.6" height="1.2" rx=".3" transform="rotate(-45 12.8 7.8)" fill="#5E3E1C"/>' +
       '<ellipse cx="6.4" cy="13.8" rx="2.9" ry="2.3" fill="#E2B46A" stroke="#5E3E1C" stroke-width=".45"/>' +
       '<circle cx="6.7" cy="13.6" r=".6" fill="#3B2410"/>' +
-      '<path d="M5.2 14.8 12.3 8.3" stroke="#F4EBD3" stroke-width=".25"/>')
+      '<path d="M5.2 14.8 12.3 8.3" stroke="#F4EBD3" stroke-width=".25"/>'),
+    /* ===== 第二批（2026-10-15）===== */
+    /* 钟表匠：右手托着一只怀表，链子垂到腰上 */
+    clock: svg("",
+      '<path d="M12.6 10.4c.8 1.4 1.6 2.1 2.6 2.3" fill="none" stroke="#C9A45C" stroke-width=".45" stroke-dasharray=".6 .35"/>' +
+      '<circle cx="15.7" cy="13.7" r="2.35" fill="#E8C36A" stroke="#8A6A2E" stroke-width=".45"/>' +
+      '<circle cx="15.7" cy="13.7" r="1.7" fill="#FBF6E7"/>' +
+      '<path d="M15.7 12.6v1.1l.85.5" fill="none" stroke="#2A2620" stroke-width=".4" stroke-linecap="round"/>' +
+      '<rect x="15.35" y="10.9" width=".7" height=".55" rx=".2" fill="#8A6A2E"/>'),
+    /* 追问者：头边一个问号气泡，手里一根教鞭 */
+    examiner: svg("",
+      '<path d="M14.6 1.4h4.1c.6 0 1 .4 1 1v2.7c0 .6-.4 1-1 1h-2.3l-1.2 1.1.2-1.1h-.8c-.6 0-1-.4-1-1V2.4c0-.6.4-1 1-1z" fill="#FBF6E7" stroke="#5A6B3A" stroke-width=".4"/>' +
+      '<path d="M15.9 3.1c.1-.7.6-1 1.1-1s1 .4 1 .9c0 .7-.9.8-.9 1.5" fill="none" stroke="#2A2620" stroke-width=".5" stroke-linecap="round"/>' +
+      '<circle cx="17.1" cy="5.2" r=".3" fill="#2A2620"/>' +
+      '<path d="M4.2 15.6 8.3 10.4" stroke="#7A5532" stroke-width=".8" stroke-linecap="round"/>'),
+    /* 后继者：右手举着一支传下来的火把 */
+    heir: svg("",
+      '<circle cx="15.8" cy="7.2" r="2.6" fill="#F4C54E" opacity=".22"/>' +
+      '<path d="M15.2 9.2 14.4 16.2" stroke="#6B4A2E" stroke-width="1" stroke-linecap="round"/>' +
+      '<path d="M14.6 8.9h1.6l-.2 1h-1.2z" fill="#3B2F1E"/>' +
+      '<path d="M15.4 4.9c1.4 1 1.7 2.2 1 3.5-.5.8-1.6.9-2.2.2-.7-.8-.4-1.8.3-2.4 0 .6.3.9.6.9.3-.7.5-1.4.3-2.2z" fill="#E8792A"/>' +
+      '<path d="M15.5 6.8c.5.4.6.9.3 1.4-.3.4-.8.4-1 0-.2-.4 0-.8.3-1 .1.2.2.3.4.3z" fill="#F4C54E"/>'),
+    /* 法师：尖顶帽，左手托一颗法球 */
+    mage: svg("",
+      '<path d="M5.6 4.9c2.8-.9 6-.9 8.8 0-1.4.5-6.6.5-8.8 0z" fill="#2A3C6A" stroke="#18284A" stroke-width=".35"/>' +
+      '<path d="M7.4 4.6 11.6.4c.3 1.6 1 3.1 1.6 4.2-2 .3-4 .3-5.8 0z" fill="#2A3C6A"/>' +
+      '<path d="M8.3 4.2c1.3.15 2.8.15 4.1 0" stroke="#E0A83A" stroke-width=".5"/>' +
+      '<circle cx="4" cy="12.6" r="1.9" fill="#7FB6F0" opacity=".3"/>' +
+      '<circle cx="4" cy="12.6" r="1.25" fill="#9CCBF7" stroke="#2B5C9C" stroke-width=".35"/>' +
+      '<circle cx="3.6" cy="12.2" r=".35" fill="#fff" opacity=".85"/>'),
+    /* 星象师：头顶一弯新月、身边一颗星 */
+    astro: svg("",
+      '<path d="M16.6 1.2a2.4 2.4 0 1 0 1.6 4.2 2 2 0 1 1-1.6-4.2z" fill="#F4E3A0"/>' +
+      '<path d="M3.4 7.6l.45 1.25 1.25.45-1.25.45-.45 1.25-.45-1.25-1.25-.45 1.25-.45z" fill="#F4E3A0"/>' +
+      '<circle cx="12.6" cy="14.6" r=".35" fill="#F4E3A0"/><circle cx="8" cy="16.4" r=".3" fill="#F4E3A0"/><circle cx="11" cy="11.6" r=".28" fill="#F4E3A0"/>'),
+    /* 锻造师：右手一柄锤子，腰间皮围裙 */
+    smith: svg("",
+      '<path d="M7.6 12.4h4.8l.4 5.4H7.2z" fill="#6B4A2E" opacity=".85"/>' +
+      '<path d="M13.4 15.4 16.4 9.6" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
+      '<rect x="14.6" y="7.6" width="3.8" height="2" rx=".3" transform="rotate(27 16.5 8.6)" fill="#8E969C" stroke="#4A5058" stroke-width=".4"/>'),
+    /* 招魂者：身边飘着两团魂火 */
+    necro: svg(
+      '<path d="M3.4 5.2c1.3 0 2.1 1 2.1 2.2 0 1.4-1 2-1 3.2-.6-.7-.3-1.4-.9-2-.9-.6-1.3-1.3-1.3-2 0-.8.4-1.4 1.1-1.4z" fill="#9FE3C4" opacity=".75"/>',
+      '<path d="M16.5 9.6c1.2 0 1.9.9 1.9 2 0 1.2-.9 1.8-.9 2.9-.6-.6-.3-1.3-.8-1.8-.8-.5-1.2-1.2-1.2-1.8 0-.8.4-1.3 1-1.3z" fill="#9FE3C4" opacity=".85"/>' +
+      '<circle cx="3.6" cy="6.8" r=".3" fill="#1E3A2E"/><circle cx="4.4" cy="6.8" r=".3" fill="#1E3A2E"/>' +
+      '<circle cx="16.4" cy="11.1" r=".28" fill="#1E3A2E"/><circle cx="17.2" cy="11.1" r=".28" fill="#1E3A2E"/>'),
+    /* 赏金猎人：宽檐帽，左手一张悬赏令 */
+    bounty: svg("",
+      '<path d="M4.6 5c3.6-1 7.2-1 10.8 0-1 .7-9.8.7-10.8 0z" fill="#6B4A2E" stroke="#3B2A1A" stroke-width=".35"/>' +
+      '<path d="M7.2 4.8c.2-1.8 1.3-2.8 2.8-2.8s2.6 1 2.8 2.8c-1.8.3-3.8.3-5.6 0z" fill="#7E5A36"/>' +
+      '<path d="M7.4 4.4c1.7.25 3.5.25 5.2 0" stroke="#C9A45C" stroke-width=".45"/>' +
+      '<rect x="2.3" y="11.2" width="3.6" height="4.6" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
+      '<circle cx="4.1" cy="12.8" r=".75" fill="#8C7650" opacity=".7"/>' +
+      '<path d="M3 14.6h2.2" stroke="#B8322A" stroke-width=".5"/>'),
+    /* 灵媒：身后一个淡淡的影子，胸前捧着水晶球 */
+    medium: svg(
+      '<path d="M13.4 2.6c1.6 0 2.8 1.3 2.8 2.9 0 1.1-.6 2-1.4 2.6 2.3.8 3.5 3.6 3.7 8.4h-6.8" fill="currentColor" opacity=".28"/>',
+      '<circle cx="10" cy="13.6" r="2.3" fill="#C9B6F0" opacity=".9" stroke="#5A3F8A" stroke-width=".4"/>' +
+      '<circle cx="9.3" cy="12.9" r=".55" fill="#fff" opacity=".8"/>' +
+      '<path d="M8.3 15.9h3.4l-.4.9H8.7z" fill="#5A4424"/>')
   };
 })();
