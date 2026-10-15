@@ -24,8 +24,22 @@ check('Attack and critical hits are distinct, decorative, and bounded under rapi
  for(let i=0;i<20;i++)fx.attack(true);assert(body.children.length<=48);drain();assert.equal(body.children.length,0);
 });
 check('Critical and kill particle bursts share geometry reads instead of one layout read per particle',()=>{
- fx.resetBattle();let before=layoutReads;fx.attack(true);assert.equal(layoutReads-before,4);drain();
+ fx.resetBattle();let before=layoutReads;fx.attack(true);assert.equal(layoutReads-before,2);drain();
  before=layoutReads;fx.kill();assert.equal(layoutReads-before,3);fx.resetBattle();drain();
+});
+check('Attacks travel toward the other lane; incoming attacks reverse direction and clean up',()=>{
+ const foeRect=ids.foeArt.getBoundingClientRect,meRect=ids.meArt.getBoundingClientRect;
+ ids.foeArt.getBoundingClientRect=()=>({left:180,top:30,width:40,height:40});
+ ids.meArt.getBoundingClientRect=()=>({left:30,top:180,width:40,height:40});
+ fx.resetBattle();fx.attack(false);
+ let bolt=body.children.find(n=>n.className==='dfx dfx-bolt');assert(bolt);
+ assert(bolt.lastMotion.frames.at(-1).transform.includes('150px'));
+ assert(bolt.lastMotion.frames.at(-1).transform.includes('-150px'));
+ assert.match(ids.meArt.lastMotion.frames[1].transform,/translate\([\d.]+px,-[\d.]+px\)/);
+ fx.resetBattle();fx.block();bolt=body.children.find(n=>n.className==='dfx dfx-bolt');assert(bolt);
+ assert.match(ids.foeArt.lastMotion.frames[1].transform,/translate\(-[\d.]+px,[\d.]+px\)/);
+ const animation=bolt.lastMotion;drain();assert(animation.cancelled);assert.equal(body.children.length,0);
+ ids.foeArt.getBoundingClientRect=foeRect;ids.meArt.getBoundingClientRect=meRect;
 });
 check('Shield, HP damage, dodge, and healing have separate feedback',()=>{
  fx.hurt(0,8);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),0);drain();

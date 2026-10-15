@@ -1326,6 +1326,14 @@ function wagerX(){
   const x = hasRelic("boldheart") ? 1 : hasRelic("cushion") ? Math.max(1, 2 - hx("cushion", 2 - CUSHION_MULT)) : 2;
   return heroOn("rogue", 5) ? Math.min(x, HERO_ROGUE_X) : x;      // 狂徒 ★5：×1.5（壮胆的 ×1 照旧更低）
 }
+/* 冒险是最终独立乘区；狂徒提升这一乘区，不再混入普通增伤。 */
+function wagerOutX(preview){
+  return (preview || (B && B.wager)) ? 2 + (heroOn("rogue") ? heroV("rogue") / 100 : 0) : 1;
+}
+function wagerScale(value, incoming){
+  if(!(value > 0) || !B || !B.wager) return value;
+  return Math.round(value * (incoming ? wagerX() : wagerOutX()));
+}
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
    第 50 层 12%、第 60 层 19%、第 75 层 29%、第 100 层 56%、第 125 层 85%、第 140 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
@@ -1683,6 +1691,7 @@ function renderHud(){
   paintHp($("hpBar"), $("hpFill"), $("hpTxt"), P.hp, s.maxHp, $("hpShield"));
   const need = xpNeed(P.lvl);
   $("xpFill").style.width = Math.min(100, P.xp / need * 100) + "%";
+  renderStatusOwner("mapStatuses", P);
 
   renderSheets(s);
 }
@@ -2380,6 +2389,11 @@ function showWeak(m){
   el.hidden = false;
   el.innerHTML = T("弱点 · <b>") + cn + T("</b>类词伤害更高");
 }
+function renderCombatFeedback(head, note){
+  const el=$("combatFeedback");if(!el)return;
+  el.innerHTML=head+(note ? '<span class="combat-note">'+note+'</span>' : "");
+  el.title=el.textContent;
+}
 function renderBattleBars(){
   renderStatuses();
   const m = B.mob, s = stats();
@@ -2437,24 +2451,16 @@ function comboPct(combo){
 }
 /* 一档连击给几 %：底子 CHAPTER.comboPct，永恒之链（圣器）×HOLY_CHAIN_X */
 function comboTier(){ return CHAPTER.comboPct * (holyOn("eternal") ? HOLY_CHAIN_X : 1); }
-/* 连击那一条（用户 2026-09 从战斗窗底下挪到**怪物血条下面**）。
-   玩家一眼要看见三件事：连了几次、现在加了百分之几、再对几个进下一档。
-   ⚠️ 三段都常驻（数字变、行数不变），答题前后窗高才不会跳。
-   ⚠️ 涨了就放大回弹（.up），掉了就缩一下、淡一下（.down）——
-      纯装饰，系统开了「减少动态效果」就整段跳过。
-   comboShown 记着上一次画出来的数，靠它判断是涨是掉；
-   开新一趟时要清成 null（newRun 里），否则新局第一场会白播一次「掉了」。*/
+/* 题目左上角只显示连击数字；伤害仍依 comboPct 计算。
+   comboShown 在新局清空，涨跌动画不改变布局；档位光效落在玩家处。*/
 let comboShown = null;
 function renderCombo(){
   const c = $("combo");
   if(!c) return;
-  const n = (P && P.combo) || 0, step = comboStep(), pct = comboPct(n);
-  const need = step - (n % step);
-  c.className = "combo" + (pct ? "" : " none");
-  c.innerHTML =
-    T("<span class=\"cmb-n\">连击 <b>×") + n + "</b></span>" +
-    "<span class=\"cmb-p" + (pct ? "" : " off") + T("\">伤害 +") + pct + "%</span>" +
-    T("<span class=\"cmb-next\">再对 ") + need + T(" 个 +") + comboTier() + "%</span>";
+  const n = (P && P.combo) || 0, step = comboStep();
+  c.className = "combo" + (n ? "" : " none");
+  c.setAttribute("aria-label", L("连击 ", "Combo ") + n);
+  c.innerHTML = '<span class="cmb-n"><b>×' + n + '</b></span>';
   const was = comboShown;
   comboShown = n;
   if(was === null || was === n || REDUCE_MOTION) return;
@@ -2697,9 +2703,11 @@ function timeUp(){
   const mit = mitigate(Math.max(1, m.dmg - s.def), s);
   hitLost = 0;
   if(mit.dodged){
+    renderCombatFeedback(L("超时 · 闪避", "Timeout · Dodge"), "");
     say(T("时间到 —— 你侧了半步躲开。题还在，接着答。"), "hurt");
   } else {
     const damageText=takeHit(mit.dmg, m, false);
+    renderCombatFeedback(L("超时", "Timeout"), damageText);
     say(L("超时：","Timeout: ")+damageText+mit.why+L("题目保留，请继续作答。","The question stays; keep answering."),"hurt");
   }
   hurtEnd(mit.dmg);
@@ -2779,6 +2787,7 @@ function nextQuestion(){
   wr.hidden = (type === "spell");                             // 拼写题不给冒险，太难
   setWagerLabel();
   $("verdict").innerHTML = "";
+  renderCombatFeedback("", "");
   $("btnNextQ").hidden = true;
   $("btnNextQ").textContent = T("继续");
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
@@ -2901,10 +2910,12 @@ function renderDef(word){
 function setWagerLabel(){
   const b = $("btnWager"), on = !!(B && B.wager);
   if(b.firstChild && b.firstChild.nodeType === 3){
-    b.firstChild.textContent = on ? T("冒险中 · 双倍赌注") : T("冒险 · 我确定");
+    b.firstChild.textContent = on ? L("冒险中", "Risk ON") : L("冒险", "Risk OFF");
   }
   const em = b.querySelector("em");
-  if(em) em.textContent = OPT.lock ? T("已锁定：每题自动冒险") : T("对了伤害翻倍，错了受伤翻倍");
+  if(em) em.textContent = L("出伤 ×", "Deal ×") + Number(wagerOutX(true).toFixed(2)) + L(" · 受伤 ×", " · Take ×") + Number(wagerX().toFixed(2));
+  b.setAttribute("aria-pressed", String(on));
+  b.title = OPT.lock ? T("已锁定：每题自动冒险") : L("冒险倍率在增伤、暴击、护甲和减伤之后独立结算。", "Risk multiplies final damage after bonuses, critical hits, armor and mitigation.");
 }
 function renderSpell(word){
   $("qLabel").textContent = T("拼出这个词 · 对了双倍经验");
@@ -3376,10 +3387,7 @@ function answer(btn, ok){
     if(hasRelic("spellblade") && (P.bladeLeft || 0) > 0){ pct += tg("p", "spellblade", SBLADE_PCT); P.bladeLeft--; }
     /* 节奏件：「×2」「×1.5」都摊成②层的百分比 —— 全局仍然只有两个乘区。
        两件同时触发就是 +150%（相加，不是相乘）。*/
-    /* 冒险（用户 2026-09 报的 bug：开了跟没开一样）——
-       按钮上写的就是「对了伤害翻倍」，所以它是②层的 +100%，不是原来那个 +3 点伤。
-       ⚠️ 摊进百分比桶，别给它开第三个乘区。*/
-    if(B.wager) pct += tg("p", "@wager", 100);
+    // 冒险统一在暴击及怪物护甲之后独立乘算，不加入此处的增伤桶。
     /* 开场 2026-09-21 从「每层第一次」改成「每层前 OPENING_N 次」——
        「每层一次」摊到一层 35 刀上只剩 +2.9%，撑不起一件稀有（见面礼「每场一次」是它的 11.5 倍）。*/
     if(hasRelic("opening") && (G.openLeft || 0) > 0){ pct += tg("p", "opening", OPENING_PCT); G.openLeft--; }
@@ -3408,7 +3416,6 @@ function answer(btn, ok){
       if(firstSeen && heroOn("pioneer")) pct += tg("p", "hero", heroV("pioneer"));              // 拓荒者：生词
       if(wasDue && heroOn("keeper")) pct += tg("p", "hero", heroV("keeper"));                  // 守夜人：到期词
       if(B.q.haunted && heroOn("exorcist")) pct += tg("p", "hero", heroV("exorcist"));           // 驱魔人：心魔词
-      if(B.wager && heroOn("rogue")) pct += tg("p", "hero", heroV("rogue"));                  // 狂徒：冒险答对
       if(B.heroFirst && heroOn("adv", 3)) pct += tg("p", "hero", HERO_ADV_FIRST);      // 冒险者 ★3：每层第一场
       if(B.q.ask && heroOn("examiner")) pct += tg("p", "hero", HERO_ASK_PCT);          // 追问者：追问答对
       if(m.stun && heroOn("debater", 3)) pct += tg("p", "hero", HERO_DEBATE_PCT);      // 辩手 ★3：愣住的怪
@@ -3480,10 +3487,12 @@ function answer(btn, ok){
        而怪物护甲平均 0.8 点，两个小数字乘在一起等于这件传奇什么都没做。*/
     const noArmor = hasRelic("flaw") || (crit && hasRelic("crush"));
     const armor = noArmor ? 0 : m.armor;
-    const dmg = Math.max(1, raw - armor);
+    const beforeRisk = Math.max(1, raw - armor);
+    const dmg = wagerScale(beforeRisk, false);
     if(parts){
       try{ lastDmgRec = dmgCompose({parts:parts, inl:inl, base:base, extra:extra, pct:pct, flat:flat,
-                                    crit:crit, cm:critMult, armor:Math.max(0, raw - dmg), dmg:dmg}); }
+                                    crit:crit, cm:critMult, armor:Math.max(0, raw - beforeRisk), dmg:dmg});
+            if(dmg !== beforeRisk) lastDmgRec.rows["@wager"] = dmg - beforeRisk; }
       catch(e){ lastDmgRec = null; }
     }
     /* 第十四批的三个事实（不看带没带，卖掉就失效的换算在 flatSteady / extraSteady / 上面）*/
@@ -3778,7 +3787,7 @@ function answer(btn, ok){
     floatNum("foe", "-" + dmg, "dmg");
     if(window.DungeonFX) DungeonFX.attack(crit);
     head = "<span class=\"big ok\">" +
-           (B.wager ? T("答对了！") : crit ? T("暴击！") : isSpell ? T("拼对了！") : T("命中！")) + "</span>";
+           (crit ? T("暴击！") : T("命中！")) + "</span>";
     note = T("你砍中 ") + m.name + T("，造成 <b>") + dmg + T("</b> 点伤害") +
            (hitWeak ? T("（正中弱点）") : "") +
            (surge ? T("，浪涌炸开") : "") +
@@ -3879,14 +3888,13 @@ function answer(btn, ok){
     if(!fearless) addHaunt(word.en);         // 答错就缠上来
 
     {   // （这层花括号原来是「复读者补救题」那条分支留下的，删遗物时保留块作用域，省得整段重缩进）
-      // 受伤也全是加减：怪物伤害 − 护甲，再加上冒险失手/心魔的惩罚
+      // 怪物伤害先扣护甲并合入心魔，再减伤；冒险最终独立乘算。
       hurtBegin(m, s, true);                   // 「构成」：从怪物的攻击起算（护甲那一截在里面记）
       let dmg = Math.max(1, m.dmg - s.def);   // 背水已经算在 s.def 里
-      // 冒险失手 —— 按钮写的是「错了受伤翻倍」；托底把这个倍率从 ×2 降到 ×1.5
-      if(B.wager){ const d0 = dmg; dmg = Math.round(dmg * wagerX()); hurtRow("@wager", dmg - d0); }   // 托底 ×1.8 / 壮胆 ×1
+      // 冒险倍率在 mitigate 之后结算，避免被减半或封顶吞掉。
       if(wasHaunted){ dmg += 1; hurtRow("@haunt", 1); }   // 心魔又答错
       /* 化劲：这一口「本来」有多重（护甲之前）—— 最后真落到血上的少了多少，就是挡掉的 */
-      const rawHit = (B.wager ? Math.round(m.dmg * wagerX()) : m.dmg) + (wasHaunted ? 1 : 0);
+      const rawHit = wagerScale(m.dmg + (wasHaunted ? 1 : 0), true);
       hitLost = 0;
       /* 心镜 2026-09-21 从「完全免伤」改成减伤 —— 加成挪进了 mitigate() 的 cut 桶
          （靠 opt.haunted 传进去），所以它现在跟别的百分比减伤一起相加、一起吃 MIT_CUT_MAX。*/
@@ -3952,7 +3960,8 @@ function answer(btn, ok){
       /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。*/
       if(dmg > 0){
         const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted, fresh:firstSeen});
-        dmg = mit.dmg;
+        dmg = wagerScale(mit.dmg, true);
+        hurtRow("@wager", dmg - mit.dmg);
         if(mit.dodged){
           head = mit.by === "glimmer" ? T("<span class=\"big no\">浮光 —— 刀穿过去了</span>")
                                       : T("<span class=\"big no\">错身 —— 没碰到你</span>");
@@ -3989,7 +3998,8 @@ function answer(btn, ok){
   heirEvent(ok?"right":"wrong",{mob:m,word:word.en,cat:word.cat,pos:word.pos,spell:isSpell,fast:fastAns,seconds:usedSec,left:leftSec,untimed:untimed,fresh:firstSeen,due:wasDue,haunt:!!B.q.haunted,wager:!!B.wager});
   LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
-  $("verdict").innerHTML = head +
+  renderCombatFeedback(head, note);
+  $("verdict").innerHTML = '<span class="big ' + (ok ? 'ok' : 'no') + '">' + (ok ? T("答对了！") : T("答错了")) + '</span>' +
     "<span class=\"mean\"><b>" + wordFull(word) + "</b>" + (word.py ? " " + word.py : "") + T("　") + word.cn + T("　<span style=\"color:var(--faint)\">") + CAT_CN[word.cat] + "</span></span>";
   if(CAN_SPEAK){
     $("btnSpeak").hidden = false;                  // 答完了，随时能再听一次
@@ -7114,19 +7124,22 @@ function statusCutPct(){
 }
 function statusLabel(k){return HeroRules.effects[k][UI_EN?1:0];}
 function statusChips(owner){
-  if(!owner || !owner.status)return "";
+  if(!owner)return "";
   const chips=Object.keys(HeroRules.effects).filter(k=>statusN(owner,k)>0).map(function(k){
     const debuff=HeroRules.negative.includes(k),n=statusN(owner,k);
     return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+statusLabel(k)+" <b>"+n+"</b></button>";
   }).join("");
   return chips+(owner===P && (P.heirGuard||0)>0?'<span class="status-chip" title="下次实际受到的攻击被专属遗物格挡，最多储存两次">'+L("专属格挡","Heirloom guard")+' <b>'+P.heirGuard+'</b></span>':'');
 }
+function renderStatusOwner(id, owner){
+  const el=$(id);if(!el)return;
+  const html=statusChips(owner);
+  if(el.innerHTML!==html)el.innerHTML=html;
+  el.hidden=!html;
+}
 function renderStatuses(){
-  [{id:"playerStatuses",owner:P},{id:"foeStatuses",owner:B&&B.mob}].forEach(function(row){
-    const el=$(row.id);if(!el)return;
-    el.innerHTML=statusChips(row.owner);
-    el.hidden=!el.innerHTML;
-  });
+  renderStatusOwner("playerStatuses", P);
+  renderStatusOwner("foeStatuses", B&&B.mob);
 }
 function statusInfoHtml(cap){
   return "<b>"+L("祝福上限 ","Blessing cap ")+(cap||statusCap())+"</b><p>"+L("每回答一次结算一回合：旧效果生效后减少一层，再获得新层数。超时不结算。答错时敌人会轮流施加衰弱、破绽或侵毒（普通 1 层，Boss 2 层）。","Each submitted answer settles old effects, removes one stack, then grants new stacks. Timeouts do not advance rounds. Wrong answers rotate Weakness, Exposed and Venom (1 stack, or 2 for bosses).")+"</p>"+
@@ -10118,10 +10131,11 @@ document.querySelectorAll("[data-info]").forEach(function(b){
   });
 });
 $("fullStats").addEventListener("toggle",function(){if(this.open && SCENE==="run" && P && G)renderHud();});
-["playerStatuses","foeStatuses"].forEach(function(id){
+["playerStatuses","foeStatuses","mapStatuses"].forEach(function(id){
   const el=$(id);if(!el)return;
   el.addEventListener("click",function(e){const b=e.target.closest("[data-status]");if(b){const d=HeroRules.effects[b.dataset.status];toast(d[UI_EN?3:2]);}});
 });
+$("combatFeedback").addEventListener("click",function(){if(this.title)toast(this.title);});
 $("btnHeroGotOk").addEventListener("click", function(){ $("veilHeroGot").hidden = true; renderHero(); });
 $("btnCloseBless").addEventListener("click", closeBless);
 /* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */

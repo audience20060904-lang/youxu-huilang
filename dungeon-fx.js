@@ -34,6 +34,8 @@
   function forget(el){
     const entry = Array.from(live).find(item => item.el === el);
     if(entry){ clearTimeout(entry.timer); live.delete(entry); }
+    const active=motions.get(el);
+    if(active){active.animation.cancel();motions.delete(el);}
     el.remove();
   }
   function keep(el, ms, kind){
@@ -78,13 +80,13 @@
     document.body.appendChild(fx);
     return keep(fx, 950, "battle");
   }
-  function text(el, zh, en, type){
-    const fx = stamp(el, "text " + type, null, 140);
+  function text(el, zh, en, type, position){
+    const fx = stamp(el, "text " + type, null, 140, position);
     if(fx) fx.textContent = label(zh, en);
   }
-  function sparks(el, type, n){
+  function sparks(el, type, n, at){
     // 粒子共享同一次布局读取，避免每追加一颗都强制重新计算页面。
-    const position=point(el);if(!position)return;
+    const position=at||point(el);if(!position)return;
     for(let i=0;i<n;i++){
       const fx = stamp(el, "spark " + type, null, 5, position);
       if(!fx) break;
@@ -95,8 +97,19 @@
       fx.style.setProperty("--turn", Math.round(angle*180/Math.PI) + "deg");
     }
   }
+  function strike(from, to, color, origin, target){
+    const a=origin||point(from), b=target||point(to);if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,reach=Math.min(48,length*.42);
+    motion(from,[{transform:"translate(0,0)"},{transform:"translate("+(dx/length*reach)+"px,"+(dy/length*reach)+"px) rotate("+(dy<0?-8:8)+"deg)",offset:.38},{transform:"translate(0,0)"}],360);
+    const bolt=stamp(from,"bolt", "slash",22,a);
+    if(bolt){
+      bolt.style.color=color;
+      const rotate=" rotate("+(Math.atan2(dy,dx)*180/Math.PI+45)+"deg)";
+      motion(bolt,[{transform:"translate(-50%,-50%)"+rotate,opacity:0},{transform:"translate(-50%,-50%)"+rotate,opacity:1,offset:.15},{transform:"translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))"+rotate,opacity:1,offset:.78},{transform:"translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))"+rotate,opacity:0}],300,"battle",true);
+    }
+  }
   function incoming(){
-    motion($("foeArt"), [{transform:"translateY(0)"},{transform:"translateY(8px) scale(1.05)",offset:.3},{transform:"translateY(0)"}], 280);
+    strike($("foeArt"),$("meArt"),"#d59b82");
   }
   const api = {
     resetBattle:() => {clear("battle");skillAt.clear();},
@@ -110,23 +123,24 @@
       if(fx)fx.style.color=sig[1];
       if(kind==='pet'){
         const pet=document.querySelector('.battle-pet');
-        motion(pet,[{transform:'translate(0,0)'},{transform:'translate(8px,-18px) rotate(-12deg)',offset:.35},{transform:'translate(0,0)'}],420);
+        strike(pet,$("foeArt"),'#d9bb91');
       }
     },
     attack:function(crit){
       if(!enabled() || !battleOpen()) return;
-      motion($("meArt"), [{transform:"translateY(0)"},{transform:"translateY(-9px) rotate(-7deg)",offset:.25},{transform:"translateY(0)"}], 320);
+      const target=point($("foeArt")),origin=point($("meArt"));
+      strike($("meArt"),$("foeArt"),crit?"#ffe0a0":"#d1d9bc",origin,target);
       motion($("foeArt"), [{transform:"translateX(0)",filter:"brightness(1)"},{transform:"translateX(6px) rotate(5deg)",filter:"brightness(1.9)",offset:.25},{transform:"translateX(-3px)",offset:.5},{transform:"translateX(0)",filter:"brightness(1)"}], 360);
-      stamp($("foeArt"), crit ? "slash critical" : "slash", "slash");
-      sparks($("foeArt"), crit ? "critical" : "hit", crit ? 9 : 5);
-      if(crit){ stamp($("foeArt"), "slash cross", "slash"); text($("foeArt"), "暴击", "CRITICAL", "critical"); }
+      stamp($("foeArt"), crit ? "slash critical" : "slash", "slash",null,target);
+      sparks($("foeArt"), crit ? "critical" : "hit", crit ? 9 : 5,target);
+      if(crit){ stamp($("foeArt"), "slash cross", "slash",null,target); text($("foeArt"), "暴击", "CRITICAL", "critical",target); }
     },
     hurt:function(hp, shield){
       if(!enabled() || !battleOpen()) return;
       incoming();
       if(shield > 0) api.block(false, true);
       if(hp > 0){
-        motion($("meArt"), [{transform:"translateX(0)"},{transform:"translateX(-7px) rotate(-8deg)",offset:.25},{transform:"translateX(4px)",offset:.5},{transform:"translateX(0)"}], 360);
+        motion($("meArt"), [{transform:"translate(0,0)"},{transform:"translate(-5px,9px) rotate(-8deg)",offset:.35},{transform:"translate(2px,-2px)",offset:.6},{transform:"translate(0,0)"}], 380);
         stamp($("meArt"), "hurt", "ring");
         sparks($("meArt"), "hurt", 5);
       }
@@ -167,7 +181,7 @@
       if(!enabled() || !battleOpen()) return;
       const c = $("combo");
       motion(c, [{filter:"brightness(1)"},{filter:"brightness(1.4)",offset:.25},{filter:"brightness(1)"}], 420);
-      if(milestone){ sparks(c,"critical",8); text(c, n + " 连击", n + " COMBO", "critical combo-burst"); }
+      if(milestone){ sparks($("meArt"),"critical",8); stamp($("meArt"),"skill combo-burst","star",70); }
     },
     heal:function(){ stamp($("meArt"), "heal", "heal"); },
     move:function(map, cells, width, world, x, y, svg, cls){

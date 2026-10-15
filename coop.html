@@ -4,8 +4,8 @@
 <title>幽墟回廊 · 联机</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261016-preload2">
-<script src="preload.js?v=20261016-preload2" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261016-arena1">
+<script src="preload.js?v=20261016-arena1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -126,6 +126,7 @@
               <div class="txt" id="hpTxt">20 / 20</div>
             </div>
             <div class="xpbar"><div class="fill" id="xpFill"></div></div>
+            <div class="map-statuses" id="mapStatuses" aria-label="当前祝福与负面状态" hidden></div>
           </div>
           <!-- 联机独有：队友状态条（血/连击/遗物数），index.html 里没有这一块 -->
           <div class="hudline mateline" id="mateRow" hidden>
@@ -409,6 +410,8 @@
 
 <div class="veil" id="veilBattle" hidden>
   <div class="sheet battle">
+    <section class="battle-arena" id="battleArena" aria-label="战斗场景">
+      <div class="arena-scenery" aria-hidden="true"><i class="arena-gate"></i><i class="arena-flame left"></i><i class="arena-flame right"></i></div>
     <div class="foe">
       <div class="battle-statuses foe-statuses" id="foeStatuses" aria-label="怪物的祝福与负面状态" hidden></div>
       <div class="portrait" id="foeArt"></div>
@@ -420,34 +423,7 @@
         <div class="fbar mate" id="foeMateBar" hidden><div class="fill" id="foeMateFill"></div><div class="txt" id="foeMateTxt">队友 0 / 0</div></div>
       </div>
     </div>
-
-    <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
-
-    <div class="qcard" id="qcard">
-      <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
-      <div class="qlabel" id="qLabel">这个词是什么意思？</div>
-      <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
-      <div class="qword" id="qWord">cat</div>
-      <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>
-      <!-- 待复习的错题：右上角写「答错 N 次 / N 天前」（2026-09-28），绝对定位不占高度，答完喇叭出来就收掉 -->
-      <div class="qmiss" id="qMiss" hidden></div>
-    </div>
-
-    <div class="quiz-input">
-    <div class="opts" id="opts"></div>
-    <div class="wagerrow" id="wagerRow">
-      <button class="wager" id="btnWager" type="button">冒险 · 我确定
-        <em>对了伤害翻倍，错了受伤翻倍</em></button>
-    </div>
-    <div class="spellbar" id="spellBar" hidden>
-      <button class="spkline" id="btnSpellSpeak" type="button" aria-label="播放读音">🔊</button>
-      <div class="spellrow" id="spellRow"></div>
-    </div>
-    <div class="letters" id="letters" hidden></div>
-    </div>
-
-    <div class="verdict" id="verdict"></div>
-
+      <div class="combat-feedback" id="combatFeedback" role="status"></div>
     <div class="mybar">
       <div class="me" id="meArt"></div>
       <div class="col">
@@ -459,12 +435,41 @@
         </div>
       </div>
     </div>
+      <div class="arena-controls">
+    <div class="wagerrow" id="wagerRow">
+      <button class="wager" id="btnWager" type="button">冒险 · 我确定
+        <em>对了伤害翻倍，错了受伤翻倍</em></button>
+    </div>
+        <button class="btn ghost" id="btnFlee" type="button">撤退 · 掉一半血</button>
+      </div>
+    </section>
+    <section class="battle-learning" aria-label="词汇学习">
+    <div class="qcard" id="qcard">
+      <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
+      <div class="combo none" id="combo" aria-label="连击 0"><span class="cmb-n"><b>×0</b></span></div>
+      <div class="qlabel" id="qLabel">这个词是什么意思？</div>
+      <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
+      <div class="qword" id="qWord">cat</div>
+      <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>
+      <div class="qmiss" id="qMiss" hidden></div>
+    </div>
+
+    <div class="quiz-input">
+    <div class="opts" id="opts"></div>
+
+    <div class="spellbar" id="spellBar" hidden>
+      <button class="spkline" id="btnSpellSpeak" type="button" aria-label="播放读音">🔊</button>
+      <div class="spellrow" id="spellRow"></div>
+    </div>
+    <div class="letters" id="letters" hidden></div>
+    </div>
+
+    <div class="verdict" id="verdict" role="status"></div>
     <div class="rowb">
-      <button class="btn ghost" id="btnFlee" type="button">撤退 · 掉一半血</button>
-      <span class="sp"></span>
       <span class="battle-prompt">作答后继续</span>
       <button class="btn primary" id="btnNextQ" type="button" hidden>继续</button>
     </div>
+    </section>
   </div>
 </div>
 
