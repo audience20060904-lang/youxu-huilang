@@ -2298,6 +2298,8 @@ function showWeak(m){
 function renderBattleBars(){
   renderStatuses();
   const m = B.mob, s = stats();
+  const heroName=$("battleHeroName"), hero=heroById(P.hero);
+  if(heroName)heroName.textContent=hero?hero.n:L("冒险者","Adventurer");
   clampShield(s);
   paintHeroBadge();               // 角色第二批：小人像上的角标（法力 / 魂 / 怀表 / 悬赏）
   const abyss = !!(m.def && m.def.abyss);

@@ -144,6 +144,8 @@ Object.assign(I18N, {
 " <span class=\"sys\">(刹那攒满了 —— 下一刀 +": " <span class=\"sys\">(Instant is charged — next strike +",
 " <span class=\"sys\">(凝盾 · 护盾 ": " <span class=\"sys\">(Aegis · shield ",
 "答对了！": "Correct!",
+"作答后继续": "Answer to continue",
+"生命 / 护盾": "HP / Shield",
 "暴击！": "Critical!",
 "拼对了！": "Spelled it!",
 "命中！": "Hit!",
