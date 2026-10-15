@@ -631,6 +631,14 @@ Object.assign(I18N, {
 "祝福": "Blessings",
 "用宝石换永久的好处": "Trade gems for permanent perks",
 "宝珠商店": "Orb Shop",
+"角色": "Heroes",
+"抽角色、出战、养成": "Recruit, train, send one in",
+"角色 · 跨局永久": "Heroes · permanent",
+"名册": "Roster",
+"招募": "Recruit",
+"招募结果": "Recruited",
+"好": "OK",
+"出战": "Set active",
 "宝珠 · 只在战场生效": "Orbs · Battlefield only",
 "战场": "Battlefield",
 "能站多久？": "How long can you last?",
@@ -2469,6 +2477,21 @@ var HOLY_EN = {
   meltheart: ["Melting Heart", "Breaking down a relic no longer gives gold; each one broken down this run: damage +2%, max HP +1% (max 100)", "What melts in the fire grows into your bones.", "Melt build"],
   thunderbox: ["Thunder Box", "Killing a regular foe stores 5% of the overkill damage; your first correct answer in a Boss room unleashes all of it", "Nine floors of thunder, on one head.", "Thunder build"]
 };
+/* 角色（2026-10-15）：[名字, 一句话, 被动（{v} 是按等级长的那个数）, ★3, ★5] */
+var HERO_EN = {
+  adv: ["Adventurer", "A little of everything", "ATK and max HP +{v}%", "First battle on each floor: damage +50%", "Relic slots +1"],
+  clerk: ["Scribe", "What you write down is yours", "Spelling questions +10%; correct spelling: damage +{v}%", "Combo bonus for a correct spelling +10 → +15", "After a correct spelling, your next right answer always crits"],
+  duelist: ["Duelist", "Your first instinct is the answer", "Right within 3 seconds: damage +{v}%", "Right within 3 seconds: crit chance +20%", "3 fast answers in a row: next hit gains extra damage + 100% of ATK"],
+  hermit: ["Hermit", "Think it through, then speak", "Timer +3 seconds; damage taken −{v}%", "First timeout in each battle doesn't bite", "Right after using half the timer or more: shield of 3% max HP (5 per floor)"],
+  pioneer: ["Pioneer", "Go where you haven't been", "Right on a new word (first time you meet it): damage +{v}%", "First new word right on each floor: restore 5% max HP", "Wrong on a new word: damage taken halved"],
+  keeper: ["Night Keeper", "Come back before you forget", "Reviews make up at least 40% of questions; right on a due word: damage +{v}%", "Right on a due word you once missed: restore 3% max HP (5 per floor)", "Right on a due word: combo +2 more"],
+  exorcist: ["Exorcist", "Miss it, and it's asked again soon", "Haunts return after 6 questions (was 10); right on a haunting word: damage +{v}%", "Dispelling a haunt: shield of 5% max HP", "Twice per floor: missing a haunting word costs no HP"],
+  rogue: ["Daredevil", "Knowing whether you know is knowing too", "Right with Risk on: damage +{v}% more (on top of the +100%)", "Right with Risk on: combo +2 → +3", "Wrong with Risk on: only 1.5× damage (was 2×)"],
+  reader: ["Early Reader", "Come by every day", "Every 20 different words you've answered today: damage +1% (up to +{v}%)", "First run each day starts with a shield of 20% max HP", "Today's accuracy ≥ 90% (at least 20 answers): crit chance +15%"],
+  naturalist: ["Naturalist", "Know a bit of everything", "Each different category answered right this floor: damage +{v}%", "Every 5 categories this floor: restore 5% max HP", "Hitting a weakness always crits"],
+  poet: ["Wordsmith", "Noun, verb, adjective — that's a sentence", "Right answer with a different part of speech from the last one: +1 stack (max 5), each stack damage +{v}%; same part of speech: back to 1", "The hit that reaches 5 stacks gains extra damage + 100% of ATK", "Wrong answers don't clear stacks, only drop one"],
+  bard: ["Bard", "Fast or slow, just keep steady", "Answer time within 1s of the last one: +1 stack (max 8), each stack damage +{v}%; off-beat: lose half", "At 8 stacks: damage taken −15%", "Each time stacks fill: restore 5% max HP"]
+};
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
 var DIFF_EN = {A:["Tier A", "Original", "No ATK bonus", "The game as it was built"],
   B:["Tier B", "A bit easier", "ATK +25%"], C:["Tier C", "Easier still", "ATK +50%"],
@@ -2479,6 +2502,7 @@ function i18nApplyContent(){
   if(!UI_EN) return;
   RELICS.forEach(function(r){ var e = RELIC_EN[r.id]; if(e){ r.n = e[0]; r.pw = e[1]; r.lore = e[2]; } });
   if(typeof HOLY !== "undefined") HOLY.forEach(function(h){ var e = HOLY_EN[h.id]; if(e){ h.n = e[0]; h.pw = e[1]; h.lore = e[2]; if(e[3]) h.flow = e[3]; } });
+  if(typeof HEROES !== "undefined") HEROES.forEach(function(h){ var e = HERO_EN[h.id]; if(e){ h.n = e[0]; h.line = e[1]; h.p = e[2]; h.s3 = e[3]; h.s5 = e[4]; } });
   FOES.forEach(function(f){ if(FOE_EN[f.id]) f.name = FOE_EN[f.id]; });
   GATEKEEPER.name = FOE_EN.gate; ABYSS.name = FOE_EN.abyss; STUDY_FOE.name = FOE_EN.study;
   CHAPTERS.forEach(function(c){

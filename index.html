@@ -98,6 +98,9 @@
           <button class="place" id="btnCave" type="button">
             <i>洞</i><span class="pn">洞窟<em>选一条路，下去</em></span><span class="go">▸</span>
           </button>
+          <button class="place" id="btnHero" type="button">
+            <i>人</i><span class="pn">角色<em id="heroSub">抽角色、出战、养成</em></span><span class="go">▸</span>
+          </button>
           <button class="place" id="btnTownCodex" type="button">
             <i>鉴</i><span class="pn">图鉴<em>你认过的词、拿过的遗物</em></span><span class="go">▸</span>
           </button>
@@ -641,6 +644,39 @@
       <span class="sp"></span>
       <button class="btn primary" id="btnBlessBack" type="button">返回</button>
     </div>
+  </div>
+</div>
+
+<!-- 角色（2026-10-15，见 角色系统.md）：名册 / 招募两个子栏目 + 角色详情 + 抽卡结果 -->
+<div class="veil" id="veilHero" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow">角色 · 跨局永久</div>
+    <div class="hrsubs">
+      <button class="osub hrsub on" data-hrsub="roster" type="button">名册</button>
+      <button class="osub hrsub" data-hrsub="pull" type="button">招募</button>
+    </div>
+    <div class="sx hrbody" id="heroBody"></div>
+    <div class="rowb"><span class="hrgem" id="heroGem"></span><span class="sp"></span><button class="btn primary" id="btnCloseHero" type="button">关闭</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veilHeroInfo" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="heroInfoEyebrow">角色</div>
+    <div class="hrinfo" id="heroInfoBody"></div>
+    <div class="rowb">
+      <button class="btn ghost" id="btnHeroInfoBack" type="button">返回</button>
+      <span class="sp"></span>
+      <button class="btn primary hrgo" id="btnHeroGo" type="button">出战</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="veilHeroGot" hidden>
+  <div class="sheet">
+    <div class="eyebrow">招募结果</div>
+    <div class="hrgot" id="heroGotList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnHeroGotOk" type="button">好</button></div>
   </div>
 </div>
 

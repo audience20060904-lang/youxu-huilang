@@ -1256,3 +1256,83 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .relic.sanct{border-color:var(--holy);background:var(--holy-bg)}
 #holyBlessList .relic{flex-shrink:0}
 #holyBlessList .relic.off{opacity:.45}
+
+/* ===== 角色（2026-10-15，见 角色系统.md）===== 类名一律带 hr 前缀，别撞短名
+   主城「角色」→ veilHero（名册 / 招募）→ veilHeroInfo；抽完弹 veilHeroGot。品质边框沿用遗物那三档颜色。*/
+.hrsubs{display:flex;gap:6px}
+.hrgem{font-size:13px;color:var(--dim)}
+.hrgem b{color:var(--q3)}
+.hrart{display:block;width:44px;height:44px;flex:none}
+.hrart svg{width:100%;height:100%;display:block}
+.hrart.big{width:72px;height:72px}
+.hrbar{display:inline-block;width:40px;height:4px;background:var(--stone-3);border-radius:2px;overflow:hidden;vertical-align:middle}
+.hrbar > i{display:block;height:100%;background:var(--coin)}
+.hrstar{font-size:11px;color:var(--torch);letter-spacing:.5px;white-space:nowrap}
+/* 名册：定死大小的方格 */
+.hrgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (min-width:460px){.hrgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.hrcell{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;height:118px;padding:8px 4px 7px;min-width:0;
+  border:1px solid var(--edge);border-top:3px solid var(--edge);border-radius:3px;background:var(--stone-2);
+  font:inherit;color:var(--bone);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hrcell.hq1, .hrgc.hq1{border-top-color:var(--q1)}
+.hrcell.hq2, .hrgc.hq2{border-top-color:var(--q2)}
+.hrcell.hq3, .hrgc.hq3{border-top-color:var(--q3)}
+.hrcell.cur{background:#FDF6E7;border-left-color:var(--torch-deep);border-right-color:var(--torch-deep);border-bottom-color:var(--torch-deep)}
+.hrcell b{font-size:13px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.hrcell.locked .hrart{opacity:.28;filter:grayscale(1)}
+.hrcell.locked b, .hrcell.locked .hrstar{color:var(--faint)}
+.hrlv{display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--dim);white-space:nowrap}
+.hrcur{position:absolute;top:4px;right:4px;font-style:normal;font-size:10px;line-height:15px;background:var(--torch);color:#FFF9EC;padding:0 5px;border-radius:2px}
+@media (hover:hover){.hrcell:hover{border-color:var(--torch-deep)}}
+/* 招募 */
+.hrpull{display:flex;flex-direction:column;gap:12px;padding-top:4px}
+.hrpity{text-align:center;font-size:13px;color:var(--dim)}
+.hrpity b{color:var(--q3)}
+.hrbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hrpb{height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+.hrpb b{font-size:15px;white-space:nowrap}
+.hrpb i{font-style:normal;font-size:12px;color:var(--torch);white-space:nowrap}
+.hrpb.armed{border-color:var(--torch-deep);background:#F6E6C4}
+.hrpb:disabled{opacity:.55;cursor:default}
+.hrnote{font-size:12px;color:var(--faint);text-align:center}
+.hrpool{display:flex;flex-wrap:wrap;gap:5px 6px;align-items:center;font-size:12.5px}
+.hrpool > span{flex:0 0 100%;font-weight:600;font-size:12px}
+.hrpool i{font-style:normal;padding:2px 7px;border:1px dashed var(--edge);border-radius:2px;color:var(--faint)}
+.hrpool i.own{border-style:solid;color:var(--bone);background:var(--stone-2)}
+/* 详情 */
+.hrinfo{display:flex;flex-direction:column;gap:10px}
+.hrhead{display:flex;gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--edge);border-left:4px solid var(--edge);border-radius:3px;background:var(--stone-2)}
+.hrhead.hq1{border-left-color:var(--q1)} .hrhead.hq2{border-left-color:var(--q2)} .hrhead.hq3{border-left-color:var(--q3)}
+.hrname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hrname b{font-size:18px;font-family:var(--disp);font-weight:600}
+.hrname i{font-style:normal;font-size:12.5px;color:var(--dim)}
+.hrxp{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);white-space:nowrap}
+.hrxp .hrbar{flex:1;width:auto;height:6px}
+.hrs{display:flex;gap:10px;align-items:flex-start;font-size:13px;opacity:.45}
+.hrs.on{opacity:1}
+.hrs > span{flex:none;width:44px;font-weight:700;color:var(--torch);font-size:12px;padding-top:1px;white-space:nowrap}
+.hrs.main > span{color:var(--bone)}
+.hrs p{margin:0;line-height:1.45}
+.hrs em{font-style:normal;color:var(--faint);font-size:12px}
+.hrhow{font-size:11.5px;color:var(--faint);border-top:1px dashed var(--edge-soft);padding-top:8px}
+.hrgo{min-width:96px}
+/* 抽卡结果：十连 2×5 一屏装下、不滚（高频挑选窗那条规矩）*/
+.hrgot{display:grid;grid-template-columns:minmax(0,140px);justify-content:center;gap:8px}
+.hrgot.ten{grid-template-columns:repeat(5,minmax(0,1fr))}
+.hrgc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px 6px;min-width:0;
+  border:1px solid var(--edge);border-top:3px solid var(--edge);border-radius:3px;background:var(--stone-2);
+  animation:hrIn .38s ease both}
+.hrgc.hq3{background:#FBEFDF;box-shadow:0 0 0 1px var(--q3) inset, 0 0 14px rgba(180,91,18,.35)}
+.hrgc .hrart{width:40px;height:40px}
+.hrgot:not(.ten) .hrgc .hrart{width:72px;height:72px}
+.hrgc b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hrgc em{font-style:normal;font-size:10.5px;line-height:15px;color:var(--dim);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.hrgc em.new{color:#FFF9EC;background:var(--blood);padding:0 5px;border-radius:2px}
+.hrgc em.gem{color:var(--q3)}
+/* 十连：名字允许折成两行（英文名长），字收一号；同一排的卡片照样等高（grid 默认拉伸）*/
+.hrgot.ten{gap:6px}
+.hrgot.ten .hrgc{padding:6px 1px 5px}
+.hrgot.ten .hrgc b{font-size:11.5px;line-height:1.2;white-space:normal;text-align:center}
+.hrgot.ten.en{grid-template-columns:repeat(4,minmax(0,1fr))}
+@keyframes hrIn{from{opacity:0;transform:perspective(300px) rotateY(80deg) scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hrgc{animation:none}}

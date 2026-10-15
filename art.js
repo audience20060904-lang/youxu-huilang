@@ -721,3 +721,100 @@ var HOLY_ART = (function(){
       '<path d="M25 6l-3 4" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>')
   };
 })();
+
+/* ===== 角色（2026-10-15，见 角色系统.md）=====
+   每个人一张 20×20：**同一个斗篷轮廓**（就是上面 HERO 那一身，去掉背后那把剑），靠手里 / 身上的东西区分。
+   斗篷是 currentColor（颜色在 content.js 的 HEROES[].col，game.js 的 heroCss() 生成样式），
+   手里的东西用固定色 —— 地图格子只有二三十像素，别往里加细节。
+   名册、详情、抽卡结果都拿同一张放大（矢量图，放大不糊）。冒险者就是原来那张 HERO。*/
+var HERO_ART = (function(){
+  var shadow = '<ellipse cx="10" cy="18.4" rx="4.9" ry="1.05" fill="#1E2A33" opacity=".16"/>';
+  var body =
+   '<path d="M10 8.2c3.1 0 4.9 3.3 5.2 9.7H4.8C5.1 11.5 6.9 8.2 10 8.2z" fill="currentColor"/>' +
+   '<path d="M10 8.2c3.1 0 4.9 3.3 5.2 9.7h-2.6C12.9 11.8 11.9 9.3 10 8.2z" fill="#000" opacity=".18"/>' +
+   '<path d="M10 8.2c-3.1 0-4.9 3.3-5.2 9.7h1.8C6.9 11.8 8.1 9.3 10 8.2z" fill="#fff" opacity=".15"/>' +
+   '<path d="M7 12.7h6" stroke="#0E2233" stroke-width="1.1" opacity=".22"/>' +
+   '<path d="M7.7 9.1h4.6l.6 1.6c-1.8-.7-4-.7-5.8 0z" fill="#fff" opacity=".18"/>' +
+   '<path d="M10 1.6c1.9 0 3.4 1.5 3.4 3.5 0 1.4-.7 2.5-1.8 3.1l.4 1.2H8l.4-1.2A3.5 3.5 0 0 1 6.6 5.1C6.6 3.1 8.1 1.6 10 1.6z" fill="currentColor"/>' +
+   '<path d="M10 1.6c1.9 0 3.4 1.5 3.4 3.5 0 1.4-.7 2.5-1.8 3.1l.4 1.2h-2z" fill="#000" opacity=".16"/>' +
+   '<path d="M7.9 4.8h4.2c.1 2-.9 3.5-2.1 3.5S7.8 6.8 7.9 4.8z" fill="#0C1B27" opacity=".34"/>' +
+   '<circle cx="10" cy="6.2" r=".55" fill="#CFE6F5" opacity=".8"/>';
+  function svg(back, front){
+    return '<svg viewBox="0 0 20 20" aria-hidden="true">' + shadow + (back || "") + body + (front || "") + '</svg>';
+  }
+  return {
+    adv: HERO,
+    /* 书吏：右手一支羽毛笔，左手一卷纸 */
+    clerk: svg("",
+      '<path d="M17.8 4.4c-1.7.5-3.1 2.3-3.7 4.7l-.6 3 .9.2.8-2.8c.8-2 2.1-3.4 2.6-5.1z" fill="#F3EEDF" stroke="#7C6A4E" stroke-width=".45"/>' +
+      '<path d="M13.9 11.9l-.4 1.6" stroke="#2A2620" stroke-width=".7" stroke-linecap="round"/>' +
+      '<rect x="2.6" y="12" width="1.1" height="3.9" rx=".4" fill="#C9B47E"/><rect x="7" y="12" width="1.1" height="3.9" rx=".4" fill="#C9B47E"/>' +
+      '<rect x="3.4" y="12.3" width="3.8" height="3.3" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
+      '<path d="M4 13.4h2.6M4 14.5h1.8" stroke="#6B5A3A" stroke-width=".4"/>'),
+    /* 剑客：斗笠 + 横在身前的细长剑 */
+    duelist: svg("",
+      '<path d="M7.6 13.1h10.6l.9.55-.9.55H7.6z" fill="#E1E7EC" stroke="#6E7B86" stroke-width=".35"/>' +
+      '<path d="M7.4 12.1v3.1" stroke="#8A6A16" stroke-width="1" stroke-linecap="round"/>' +
+      '<path d="M4.4 13.65h2.8" stroke="#3B2A1A" stroke-width="1.4" stroke-linecap="round"/>' +
+      '<path d="M3.2 5.5 10 1.1l6.8 4.4c-1.7.9-4 1.3-6.8 1.3s-5.1-.4-6.8-1.3z" fill="#C9A45C" stroke="#8A6A2E" stroke-width=".45" stroke-linejoin="round"/>' +
+      '<path d="M10 1.1v5.6" stroke="#8A6A2E" stroke-width=".35" opacity=".7"/>'),
+    /* 隐士：比人还高的一根手杖 */
+    hermit: svg("",
+      '<rect x="15.3" y="1.6" width="1.1" height="17" rx=".5" fill="#7A5532"/>' +
+      '<path d="M15.8 1.8c1.5-.6 2.8.4 2.5 1.6-.2.9-1.2 1.2-1.8.7" fill="none" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
+      '<circle cx="15.9" cy="10.4" r="1" fill="currentColor"/>'),
+    /* 拓荒者：背后鼓鼓的背包，顶上捆着一卷铺盖 */
+    pioneer: svg(
+      '<rect x="2.4" y="7.8" width="5.8" height="7.6" rx="1.4" fill="#8A6A3A" stroke="#5A4424" stroke-width=".5"/>' +
+      '<rect x="2" y="6.3" width="6.6" height="2.2" rx="1.1" fill="#B5533A" stroke="#7A3424" stroke-width=".4"/>',
+      '<path d="M7.6 9.3 11.8 14" stroke="#5A4424" stroke-width=".9" stroke-linecap="round"/>'),
+    /* 守夜人：提着一盏灯 */
+    keeper: svg("",
+      '<circle cx="15.5" cy="13.4" r="2.9" fill="#F4C54E" opacity=".25"/>' +
+      '<path d="M15.5 9.6v1.5" stroke="#3B2F1E" stroke-width=".7" stroke-linecap="round"/>' +
+      '<rect x="14" y="11" width="3" height=".9" rx=".3" fill="#3B2F1E"/>' +
+      '<rect x="14.3" y="11.9" width="2.4" height="3" fill="#F4C54E" stroke="#3B2F1E" stroke-width=".45"/>' +
+      '<path d="M15.5 11.9v3" stroke="#3B2F1E" stroke-width=".35"/>' +
+      '<rect x="14" y="14.9" width="3" height=".8" rx=".3" fill="#3B2F1E"/>'),
+    /* 驱魔人：左手一道符，右手一串铃 */
+    exorcist: svg("",
+      '<path d="M2.9 10.4 6.2 9.6l1.2 5.5-3.3.8z" fill="#F0D27A" stroke="#A88A3A" stroke-width=".4"/>' +
+      '<path d="M4.3 11.3l1.5-.35M4.6 12.6l1.5-.35M4.85 13.8l1.1-.25" stroke="#C0392B" stroke-width=".5" stroke-linecap="round"/>' +
+      '<path d="M15.4 9.4l.5 5.8" stroke="#6B4A2E" stroke-width=".45"/>' +
+      '<circle cx="15.55" cy="11.1" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>' +
+      '<circle cx="15.75" cy="12.9" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>' +
+      '<circle cx="15.95" cy="14.7" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>'),
+    /* 狂徒：脖子上一条红巾，手上一颗骰子 */
+    rogue: svg("",
+      '<path d="M7.4 9.1h5.2l-.3 1.3c-1.5.6-3.1.6-4.6 0z" fill="#B8322A"/>' +
+      '<path d="M12.2 9.8l2.2 1.9-.5.5-2.1-1.4z" fill="#B8322A"/>' +
+      '<rect x="14.1" y="12.2" width="3.3" height="3.3" rx=".6" fill="#FBF6E7" stroke="#2A2620" stroke-width=".45"/>' +
+      '<circle cx="14.95" cy="13.05" r=".38" fill="#2A2620"/><circle cx="15.75" cy="13.85" r=".38" fill="#2A2620"/><circle cx="16.55" cy="14.65" r=".38" fill="#2A2620"/>'),
+    /* 晨读者：胸前抱着一本书 */
+    reader: svg("",
+      '<rect x="6.8" y="10.5" width="6.4" height="4.4" rx=".5" fill="#2E4A7A" stroke="#18284A" stroke-width=".4"/>' +
+      '<rect x="7.2" y="14.3" width="5.6" height=".75" fill="#F4EBD3"/>' +
+      '<path d="M10 10.6v4.3" stroke="#18284A" stroke-width=".4"/>' +
+      '<path d="M11.6 15v1.7l.5-.5.5.5V15z" fill="#E0A83A"/>'),
+    /* 博物学者：斜挎一只标本匣 */
+    naturalist: svg("",
+      '<path d="M7.3 9.3 13.6 13.2" stroke="#5A4424" stroke-width=".9" stroke-linecap="round"/>' +
+      '<rect x="12.6" y="12.8" width="5" height="3.8" rx=".6" fill="#6B5232" stroke="#3B2A1A" stroke-width=".45"/>' +
+      '<rect x="13.3" y="13.5" width="3.6" height="2.4" rx=".3" fill="#CFE8E0"/>' +
+      '<path d="M14 15.4c.6-1 1.6-1.4 2.6-1.2-.4 1-1.4 1.5-2.6 1.2z" fill="#4E8A3A"/>'),
+    /* 造句者：背后挂一长卷字，右手一支毛笔 */
+    poet: svg(
+      '<rect x="2.6" y="6.4" width="3.4" height="11.2" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
+      '<rect x="2.1" y="5.8" width="4.4" height=".9" rx=".4" fill="#7A5532"/>' +
+      '<path d="M3.5 8v8M4.9 8v5.6" stroke="#2A2620" stroke-width=".45" opacity=".75"/>',
+      '<path d="M17.8 5.3 14.7 11.9" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
+      '<path d="M14.7 11.8l-1 2.1.55.25 1.3-1.9z" fill="#2A2620"/>'),
+    /* 乐师：怀里抱一把琴 */
+    bard: svg("",
+      '<path d="M8.4 12.4 12.6 8.1" stroke="#5E3E1C" stroke-width="1" stroke-linecap="round"/>' +
+      '<rect x="12" y="7.2" width="1.6" height="1.2" rx=".3" transform="rotate(-45 12.8 7.8)" fill="#5E3E1C"/>' +
+      '<ellipse cx="6.4" cy="13.8" rx="2.9" ry="2.3" fill="#E2B46A" stroke="#5E3E1C" stroke-width=".45"/>' +
+      '<circle cx="6.7" cy="13.6" r=".6" fill="#3B2410"/>' +
+      '<path d="M5.2 14.8 12.3 8.3" stroke="#F4EBD3" stroke-width=".25"/>')
+  };
+})();

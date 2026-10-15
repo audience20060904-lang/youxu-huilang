@@ -356,6 +356,7 @@ function newRun(){
         holy:[], sanct:null, bossKills:0, holyWords:0, trial:0, eyeStack:0, melted:0, thunder:0, sellN:0 };
   tutPending = false;
   studyOn = false;
+  heroStart();                // 角色：出战的那个人定死在 P 上（一趟一个人）
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
   G = { floor:0, paused:false, over:false };
   newRelics = [];
@@ -525,6 +526,14 @@ function stats(){
   if(holyOn("warblade")){ const d = Math.round(s.atk * HOLY_BLADE_DEF); s.def += d; s.defGear += d; } // 战神之刃：攻击 → 护甲
   if(holyOn("fateeye")) s.crit += HOLY_EYE_CRIT;                                                     // 天命之眼
   if(holyOn("meltheart") && P.melted) hpMul(1 + meltN() * HOLY_MELT_HP / 100);                       // 熔铸之心：每分解过一件 +1%（最多算 100 件）
+  /* 角色（2026-10-15）：冒险者按等级加攻击 / 生命的百分比（生命走 hpMul —— 厚血 / 不周 / 血肉照样不被放大）；
+     晨读者 ★5 今天正确率够高时加暴击率。⚠️ 在上面那句「纯净学习直接返回」之后 —— 纯净学习的生命锁 100 不能被它抬上去。*/
+  if(heroOn("adv")){
+    const hv = heroV();
+    s.atk = Math.max(1, Math.round(s.atk * (1 + hv / 100)));
+    hpMul(1 + hv / 100);
+  }
+  if(heroOn("reader", 5) && readerAccOk()) s.crit += HERO_READ_CRIT;
   return s;
 }
 function statsRaw(){
@@ -775,6 +784,7 @@ function nextFloor(){
   G.honeN = 0;             // 磨砺（第十四批）：这一层答对几题
   G.killsAt = P.kills;     // 摧枯（第十四批）：进层时的击杀数，这一层击倒几只 = P.kills − 它
   G.catSeen = {};          // 「面熟」这一层各类别的怪遇到过几只，startBattle() 里累
+  heroFloorReset();        // 角色：每层的次数和本层攒的东西
   G.floorAsked = 0;        // 「破晓甲」这一层已经答过几题（不分对错），answer() 里累
   /* 第九批「跨流派组合」每层的次数上限和本层攒的东西（2026-09-21）*/
   G.needleN = 0;           // 粗针：这一层拼对给过几次护盾
@@ -836,6 +846,12 @@ function nextFloor(){
     if((P.shield || 0) < want){ P.shield = want; say(T("城垣补齐了 —— 护盾 <b>") + want + T("</b>。"), "good"); }
   }
   if(hasRelic("thick")) P.shield = (P.shield || 0) + hx("thick", THICK_SHIELD);   // 厚盾：每层白得一点
+  if(P.heroDayPend && heroOn("reader", 3)){                                        // 晨读者 ★3：今天第一趟的开局盾
+    P.heroDayPend = false;
+    const add = Math.max(1, Math.round(stats().maxHp * HERO_READ_SH));
+    P.shield = (P.shield || 0) + add;
+    say(L("晨读者 —— 今天的第一趟，护盾 +<b>" + add + "</b>。", "Early Reader — first run today, shield +<b>" + add + "</b>."), "good");
+  }
   if(holyOn("saintshield")){                                                       // 圣徒之盾（圣器）：每层 40% 最大生命
     const add = Math.max(1, Math.round(stats().maxHp * HOLY_SAINT_PCT));
     P.shield = (P.shield || 0) + add;
@@ -1271,7 +1287,10 @@ function adamantPct(s){
   return Math.min(ADAMANT_MAX, ADAMANT_BASE + cut);
 }
 /* 冒险失手的倍率：底子 ×2，托底 ×1.8，壮胆 ×1（不翻倍） */
-function wagerX(){ return hasRelic("boldheart") ? 1 : hasRelic("cushion") ? Math.max(1, 2 - hx("cushion", 2 - CUSHION_MULT)) : 2; }
+function wagerX(){
+  const x = hasRelic("boldheart") ? 1 : hasRelic("cushion") ? Math.max(1, 2 - hx("cushion", 2 - CUSHION_MULT)) : 2;
+  return heroOn("rogue", 5) ? Math.min(x, HERO_ROGUE_X) : x;      // 狂徒 ★5：×1.5（壮胆的 ×1 照旧更低）
+}
 /* 石胎 / 钝痛的封顶线在无尽深处跟着「一半」的伤害压迫（深渊压迫 × 深渊狂潮）往上抬（用户 2026-09-25 选的方案 B）：
    第 50 层 12%、第 60 层 19%、第 75 层 29%、第 100 层 56%、第 125 层 85%、第 140 层往后一口就过上限。别的章恒为 1。*/
 function capRamp(){
@@ -1575,8 +1594,8 @@ function render(){
       glyph = art ? "" : mo.g;
     }
     if(x === P.x && y === P.y){
-      c.innerHTML = HERO;
-      c.className = "c floor you walkable" + (isGoal ? " goal" : "");
+      c.innerHTML = heroArt(P.hero);                 // 角色：出战的那个人（主城里 P 没有 hero，就是原来那张）
+      c.className = "c floor you walkable" + heroCls(P.hero) + (isGoal ? " goal" : "");
       continue;
     }
     // 地图上的东西全是画出来的。glyph 只在某只怪没配图时才派上用场
@@ -1711,6 +1730,7 @@ function partName(k){
     "@other":L("其它", "Others"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
   if(sp[k]) return sp[k];
   if(String(k).indexOf("holy:") === 0){ const h = holyById(k.slice(5)); return h ? h.n : k; }   // 圣器
+  if(k === "hero"){ const h = heroById(P && P.hero); return h ? L("角色 · ", "Hero · ") + h.n : k; }   // 角色
   const r = relicById(k);
   return r ? r.n : k;
 }
@@ -1831,7 +1851,8 @@ function renderSheets(s){
   const acc = (P.right + P.wrong) ? Math.round(P.right / (P.right + P.wrong) * 100) + "%" : "—";
   $("runStats").innerHTML = st(T("答对"), P.right) + st(T("答错"), P.wrong) +
     st(T("正确率"), acc) + st(T("击杀"), P.kills) +
-    st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl));
+    st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl)) +
+    heroRunCells();
   renderRelics();
   renderMate();
 }
@@ -2178,6 +2199,8 @@ function startBattle(m){
   B = {mob:m, q:null, locked:false, asked:0,
        wager:false, optCount:4,
        wrongTimes:0, shatterUsed:false, shatterFree:false, deflectUsed:false};
+  /* 冒险者 ★3：这一层第一场战斗（G.heroFought 每层清零）*/
+  if(!G.heroFought){ G.heroFought = true; B.heroFirst = true; }
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
   if(hasRelic("citywall")){
     const w = hx("citywall", Math.max(1, Math.ceil(stats().maxHp * CITY_FIGHT)));
@@ -2209,7 +2232,8 @@ function startBattle(m){
   G.paused = true;
   $("foeArt").className = "portrait" + (m.boss ? " boss" : "");
   $("foeArt").innerHTML = ART[m.art];
-  $("meArt").innerHTML = HERO;
+  $("meArt").innerHTML = heroArt(P.hero);
+  $("meArt").className = "me" + heroCls(P.hero);
   $("foeName").textContent = m.name;
   $("foeTag").textContent = (m.def && m.def.study) ? L("纯净学习 · 血量无限，随时能撤退", "Pure study · endless HP, retreat any time")
                           : (m.def && m.def.abyss) ? T("深渊 · 血量无限，打穿一层还有一层")
@@ -2398,7 +2422,8 @@ function pickQuizWord(cat){
   const today = dayNo();
   const due = pool.filter(function(w){ return lexDue(LEX[lexKey(w)], today); });
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
-  const dueRate = DUE_MIN + (DUE_MAX - DUE_MIN) * Math.min(1, due.length / DUE_FULL);
+  const dueMin = heroOn("keeper") ? Math.max(DUE_MIN, HERO_KEEPER_DUE) : DUE_MIN;   // 守夜人：复习题至少占 40%
+  const dueRate = dueMin + (DUE_MAX - dueMin) * Math.min(1, due.length / DUE_FULL);
   const bag = [];
   if(due.length && Math.random() < dueRate){
     /* 到期的词里「现在还记得住的概率」越低放得越多 —— 最快要忘的先出 */
@@ -2424,7 +2449,10 @@ function pickQuizWord(cat){
 /* 这一题出拼写的概率：底子 10%，拼写流的两件遗物各再加 15%。
    「盲斗」不走这条线，它是硬锁 100%。*/
 function spellChance(){
-  return Math.min(1, SPELL_RATE + spellBonusPct() / 100);
+  const base = Math.min(1, SPELL_RATE + spellBonusPct() / 100);
+  if(!heroOn("clerk")) return base;
+  /* 书吏：再 +10%，但总数封在 HERO_SPELL_CAP —— 封顶线不会比没带书吏时还低（遗物已经堆过 60% 的就照旧）*/
+  return Math.min(Math.max(HERO_SPELL_CAP, base), base + HERO_CLERK_SPELL / 100);
 }
 /* 遗物给的**额外**拼写率（不含底子的 SPELL_RATE）。
    ⚠️ 盲斗以前吃这个数换伤害，2026-09 改成「一击必杀」之后就不吃了 —— 这里只管出题概率。 */
@@ -2458,7 +2486,7 @@ function qSeconds(){
    OPT.qtime = 1~999 秒；0 = 不限时（读条整个不出，跟拼写题一样）；没填 = 默认 QUIZ_TIME。
    它是「这台设备」的设置，跟 OPT 走、不进存档码。不限时时 qBase() 仍返回 QUIZ_TIME ——「从容」要拿它算剩几秒。*/
 function qCustom(){ return OPT.snow && typeof OPT.qtime === "number" ? OPT.qtime : -1; }
-function qBase(){ const c = qCustom(); return c > 0 ? c : QUIZ_TIME; }
+function qBase(){ const c = qCustom(); return c > 0 ? c : QUIZ_TIME + (heroOn("hermit") ? HERO_HERMIT_SEC : 0); }   // 隐士：读条 +3 秒（自己填了秒数就按自己的）
 function startQTimer(){
   clearQTimer();
   if(!B || !B.q || B.q.type === "spell" || B.q.type === "def") return;   // 拼写 / 释义句都不限时
@@ -2515,6 +2543,14 @@ function timeUp(){
   }
   if(studyNoHurt()){             // 纯净学习 + 练习模式：不掉血
     say(L("时间到 —— 练习模式，不掉血。题还在，接着答。", "Time's up — practice mode, no HP lost. Same question, keep going."), "sys");
+    startQTimer();
+    return;
+  }
+  /* 隐士 ★3：每场第一次超时不挨咬（B.heroTO 一场一清）*/
+  if(heroOn("hermit", 3) && !B.heroTO){
+    B.heroTO = true;
+    hurtBegin(m, s, false); hurtRow("hero", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
+    say(L("时间到 —— 隐士定了定神，这一口没挨上。题还在，接着答。", "Time's up — the Hermit holds steady; no bite this time. Same question, keep going."), "good");
     startQTimer();
     return;
   }
@@ -3019,6 +3055,9 @@ function answer(btn, ok){
   /* 缓刑（第十三批）：前几题挂着的账，这一题先扣一份（答对少扣）—— 这一题自己要是答错，那一口排到后面三题 */
   const oweLog = payOwe(ok, m);
   const firstSeen = !LEX[lexKey(word)];          // 课业：这个存档从没见过的生词（LEX 里没记录）
+  /* 角色：答题**之前**这个词是不是到期了 / 以前错过几次（守夜人看它，lexMark 之后就变了）*/
+  const wasDue = !firstSeen && lexDue(LEX[lexKey(word)]);
+  const missBefore = firstSeen ? 0 : lexMiss(LEX[lexKey(word)]);
   const rec = LEX[lexKey(word)] || {str:0, seen:0, wrong:0};
   rec.seen++;
   if(P.seenWords.indexOf(word.en) < 0) P.seenWords.push(word.en);
@@ -3109,6 +3148,9 @@ function answer(btn, ok){
   }
   if(ok){
     P.right++; lexMark(rec, true, how);
+    /* 角色经验：答对 +1、拼对 +2；这个词刚被练到「已掌握」（熟练度跨过 3）再 +10 */
+    heroXp(isSpell ? HERO_XP_SPELL : HERO_XP_RIGHT);
+    if(!wasStrong && (rec.str || 0) >= 3) heroXp(HERO_XP_MASTER);
     /* 蚀甲：答对一题护甲 +1，封顶 CORRODE_MAX（2026-09-21 修好的方向）——
        原来的写法把「被磨掉几点」记在 G.corrodeLoss 上、封在 0，所以「每答对 +1」
        永远只能把护甲还回原值，一件史诗从头到尾只有负面。*/
@@ -3120,6 +3162,9 @@ function answer(btn, ok){
     /* 拼对的默认奖励（数值在 content.js）：连击直接加一截 + 本场经验翻倍。
        连击是在算伤害之前加的 —— 这一刀就能吃到加成。*/
     if(isSpell){ P.combo += SPELL_COMBO + (hasRelic("boom") ? hx("boom", SPELL_COMBO) : 0); B.xpx = SPELL_XPX; }  // 破音：连击奖励翻倍
+    if(isSpell && heroOn("clerk", 3)) P.combo += HERO_CLERK_COMBO;      // 书吏 ★3：拼对的连击奖励再 +5
+    if(B.wager && heroOn("rogue", 3)) P.combo += 1;                     // 狂徒 ★3：冒险答对 +2 → +3
+    if(wasDue && heroOn("keeper", 5)) P.combo += HERO_KEEPER_COMBO;     // 守夜人 ★5：答对到期词再 +2
     if(hitWeak && hasRelic("chase")){                       // 追猎：打中弱点多攒两下 + 回血
       P.combo += hx("chase", 2);
       const ch = healUp(hx("chase", Math.max(1, Math.ceil(stats().maxHp * CHASE_HEAL))));
@@ -3163,6 +3208,10 @@ function answer(btn, ok){
       } else { whim = "+" + earnGold(hx("whim", 60)) + T(" 金"); }
       relicLog += T(" <span class=\"sys\">(无常 · ") + whim + ")</span>";
     }
+
+    /* 角色：博物学者的类别 / 造句者的词性 / 乐师的节拍先记上 —— 下面 pctSteady() 读到的就是算上这一题的层数 */
+    const hr = heroRight(word, s, untimed, usedSec);
+    relicLog += hr.log;
 
     // 第一层 · 基础点伤（会被百分比放大）
     let base = s.atk;
@@ -3212,6 +3261,16 @@ function answer(btn, ok){
     if(hasRelic("keenrise") && (P.riseLeft || 0) > 0){ pct += tg("p", "keenrise", RISE_PCT); P.riseLeft--; }
     /* 刹那（神圣）：上一轮攒满 INSTANT_RUN 次速答，这一刀就是那一刀。先吃、再数这一题。*/
     if(hasRelic("instant") && G.instantReady){ pct += tg("p", "instant", INSTANT_PCT); G.instantReady = false; }
+    /* 角色（2026-10-15）：这一刀才有的那几档，照旧进②层这一个桶。按等级长的那个数是 heroV()。*/
+    if(P.hero){
+      if(isSpell && heroOn("clerk")) pct += tg("p", "hero", heroV());                  // 书吏：拼对
+      if(fast && heroOn("duelist")) pct += tg("p", "hero", heroV());                   // 剑客：3 秒内答对
+      if(firstSeen && heroOn("pioneer")) pct += tg("p", "hero", heroV());              // 拓荒者：生词
+      if(wasDue && heroOn("keeper")) pct += tg("p", "hero", heroV());                  // 守夜人：到期词
+      if(B.q.haunted && heroOn("exorcist")) pct += tg("p", "hero", heroV());           // 驱魔人：心魔词
+      if(B.wager && heroOn("rogue")) pct += tg("p", "hero", heroV());                  // 狂徒：冒险答对
+      if(B.heroFirst && heroOn("adv", 3)) pct += tg("p", "hero", HERO_ADV_FIRST);      // 冒险者 ★3：每层第一场
+    }
 
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
@@ -3236,16 +3295,23 @@ function answer(btn, ok){
       relicLog += T(" <span class=\"sys\">(化劲 +") + P.redirect + ")</span>";
       P.redirect = 0;
     }
+    /* 剑客 ★5：上一轮连着 3 次速答攒满了，这一刀额外伤害 + 攻击；造句者 ★3：刚叠到 5 层的这一刀同样 */
+    if(heroOn("duelist", 5) && P.heroReady){ extra += tg("e", "hero", Math.round(s.atk * HERO_DUEL_EXTRA)); P.heroReady = false; }
+    if(hr.poet5 && heroOn("poet", 3)) extra += tg("e", "hero", Math.round(s.atk * HERO_POET_EXTRA));
 
     // 第四层 · 暴击率／暴击伤害。超过 100% 的部分每 5 点换 +10% 暴击伤害，不浪费
     let parts = null;                        // 「构成」：趁状态还没被这一刀改掉，逐件拿掉算一遍差
     try{ parts = partsOf(false, pct - pctSteady(s)); }catch(e){ parts = null; }
     const cc = critSteady(s, pct);                                          // 暴击率 / 倍率全是常驻的，信息页同一个口径
-    const critRate = cc.rate, critMult = cc.mult;
+    let critRate = cc.rate;
+    const critMult = cc.mult;
+    if(fast && heroOn("duelist", 3)) critRate = Math.min(100, critRate + HERO_DUEL_CRIT);   // 剑客 ★3：速答时暴击率 +20%
     // 灵光：连击每满 5 次，那一刀必定暴击（吃的还是同一个暴击乘区，没有第三个）
     // 刹那（神圣）：答得快的那一刀也必定暴击 —— 走同一个 forceCrit，还是那一个乘区
     const forceCrit = (hasRelic("flash") && P.combo > 0 && P.combo % 5 === 0) ||
-                      (fast && hasRelic("instant")) || hasRelic("fate");   // 定数（第十一批）：每一刀都暴击
+                      (fast && hasRelic("instant")) || hasRelic("fate") ||   // 定数（第十一批）：每一刀都暴击
+                      (heroOn("clerk", 5) && P.heroCritNext) ||               // 书吏 ★5：拼对之后的下一次答对
+                      (hitWeak && heroOn("naturalist", 5));                    // 博物学者 ★5：打中弱点
     /* 无锋（第十一批）：不再暴击 —— 灵光 / 刹那 / 定数的「必定暴击」也一起哑掉（两件都带时按无锋算）*/
     const crit = !hasRelic("noedge") && (forceCrit || Math.random() * 100 < critRate);
     // 蓄势：暴了就清零，没暴就再攒一层（跨怪物保留，跟连击一个道理）
@@ -3499,6 +3565,28 @@ function answer(btn, ok){
     }
     if(wasStrong && hasRelic("tome")) earnGold(hx("tome", 8));                          // 典藏：答对掌握过的词
     if(firstSeen && hasRelic("lesson")) earnGold(hx("lesson", 10));                       // 课业：这个存档第一次见的生词
+    /* ===== 角色：答对之后的回血 / 护盾 / 计数（2026-10-15）===== 「答对就给」的都封了产量 */
+    if(P.hero){
+      P.heroCritNext = heroOn("clerk", 5) && isSpell;                        // 书吏 ★5：这一次用掉了，拼对再给下一次
+      if(heroOn("duelist", 5)){                                              // 剑客 ★5：连着几次速答
+        if(fast){ P.heroRun = (P.heroRun || 0) + 1; if(P.heroRun >= HERO_DUEL_RUN){ P.heroRun = 0; P.heroReady = true; } }
+        else P.heroRun = 0;
+      }
+      if(heroOn("hermit", 5) && !untimed && usedSec >= qSeconds() / 2 && (G.heroShN || 0) < HERO_HERMIT_N){   // 隐士 ★5
+        G.heroShN = (G.heroShN || 0) + 1;
+        P.shield = (P.shield || 0) + Math.max(1, Math.ceil(s.maxHp * HERO_HERMIT_SH));
+      }
+      if(firstSeen && heroOn("pioneer", 3) && !G.heroFresh){                // 拓荒者 ★3：每层第一次答对生词
+        G.heroFresh = true;
+        const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_PIONEER_HEAL)), s).hp;
+        if(hp) relicLog += L(" <span class=\"sys\">(拓荒者 · 回 " + hp + " 点)</span>", " <span class=\"sys\">(Pioneer · +" + hp + " HP)</span>");
+      }
+      if(wasDue && missBefore > 0 && heroOn("keeper", 3) && (G.heroDueN || 0) < HERO_KEEPER_N){   // 守夜人 ★3
+        G.heroDueN = (G.heroDueN || 0) + 1;
+        const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_KEEPER_HEAL)), s).hp;
+        if(hp) relicLog += L(" <span class=\"sys\">(守夜人 · 回 " + hp + " 点)</span>", " <span class=\"sys\">(Night Keeper · +" + hp + " HP)</span>");
+      }
+    }
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
     head = "<span class=\"big ok\">" +
@@ -3524,6 +3612,11 @@ function answer(btn, ok){
       } else relicLog += L(" <span class=\"sys\">(试炼 · 还差 " + P.trial + " 题)</span>", " <span class=\"sys\">(Trial · " + P.trial + " to go)</span>");
     }
     const hauntGone = dropHaunt(word.en);     // 答对了就从名单里拿掉（还没熬到的也一样）
+    if(B.q.haunted && hauntGone && heroOn("exorcist", 3)){                   // 驱魔人 ★3：驱散心魔给盾
+      const add = Math.max(1, Math.ceil(s.maxHp * HERO_EXO_SH));
+      P.shield = (P.shield || 0) + add;
+      relicLog += L(" <span class=\"sys\">(驱魔人 · 护盾 +" + add + ")</span>", " <span class=\"sys\">(Exorcist · shield +" + add + ")</span>");
+    }
     if(B.q.haunted && hauntGone && !P.study){   // 纯净学习里打心魔不回血（回血改成每 10 连击，见上面）
       const back = hasRelic("bind") ? hx("bind", Math.max(1, Math.round(s.maxHp * BIND_HEAL))) : 2;
       healUp(back, s);
@@ -3585,6 +3678,7 @@ function answer(btn, ok){
     if(hasRelic("keenrise") && (P.riseLeft || 0) > 0) P.riseLeft--;       // 锐进：同理，「升级后的 5 题」不分对错
     if(hasRelic("instant")) G.fastRun = 0;                                 // 刹那：连着的速答断了
     G.dice = 0;                       // 赌骰：答错把这一层攒的暴击率清零
+    heroWrong();                      // 角色：造句者 / 乐师 / 剑客的连续计数
     if(hasRelic("chew")) P.chew = true;     // 反刍：欠着，下一题答对才还
     if(hasRelic("build")){                  // 筑盾：错了也不白错
       P.shield = (P.shield || 0) + hx("build", BUILD_SHIELD);
@@ -3632,6 +3726,14 @@ function answer(btn, ok){
         head = T("<span class=\"big no\">无惧 —— 旧账咬不动你</span>");
         note = T("心魔答错不掉血，这个词也没再加重。");
       }
+      /* 驱魔人 ★5：每层两次，心魔词答错不掉血（G.heroExoN 每层清零）*/
+      if(dmg > 0 && wasHaunted && heroOn("exorcist", 5) && (G.heroExoN || 0) < HERO_EXO_N){
+        G.heroExoN = (G.heroExoN || 0) + 1;
+        hurtRow("hero", -dmg); dmg = 0;
+        head = L("<span class=\"big no\">驱魔人按住了它</span>", "<span class=\"big no\">The Exorcist holds it down</span>");
+        note = L("心魔词答错，这一下没落到身上（这一层还剩 " + (HERO_EXO_N - G.heroExoN) + " 次）。",
+                 "Missed a haunting word, but the blow never landed (" + (HERO_EXO_N - G.heroExoN) + " left this floor).");
+      }
       // 默诵：拼写题答错不掉血，但**每层只有 RECITE_FREE 次**（老续玩档没这个字段，所以 || 0）
       if(dmg > 0 && isSpell && hasRelic("recite") && (G.reciteFree || 0) < RECITE_FREE){
         G.reciteFree = (G.reciteFree || 0) + 1;
@@ -3655,7 +3757,7 @@ function answer(btn, ok){
       }
       /* 防御线的减伤链放在**最后**：默诵/回声先挡，全挡下了就不消耗屏息的次数、也不掷错身。*/
       if(dmg > 0){
-        const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted});
+        const mit = mitigate(dmg, s, {wrong:true, repeatWord:repeatWord, haunted:wasHaunted, fresh:firstSeen});
         dmg = mit.dmg;
         if(mit.dodged){
           head = mit.by === "glimmer" ? T("<span class=\"big no\">浮光 —— 刀穿过去了</span>")
@@ -3887,6 +3989,7 @@ function pctSteady(s){
   pct += bookPct();                                                                            // 万言圣典
   if(holyOn("goldidol")) pct += idolTiers() * HOLY_IDOL_PCT;                                  // 黄金圣像：金币 → 伤害（最多 层数 档）
   if(holyOn("meltheart")) pct += meltN() * HOLY_MELT_PCT;                                     // 熔铸之心：每分解过一件 +2%（最多算 100 件）
+  pct += heroPctSteady();                                                                      // 角色：晨读者 / 博物学者 / 造句者 / 乐师
   return pct;
 }
 function cutState(s, wrong){
@@ -3989,6 +4092,7 @@ function critSteadyRaw(s, pct){
    每层一次的（粗布 / 缓坠）、看这只怪的（镇压 / 记仇 / 面熟）、看这道题的（稳答 / 心镜 / 二见）留在 mitigate() 里。*/
 function cutStateRaw(s, wrong){
   let cut = cutStatic();
+  if(heroOn("bard", 3) && (P.heroBeat || 0) >= HERO_BARD_MAX) cut += HERO_BARD_CUT;   // 乐师 ★3：叠满时
   if(hasRelic("scale") && P.hp < s.maxHp / 2) cut += SCALE_CUT;           // 逆鳞：半血以下
   /* 第十批：余裕跟逆鳞正好相反（血还满着才有）；叩关只在 Boss 层生效（那一层的容错是全游戏最低的）。*/
   if(hasRelic("ease") && P.hp > s.maxHp * EASE_AT) cut += EASE_CUT;       // 余裕：血还在八成以上
@@ -4052,6 +4156,7 @@ function cutStatic(){
   if(hasRelic("boldheart")) cut += BOLD_CUT;                              // 壮胆（第十五批）：冒险不翻倍那半在 wagerX()
   if(hasRelic("treasurebowl")) cut += Math.min(BOWL_MAX, Math.floor((P.gold || 0) / BOWL_PER) * BOWL_CUT);   // 聚宝盆（第十七批）：金币 → 减伤
   if(hasRelic("goldbody")) cut += GBODY_CUT;                              // 金身（第十五批）：上限那半在 cutMax()
+  if(heroOn("hermit")) cut += heroV();                                    // 隐士（角色）：按等级 −5% ~ −20%
   return cut;
 }
 /* 万流归宗（神圣）：护盾／护甲／连击三条线各数几档（各最多 CONF_TIERS 档），
@@ -4082,6 +4187,7 @@ function partsOf(wrong, pin){
   if(P.face && G && P.face.f === G.floor && ids.indexOf("thousandface") >= 0)
     P.face.ids.forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
   (P.holy || []).forEach(function(id){ ids.push("holy:" + id); });   // 圣器也逐件拿掉算一遍（holyOn 认 "holy:<id>"）
+  if(P.hero) ids.push("hero");                                        // 角色单列一行（heroOn 认 RMASK 的 "hero"）
   let all, base;
   const per = {};
   try{
@@ -4223,6 +4329,11 @@ function mitigate(dmg, s0, opt){
     G.holdUsed = (G.holdUsed || 0) + 1;
     const o0 = out; out = halfOf("hold", out); hurtRow("hold", out - o0);
     why += T(" <span class=\"sys\">(屏息卸掉一半，这一层还剩 ") + (HOLD_FREE - G.holdUsed) + T(" 次)</span>");
+  }
+  /* 拓荒者 ★5（角色）：生词答错，受到的伤害减半 */
+  if(wrong && opt && opt.fresh && heroOn("pioneer", 5)){
+    const o0 = out; out = Math.max(1, Math.ceil(out / 2)); hurtRow("hero", out - o0);
+    why += L(" <span class=\"sys\">(拓荒者 · 生词，减半)</span>", " <span class=\"sys\">(Pioneer · new word, halved)</span>");
   }
   /* 卸力（第十一批）：每场第一次**真的要掉血**的那一下减半，每层最多 DEFLECT_N 次。
      跟屏息 / 余温各减各的（同一下能被减两次半）。B.deflectUsed 跟着 B 一场一清。*/
@@ -4917,7 +5028,12 @@ function judgeChest(){
   chestQ.done = true;
   const rec = LEX[lexKey(w)] || {str:0, seen:0, wrong:0};
   rec.seen++;
+  const strong0 = (rec.str || 0) >= 3;
   lexMark(rec, ok, lexHow(ok, true, chestQ.spell, spellOf(w), 0, false));
+  if(ok){                                   // 角色经验：宝箱也是拼写题
+    heroXp(HERO_XP_SPELL);
+    if(!strong0 && (rec.str || 0) >= 3) heroXp(HERO_XP_MASTER);
+  }
   if(!ok){
     addHaunt(w.en);
     noteMissToday(w);
@@ -5141,7 +5257,7 @@ function capByFloor(fl){
   const f = (fl == null) ? (G ? G.floor : 1) : fl;
   return f > RELIC_CAP_FROM ? Math.floor((f - RELIC_CAP_FROM) / RELIC_CAP_EVERY) : 0;
 }
-function relicCap(){ return RELIC_MAX + (hasRelic("pack") ? hx("pack", 3) : 0) + capByFloor(); }
+function relicCap(){ return RELIC_MAX + (hasRelic("pack") ? hx("pack", 3) : 0) + capByFloor() + (heroOn("adv", 5) ? 1 : 0); }   // 冒险者 ★5：遗物格 +1
 let pendingSwap = null;           // 等着被换进来的那件
 /* 刚拿到、还没在遗物页上点开看过的那几件 —— 卡片左上角挂个「new」小红点。
    **纯界面状态，不进存档**：回主城 / 重开一趟就清掉。 */
@@ -5971,7 +6087,7 @@ function addHaunt(en){
 function hauntReady(en){
   if(!P.haunt || P.haunt.indexOf(en) < 0) return false;
   const at = P.hauntAt ? P.hauntAt[en] : undefined;
-  return typeof at !== "number" || answered() - at >= HAUNT_DELAY;
+  return typeof at !== "number" || answered() - at >= (heroOn("exorcist") ? HERO_EXO_DELAY : HAUNT_DELAY);   // 驱魔人：隔 6 题就回来
 }
 function readyHaunts(){
   if(!P.haunt) return [];
@@ -5995,7 +6111,8 @@ var TOWN_KEY = "youxu.town.v1";
 var TOWN = (function(){
   const t = load(TOWN_KEY, {gem:0}) || {};
   return {gem: typeof t.gem === "number" ? t.gem : (t.gold || 0), bless: fixBless(t.bless),
-          orb: fixOrb(t.orb)};            // 宝珠（2026-09-23，orb.js 里正规化）
+          orb: fixOrb(t.orb),             // 宝珠（2026-09-23，orb.js 里正规化）
+          hero: fixHero(t.hero)};         // 角色（2026-10-15，见 角色系统.md）
 })();
 /* 宝石一变就落盘（用户要求）——**别绕过这个函数直接改 TOWN.gem** */
 function addGems(n){
@@ -6682,6 +6799,338 @@ function renderOrbShop(){
   re.disabled = gem < ORB_REROLL && !armed;
 }
 
+/* ================= 角色（用户 2026-10-15：「要抽取，养成。不要副作用」）=================
+   唯一说明书是 角色系统.md，数据在 content.js 的 HEROES。宝石抽角色、背单词养角色。
+   - 存档：TOWN.hero = {cur:出战的是谁, own:{id:{star, xp}}, pity:离上一次传奇抽了几次, spent:一共花了多少宝石}
+     （跟祝福、宝珠同一个 youxu.town.v1，**没开新键**）。读一律过 fixHero()。
+   - 一趟一个人：进洞那一刻的 id / 等级 / 星级定死在 P.hero / P.heroLv / P.heroStar 上，这一趟攒的经验记在 P.heroXp，
+     **结算 / 回镇上那一下**才并进 TOWN（heroFoldXp）—— 洞里面板不会突然跳，续玩档也对得上。
+   - 判定一律 heroOn(id, 星级)：认 RMASK 的 "hero"（「构成」逐件拿掉算差时它单列一行）。*/
+function heroById(id){ for(let i = 0; i < HEROES.length; i++) if(HEROES[i].id === id) return HEROES[i]; return null; }
+function fixHero(h){
+  const o = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0};
+  const int = function(v){ return Math.max(0, Math.floor(+v || 0)); };
+  if(h && typeof h === "object"){
+    const own = h.own && typeof h.own === "object" ? h.own : {};
+    for(const id in own){
+      if(!heroById(id)) continue;                       // 删掉的角色不认
+      const x = own[id] || {};
+      o.own[id] = {star: Math.max(1, Math.min(HERO_STAR_MAX, int(x.star) || 1)), xp: int(x.xp)};
+    }
+    o.pity = Math.min(HERO_PITY - 1, int(h.pity));
+    o.spent = int(h.spent);
+    if(o.own[h.cur]) o.cur = h.cur;
+  }
+  if(!o.own[HERO_DEFAULT]) o.own[HERO_DEFAULT] = {star:1, xp:0};   // 冒险者一开始就有
+  if(!o.own[o.cur]) o.cur = HERO_DEFAULT;
+  return o;
+}
+/* 经验 → 等级：从 n 级升到 n+1 级要 HERO_XP_STEP × n。返回 {lv, cur:这一级攒了多少, need:这一级要多少（满级是 0）} */
+function heroLvOf(xp){
+  let lv = 1, left = Math.max(0, xp || 0);
+  while(lv < HERO_LV_MAX && left >= HERO_XP_STEP * lv){ left -= HERO_XP_STEP * lv; lv++; }
+  return {lv:lv, cur:lv < HERO_LV_MAX ? left : 0, need:lv < HERO_LV_MAX ? HERO_XP_STEP * lv : 0};
+}
+/* 被动里那个数：pv:[1 级, 30 级] 之间按等级线性取，留一位小数 */
+function heroValAt(h, lv){
+  const t = (Math.max(1, Math.min(HERO_LV_MAX, lv || 1)) - 1) / (HERO_LV_MAX - 1);
+  return Math.round((h.pv[0] + (h.pv[1] - h.pv[0]) * t) * 10) / 10;
+}
+function heroFmt(v){ const r = Math.round(v * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); }
+function heroText(h, lv){ return h.p.replace("{v}", heroFmt(heroValAt(h, lv))); }
+/* 这一趟出战的是不是它（star 给了就再要求星级够）。RMASK 拿掉 "hero" 时当没有（「构成」）。*/
+function heroOn(id, star){
+  if(!P || P.hero !== id) return false;
+  if(RMASK && (RMASK === "all" || RMASK.hero)) return false;
+  return !star || (P.heroStar || 1) >= star;
+}
+function heroV(){ const h = P && heroById(P.hero); return h ? heroValAt(h, P.heroLv || 1) : 0; }
+function heroRec(id){ return TOWN.hero.own[id] || null; }
+/* 进洞那一刻：出战的那个人定死在 P 上（教程固定冒险者 1 级 ★1），这一趟要用的状态清零 */
+function heroStart(){
+  const id = P.tut ? HERO_DEFAULT : TOWN.hero.cur, rec = heroRec(id) || {star:1, xp:0};
+  P.hero = id;
+  P.heroLv = P.tut ? 1 : heroLvOf(rec.xp).lv;
+  P.heroStar = P.tut ? 1 : rec.star;
+  P.heroXp = 0;
+  P.heroStack = 0; P.heroPos = null;          // 造句者
+  P.heroBeat = 0; P.heroBeatT = null;         // 乐师
+  P.heroRun = 0; P.heroReady = false;         // 剑客 ★5
+  P.heroCritNext = false;                     // 书吏 ★5
+  /* 晨读者 ★3：每天第一趟开局给盾 —— 今天发过没记在 MET.day.hd 上（跟着 MET.day 跨天清），盾在 nextFloor() 里发 */
+  P.heroDayPend = false;
+  if(heroOn("reader", 3)){ const t = todayRec(); if(!t.hd){ t.hd = 1; P.heroDayPend = true; } }
+}
+/* 读老续玩档：没有这些字段的一律当冒险者 1 级（RUN_V 不动）*/
+function heroResume(){
+  if(!heroById(P.hero)){ P.hero = HERO_DEFAULT; P.heroLv = 1; P.heroStar = 1; }
+  if(typeof P.heroLv !== "number") P.heroLv = 1;
+  if(typeof P.heroStar !== "number") P.heroStar = 1;
+  ["heroXp", "heroStack", "heroBeat", "heroRun"].forEach(function(k){ if(typeof P[k] !== "number") P[k] = 0; });
+}
+/* 攒经验（只算出战的那个人；教程不算）*/
+function heroXp(n){
+  if(!P || P.tut || !P.hero || !(n > 0)) return;
+  P.heroXp = (P.heroXp || 0) + n;
+}
+/* 结算：这一趟攒的经验并进 TOWN。返回 {id, gain, from, to}（结算那一行用），没有就 null。调完 P.heroXp 清零，不会并两次。*/
+function heroFoldXp(){
+  if(!P || P.tut || !P.hero || !(P.heroXp > 0)) return null;
+  const rec = heroRec(P.hero), gain = P.heroXp;
+  P.heroXp = 0;
+  if(!rec) return null;
+  const from = heroLvOf(rec.xp).lv;
+  rec.xp += gain;
+  return {id:P.hero, gain:gain, from:from, to:heroLvOf(rec.xp).lv};
+}
+function heroFoldLine(f){
+  if(!f) return "";
+  const h = heroById(f.id);
+  return li(L("出战 · ", "Hero · ") + (h ? h.n : f.id),
+            L("经验 +" + f.gain, "XP +" + f.gain) + (f.to > f.from ? " · Lv " + f.from + " → " + f.to : " · Lv " + f.to));
+}
+/* 今天答过的不同的词（只数正在学的这门）—— 晨读者读它 */
+function todayWordsN(){
+  const ws = todayRec().ws;
+  let n = 0;
+  for(const k in ws) if(lexWord(k)) n++;
+  return n;
+}
+/* 晨读者 ★5：今天正确率 ≥ 90%，至少答过 20 题 */
+function readerAccOk(){
+  const t = todayRec(), n = (t.r || 0) + (t.w || 0);
+  return n >= HERO_READ_MIN && t.r * 100 >= HERO_READ_ACC * n;
+}
+/* 常驻的那几档伤害%（信息页同一个口径，pctSteady 里加）：晨读者 / 博物学者 / 造句者 / 乐师 */
+function heroPctSteady(){
+  if(!P || !P.hero) return 0;
+  let p = 0;
+  if(heroOn("reader")) p += Math.min(heroV(), Math.floor(todayWordsN() / HERO_READ_PER));
+  if(heroOn("naturalist") && G && G.heroCats) p += Object.keys(G.heroCats).length * heroV();
+  if(heroOn("poet")) p += (P.heroStack || 0) * heroV();
+  if(heroOn("bard")) p += (P.heroBeat || 0) * heroV();
+  return Math.round(p * 10) / 10;
+}
+/* 答对那一下先更新的状态（在算伤害之前，这一刀就吃得到）：博物学者的类别、造句者的词性、乐师的节拍。
+   返回 {poet5: 这一刀是不是刚叠到 5 层, log}。回血走 healUp，封产量靠「凑齐 / 叠满」本身。*/
+function heroRight(word, s, untimed, usedSec){
+  const out = {poet5:false, log:""};
+  if(heroOn("naturalist") && G && word.cat){
+    if(!G.heroCats) G.heroCats = {};
+    if(!G.heroCats[word.cat]){
+      G.heroCats[word.cat] = 1;
+      const n = Object.keys(G.heroCats).length;
+      if(heroOn("naturalist", 3) && n % HERO_NAT_EVERY === 0){
+        const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_NAT_HEAL)), s).hp;
+        if(hp) out.log += L(" <span class=\"sys\">(博物学者 · 凑齐 " + n + " 类，回 " + hp + " 点)</span>",
+                            " <span class=\"sys\">(Naturalist · " + n + " kinds, +" + hp + " HP)</span>");
+      }
+    }
+  }
+  if(heroOn("poet")){
+    const before = P.heroStack || 0;
+    const st = (P.heroPos && word.pos && P.heroPos !== word.pos) ? Math.min(HERO_POET_MAX, before + 1) : 1;
+    P.heroStack = st; P.heroPos = word.pos || null;
+    out.poet5 = st >= HERO_POET_MAX && before < HERO_POET_MAX;
+  }
+  if(heroOn("bard") && !untimed){
+    const before = P.heroBeat || 0;
+    const inBeat = typeof P.heroBeatT === "number" && Math.abs(usedSec - P.heroBeatT) <= HERO_BARD_GAP;
+    P.heroBeat = inBeat ? Math.min(HERO_BARD_MAX, before + 1) : Math.floor(before / 2);
+    P.heroBeatT = usedSec;
+    if(P.heroBeat >= HERO_BARD_MAX && before < HERO_BARD_MAX && heroOn("bard", 5)){
+      const hp = healUp(Math.max(1, Math.ceil(s.maxHp * HERO_BARD_HEAL)), s).hp;
+      if(hp) out.log += L(" <span class=\"sys\">(乐师 · 叠满，回 " + hp + " 点)</span>", " <span class=\"sys\">(Bard · full, +" + hp + " HP)</span>");
+    }
+  }
+  return out;
+}
+/* 每层清零（nextFloor / resumeRun 都调）：冒险者 ★3 打过第一场没 / 隐士 ★5、守夜人 ★3、驱魔人 ★5 的次数 /
+   拓荒者 ★3 这一层回过没 / 博物学者这一层答对过哪几类 */
+function heroFloorReset(){
+  if(!G) return;
+  G.heroFought = false; G.heroShN = 0; G.heroFresh = false; G.heroDueN = 0; G.heroExoN = 0; G.heroCats = {};
+}
+/* 信息页「本局战绩」最后两格：出战的是谁（等级 · 星级）、这一趟攒了多少角色经验（回镇上才并进去）*/
+function heroRunCells(){
+  const h = P && heroById(P.hero);
+  if(!h) return "";
+  return st(L("出战", "Hero"), h.n + " Lv" + (P.heroLv || 1) + " ★" + (P.heroStar || 1)) +
+         st(L("角色经验", "Hero XP"), "+" + (P.heroXp || 0));
+}
+/* 答错：造句者散掉（★5 只掉一层）、乐师掉一半、剑客的连续速答断掉 */
+function heroWrong(){
+  if(heroOn("poet")){
+    if(heroOn("poet", 5)) P.heroStack = Math.max(0, (P.heroStack || 0) - 1);
+    else { P.heroStack = 0; P.heroPos = null; }
+  }
+  if(heroOn("bard")){ P.heroBeat = Math.floor((P.heroBeat || 0) / 2); P.heroBeatT = null; }
+  if(heroOn("duelist")) P.heroRun = 0;
+}
+/* ---- 抽卡 ----
+   单抽 / 十连。每一抽先看保底（离上一次传奇满 HERO_PITY − 1 抽，这一抽必是传奇），再按 HERO_RATE 掷品质，
+   同品质里平均挑一个；十连一个史诗以上都没有就把最后一抽换成史诗。
+   没有的 → 拿到（★1）；有了 → ★+1；★5 了 → 退 HERO_REFUND 宝石。返回每一抽的结果（结果窗照着画）。*/
+function heroPull(n){
+  const cost = n >= 10 ? HERO_PULL10 : HERO_PULL * n;
+  if((TOWN.gem || 0) < cost) return null;
+  const H = TOWN.hero, rars = [];
+  for(let i = 0; i < n; i++){
+    let r;
+    if(H.pity + 1 >= HERO_PITY) r = 3;
+    else {
+      const x = Math.random();
+      r = x < HERO_RATE[3] ? 3 : x < HERO_RATE[3] + HERO_RATE[2] ? 2 : 1;
+    }
+    if(r === 3) H.pity = 0; else H.pity++;
+    rars.push(r);
+  }
+  if(n >= 10 && !rars.some(function(r){ return r >= 2; })) rars[rars.length - 1] = 2;
+  let refund = 0;
+  const out = rars.map(function(r){
+    const pool = HEROES.filter(function(h){ return h.r === r; });
+    const h = pool[Math.floor(Math.random() * pool.length)], rec = H.own[h.id];
+    if(!rec){ H.own[h.id] = {star:1, xp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
+    if(rec.star < HERO_STAR_MAX){ rec.star++; return {id:h.id, r:r, kind:"star", star:rec.star}; }
+    refund += HERO_REFUND[r];
+    return {id:h.id, r:r, kind:"gem", gem:HERO_REFUND[r]};
+  });
+  H.spent += cost;
+  addGems(refund - cost);      // 宝石一变就落盘（角色那一份跟着一起写进去）
+  return out;
+}
+/* ---- 角色的界面：主城「角色」→ veilHero（名册 / 招募）→ veilHeroInfo（详情 · 出战）；抽完弹 veilHeroGot ----
+   纯界面状态（heroTab / heroArmed / heroInfoId）不进存档。花宝石的按钮两步确认（跟祝福 / 宝珠一样）。*/
+let heroTab = "roster", heroArmed = "", heroInfoId = null;
+const HERO_RAR = function(r){ return [L("普通", "Common"), L("稀有", "Rare"), L("史诗", "Epic"), L("传奇", "Legendary")][r] || ""; };
+function heroStars(n){ return "★".repeat(n) + "☆".repeat(Math.max(0, HERO_STAR_MAX - n)); }
+function heroArtHtml(id, cls){ return "<span class=\"hrart hr-" + id + (cls ? " " + cls : "") + "\">" + heroArt(id) + "</span>"; }
+function openHero(tab){
+  heroTab = tab || heroTab;
+  heroArmed = "";
+  renderHero();
+  $("veilHero").hidden = false;
+}
+function closeHero(){ $("veilHero").hidden = true; heroArmed = ""; renderTown(); }
+function renderHero(){
+  Array.prototype.forEach.call(document.querySelectorAll(".hrsub"), function(b){ b.classList.toggle("on", b.dataset.hrsub === heroTab); });
+  $("heroGem").innerHTML = L("宝石 ", "Gems ") + "<b>" + (TOWN.gem || 0) + "</b>";
+  const H = TOWN.hero, box = $("heroBody");
+  if(heroTab === "roster"){
+    box.innerHTML = "<div class=\"hrgrid\">" + HEROES.map(function(h){
+      const rec = H.own[h.id];
+      if(!rec) return "<button class=\"hrcell locked hq" + h.r + "\" type=\"button\" data-id=\"" + h.id + "\">" + heroArtHtml(h.id) +
+        "<b>" + h.n + "</b><span class=\"hrstar\">" + L("未招募", "Not yet") + "</span><span class=\"hrlv\">" + HERO_RAR(h.r) + "</span></button>";
+      const lv = heroLvOf(rec.xp), pc = lv.need ? Math.round(lv.cur / lv.need * 100) : 100;
+      return "<button class=\"hrcell hq" + h.r + (H.cur === h.id ? " cur" : "") + "\" type=\"button\" data-id=\"" + h.id + "\">" +
+        (H.cur === h.id ? "<em class=\"hrcur\">" + L("出战", "Active") + "</em>" : "") + heroArtHtml(h.id) +
+        "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) + "</span>" +
+        "<span class=\"hrlv\">Lv " + lv.lv + "<i class=\"hrbar\"><i style=\"width:" + pc + "%\"></i></i></span></button>";
+    }).join("") + "</div>";
+  } else {
+    const gem = TOWN.gem || 0, left = HERO_PITY - H.pity;
+    const btn = function(n, cost){
+      const armed = heroArmed === "p" + n;
+      return "<button class=\"btn hrpb" + (armed ? " armed" : "") + "\" type=\"button\" data-pull=\"" + n + "\"" + (gem < cost && !armed ? " disabled" : "") + ">" +
+        "<b>" + (armed ? L("再点一次", "Tap again") : n === 1 ? L("单抽", "Pull ×1") : L("十连", "Pull ×10")) + "</b>" +
+        "<i>" + cost + L(" 宝石", " gems") + "</i></button>";
+    };
+    const pool = [3, 2, 1].map(function(r){
+      return "<div class=\"hrpool\"><span class=\"q" + r + "\">" + HERO_RAR(r) + " " + Math.round(HERO_RATE[r] * 100) + "%</span>" +
+        HEROES.filter(function(h){ return h.r === r; }).map(function(h){
+          const rec = H.own[h.id];
+          return "<i class=\"" + (rec ? "own" : "") + "\">" + h.n + (rec ? " " + "★" + rec.star : "") + "</i>";
+        }).join("") + "</div>";
+    }).join("");
+    box.innerHTML = "<div class=\"hrpull\">" +
+      "<div class=\"hrpity\">" + L("再 <b>" + left + "</b> 抽必出传奇", "Legendary guaranteed within <b>" + left + "</b> pulls") + "</div>" +
+      "<div class=\"hrbtns\">" + btn(1, HERO_PULL) + btn(10, HERO_PULL10) + "</div>" +
+      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 抽到重复的升星，★5 之后退宝石", "Ten-pull: at least one Epic · Duplicates add a star; past ★5 they refund gems") + "</div>" +
+      pool + "</div>";
+  }
+}
+function heroPullClick(n){
+  const key = "p" + n;
+  if(heroArmed !== key){ heroArmed = key; renderHero(); return; }
+  heroArmed = "";
+  const res = heroPull(n);
+  renderHero();
+  if(!res){ toast(L("宝石不够", "Not enough gems")); return; }
+  renderHeroGot(res);
+  $("veilHeroGot").hidden = false;
+}
+function renderHeroGot(res){
+  const box = $("heroGotList");
+  box.className = "hrgot" + (res.length > 1 ? " ten" + (UI_EN ? " en" : "") : "");   // 英文名长，十连排 4 列
+  box.innerHTML = res.map(function(x, i){
+    const h = heroById(x.id);
+    /* 十连的卡片窄（360 宽上一格五十来像素），标签写短的：升星只写升到几星、退宝石只写数 */
+    const ten = res.length > 1;
+    const tag = x.kind === "new" ? "<em class=\"new\">" + L("新", "New") + "</em>"
+              : x.kind === "star" ? "<em>" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
+              : "<em class=\"gem\">+" + x.gem + (ten ? "" : L(" 宝石", " gems")) + "</em>";
+    return "<div class=\"hrgc hq" + x.r + "\" style=\"animation-delay:" + (i * 90) + "ms\">" + heroArtHtml(x.id) +
+      "<b>" + (h ? h.n : x.id) + "</b>" + tag + "</div>";
+  }).join("");
+}
+function openHeroInfo(id){
+  heroInfoId = id;
+  renderHeroInfo();
+  $("veilHeroInfo").hidden = false;
+}
+function renderHeroInfo(){
+  const h = heroById(heroInfoId);
+  if(!h) return;
+  const rec = TOWN.hero.own[h.id], lv = rec ? heroLvOf(rec.xp) : {lv:1, cur:0, need:HERO_XP_STEP}, star = rec ? rec.star : 0;
+  $("heroInfoEyebrow").textContent = L("角色 · ", "Hero · ") + HERO_RAR(h.r);
+  const pctU = h.p.indexOf("{v}%") >= 0 ? "%" : "";
+  const next = rec && lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)) + pctU + L("）", ")") : "";
+  const sline = function(n, txt){
+    return "<div class=\"hrs" + (star >= n ? " on" : "") + "\"><span>★" + n + "</span><p>" + txt + "</p></div>";
+  };
+  $("heroInfoBody").innerHTML =
+    "<div class=\"hrhead hq" + h.r + "\">" + heroArtHtml(h.id, "big") +
+      "<div class=\"hrname\"><b>" + h.n + "</b><i>" + h.line + "</i>" +
+      "<span class=\"hrstar\">" + (rec ? heroStars(star) : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
+    (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + " / " + HERO_LV_MAX + "</span>" +
+             "<i class=\"hrbar\"><i style=\"width:" + (lv.need ? Math.round(lv.cur / lv.need * 100) : 100) + "%\"></i></i>" +
+             "<span>" + (lv.need ? lv.cur + " / " + lv.need : L("满级", "Max")) + "</span></div>" : "") +
+    "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1) + "<em>" + next + "</em></p></div>" +
+    sline(3, h.s3) + sline(5, h.s5) +
+    "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 抽到重复的升星",
+                                  "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · Duplicates add stars") + "</div>";
+  const go = $("btnHeroGo"), cur = TOWN.hero.cur === h.id;
+  go.textContent = cur ? L("出战中", "Active") : L("出战", "Set active");
+  go.disabled = !rec || cur;
+}
+function heroGo(){
+  if(!heroInfoId || !TOWN.hero.own[heroInfoId]) return;
+  TOWN.hero.cur = heroInfoId;
+  commitPerm();                 // 换出战的人是存档管理，就地写一次（跟换祝福一样）
+  const h = heroById(heroInfoId);
+  toast(L("出战：", "Active: ") + (h ? h.n : ""));
+  renderHeroInfo();
+  renderHero();
+  renderTown();
+}
+function heroTownLine(){
+  const h = heroById(TOWN.hero.cur), rec = heroRec(TOWN.hero.cur);
+  if(!h || !rec) return "";
+  return L("出战：", "Active: ") + h.n + " Lv" + heroLvOf(rec.xp).lv + " " + "★" + rec.star;
+}
+/* 地图上 / 战斗窗里那个人：图 + 颜色类（颜色由下面 heroCss 生成的样式给）*/
+function heroArt(id){ return (typeof HERO_ART !== "undefined" && HERO_ART[id]) || HERO; }
+function heroCls(id){ return heroById(id) ? " hr-" + id : ""; }
+(function heroCss(){
+  if(typeof document === "undefined" || typeof HEROES === "undefined") return;
+  const st = document.createElement("style");
+  st.textContent = HEROES.map(function(h){
+    const c = ".hr-" + h.id;
+    return ".c.you" + c + ",.mybar .me" + c + ",.hrart" + c + "{color:" + h.col + "}";
+  }).join("\n");
+  document.head.appendChild(st);
+})();
+
 let SCENE = "town";
 
 /* 地牢那几块和主城面板互斥显示 */
@@ -6716,6 +7165,8 @@ function renderTown(){
     : (T("用宝石换永久的好处 · ") + BLESS_SLOT_COST + T(" 宝石一个槽位"));
   const os = $("orbShopSub");
   if(os) os.textContent = T("宝珠 · ") + ORB_PRICE + T(" 宝石一颗，只在战场生效");
+  const hs = $("heroSub");
+  if(hs) hs.textContent = heroTownLine();        // 角色：出战的是谁
   $("tBest").textContent = M.best ? (T("第 ") + M.best + T(" 层")) : "—";
   $("tClears").textContent = M.clears || 0;
   $("tDeaths").textContent = M.deaths || 0;
@@ -6730,6 +7181,7 @@ function renderTown(){
 }
 /* 回主城：身上的一切清空，重建一个空角色 */
 function goTown(){
+  heroFoldXp();        // 角色：没走结算就回来的（极少），这一趟攒的经验也别丢（结算过的已经清零了）
   SCENE = "town";
   tipOff();
   cancelWalk();
@@ -6787,7 +7239,9 @@ function askDiff(routeId){
   if(!r || !r.open) return;
   pendingRoute = routeId;
   const sub = $("diffSub");
-  if(sub) sub.textContent = r.name + " · " + r.tag;
+  const hh = heroById(TOWN.hero.cur), hrec = heroRec(TOWN.hero.cur);
+  if(sub) sub.textContent = r.name + " · " + r.tag +
+    (hh && hrec ? L(" · 出战 ", " · Hero ") + hh.n + " Lv" + heroLvOf(hrec.xp).lv : "");   // 角色：就地一行，免得忘了换
   renderDiffList();
   $("veilDiff").hidden = false;
   tip("diff", "veilDiff");
@@ -7150,6 +7604,7 @@ function resumeRun(s){
   if(typeof P.melted !== "number") P.melted = 0;              // 熔铸之心：带着它分解过几件
   if(typeof P.thunder !== "number") P.thunder = 0;            // 雷霆之匣：匣子里存了多少（小数攒着）
   if(typeof P.sellN !== "number") P.sellN = 0;                // 余烬：本局分解过几件
+  heroResume();                                               // 角色（2026-10-15），老档没有就当冒险者
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -7179,6 +7634,7 @@ function resumeRun(s){
   G.trialUsed = false;     // 试炼圣骸（圣器）
   G.rewindN = 0;           // 逆时沙漏（圣器）
   G.eyeGain = 0;           // 天命之眼（圣器）
+  heroFloorReset();        // 角色：每层的次数（续玩档存的是刚进这一层的样子）
   G.bwallGot = 0;
   G.bwallBank = 0;
   G.wshGot = 0;            // 磨盾（第十五批）
@@ -7310,6 +7766,7 @@ function endRun(win, gaveUp){
   /* 历史平均要**在并进本局之前**算，不然等于跟自己比 */
   const hAcc = histAcc(sc.floor);
   foldAcc();
+  const heroF = heroFoldXp();   // 角色：这一趟攒的经验并进去（下面 addGems / commit 一起落盘）
   addGems(sc.gems);    // 宝石一变就落盘
   commit(false);       // 存档点之三（上半截）：这一趟结束，人被抬回镇上，续玩档作废
   $("endTitle").textContent = win ? ((CH.boss ? CH.boss.name : T("这一章")) + T("倒下了"))
@@ -7341,6 +7798,7 @@ function endRun(win, gaveUp){
     li(T("难度 · 第") + chNo() + T("章 ") + CH.level, "×" + Math.round(CH.gemMult * 100) + "%") +
     li(T("<b>获得宝石</b>"), "<b style=\"color:var(--q3)\">+" + sc.gems + "</b>") +
     li(T("宝石合计"), TOWN.gem) +
+    heroFoldLine(heroF) +
     (P.practice ? li(T("练习模式"), T("护甲 +50 · 攻击 −50%")) : "") +
     /* ⚠️ 这一行写「难度等级」不写「难度」—— 上面那行「难度 · 第N章」已经占了「难度」两个字
        （那是宝石的章节倍率），两行都叫难度会以为是同一件事。*/
@@ -7395,6 +7853,7 @@ function endStudy(gaveUp){
   const counted = !P.practice;
   const isBest = counted && dmg > prev;
   if(isBest) M.studyBest = dmg;
+  const heroF = heroFoldXp();   // 角色：纯净学习也攒经验
   commit(false);       // 这一趟结束，续玩档作废
   const total = P.right + P.wrong;
   const acc = total ? Math.round(P.right / total * 100) : 0;
@@ -7420,6 +7879,7 @@ function endStudy(gaveUp){
     li(T("正确率 ") , acc + "%") +
     li(L("最大连击", "Best combo"), P.maxCombo || 0) +
     li(L("单次最高伤害", "Biggest single hit"), P.studyTop || 0) +
+    heroFoldLine(heroF) +
     (P.practice ? li(T("练习模式"), L("不掉血 · 不计纪录", "No HP loss · no record")) : "") +
     li(T("这趟遇到的词"), P.seenWords.length + T(" 个")) +
     li(T("这趟答错的词"), Object.keys(P.missN || {}).length + T(" 个")) +
@@ -7548,12 +8008,12 @@ function openCodex(tab){
 }
 function hideAll(){
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
-  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo"].forEach(function(id){ $(id).hidden = true; });
+  ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHero","veilHeroInfo","veilHeroGot"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
-  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo"];
+  const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHeroGot","veilHeroInfo","veilHero"];   // 角色那三个：叠在上面的排前面
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
 }
@@ -7834,6 +8294,21 @@ function codeIO(io){
         const lv = io.num("bl", E ? (TOWN.bless.open.fav[r] || 1) - 1 : 0) + 1;
         if(!E) B.open.fav[r] = Math.max(1, Math.min(BLESS_LV_MAX, lv));
       }
+    },
+    function(){                                            // 角色（2026-10-15）：按 HEROES 下标 —— 有没有 1 位，有的存「星级 − 1」+ 经验；再存保底、花了多少、出战的是第几个
+      const src = E ? TOWN.hero : null, hd = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0};
+      const n = io.num("hn", HEROES.length);
+      for(let i = 0; i < n; i++){
+        const h = HEROES[i], rec = E ? src.own[h.id] : null;
+        if(!io.bit("ho", !!rec)) continue;
+        const star = io.num("hs", E ? rec.star - 1 : 0) + 1, xp = io.num("hx", E ? rec.xp : 0);
+        if(!E && h) hd.own[h.id] = {star:star, xp:xp};
+      }
+      hd.pity = io.num("hp", E ? src.pity : 0);
+      hd.spent = io.num("hm", E ? src.spent : 0);
+      const ci = io.num("hc", E ? Math.max(0, HEROES.findIndex(function(h){ return h.id === src.cur; })) : 0);
+      if(!E && HEROES[ci]) hd.cur = HEROES[ci].id;
+      out.town.hero = hd;
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
@@ -8192,6 +8667,15 @@ function mergeData(o){
     const inOrb = fixOrb(o.town.orb);
     if(inOrb.spent > (TOWN.orb.spent || 0)){ inOrb.shop = TOWN.orb.shop; TOWN.orb = inOrb; }
   }
+  /* 角色（2026-10-15）：抽到谁 / 星级 / 保底**整份取「花得多」的那一边**（跟祝福、宝珠一个规矩 —— 并集等于一份钱抽出两份卡）；
+     经验是背单词攒的不是钱买的，两边都有的角色按角色取大；出战的是谁留本机的（那边没有就跟着那一份）。*/
+  if(o.town && o.town.hero){
+    const inH = fixHero(o.town.hero), mine = TOWN.hero;
+    const keep = inH.spent > (mine.spent || 0) ? inH : mine, other = keep === inH ? mine : inH;
+    for(const id in keep.own) if(other.own[id]) keep.own[id].xp = Math.max(keep.own[id].xp, other.own[id].xp);
+    if(keep.own[mine.cur]) keep.cur = mine.cur;
+    TOWN.hero = keep;
+  }
 
   /* 导入是玩家自己点的，就地写一次盘 —— 它不是游戏里的那三个存档点，而是存档管理本身；
      不马上写的话玩家关掉页面会以为导入没生效。只写永久数据，
@@ -8374,6 +8858,8 @@ document.addEventListener("keydown", function(ev){
       else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
       else if(v.id === "veilHolyInfo") closeHolyInfo();     // 圣器详情
+      else if(v.id === "veilHero") closeHero();             // 角色
+      else if(v.id === "veilHeroInfo" || v.id === "veilHeroGot") v.hidden = true;
     }
     return;
   }
@@ -8754,6 +9240,21 @@ $("btnTownCodex").addEventListener("click", function(){ $("codexFind").value = "
 
 /* ---- 祝福 ---- */
 $("btnBless").addEventListener("click", openBless);
+/* 角色（2026-10-15）*/
+$("btnHero").addEventListener("click", function(){ openHero("roster"); });
+$("btnCloseHero").addEventListener("click", closeHero);
+Array.prototype.forEach.call(document.querySelectorAll(".hrsub"), function(b){
+  b.addEventListener("click", function(){ heroTab = b.dataset.hrsub; heroArmed = ""; renderHero(); $("heroBody").scrollTop = 0; });
+});
+$("heroBody").addEventListener("click", function(e){
+  const c = e.target.closest ? e.target.closest("[data-id],[data-pull]") : null;
+  if(!c || c.disabled) return;
+  if(c.dataset.pull) heroPullClick(+c.dataset.pull);
+  else openHeroInfo(c.dataset.id);
+});
+$("btnHeroInfoBack").addEventListener("click", function(){ $("veilHeroInfo").hidden = true; });
+$("btnHeroGo").addEventListener("click", heroGo);
+$("btnHeroGotOk").addEventListener("click", function(){ $("veilHeroGot").hidden = true; renderHero(); });
 $("btnCloseBless").addEventListener("click", closeBless);
 /* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */
 $("blessList").addEventListener("click", function(ev){
