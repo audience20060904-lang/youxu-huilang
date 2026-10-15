@@ -421,16 +421,17 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .quiz-input > .wagerrow .wager.on{border-style:solid;border-color:#B68936;background:#EFDBAF}
 .quiz-input > .opts{grid-area:1/1;justify-self:stretch;align-self:stretch;width:100%;height:100%;max-width:none;
   min-height:0;aspect-ratio:auto;margin:0;grid-template-rows:repeat(2,minmax(0,1fr));gap:8px}
-.quiz-input > .opts .opt{min-width:0;min-height:0;aspect-ratio:auto;padding:26px 14px 10px;border-radius:11px;
+.quiz-input > .opts .opt{min-width:0;min-height:0;aspect-ratio:auto;padding:26px 10px 8px;border-radius:11px;
   border-color:#D4C7AD;background:#FFFDF7;box-shadow:0 2px 0 #D8C9AB40;
-  font-size:clamp(14px,2svh,18px);line-height:1.3;text-align:left;justify-content:center;align-items:flex-start;flex-direction:column}
+  font-size:clamp(19px,2.65svh,24px);line-height:1.25;text-align:left;justify-content:center;align-items:flex-start;flex-direction:column}
 .quiz-input > .opts .opt .n{top:7px;left:10px;width:19px;height:19px;border-radius:6px;font-size:10px;
   border-color:#DBCCAC;background:#F7EEDC;color:#9A7A3E}
-.quiz-input > .opts .opt .sub{font-size:11px;line-height:1.2}
+.quiz-input > .opts .opt .sub{font-size:14px;line-height:1.2}
+.quiz-input > .opts .opt.two.tight{font-size:clamp(17px,2.3svh,21px);line-height:1.2}
 .quiz-input > .opts .opt.right{border-color:#86A369;background:#EBF3DE;box-shadow:inset 3px 0 #749352}
 .quiz-input > .opts .opt.wrong{border-color:#C98C78;background:#FAE8DF;box-shadow:inset 3px 0 #B85A44}
 .quiz-input > .opts.def{height:100%;width:100%;aspect-ratio:auto;grid-template-rows:repeat(4,minmax(0,1fr))}
-.quiz-input > .opts.def .opt{padding:4px 10px 4px 36px;font-size:clamp(12px,1.75svh,14px);justify-content:center;align-items:flex-start}
+.quiz-input > .opts.def .opt{padding:4px 10px 4px 36px;font-size:clamp(15px,2.1svh,18px);justify-content:center;align-items:flex-start}
 .quiz-input > .opts.def .opt .n{top:50%;left:9px}
 .quiz-input > .spellbar .spellrow{flex-wrap:nowrap;min-width:0}
 .quiz-input > .spellbar .sbox{height:var(--quiz-control-h);max-height:100%;flex-shrink:1;min-width:0;border-radius:6px;background:#FFFDF7}
@@ -460,6 +461,13 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .battle-prompt{font-size:11px;color:#97866A}
 .battle > .rowb:has(#btnNextQ:not([hidden])) .battle-prompt{display:none}
 @media (hover:hover){.quiz-input > .opts .opt:hover:not(:disabled){border-color:#AD873D;background:#FAF2DF;box-shadow:0 3px 10px #93702B18}}
+/* 窄屏保留大字，收紧序号留白，让长选项和答后对照仍能完整放下。 */
+@media (max-width:380px) and (min-height:741px){
+  .quiz-input > .opts .opt{font-size:19px;line-height:1.15;padding:20px 8px 1px}
+  .quiz-input > .opts .opt .n{top:3px;left:8px;width:16px;height:16px;font-size:9px}
+  .quiz-input > .opts .opt .sub{font-size:12px}
+  .quiz-input > .opts .opt.two.tight{font-size:18px}
+}
 @media (max-height:740px){
   .sheet.battle{--battle-gap:6px;--quiz-control-h:32px;--foe-zone:98px;--player-zone:64px;padding:10px;
     grid-template-rows:var(--foe-zone) 22px 86px minmax(0,1fr) 36px var(--player-zone) 36px}
@@ -474,10 +482,11 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   .player-vitals{padding-top:20px}.player-label{font-size:10px;margin-bottom:2px}.player-label > span{font-size:8px}
   .battle > .mybar .hpbar{height:15px}.battle > .mybar .hpbar.mate{height:10px}
   .battle > .quiz-input,.quiz-input > .opts,.quiz-input > .letters{gap:6px}
-  .quiz-input > .opts .opt{padding:21px 9px 5px;font-size:13px;line-height:1.2}
+  .quiz-input > .opts .opt{padding:21px 9px 5px;font-size:17px;line-height:1.2}
   .quiz-input > .opts .opt .n{top:4px;left:7px;width:16px;height:16px;font-size:9px}
-  .quiz-input > .opts .opt .sub{font-size:10px}
-  .quiz-input > .opts.def .opt{padding:2px 7px 2px 29px;font-size:11px;line-height:1.15}
+  .quiz-input > .opts .opt .sub{font-size:12px}
+  .quiz-input > .opts .opt.two.tight{font-size:16px}
+  .quiz-input > .opts.def .opt{padding:2px 7px 2px 29px;font-size:14px;line-height:1.15}
   .quiz-input > .opts.def .opt .n{top:50%;left:7px}
   .quiz-input > .wagerrow .wager{font-size:11px;padding:3px 9px}.quiz-input > .wagerrow .wager em{font-size:9px}
   .battle > .verdict{font-size:11px;padding:2px 6px}.battle > .verdict .big{font-size:13px}
@@ -490,8 +499,10 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   .battle > .qcard .qword{font-size:24px}.battle > .qcard .qlabel{font-size:9px}
   .battle > .combo{padding-bottom:2px}.battle > .combo .cmb-n b{font-size:14px}
   .player-label{display:none}.battle > .mybar .hpbar{height:17px}
-  .quiz-input > .opts .opt{padding:4px 7px 4px 27px;font-size:12px}.quiz-input > .opts .opt .n{top:50%;left:5px;transform:translateY(-50%)}
-  .quiz-input > .opts.def .opt{font-size:10px;padding:1px 5px 1px 26px}
+  .quiz-input > .opts .opt{padding:3px 7px 3px 27px;font-size:15px}.quiz-input > .opts .opt .n{top:50%;left:5px;transform:translateY(-50%)}
+  .quiz-input > .opts .opt .sub{font-size:11px}
+  .quiz-input > .opts .opt.two.tight{font-size:14px}
+  .quiz-input > .opts.def .opt{font-size:12px;padding:1px 5px 1px 26px}
   .quiz-input > .wagerrow .wager em{font-size:8px}.battle > .verdict .mean{font-size:10px}
 }
 .foe{display:flex;align-items:center;gap:13px;position:relative}
