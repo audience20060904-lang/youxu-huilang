@@ -7830,6 +7830,87 @@ function makeCode(){
   }
   return s;
 }
+/* ================ 本局码（测试用，用户 2026-10-15）================
+   「加一个测试用的导出码，可以复制我这一局，局内的遗物信息，你拿到我的码之后可以复现我这一局，做遗物平衡性调整」。
+   信息页属性下面「复制本局码」→ 这一刻的整局（P 全部 + 这一层的地图 / 怪 / 物件 + G 上的每层计数 + 当前面板 + 构成记录），
+   JSON → UTF-8 → 跟 YX3 一样每 3 个字节换成 2 个生僻字、带 2 字节校验，前面挂 YXR。
+   粘进「粘贴存档码」（只在镇上）= 原样接着走这一局（写进续玩档）。**永久数据一个字都不碰**。
+   ⚠️ P 上跟背词有关的大字典（这一趟答对过哪些词 / 按层的答题数 / 这一趟答错的词）不带，导进来是空的 —— 不影响数值。*/
+var RUNCODE_TAG = "YXR";
+function bytesToCode(tag, body){
+  body = Array.prototype.slice.call(body);
+  while((body.length + 2) % 3) body.push(0);
+  const ck = sumHash(body), all = [ck & 255, ck >> 8].concat(body);
+  let s = tag;
+  for(let i = 0; i < all.length; i += 3){
+    const v = all[i] * 65536 + all[i + 1] * 256 + all[i + 2];
+    s += String.fromCharCode(CODE3_CH0 + (v >> 12), CODE3_CH0 + (v & 4095));
+  }
+  return s;
+}
+function codeToBytes(tag, txt){
+  const s = txt.slice(tag.length), bytes = [];
+  if(s.length < 2 || s.length % 2) throw new Error(T("码短了"));
+  for(let i = 0; i < s.length; i += 2){
+    const a = s.charCodeAt(i) - CODE3_CH0, b = s.charCodeAt(i + 1) - CODE3_CH0;
+    if(a < 0 || a > 4095 || b < 0 || b > 4095) throw new Error(T("码里混进了别的字符"));
+    const v = a * 4096 + b;
+    bytes.push(v >> 16, (v >> 8) & 255, v & 255);
+  }
+  const body = bytes.slice(2);
+  if(sumHash(body) !== (bytes[0] | (bytes[1] << 8))) throw new Error(T("校验对不上 —— 复制的时候少了一截或者多带了字符"));
+  return body;
+}
+function makeRunCode(){
+  if(SCENE !== "run" || !P || !G || G.over || !G.map) throw new Error(T("不在洞里"));
+  const p = JSON.parse(JSON.stringify(P));
+  p.used = {}; p.accF = {}; p.missN = {}; p.seenWords = [];
+  const g = {};                                   // G 上的每层计数（数字 / 布尔）+ 面熟，导进来再盖回去
+  for(const k in G){
+    const v = G[k];
+    if(typeof v === "number" || typeof v === "boolean") g[k] = v;
+  }
+  if(G.catSeen) g.catSeen = G.catSeen;
+  if(P.face) g.face = P.face;
+  const s = stats();
+  const o = {
+    v: RUN_V, ch: CH.id, t: Date.now(), nr: RELICS.length,
+    P: p, floor: G.floor,
+    map:  G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
+    seen: G.seen.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
+    stair: G.stair, rooms: G.rooms || null,
+    mobs: G.mobs.map(function(m){
+      return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
+              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen};
+    }),
+    things: G.things, g: g,
+    /* 对账用：导出那一刻的面板（信息页同一套函数）+ 上一刀 / 上一口的构成 */
+    snap: Object.assign(partSnap(false), {maxHp:s.maxHp, hp:P.hp, crit:critSteady(s, pctSteady(s)).rate, shield:P.shield || 0}),
+    dmg: lastDmgRec, hurt: lastHurtRec
+  };
+  return bytesToCode(RUNCODE_TAG, new TextEncoder().encode(JSON.stringify(o)));
+}
+function applyRunCode(code){
+  if(COOP) return T("联机里不能导入本局码。");
+  if(SCENE === "run" && G && !G.over) return T("洞里不能导入本局码 —— 先回镇上（它会盖掉没走完的那一趟）。");
+  let o;
+  try{
+    const by = codeToBytes(RUNCODE_TAG, code);
+    while(by.length && by[by.length - 1] === 0) by.pop();   // 凑 3 的倍数补的 0（JSON 不会以 0 结尾）
+    o = JSON.parse(new TextDecoder().decode(new Uint8Array(by)));
+  }
+  catch(e){ return T("这串本局码读不出来：") + e.message + T("。"); }
+  if(!o || o.v !== RUN_V || !o.P || !chapterById(o.ch || 1)) return T("这串本局码的版本对不上，导不进来。");
+  const s = o;
+  SCENE = "run"; showScene(); resumeRun(s);
+  const g = o.g || {};
+  for(const k in g) if(k !== "face" && k !== "floor") G[k] = g[k];
+  if(g.face) P.face = g.face;
+  fov(); render(); renderHud();
+  commit(true);                                   // 写进续玩档，刷新页面也接得上
+  refreshSaveState(); showView("viewAdv");
+  return T("本局码导入成功：") + CH.name + T(" 第 ") + G.floor + T(" 层，遗物 ") + P.relics.length + T(" 件。");
+}
 function parseCode3(txt){
   const s = txt.slice(CODE3_TAG.length), bytes = [];
   if(s.length < 2 || s.length % 2) throw new Error(T("码短了"));
@@ -7990,6 +8071,8 @@ function applyCode(txt){
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
     catch(e){ return T("这段文本读不出来 —— 像是存档文件但缺了一截。"); }
+  } else if(code.indexOf(RUNCODE_TAG) === 0){
+    return applyRunCode(code);                    // 本局码（测试用）：接着走那一局，不碰永久数据
   } else if(code.indexOf(CODE3_TAG) === 0 || code.indexOf(CODE2_TAG) === 0){
     try{ o = code.indexOf(CODE3_TAG) === 0 ? parseCode3(code) : parseCode2(code); }
     catch(e){ return T("这串码读不出来：") + e.message + T("。"); }
@@ -8436,6 +8519,21 @@ $("codexFind").addEventListener("input", function(){
 $("btnCloseCodex").addEventListener("click", function(){ $("veilCodex").hidden = true; });
 /* 构成（2026-09-26）*/
 $("btnParts").addEventListener("click", openParts);
+/* 本局码（测试用）：剪贴板不给写就切到设置页，把码放进 #codeBox 选中 */
+$("btnRunCode").addEventListener("click", function(){
+  let code;
+  try{ code = makeRunCode(); }
+  catch(e){ toast(T("生成本局码时出错了：") + (e && e.message ? e.message : e)); return; }
+  const ok = function(){ toast(T("本局码（") + code.length + T(" 个字）已经在剪贴板里 —— 直接发给 Claude。")); };
+  const manual = function(){
+    showView("viewSet"); codeBoxShow(code, true);
+    toast(T("这个浏览器不让网页写剪贴板 —— 码在设置页的框里，已经选中了，自己复制走。"));
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(ok, manual); return; }
+  }catch(e){}
+  manual();
+});
 $("btnMiss").addEventListener("click", function(){ openMiss("all"); });
 document.querySelectorAll("#veilMiss .mtab").forEach(function(b){
   b.addEventListener("click", function(){ openMiss(b.dataset.mt); });
