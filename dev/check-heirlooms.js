@@ -10,7 +10,7 @@ function base(item,hero='adv'){
 }
 check('150 unique named relics, five rarities per hero, each with a mechanic and no ranks',()=>{
  assert.equal(H.items.length,150);assert.equal(new Set(H.items.map(r=>r.id)).size,150);assert.equal(new Set(H.items.map(r=>r.n)).size,150);
- for(const hero of c.HEROES){const set=H.items.filter(r=>r.heroOnly===hero.id);assert.deepEqual(plain(set.map(r=>r.r)),[0,1,2,3,4]);for(const r of set){assert(r.actions.length);assert(r.pw.includes('所有角色'));assert(!r.pw.includes('升阶'));assert(r.nobf);}}
+ for(const hero of c.HEROES){const set=H.items.filter(r=>r.heroOnly===hero.id);assert.deepEqual(plain(set.map(r=>r.r)),[0,1,2,3,4]);for(const r of set){assert(r.actions.length);assert(r.lore.length>15);assert(!/所有角色|出典：|清层专属池|不可合成|升阶/.test(r.pw+r.lore));assert(r.nobf);}}
 });
 check('Old 30 relic IDs retain their exact serialized indices',()=>{
  const old=vm.createContext({T:x=>x,UI_EN:false});vm.runInContext(read('content.js'),old);

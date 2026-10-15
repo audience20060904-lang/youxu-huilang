@@ -5917,7 +5917,7 @@ function offerRelics(){
   box.innerHTML = "";
   picks.forEach(function(r){
     const d = document.createElement("button");
-    d.type = "button"; d.className = "relic"; d.dataset.id = r.id;
+    d.type = "button"; d.className = "relic" + (r.heirloom?" heirloom":""); d.dataset.id = r.id;
     d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + RAR_CN[r.r || 0] + (r.heroOnly?" · "+heroById(r.heroOnly).n+L("专属"," Heirloom"):"") + "</span>" +
       "<span class=\"rn q" + (r.r || 0) + "\">" + r.n + "</span>" +
       "<span class=\"rp\">" + r.pw + "</span>" +
@@ -6206,7 +6206,7 @@ function renderRelics(){
     const isNew = newRelics.indexOf(id) >= 0;
     const holy = id === sanctId();          // 圣光照耀赐福的那件：金边 + 品质后面写「赐福 ×2」
     const temp = temperIds().indexOf(id) >= 0;   // 锻造师（角色）：这一层淬火的那件
-    d.className = "relic own" + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") +
+    d.className = "relic own" + (r.heirloom ? " heirloom" : "") + (fuseOn ? " pickable" : "") + (picked ? " picked" : "") +
                   (off ? " off" : "") + (isNew ? " fresh" : "") + (holy ? " sanct" : "") + (temp ? " temper" : "");
     d.dataset.id = id;
     d.innerHTML =
@@ -6216,6 +6216,7 @@ function renderRelics(){
           (temp ? L(" · 淬火 +", " · Tempered +") + heroFmt(heroV("smith")) + "%" : "") + "</span>" +
         "<span class=\"rn q" + q + "\">" + r.n + "</span>" +
         "<span class=\"rp\">" + r.pw + "</span>" +
+        (r.heirloom ? "<span class=\"rl\">" + r.lore + "</span>" : "") +
       "</div>" +
       (fuseOn
         ? "<span class=\"tick\">" + (picked ? "✓" : "") + "</span>"
