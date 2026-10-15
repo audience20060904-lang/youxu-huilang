@@ -6,7 +6,11 @@ const fs = require("fs");
 let txt = process.argv[2] || "";
 if(fs.existsSync(txt)) txt = fs.readFileSync(txt, "utf8");
 txt = txt.replace(/[\s​-‍﻿]+/g, "");
-if(txt.indexOf("YXR") !== 0){ console.error("不是本局码（应以 YXR 开头）"); process.exit(1); }
+if(txt.startsWith("YXS")){
+  try{console.log(JSON.stringify(JSON.parse(Buffer.from(require('../compact-save').unpack('YXS',txt))),null,1));process.exit(0);}
+  catch(e){console.error(e.message);process.exit(1);}
+}
+if(txt.indexOf("YXR") !== 0){ console.error("不是本局码（应以 YXS 或 YXR 开头）"); process.exit(1); }
 const s = txt.slice(3), bytes = [];
 for(let i = 0; i < s.length; i += 2){
   const v = (s.charCodeAt(i) - 0x3400) * 4096 + (s.charCodeAt(i + 1) - 0x3400);

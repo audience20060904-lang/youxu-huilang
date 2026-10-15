@@ -148,6 +148,7 @@
         <!-- 复制本局码：测试用（用户 2026-10-15），把这一局整份复制成一串码，发给 Claude 复现 / 调平衡 -->
         <div class="partsrow">
           <button class="btn ghost partsbtn" id="btnParts" type="button">构成</button>
+          <button class="btn ghost partsbtn" id="btnHeroRun" type="button">角色详情</button>
           <button class="btn ghost partsbtn" id="btnRunCode" type="button">复制本局码</button>
         </div>
       </div>
@@ -418,6 +419,7 @@
     <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
 
     <div class="qcard" id="qcard">
+      <div class="battle-statuses" id="battleStatuses" aria-label="祝福与负面状态"></div>
       <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
       <div class="qlabel" id="qLabel">这个词是什么意思？</div>
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
@@ -711,6 +713,7 @@
     <div class="rowb">
       <button class="btn ghost" id="btnHeroInfoBack" type="button">返回</button>
       <span class="sp"></span>
+      <button class="btn hrgo" id="btnHeroUpgrade" type="button">升星 · 1 张</button>
       <button class="btn primary hrgo" id="btnHeroGo" type="button">出战</button>
     </div>
   </div>
@@ -842,5 +845,7 @@
 <script src="orb.js"></script>
 <script src="art.js"></script>
 <script src="net.js"></script>
+<script src="compact-save.js"></script>
+<script src="hero-system.js"></script>
 <script src="game.js"></script>
 </body></html>

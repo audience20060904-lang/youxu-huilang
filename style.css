@@ -390,7 +390,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .battle > .foe .foe-name,.battle > .foe .foe-tag{line-height:1.2}
 .battle > .foe .foe-weak{line-height:1.25;margin-top:0}
 .battle > .combo{min-height:0}
-.battle > .qcard{min-height:0;padding:6px 10px;gap:4px;justify-content:center}
+.battle > .qcard{min-height:0;padding:6px 10px 27px;gap:4px;justify-content:center}
 .battle > .qcard .qlabel{flex:none;font-size:clamp(9px,1.5svh,10px);line-height:1.3}
 .battle > .qcard .qword{min-height:0;max-width:100%;overflow-y:auto;overscroll-behavior:contain;
   font-size:clamp(20px,3.5svh,28px);line-height:1.15}
@@ -1384,6 +1384,9 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrcell.hq2, .hrgc.hq2{border-top-color:var(--q2)}
 .hrcell.hq3, .hrgc.hq3{border-top-color:var(--q3)}
 .hrcell.cur{background:#FDF6E7;border-left-color:var(--torch-deep);border-right-color:var(--torch-deep);border-bottom-color:var(--torch-deep)}
+.hrcell{height:132px}
+.hrcell .hrart{width:56px;height:56px}
+.hrcell .hrstar i{position:absolute;top:3px;left:3px;margin:0;padding:0 3px;font-size:9px;line-height:14px;background:var(--stone-2);border-radius:2px}
 .hrcell b{font-size:13px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .hrcell.locked .hrart{opacity:.28;filter:grayscale(1)}
 .hrcell.locked b, .hrcell.locked .hrstar{color:var(--faint)}
@@ -1401,6 +1404,18 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrpb.armed{border-color:var(--torch-deep);background:#F6E6C4}
 .hrpb:disabled{opacity:.55;cursor:default}
 .hrnote{font-size:12px;color:var(--faint);text-align:center}
+.summon-stage{min-height:225px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--torch-deep);padding:10px 0 18px;background:radial-gradient(ellipse at 50% 55%,#B88C2420,transparent 65%)}
+.summon-stage svg{width:min(100%,300px);height:auto;filter:drop-shadow(0 8px 9px #51402018)}
+.summon-stage>span{font-size:12px;color:var(--dim);text-align:center;letter-spacing:1px}
+.summon-rules{font-size:11px;color:var(--dim);text-align:center;border-top:1px solid var(--edge-soft);padding:9px 0}
+.battle-statuses{position:absolute;bottom:3px;left:5px;right:5px;display:flex;gap:4px;align-items:center;height:20px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap}
+.status-chip{flex:none;font:10px/16px var(--mono);padding:0 5px;border:1px solid #68877B66;border-radius:3px;color:#345B46;background:#E9EFE3;cursor:pointer}
+.status-chip.negative{color:#8A3B34;border-color:#B9675F66;background:#F7E9DD}
+.status-empty{font-size:10px;color:var(--faint);margin:auto}
+.hero-status-info{font-size:12px;color:var(--dim);line-height:1.55;border-top:1px dashed var(--edge);padding-top:8px}
+.hero-status-info p{margin:4px 0 8px}
+#veilHeroInfo .rowb{flex-wrap:wrap;gap:6px}
+#btnHeroUpgrade{font-size:12px}
 .hrpool{display:flex;flex-wrap:wrap;gap:5px 6px;align-items:center;font-size:12.5px}
 .hrpool > span{flex:0 0 100%;font-weight:600;font-size:12px}
 .hrpool i{font-style:normal;padding:2px 7px;border:1px dashed var(--edge);border-radius:2px;color:var(--faint)}

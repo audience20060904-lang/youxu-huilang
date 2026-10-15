@@ -722,208 +722,122 @@ var HOLY_ART = (function(){
   };
 })();
 
-/* ===== 角色（2026-10-15，见 角色系统.md）=====
-   每个人一张 20×20：**同一个斗篷轮廓**（就是上面 HERO 那一身，去掉背后那把剑），靠手里 / 身上的东西区分。
-   斗篷是 currentColor（颜色在 content.js 的 HEROES[].col，game.js 的 heroCss() 生成样式），
-   手里的东西用固定色 —— 地图格子只有二三十像素，别往里加细节。
-   名册、详情、抽卡结果都拿同一张放大（矢量图，放大不糊）。冒险者就是原来那张 HERO。*/
+/* ===== 角色立绘 · 100×100 矢量模型 =====
+   五类衣装、独立头饰与职业道具；在地图缩小时先读轮廓，在名册放大时再读细节。
+   主色由 heroCss() 提供，明暗只叠黑白透明色；无引用 id，可同时重复显示。 */
 var HERO_ART = (function(){
-  var shadow = '<ellipse cx="10" cy="18.4" rx="4.9" ry="1.05" fill="#1E2A33" opacity=".16"/>';
-  var body =
-   '<path d="M10 8.2c3.1 0 4.9 3.3 5.2 9.7H4.8C5.1 11.5 6.9 8.2 10 8.2z" fill="currentColor"/>' +
-   '<path d="M10 8.2c3.1 0 4.9 3.3 5.2 9.7h-2.6C12.9 11.8 11.9 9.3 10 8.2z" fill="#000" opacity=".18"/>' +
-   '<path d="M10 8.2c-3.1 0-4.9 3.3-5.2 9.7h1.8C6.9 11.8 8.1 9.3 10 8.2z" fill="#fff" opacity=".15"/>' +
-   '<path d="M7 12.7h6" stroke="#0E2233" stroke-width="1.1" opacity=".22"/>' +
-   '<path d="M7.7 9.1h4.6l.6 1.6c-1.8-.7-4-.7-5.8 0z" fill="#fff" opacity=".18"/>' +
-   '<path d="M10 1.6c1.9 0 3.4 1.5 3.4 3.5 0 1.4-.7 2.5-1.8 3.1l.4 1.2H8l.4-1.2A3.5 3.5 0 0 1 6.6 5.1C6.6 3.1 8.1 1.6 10 1.6z" fill="currentColor"/>' +
-   '<path d="M10 1.6c1.9 0 3.4 1.5 3.4 3.5 0 1.4-.7 2.5-1.8 3.1l.4 1.2h-2z" fill="#000" opacity=".16"/>' +
-   '<path d="M7.9 4.8h4.2c.1 2-.9 3.5-2.1 3.5S7.8 6.8 7.9 4.8z" fill="#0C1B27" opacity=".34"/>' +
-   '<circle cx="10" cy="6.2" r=".55" fill="#CFE6F5" opacity=".8"/>';
-  function svg(back, front){
-    return '<svg viewBox="0 0 20 20" aria-hidden="true">' + shadow + (back || "") + body + (front || "") + '</svg>';
+  function path(d, extra){ return '<path d="' + d + '" ' + (extra || '') + '/>'; }
+  function line(d, w, opacity){ return path(d, 'fill="none" stroke="currentColor" stroke-width="' + (w || 2) + '" stroke-linecap="round" stroke-linejoin="round"' + (opacity ? ' opacity="' + opacity + '"' : '')); }
+  function dark(d, opacity){ return path(d, 'fill="#000" opacity="' + (opacity || .18) + '"'); }
+  function light(d, opacity){ return path(d, 'fill="#fff" opacity="' + (opacity || .23) + '"'); }
+  function circle(x,y,r,extra){return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" '+(extra||'')+'/>';}
+  function rect(x,y,w,h,r,extra){return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+r+'" '+(extra||'')+'/>';}
+  function ring(x,y,r){return circle(x,y,r,'fill="none" stroke="currentColor" stroke-width="2"');}
+  function gem(x,y,size){return '<g transform="translate('+x+' '+y+') scale('+size/10+')">'+path('M0-10 7 0 0 12-7 0Z')+light('M0-10 0 12-7 0Z',.35)+dark('M0-10 7 0 0 12Z',.2)+'</g>';}
+  function spark(x,y,s){return path('M'+x+' '+(y-s)+' '+(x+1.6)+' '+(y-1.6)+' '+(x+s)+' '+y+' '+(x+1.6)+' '+(y+1.6)+' '+x+' '+(y+s)+' '+(x-1.6)+' '+(y+1.6)+' '+(x-s)+' '+y+' '+(x-1.6)+' '+(y-1.6)+'Z');}
+  function book(x,y,w){return '<g transform="translate('+x+' '+y+') scale('+w/24+')">'+path('M-12-8Q-6-11 0-7 6-11 12-8V9Q6 6 0 10-6 6-12 9Z')+light('M-10-6Q-5-8-1-5V7Q-5 4-10 6ZM1-5Q5-8 10-6V6Q5 4 1 7Z',.5)+line('M0-7V10',1.3)+dark('M-8-3H-3M3-3H8M-8 1H-3M3 1H8',.18)+'</g>';}
+  function sword(x,y,angle,long){return '<g transform="translate('+x+' '+y+') rotate('+angle+')">'+path('M-2 10H2V-31L0-'+(long||44)+'-2-31Z')+light('M0 10V-'+(long||44)+'L-2-31V10Z',.45)+rect(-9,9,18,3,1)+rect(-2,12,4,12,1)+circle(0,26,3)+dark('M-2 15H2V18H-2ZM-2 21H2V24H-2Z')+'</g>';}
+  function flame(x,y,s){return '<g transform="translate('+x+' '+y+') scale('+s+')">'+path('M0-15C12-5 12 4 6 9-2 15-12 8-9 0-7-6-3-6-4-11-1-9 1-6 2-3 4-8 3-12 0-15Z')+light('M0-4C5 0 5 6 1 8-4 10-7 4-3 1-3 4-1 4 0-4Z',.55)+'</g>';}
+  function soul(x,y,s){return '<g transform="translate('+x+' '+y+') scale('+s+')">'+path('M0-12C8-12 12-6 10 1 9 8 3 9 4 17L-1 12-5 14-6 8C-15 2-12-12 0-12Z','opacity=".55"')+circle(-3,-2,1.8,'fill="#fff" opacity=".8"')+circle(3,-2,1.8,'fill="#fff" opacity=".8"')+'</g>';}
+  var bodies = {
+    cloak: path('M34 36Q20 42 17 77L27 87 32 72 28 91H72L68 72 78 87 84 77Q80 43 66 36Z')+dark('M55 38 66 36Q80 43 84 77L78 87 68 72 72 91H54Z')+light('M34 38Q23 48 21 73L27 78 35 51 34 85 39 85 43 41Z',.16)+path('M42 37H58L61 56 50 65 39 56Z','fill="#000" opacity=".12"'),
+    robe: path('M35 36Q22 39 17 63L28 69 34 54 26 92Q50 96 74 92L66 54 72 69 83 63Q78 39 65 36Z')+dark('M57 38 65 36Q78 39 83 63L72 69 66 54 74 92 56 94Z')+light('M35 40 29 60 24 59 29 45ZM37 62 31 89 36 90 44 65Z',.2)+line('M45 41 50 66 56 41',1.6,.6)+path('M47 66H53L56 91H44Z','fill="#fff" opacity=".12"'),
+    coat: path('M33 37 23 43 17 65 26 70 34 54 29 83 45 88 50 76 55 88 72 83 66 54 75 70 84 65 77 43 66 37Z')+dark('M58 39 66 37 77 43 84 65 75 70 66 54 72 83 55 88 50 76Z')+light('M33 39 38 41 34 57 23 65 21 63 27 46Z',.2)+path('M41 36 50 44 59 36 57 59 44 59Z','fill="#fff" opacity=".18"')+line('M41 38 39 49 46 53M59 38 61 49 54 53',1.3,.55),
+    armor: path('M31 36 20 42 17 57 27 62 34 53 31 73 37 84H63L70 73 66 53 75 62 85 57 80 42 68 36Z')+dark('M55 38 68 36 80 42 85 57 75 62 66 53 70 73 63 84H54Z')+path('M35 39 50 35 65 39 62 61 50 67 38 61Z')+light('M35 39 50 35 48 62 40 59Z',.23)+line('M38 43 50 47 62 43M39 56 50 60 61 56M20 48 29 51M72 51 82 48',2,.55)+path('M32 68H68L65 76H35Z','fill="#000" opacity=".2"'),
+    apron: path('M32 37 23 43 16 63 27 68 34 53 31 85H70L66 53 75 68 84 63 77 43 67 37Z')+dark('M56 39 67 37 77 43 84 63 75 68 66 53 70 85H57Z')+path('M40 38H60L62 57 67 89H34L39 57Z','fill="#000" opacity=".16"')+light('M40 38H44L42 57 38 86H35L39 57Z',.2)+rect(42,57,17,13,2,'fill="#fff" opacity=".16"')+line('M41 38 39 52M60 38 62 52',1.5,.65)
+  };
+  var heads = {
+    hood: path('M33 23Q34 6 50 4 66 6 67 23L63 39 56 43H44L37 39Z')+dark('M50 4Q66 6 67 23L63 39 56 43H51Z')+light('M35 23Q37 11 47 8L40 23 39 34 36 31Z',.18)+path('M40 23Q50 17 60 23L58 33Q50 42 42 33Z','fill="#000" opacity=".3"'),
+    hair: path('M35 24Q31 12 40 9 46 1 59 8 68 11 65 26L61 37 51 42 40 36Z')+dark('M53 8Q68 11 65 26L61 37 51 42 52 23Z')+path('M39 23 44 15 53 20 60 18 61 30 56 36H45L40 31Z','fill="#fff" opacity=".24"')+light('M36 17Q39 7 51 8L43 13Z',.25),
+    turban: path('M34 24Q31 10 44 7 56 3 64 12L67 25 63 34 58 40 42 40 36 33Z')+dark('M51 7Q62 7 64 12L67 25 63 34 58 40H52Z')+path('M39 26H62L59 34 50 38 42 34Z','fill="#000" opacity=".25"')+line('M35 17Q48 7 63 16M35 21Q49 12 66 22',2,.6)+light('M36 14Q44 8 52 9L42 14Z',.25),
+    helm: path('M34 27V19Q34 6 50 6 66 6 66 19V27L60 40H40Z')+dark('M51 6Q66 6 66 19V27L60 40H51Z')+path('M39 25H61L58 33H42Z','fill="#000" opacity=".42"')+light('M36 23V17Q37 10 47 9L45 22Z',.25)+line('M50 9V23M39 35H46M54 35H61',1.5,.6),
+    wizard: path('M35 30Q34 15 50 15 66 15 65 30L59 40H41Z')+dark('M51 16Q66 16 65 30L59 40H51Z')+path('M26 22 37 15 55 1 61 17 75 24Q53 32 26 22Z')+dark('M55 1 61 17 75 24 53 26Z')+light('M37 18 53 4 48 21Z',.24)+line('M37 20Q50 24 63 22',2,.65),
+    widehat: path('M36 23H65V30L59 40H42L36 32Z')+path('M22 22 34 17 39 7Q50 3 61 7L66 17 80 22Q53 31 22 22Z')+dark('M52 6 61 7 66 17 80 22 52 26Z')+light('M39 9 48 7 46 17 36 18Z',.2)+line('M35 17Q50 20 66 17',2,.7),
+    cone: path('M35 24H65V32L58 40H42L36 32Z')+path('M20 24 50 5 81 24Q51 34 20 24Z')+dark('M50 5 81 24Q66 30 50 29Z')+light('M25 24 48 9 40 26Z',.22)+line('M50 8V27',1,.6)
+  };
+  function model(body,head,back,front,face){
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">'+
+      '<ellipse cx="50" cy="94" rx="32" ry="4" fill="#000" opacity=".12"/>'+(back||'')+
+      path('M36 73H47L46 92 33 94 32 89ZM54 73H65L68 90 67 94 54 92Z')+dark('M36 83H46V91L33 93ZM55 83H65L67 93 55 91Z',.24)+
+      bodies[body]+rect(33,61,35,5,1,'fill="#000" opacity=".25"')+rect(46,60,8,7,1,'fill="#fff" opacity=".4"')+rect(48,62,4,3,0,'fill="#000" opacity=".2"')+
+      heads[head]+(face===false?'':circle(45,28,1.4,'fill="#fff" opacity=".8"')+circle(55,28,1.4,'fill="#fff" opacity=".8"'))+(front||'')+'</svg>';
   }
   return {
-    adv: HERO,
-    /* 书吏：右手一支羽毛笔，左手一卷纸 */
-    clerk: svg("",
-      '<path d="M17.8 4.4c-1.7.5-3.1 2.3-3.7 4.7l-.6 3 .9.2.8-2.8c.8-2 2.1-3.4 2.6-5.1z" fill="#F3EEDF" stroke="#7C6A4E" stroke-width=".45"/>' +
-      '<path d="M13.9 11.9l-.4 1.6" stroke="#2A2620" stroke-width=".7" stroke-linecap="round"/>' +
-      '<rect x="2.6" y="12" width="1.1" height="3.9" rx=".4" fill="#C9B47E"/><rect x="7" y="12" width="1.1" height="3.9" rx=".4" fill="#C9B47E"/>' +
-      '<rect x="3.4" y="12.3" width="3.8" height="3.3" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
-      '<path d="M4 13.4h2.6M4 14.5h1.8" stroke="#6B5A3A" stroke-width=".4"/>'),
-    /* 剑客：斗笠 + 横在身前的细长剑 */
-    duelist: svg("",
-      '<path d="M7.6 13.1h10.6l.9.55-.9.55H7.6z" fill="#E1E7EC" stroke="#6E7B86" stroke-width=".35"/>' +
-      '<path d="M7.4 12.1v3.1" stroke="#8A6A16" stroke-width="1" stroke-linecap="round"/>' +
-      '<path d="M4.4 13.65h2.8" stroke="#3B2A1A" stroke-width="1.4" stroke-linecap="round"/>' +
-      '<path d="M3.2 5.5 10 1.1l6.8 4.4c-1.7.9-4 1.3-6.8 1.3s-5.1-.4-6.8-1.3z" fill="#C9A45C" stroke="#8A6A2E" stroke-width=".45" stroke-linejoin="round"/>' +
-      '<path d="M10 1.1v5.6" stroke="#8A6A2E" stroke-width=".35" opacity=".7"/>'),
-    /* 隐士：比人还高的一根手杖 */
-    hermit: svg("",
-      '<rect x="15.3" y="1.6" width="1.1" height="17" rx=".5" fill="#7A5532"/>' +
-      '<path d="M15.8 1.8c1.5-.6 2.8.4 2.5 1.6-.2.9-1.2 1.2-1.8.7" fill="none" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
-      '<circle cx="15.9" cy="10.4" r="1" fill="currentColor"/>'),
-    /* 拓荒者：背后鼓鼓的背包，顶上捆着一卷铺盖 */
-    pioneer: svg(
-      '<rect x="2.4" y="7.8" width="5.8" height="7.6" rx="1.4" fill="#8A6A3A" stroke="#5A4424" stroke-width=".5"/>' +
-      '<rect x="2" y="6.3" width="6.6" height="2.2" rx="1.1" fill="#B5533A" stroke="#7A3424" stroke-width=".4"/>',
-      '<path d="M7.6 9.3 11.8 14" stroke="#5A4424" stroke-width=".9" stroke-linecap="round"/>'),
-    /* 守夜人：提着一盏灯 */
-    keeper: svg("",
-      '<circle cx="15.5" cy="13.4" r="2.9" fill="#F4C54E" opacity=".25"/>' +
-      '<path d="M15.5 9.6v1.5" stroke="#3B2F1E" stroke-width=".7" stroke-linecap="round"/>' +
-      '<rect x="14" y="11" width="3" height=".9" rx=".3" fill="#3B2F1E"/>' +
-      '<rect x="14.3" y="11.9" width="2.4" height="3" fill="#F4C54E" stroke="#3B2F1E" stroke-width=".45"/>' +
-      '<path d="M15.5 11.9v3" stroke="#3B2F1E" stroke-width=".35"/>' +
-      '<rect x="14" y="14.9" width="3" height=".8" rx=".3" fill="#3B2F1E"/>'),
-    /* 驱魔人：左手一道符，右手一串铃 */
-    exorcist: svg("",
-      '<path d="M2.9 10.4 6.2 9.6l1.2 5.5-3.3.8z" fill="#F0D27A" stroke="#A88A3A" stroke-width=".4"/>' +
-      '<path d="M4.3 11.3l1.5-.35M4.6 12.6l1.5-.35M4.85 13.8l1.1-.25" stroke="#C0392B" stroke-width=".5" stroke-linecap="round"/>' +
-      '<path d="M15.4 9.4l.5 5.8" stroke="#6B4A2E" stroke-width=".45"/>' +
-      '<circle cx="15.55" cy="11.1" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>' +
-      '<circle cx="15.75" cy="12.9" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>' +
-      '<circle cx="15.95" cy="14.7" r=".85" fill="#D9B44A" stroke="#8A6A16" stroke-width=".3"/>'),
-    /* 狂徒：脖子上一条红巾，手上一颗骰子 */
-    rogue: svg("",
-      '<path d="M7.4 9.1h5.2l-.3 1.3c-1.5.6-3.1.6-4.6 0z" fill="#B8322A"/>' +
-      '<path d="M12.2 9.8l2.2 1.9-.5.5-2.1-1.4z" fill="#B8322A"/>' +
-      '<rect x="14.1" y="12.2" width="3.3" height="3.3" rx=".6" fill="#FBF6E7" stroke="#2A2620" stroke-width=".45"/>' +
-      '<circle cx="14.95" cy="13.05" r=".38" fill="#2A2620"/><circle cx="15.75" cy="13.85" r=".38" fill="#2A2620"/><circle cx="16.55" cy="14.65" r=".38" fill="#2A2620"/>'),
-    /* 晨读者：胸前抱着一本书 */
-    reader: svg("",
-      '<rect x="6.8" y="10.5" width="6.4" height="4.4" rx=".5" fill="#2E4A7A" stroke="#18284A" stroke-width=".4"/>' +
-      '<rect x="7.2" y="14.3" width="5.6" height=".75" fill="#F4EBD3"/>' +
-      '<path d="M10 10.6v4.3" stroke="#18284A" stroke-width=".4"/>' +
-      '<path d="M11.6 15v1.7l.5-.5.5.5V15z" fill="#E0A83A"/>'),
-    /* 博物学者：斜挎一只标本匣 */
-    naturalist: svg("",
-      '<path d="M7.3 9.3 13.6 13.2" stroke="#5A4424" stroke-width=".9" stroke-linecap="round"/>' +
-      '<rect x="12.6" y="12.8" width="5" height="3.8" rx=".6" fill="#6B5232" stroke="#3B2A1A" stroke-width=".45"/>' +
-      '<rect x="13.3" y="13.5" width="3.6" height="2.4" rx=".3" fill="#CFE8E0"/>' +
-      '<path d="M14 15.4c.6-1 1.6-1.4 2.6-1.2-.4 1-1.4 1.5-2.6 1.2z" fill="#4E8A3A"/>'),
-    /* 造句者：背后挂一长卷字，右手一支毛笔 */
-    poet: svg(
-      '<rect x="2.6" y="6.4" width="3.4" height="11.2" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
-      '<rect x="2.1" y="5.8" width="4.4" height=".9" rx=".4" fill="#7A5532"/>' +
-      '<path d="M3.5 8v8M4.9 8v5.6" stroke="#2A2620" stroke-width=".45" opacity=".75"/>',
-      '<path d="M17.8 5.3 14.7 11.9" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
-      '<path d="M14.7 11.8l-1 2.1.55.25 1.3-1.9z" fill="#2A2620"/>'),
-    /* 乐师：怀里抱一把琴 */
-    bard: svg("",
-      '<path d="M8.4 12.4 12.6 8.1" stroke="#5E3E1C" stroke-width="1" stroke-linecap="round"/>' +
-      '<rect x="12" y="7.2" width="1.6" height="1.2" rx=".3" transform="rotate(-45 12.8 7.8)" fill="#5E3E1C"/>' +
-      '<ellipse cx="6.4" cy="13.8" rx="2.9" ry="2.3" fill="#E2B46A" stroke="#5E3E1C" stroke-width=".45"/>' +
-      '<circle cx="6.7" cy="13.6" r=".6" fill="#3B2410"/>' +
-      '<path d="M5.2 14.8 12.3 8.3" stroke="#F4EBD3" stroke-width=".25"/>'),
-    /* ===== 第二批（2026-10-15）===== */
-    /* 钟表匠：右手托着一只怀表，链子垂到腰上 */
-    clock: svg("",
-      '<path d="M12.6 10.4c.8 1.4 1.6 2.1 2.6 2.3" fill="none" stroke="#C9A45C" stroke-width=".45" stroke-dasharray=".6 .35"/>' +
-      '<circle cx="15.7" cy="13.7" r="2.35" fill="#E8C36A" stroke="#8A6A2E" stroke-width=".45"/>' +
-      '<circle cx="15.7" cy="13.7" r="1.7" fill="#FBF6E7"/>' +
-      '<path d="M15.7 12.6v1.1l.85.5" fill="none" stroke="#2A2620" stroke-width=".4" stroke-linecap="round"/>' +
-      '<rect x="15.35" y="10.9" width=".7" height=".55" rx=".2" fill="#8A6A2E"/>'),
-    /* 追问者：头边一个问号气泡，手里一根教鞭 */
-    examiner: svg("",
-      '<path d="M14.6 1.4h4.1c.6 0 1 .4 1 1v2.7c0 .6-.4 1-1 1h-2.3l-1.2 1.1.2-1.1h-.8c-.6 0-1-.4-1-1V2.4c0-.6.4-1 1-1z" fill="#FBF6E7" stroke="#5A6B3A" stroke-width=".4"/>' +
-      '<path d="M15.9 3.1c.1-.7.6-1 1.1-1s1 .4 1 .9c0 .7-.9.8-.9 1.5" fill="none" stroke="#2A2620" stroke-width=".5" stroke-linecap="round"/>' +
-      '<circle cx="17.1" cy="5.2" r=".3" fill="#2A2620"/>' +
-      '<path d="M4.2 15.6 8.3 10.4" stroke="#7A5532" stroke-width=".8" stroke-linecap="round"/>'),
-    /* 后继者：右手举着一支传下来的火把 */
-    heir: svg("",
-      '<circle cx="15.8" cy="7.2" r="2.6" fill="#F4C54E" opacity=".22"/>' +
-      '<path d="M15.2 9.2 14.4 16.2" stroke="#6B4A2E" stroke-width="1" stroke-linecap="round"/>' +
-      '<path d="M14.6 8.9h1.6l-.2 1h-1.2z" fill="#3B2F1E"/>' +
-      '<path d="M15.4 4.9c1.4 1 1.7 2.2 1 3.5-.5.8-1.6.9-2.2.2-.7-.8-.4-1.8.3-2.4 0 .6.3.9.6.9.3-.7.5-1.4.3-2.2z" fill="#E8792A"/>' +
-      '<path d="M15.5 6.8c.5.4.6.9.3 1.4-.3.4-.8.4-1 0-.2-.4 0-.8.3-1 .1.2.2.3.4.3z" fill="#F4C54E"/>'),
-    /* 法师：尖顶帽，左手托一颗法球 */
-    mage: svg("",
-      '<path d="M5.6 4.9c2.8-.9 6-.9 8.8 0-1.4.5-6.6.5-8.8 0z" fill="#2A3C6A" stroke="#18284A" stroke-width=".35"/>' +
-      '<path d="M7.4 4.6 11.6.4c.3 1.6 1 3.1 1.6 4.2-2 .3-4 .3-5.8 0z" fill="#2A3C6A"/>' +
-      '<path d="M8.3 4.2c1.3.15 2.8.15 4.1 0" stroke="#E0A83A" stroke-width=".5"/>' +
-      '<circle cx="4" cy="12.6" r="1.9" fill="#7FB6F0" opacity=".3"/>' +
-      '<circle cx="4" cy="12.6" r="1.25" fill="#9CCBF7" stroke="#2B5C9C" stroke-width=".35"/>' +
-      '<circle cx="3.6" cy="12.2" r=".35" fill="#fff" opacity=".85"/>'),
-    /* 星象师：头顶一弯新月、身边一颗星 */
-    astro: svg("",
-      '<path d="M16.6 1.2a2.4 2.4 0 1 0 1.6 4.2 2 2 0 1 1-1.6-4.2z" fill="#F4E3A0"/>' +
-      '<path d="M3.4 7.6l.45 1.25 1.25.45-1.25.45-.45 1.25-.45-1.25-1.25-.45 1.25-.45z" fill="#F4E3A0"/>' +
-      '<circle cx="12.6" cy="14.6" r=".35" fill="#F4E3A0"/><circle cx="8" cy="16.4" r=".3" fill="#F4E3A0"/><circle cx="11" cy="11.6" r=".28" fill="#F4E3A0"/>'),
-    /* 锻造师：右手一柄锤子，腰间皮围裙 */
-    smith: svg("",
-      '<path d="M7.6 12.4h4.8l.4 5.4H7.2z" fill="#6B4A2E" opacity=".85"/>' +
-      '<path d="M13.4 15.4 16.4 9.6" stroke="#7A5532" stroke-width=".9" stroke-linecap="round"/>' +
-      '<rect x="14.6" y="7.6" width="3.8" height="2" rx=".3" transform="rotate(27 16.5 8.6)" fill="#8E969C" stroke="#4A5058" stroke-width=".4"/>'),
-    /* 招魂者：身边飘着两团魂火 */
-    necro: svg(
-      '<path d="M3.4 5.2c1.3 0 2.1 1 2.1 2.2 0 1.4-1 2-1 3.2-.6-.7-.3-1.4-.9-2-.9-.6-1.3-1.3-1.3-2 0-.8.4-1.4 1.1-1.4z" fill="#9FE3C4" opacity=".75"/>',
-      '<path d="M16.5 9.6c1.2 0 1.9.9 1.9 2 0 1.2-.9 1.8-.9 2.9-.6-.6-.3-1.3-.8-1.8-.8-.5-1.2-1.2-1.2-1.8 0-.8.4-1.3 1-1.3z" fill="#9FE3C4" opacity=".85"/>' +
-      '<circle cx="3.6" cy="6.8" r=".3" fill="#1E3A2E"/><circle cx="4.4" cy="6.8" r=".3" fill="#1E3A2E"/>' +
-      '<circle cx="16.4" cy="11.1" r=".28" fill="#1E3A2E"/><circle cx="17.2" cy="11.1" r=".28" fill="#1E3A2E"/>'),
-    /* 赏金猎人：宽檐帽，左手一张悬赏令 */
-    bounty: svg("",
-      '<path d="M4.6 5c3.6-1 7.2-1 10.8 0-1 .7-9.8.7-10.8 0z" fill="#6B4A2E" stroke="#3B2A1A" stroke-width=".35"/>' +
-      '<path d="M7.2 4.8c.2-1.8 1.3-2.8 2.8-2.8s2.6 1 2.8 2.8c-1.8.3-3.8.3-5.6 0z" fill="#7E5A36"/>' +
-      '<path d="M7.4 4.4c1.7.25 3.5.25 5.2 0" stroke="#C9A45C" stroke-width=".45"/>' +
-      '<rect x="2.3" y="11.2" width="3.6" height="4.6" fill="#EFE3C2" stroke="#8C7650" stroke-width=".4"/>' +
-      '<circle cx="4.1" cy="12.8" r=".75" fill="#8C7650" opacity=".7"/>' +
-      '<path d="M3 14.6h2.2" stroke="#B8322A" stroke-width=".5"/>'),
-    /* 灵媒：身后一个淡淡的影子，胸前捧着水晶球 */
-    medium: svg(
-      '<path d="M13.4 2.6c1.6 0 2.8 1.3 2.8 2.9 0 1.1-.6 2-1.4 2.6 2.3.8 3.5 3.6 3.7 8.4h-6.8" fill="currentColor" opacity=".28"/>',
-      '<circle cx="10" cy="13.6" r="2.3" fill="#C9B6F0" opacity=".9" stroke="#5A3F8A" stroke-width=".4"/>' +
-      '<circle cx="9.3" cy="12.9" r=".55" fill="#fff" opacity=".8"/>' +
-      '<path d="M8.3 15.9h3.4l-.4.9H8.7z" fill="#5A4424"/>'),
-    /* ===== 第三批（2026-10-15）===== */
-    /* 药剂师：右手一只圆肚药瓶 */
-    apothecary: svg("",
-      '<rect x="15.1" y="9.4" width="1.6" height="1.6" rx=".3" fill="#C9B47E" stroke="#6B5A3A" stroke-width=".35"/>' +
-      '<path d="M15.2 10.9h1.4v1c1.3.5 2.1 1.6 2.1 2.9 0 1.8-1.4 3.1-2.8 3.1s-2.8-1.3-2.8-3.1c0-1.3.8-2.4 2.1-2.9z" fill="#E8F2EA" stroke="#3E6B44" stroke-width=".4"/>' +
-      '<path d="M13.4 14.6c1.6-.5 3.3.4 5 0 0 1.6-1.1 2.8-2.5 2.8s-2.5-1.1-2.5-2.8z" fill="#5DBB6A"/>' +
-      '<circle cx="15.1" cy="13.4" r=".35" fill="#fff" opacity=".8"/>'),
-    /* 辩手：举着一根手指，头边一个感叹号气泡 */
-    debater: svg("",
-      '<path d="M14.6 1.4h4.1c.6 0 1 .4 1 1v2.7c0 .6-.4 1-1 1h-2.3l-1.2 1.1.2-1.1h-.8c-.6 0-1-.4-1-1V2.4c0-.6.4-1 1-1z" fill="#FBF6E7" stroke="#8A5A2E" stroke-width=".4"/>' +
-      '<path d="M16.65 2.3v2" stroke="#B8322A" stroke-width=".7" stroke-linecap="round"/><circle cx="16.65" cy="5.1" r=".35" fill="#B8322A"/>' +
-      '<path d="M13.2 12.4 14.6 8.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
-      '<path d="M14.6 8.4l.3-1.3" stroke="#E8C7A0" stroke-width=".7" stroke-linecap="round"/>'),
-    /* 导师：一把白胡子 + 圆眼镜 */
-    mentor: svg("",
-      '<path d="M8.3 7.4c.4 2.6 1 4.2 1.7 4.6.7-.4 1.3-2 1.7-4.6-1.1.5-2.3.5-3.4 0z" fill="#F2EFE6" stroke="#B8B2A0" stroke-width=".3"/>' +
-      '<circle cx="9.1" cy="5.9" r=".75" fill="none" stroke="#E0A83A" stroke-width=".35"/><circle cx="10.9" cy="5.9" r=".75" fill="none" stroke="#E0A83A" stroke-width=".35"/>' +
-      '<path d="M9.85 5.9h.3" stroke="#E0A83A" stroke-width=".35"/>'),
-    /* 商人：背后一只大钱袋 */
-    merchant: svg(
-      '<path d="M3.8 8.6c.4-.6 1-.9 1.6-.9h.6c.6 0 1.2.3 1.6.9-.4.3-.6.6-.6 1 2.1.9 2.6 3.2 2.3 5.4-.3 1.4-1.6 2.2-3.5 2.2s-3.2-.8-3.5-2.2c-.3-2.2.2-4.5 2.3-5.4 0-.4-.2-.7-.6-1z" fill="#B58A4A" stroke="#6B4A1E" stroke-width=".45"/>',
-      '<circle cx="5.7" cy="13.6" r="1.25" fill="#E8C36A" stroke="#8A6A16" stroke-width=".35"/>' +
-      '<path d="M5.7 12.9v1.4" stroke="#8A6A16" stroke-width=".35"/>'),
-    /* 驯兽师：脚边蹲着一只小狼 */
-    tamer: svg("",
-      '<path d="M13.2 17.6v-2.4c0-1.3.9-2.1 2-2.1h1.2l.9-1.3.5 1.3c.8.3 1.2 1 1.2 1.8l-.6.5-.5-.2v2.4h-.9v-1.6h-2.4v1.6z" fill="#8E8A82" stroke="#4A4640" stroke-width=".35" stroke-linejoin="round"/>' +
-      '<circle cx="17.3" cy="14" r=".28" fill="#2A2620"/>' +
-      '<path d="M13.2 15.4c-.8-.2-1.3-.9-1.4-1.7" fill="none" stroke="#8E8A82" stroke-width=".7" stroke-linecap="round"/>'),
-    /* 战吼者：一顶带角的头盔，嘴边几道声浪 */
-    warcrier: svg("",
-      '<path d="M6.6 4.2c.2-1.9 1.6-3 3.4-3s3.2 1.1 3.4 3c-2.2.4-4.6.4-6.8 0z" fill="#8E969C" stroke="#4A5058" stroke-width=".35"/>' +
-      '<path d="M6.8 3.6C5.4 3.2 4.6 2 4.6.6c.9 1 1.8 1.4 2.8 1.6z" fill="#F2EFE6" stroke="#8A8270" stroke-width=".3"/>' +
-      '<path d="M13.2 3.6c1.4-.4 2.2-1.6 2.2-3-.9 1-1.8 1.4-2.8 1.6z" fill="#F2EFE6" stroke="#8A8270" stroke-width=".3"/>' +
-      '<path d="M14.6 6.2c.7.6.7 1.6 0 2.2M16 5.4c1.3 1.1 1.3 2.8 0 3.9M17.4 4.6c1.8 1.6 1.8 4 0 5.6" fill="none" stroke="#B8322A" stroke-width=".45" stroke-linecap="round" opacity=".8"/>'),
-    /* 收藏家：单片眼镜，手里一颗宝石 */
-    collector: svg("",
-      '<circle cx="10.9" cy="5.9" r=".85" fill="#CFE6F5" opacity=".5" stroke="#E0A83A" stroke-width=".4"/>' +
-      '<path d="M11.7 6.3c.5.9.6 2 .3 3" fill="none" stroke="#E0A83A" stroke-width=".25"/>' +
-      '<path d="M15.6 11.6l1.6 1.4-1.6 2.6-1.6-2.6z" fill="#7FC4E8" stroke="#2B5C9C" stroke-width=".4" stroke-linejoin="round"/>' +
-      '<path d="M14 13l1.6.1 1.6-.1" fill="none" stroke="#2B5C9C" stroke-width=".3"/>'),
-    /* 回溯者：一道往回绕的箭头圈着他 */
-    rewinder: svg(
-      '<path d="M16.8 13.6a7 7 0 1 0-1.4 3" fill="none" stroke="#5EC4C4" stroke-width=".7" stroke-linecap="round" opacity=".7"/>',
-      '<path d="M15.4 16.6l.2-1.9 1.6 1z" fill="#5EC4C4" opacity=".9"/>'),
-    /* 剑圣：背后交叉两把剑 */
-    saint: svg(
-      '<path d="M3.2 2.4 15.8 14.8M16.8 2.4 4.2 14.8" stroke="#E1E7EC" stroke-width=".9" stroke-linecap="round"/>' +
-      '<path d="M3.2 2.4 15.8 14.8M16.8 2.4 4.2 14.8" stroke="#6E7B86" stroke-width=".25" opacity=".7"/>' +
-      '<path d="M3.9 4.5 5.3 3.1M14.7 3.1 16.1 4.5" stroke="#8A6A16" stroke-width=".9" stroke-linecap="round"/>' +
-      '<path d="M3.2 2.4 4.1 3.3M16.8 2.4 15.9 3.3" stroke="#5E3E1C" stroke-width="1.1" stroke-linecap="round"/>', "")
+    /* 冒险者 · 轻甲短斗篷，肩上卷毯与宽刃。 */
+    adv: model('cloak','hood',sword(24,52,-16,40),path('M65 39 77 50 74 76 65 73Z')+dark('M68 45 75 50 72 70 68 69Z')+line('M37 41 63 65',4)+circle(37,43,3,'fill="#fff" opacity=".3"')+rect(34,69,12,11,2)+light('M36 71H43V74H36Z')),
+    /* 书吏 · 方帽、展开卷册、羽毛笔。 */
+    clerk: model('coat','hair','',path('M32 15 32 7 50 3 68 7V15L50 20Z')+light('M34 8 50 5 64 8 49 12Z')+line('M66 11V29',1.5)+circle(66,29,2)+book(43,64,30)+path('M70 51Q69 28 85 25 85 43 70 51L64 72 62 71Z')+light('M74 44Q77 31 83 28L79 40Z',.4)+line('M67 60 80 33',1,.7)),
+    /* 剑客 · 斗笠、束袖，拔出的横剑。 */
+    duelist: model('coat','cone',path('M25 45 32 86 22 82 17 52Z','opacity=".6"'),sword(57,65,76,36)+path('M33 39 48 49 62 38 59 46 48 55Z','fill="#fff" opacity=".18"')+line('M34 68 28 81',3)+path('M58 48 73 40 89 44 71 46Z','opacity=".65"')),
+    /* 隐士 · 高兜帽、长须与节杖。 */
+    hermit: model('robe','hood','',line('M78 90 80 21Q80 10 89 13 95 19 86 23',4)+line('M79 51 85 51M78 76 84 76',2)+path('M42 32 50 37 58 32 55 49 50 56 45 49Z','fill="#fff" opacity=".45"')+path('M35 48 46 56 42 64 30 56Z')+line('M41 72 38 86M59 72 62 86',1.5,.7)),
+    /* 拓荒者 · 高背包、绳圈和小镐。 */
+    pioneer: model('coat','widehat',rect(14,31,24,43,5)+dark('M15 39H34V66H15Z')+rect(9,27,32,10,5)+light('M13 29H35V32H13Z'),line('M36 40 61 67',4)+ring(30,73,9)+ring(30,73,5)+line('M74 45 64 89',4)+path('M62 43Q75 34 91 47L80 45 72 47Z')+light('M65 43Q76 37 86 44L77 41Z')),
+    /* 守夜人 · 肩披月徽、灯笼照亮手套。 */
+    keeper: model('cloak','hood','',path('M31 39 21 49 36 55 43 40Z')+circle(31,47,4,'fill="#fff" opacity=".4"')+circle(33,46,3)+line('M76 56V62',2)+rect(65,62,22,3,1)+rect(66,65,20,20,2)+dark('M69 66H83V82H69Z',.4)+flame(76,75,.45)+line('M76 66V82',1.5)+rect(64,84,24,4,1)+path('M71 62V58Q76 52 81 58V62','fill="none" stroke="currentColor" stroke-width="2"')+circle(76,75,17,'opacity=".08"')),
+    /* 驱魔人 · 符纸肩带与三枚驱邪铃。 */
+    exorcist: model('robe','turban',line('M23 83 18 27',3)+path('M14 30 26 28 30 54 18 56Z')+light('M16 32 24 31 27 51 19 53Z',.5)+line('M19 36 24 41 20 44 25 49',1.5),path('M34 39 45 42 60 80 50 83Z','fill="#fff" opacity=".25"')+line('M42 49 49 54 45 58 53 63M49 68 54 71 52 75',1.5)+line('M72 47 74 78',2)+circle(73,54,5)+circle(74,66,5)+circle(75,78,5)+light('M71 51 73 50 74 54H71ZM72 63H74V67H72ZM73 75H75V79H73Z')),
+    /* 狂徒 · 抛起的赌骰、飞扬的面巾。 */
+    rogue: model('coat','hair',path('M63 38 80 32 90 36 77 39 87 45 69 44Z','opacity=".6"'),path('M37 30 62 30 60 38 44 41 38 37Z')+dark('M40 32H60V35H40Z')+rect(73,19,17,17,3)+light('M75 21H87V31H75Z',.4)+circle(78,24,1.4,'fill="#000" opacity=".5"')+circle(85,24,1.4,'fill="#000" opacity=".5"')+circle(81.5,28,1.4,'fill="#000" opacity=".5"')+line('M72 47 78 42M83 44 86 39',1.5,.45)+path('M25 54 33 49 43 62 39 69Z')),
+    /* 晨读者 · 翻开的厚书、晨晖发冠。 */
+    reader: model('robe','hair',circle(50,21,22,'opacity=".08"')+line('M24 13 19 9M50 0V3M76 13 81 9',2,.45),book(50,61,41)+path('M25 58 34 63 31 69 23 65ZM66 63 75 58 77 65 69 69Z')+path('M53 68V82L58 78 61 82V68Z','fill="#fff" opacity=".3"')+line('M37 14 43 10M57 10 63 14',2)),
+    /* 博物学者 · 探察帽，叶标本与棱镜。 */
+    naturalist: model('coat','widehat',path('M17 79Q8 62 15 44 30 48 31 62 28 72 17 79Z','opacity=".6"')+line('M16 73 20 51M19 63 14 56M19 63 26 57',1.5),rect(61,60,24,22,3)+dark('M65 64H81V78H65Z',.3)+path('M68 75Q66 65 77 65 78 74 68 75Z','fill="#fff" opacity=".5"')+line('M69 74 76 67',1)+line('M35 41 68 61',3)+ring(26,52,8)+line('M22 58 14 71',4)+circle(26,52,5,'fill="#fff" opacity=".2"')),
+    /* 造句者 · 长卷和悬墨，宽袖文士。 */
+    poet: model('robe','turban',rect(10,20,18,65,1)+light('M12 23H26V82H12Z',.55)+rect(7,17,24,5,2)+rect(7,84,24,5,2)+line('M17 30V48M22 30V58M17 54V72M22 65V77',1.4,.6),path('M38 8 51 3 63 8 58 15H42Z')+line('M75 47 87 17',4)+path('M74 48 70 59Q76 57 79 50Z','fill="#000" opacity=".65"')+path('M68 63Q72 66 68 70 64 67 68 63Z','opacity=".6"')+path('M62 45 78 43 76 54 63 58Z')+spark(82,70,5)),
+    /* 乐师 · 月弧竖琴、羽饰与弦纹披肩。 */
+    bard: model('coat','widehat',path('M62 13Q70-2 82 5 78 15 63 19Z')+light('M64 15 79 7 71 15Z',.35),path('M23 49Q20 76 38 81 56 76 54 49L48 44 43 48 46 68Q38 77 30 68L32 48Z')+dark('M28 51 31 67Q38 72 46 67V50Z')+line('M32 51V68M37 51V71M42 50V70',1.3)+line('M25 47 51 47',3)+line('M73 35V48M73 36 82 33V45',2)+circle(70,49,3)+circle(79,46,3)+light('M37 40 49 49 61 40 58 49 49 55 39 49Z')),
+    /* 钟表匠 · 单镜、链条与大型怀表。 */
+    clock: model('coat','hair',ring(23,27,12)+line('M23 15V18M11 27H14M23 36V39M32 27H35',1.4,.6),ring(55,27,5)+line('M50 27H47M59 30 62 47Q60 69 69 64',1.5)+circle(73,70,15)+circle(73,70,11,'fill="#fff" opacity=".5"')+line('M73 62V70L80 74',2)+line('M73 59V61M62 70H64M73 79V81M82 70H84',1.5)+rect(69,51,8,5,1)+ring(73,49,4)+path('M32 45 44 48 41 56 29 52Z')),
+    /* 追问者 · 棱角眼镜、教鞭与问题卷。 */
+    examiner: model('coat','hair','',rect(39,23,10,8,1,'fill="none" stroke="currentColor" stroke-width="2"')+rect(52,23,10,8,1,'fill="none" stroke="currentColor" stroke-width="2"')+line('M49 26H52',2)+line('M65 64 86 24',3)+path('M72 15Q73 6 82 7 92 9 87 17L81 23V28','fill="none" stroke="currentColor" stroke-width="3"')+circle(81,34,2)+rect(20,57,18,24,2)+light('M23 60H35V77H23Z',.4)+line('M26 64H32M26 69H32M26 74H30',1.3)),
+    /* 后继者 · 家徽、传承火炬与缀边斗篷。 */
+    heir: model('cloak','hair',path('M24 39Q9 44 13 77L24 86 24 60Z','opacity=".5"'),line('M75 90 78 40',5)+path('M69 40H88L84 49H73Z')+flame(79,28,1)+light('M28 47 35 42 33 80 27 83Z',.23)+path('M42 43H58V53L50 60 42 53Z','fill="#fff" opacity=".4"')+path('M50 46 54 51 50 56 46 51Z')+line('M41 76 50 82 59 76',2,.7)),
+    /* 法师 · 弯尖帽、法杖与三元素轨迹。 */
+    mage: model('robe','wizard',line('M78 90 82 28',4)+gem(82,18,9)+circle(24,54,16,'opacity=".1"'),circle(24,54,10)+light('M18 49Q21 43 27 47L22 54Z',.5)+ring(24,54,16)+flame(14,35,.35)+path('M28 74 31 67 34 74 31 80Z')+spark(42,83,4)+path('M48 39 56 45 50 54 43 45Z','fill="#fff" opacity=".3"')),
+    /* 星象师 · 月冠、星盘与布满星点的长袍。 */
+    astro: model('robe','hood',ring(50,27,26)+line('M50 0V4M24 27H20M76 27H80',1.5,.5)+spark(22,13,5)+spark(79,37,4),path('M41 6Q45-2 53 2 46 4 47 10 49 15 56 13 50 21 42 16Z')+ring(70,65,17)+ring(70,65,11)+line('M53 65H87M70 48V82M58 53 82 77',1.2)+gem(70,65,5)+spark(39,55,4)+spark(51,77,3)+circle(39,83,1.4,'fill="#fff" opacity=".6"')+circle(61,89,1.6,'fill="#fff" opacity=".6"')),
+    /* 锻造师 · 宽肩皮围裙、铁锤与火花。 */
+    smith: model('apron','hair','',line('M66 79 82 42',5)+rect(70,29,25,15,2,'transform="rotate(22 82 37)"')+light('M74 30 91 37 89 41 72 35Z',.35)+path('M35 28 42 32H58L65 28 61 42 51 47 40 42Z','fill="#000" opacity=".25"')+rect(41,58,17,12,2,'fill="none" stroke="currentColor" stroke-width="1.5"')+line('M45 60V66M50 60V66M55 60V66',1)+spark(88,58,4)+spark(80,68,3)+path('M16 76H37L33 83H24V88H15V84L20 81Z')),
+    /* 招魂者 · 骨冠、曲镰与三团幽魂。 */
+    necro: model('robe','hood',soul(18,27,.85)+soul(83,57,.8)+soul(18,72,.55)+line('M80 92V21',4)+path('M80 22Q67 6 90 5 98 7 98 16 91 9 82 16Z'),path('M34 17 31 5 41 12 50 2 59 12 69 5 66 17 59 22H41Z')+dark('M50 3 59 12 69 5 66 17 59 22H50Z')+path('M43 45 50 39 57 45 55 54H45Z','fill="#fff" opacity=".35"')+circle(47,47,1.5,'fill="#000" opacity=".5"')+circle(53,47,1.5,'fill="#000" opacity=".5"')+line('M40 65 35 85M60 65 65 85',1.4,.5)),
+    /* 赏金猎人 · 羽边宽帽、皮护肩和通缉令。 */
+    bounty: model('coat','widehat',line('M23 85 20 28',4)+path('M14 29 20 18 27 29 23 39H17Z'),path('M34 39 27 43 27 54 40 49Z')+light('M28 44 35 41 38 47 29 51Z')+line('M35 42 64 66',4)+rect(64,55,23,29,1)+light('M67 58H84V81H67Z',.5)+circle(75,66,5,'fill="#000" opacity=".3"')+dark('M69 76Q75 65 81 76Z',.3)+line('M69 79H81',1.5)+path('M37 29H62L60 35H39Z','fill="#000" opacity=".25"')),
+    /* 灵媒 · 双重幻影、纱冠与悬浮水晶。 */
+    medium: model('robe','turban',path('M18 32Q8 23 13 11 19 0 28 12L33 32 45 83H6Z','opacity=".16"')+path('M81 33Q92 23 87 11 80 0 72 12L66 32 58 83H95Z','opacity=".16"'),path('M32 17 38 8 50 4 63 8 69 17 63 19 50 14 38 19Z','fill="#fff" opacity=".22"')+gem(50,51,11)+circle(50,51,19,'opacity=".08"')+path('M24 57 42 66 50 61 58 66 77 57 75 67 57 74 50 69 43 74 25 67Z')+light('M30 60 43 67 49 64 43 70 30 65Z',.25)+spark(72,34,4)+spark(26,39,3)),
+    /* 药剂师 · 鸟嘴护面、瓶带与圆肚药瓶。 */
+    apothecary: model('apron','hood','',path('M39 24 57 22 67 34 53 37 43 33Z')+light('M43 26 55 25 62 32 53 32Z',.3)+circle(44,26,4,'fill="#000" opacity=".45"')+ring(44,26,4)+line('M34 42 61 68',4)+rect(34,48,6,13,2)+rect(42,55,6,13,2)+rect(50,62,6,13,2)+path('M74 52H83V61Q95 68 89 80 79 89 68 80 62 68 74 61Z')+rect(73,48,11,5,1)+light('M68 72Q79 77 90 72 89 84 79 84 69 82 68 72Z',.4)+light('M73 64Q68 68 70 72L73 72 75 65Z',.4),false),
+    /* 辩手 · 抬手立论、金属胸针和声纹。 */
+    debater: model('coat','hair','',path('M68 56 75 38 75 27Q78 22 80 28V41L83 36Q88 32 90 37L85 51 79 62Z')+light('M77 29V42L73 52 76 54 81 43 80 29Z',.3)+line('M86 20Q92 25 91 30M89 12Q99 20 97 30',2,.6)+path('M42 40 50 47 59 40 56 54 50 58 44 54Z','fill="#fff" opacity=".3"')+circle(50,50,3)+book(24,73,21)),
+    /* 导师 · 方肩学袍、银须与教典。 */
+    mentor: model('robe','hair','',path('M35 35 28 41 40 53 50 47 60 53 72 41 65 35 50 41Z')+light('M31 41 40 48 49 43 50 45 40 51Z')+path('M39 31 45 34 50 32 55 34 61 31 58 44 50 52 42 44Z','fill="#fff" opacity=".5"')+ring(44,26,4.5)+ring(56,26,4.5)+line('M49 26H51',1.5)+book(69,68,29)+line('M24 88 24 49',3)+circle(24,47,4)),
+    /* 商人 · 裘边帽、鼓鼓的钱袋与腰链。 */
+    merchant: model('coat','turban',path('M14 47 12 35 18 37 25 34 28 46Q40 57 34 75 24 85 12 76 6 59 14 47Z','opacity=".7"')+line('M12 47H29',3),path('M34 18Q48 11 66 18L67 23Q49 18 33 24Z','fill="#fff" opacity=".35"')+gem(50,17,4)+line('M41 42 44 59Q59 80 70 61',1.6)+circle(48,64,3)+circle(55,69,3)+circle(63,68,3)+path('M68 55 64 48 79 48 75 56Q89 64 84 78 74 88 64 79 58 66 68 55Z')+dark('M73 56Q89 64 84 78 79 84 73 83Z')+circle(73,70,7,'fill="#fff" opacity=".3"')+line('M73 65V75M70 67H76M70 73H76',1.4)),
+    /* 驯兽师 · 毛领短衣、哨子与狼伙伴。 */
+    tamer: model('coat','hair',path('M28 40 20 45 23 57 38 53 41 39 48 45 54 39 65 52 79 55 82 45 70 39 64 35 50 40 38 35Z','opacity=".6"'),path('M36 38 43 47 50 42 57 47 64 38 60 51 51 47 42 52Z','fill="#fff" opacity=".3"')+line('M46 46 48 59 54 61',1.6)+rect(51,58,9,5,1)+path('M65 85Q60 74 69 68L69 57 77 64 87 61 91 68 96 73 91 79V93H84V84H75V93H66Z')+dark('M83 66 87 63 91 69 94 73 88 75 87 89H84V81H76Z')+circle(86,70,1.4,'fill="#fff" opacity=".8"')+path('M65 85Q56 86 60 73 51 85 61 91H66Z')),
+    /* 战吼者 · 外展战角、重甲与号角。 */
+    warcrier: model('armor','helm',path('M36 17Q19 16 13 3 9 22 34 27ZM64 17Q81 16 87 3 91 22 66 27Z')+light('M16 10Q22 19 35 20L35 22Q21 22 16 10ZM84 10Q78 19 65 20L65 22Q79 22 84 10Z'),path('M56 37 63 39 73 37 81 29 87 40 76 46 65 47 58 44Z')+dark('M82 32 86 39 79 42 77 38Z',.3)+line('M88 23Q94 29 92 36M91 16Q101 26 98 38',2,.6)+path('M36 65 50 72 64 65 61 78 50 85 39 78Z')+light('M39 69 48 74 47 81 41 76Z')),
+    /* 收藏家 · 高礼帽、单片镜与展藏匣。 */
+    collector: model('coat','hair',path('M23 45 25 32H31L34 45Q39 67 29 88H16Q20 64 23 45Z','opacity=".5"'),path('M32 19H67V23H32ZM38 17V4Q50 0 61 4V17Z')+light('M41 6H46V15H41Z')+line('M38 15H61',2,.6)+ring(56,27,5)+line('M61 29 65 44',1.3)+rect(59,57,29,25,3)+dark('M62 60H85V79H62Z',.3)+gem(74,68,8)+path('M37 40 50 47 62 40 58 48H42Z','fill="#fff" opacity=".25"')+circle(50,53,2,'fill="#fff" opacity=".4"')),
+    /* 回溯者 · 断环时轨、沙漏与分裂披风。 */
+    rewinder: model('cloak','hood',line('M79 35A35 35 0 1 0 74 80',3,.55)+path('M82 39 69 35 80 26Z','opacity=".65"')+line('M18 29 22 32M17 65 22 63M56 87 54 82',2,.65),path('M63 40 75 45 72 59 78 64 73 78 80 85 70 91 62 76 63 63 57 54Z','fill="#fff" opacity=".2"')+rect(65,48,22,4,1)+rect(65,79,22,4,1)+path('M68 52H84Q84 62 76 66 68 62 68 52ZM68 79Q68 69 76 66 84 69 84 79Z','fill="#fff" opacity=".35"')+path('M71 55H81Q79 61 76 63 73 61 71 55ZM71 77 76 71 81 77Z')+line('M76 64V70',1.3)+path('M37 41 48 48 45 55 34 49Z')),
+    /* 剑圣 · 双剑与剑环，层叠剑甲。 */
+    saint: model('armor','hair',ring(50,25,24)+sword(23,53,-22,45)+sword(77,53,22,45),path('M37 15 45 10 50 14 55 10 63 15 59 19H41Z')+light('M40 15 45 12 50 16 55 12 59 15 56 17H43Z')+path('M32 37 18 42 24 48 37 47 43 39ZM68 37 82 42 76 48 63 47 57 39Z')+light('M21 43 33 40 34 43 25 46ZM79 43 67 40 66 43 75 46Z')+path('M36 67 50 73 64 67 61 74 50 80 39 74ZM39 77 50 83 61 77 60 85 50 91 40 85Z')+gem(50,52,5))
   };
 })();
+
+/* 简易召唤台 · 招募页可直接插入 SUMMON_ART，颜色跟随 currentColor。 */
+var SUMMON_ART = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 170" fill="currentColor" aria-hidden="true">'+
+  '<ellipse cx="140" cy="149" rx="113" ry="12" fill="#000" opacity=".1"/>'+
+  '<path d="M38 119V136Q140 176 242 136V119Z"/><path d="M38 124V136Q140 176 242 136V124Q140 162 38 124Z" fill="#000" opacity=".24"/>'+
+  '<ellipse cx="140" cy="119" rx="102" ry="30"/><ellipse cx="140" cy="117" rx="93" ry="24" fill="#fff" opacity=".15"/>'+
+  '<path d="M60 110V122Q140 151 220 122V110Z"/><path d="M60 115V122Q140 151 220 122V115Q140 143 60 115Z" fill="#000" opacity=".17"/>'+
+  '<ellipse cx="140" cy="109" rx="80" ry="24"/><ellipse cx="140" cy="108" rx="70" ry="18" fill="#000" opacity=".13"/>'+
+  '<g fill="none" stroke="#fff" stroke-width="1.5" opacity=".5"><ellipse cx="140" cy="108" rx="61" ry="13"/>'+
+  '<path d="M103 102 140 119 177 102M111 117 140 96 169 117M78 110H88M192 110H202M140 90V96M140 121V127"/></g>'+
+  '<path d="M140 25 157 53 140 83 123 53Z"/><path d="M140 25V83L123 53Z" fill="#fff" opacity=".35"/><path d="M140 25 157 53 140 83 146 53Z" fill="#000" opacity=".15"/>'+
+  '<path d="M123 53H157M140 25 146 53 140 83" fill="none" stroke="#fff" stroke-width="1.2" opacity=".5"/>'+
+  '<ellipse cx="140" cy="106" rx="15" ry="4" opacity=".35"/><path d="M128 92 140 87 152 92" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".35"/>'+
+  '<g opacity=".65"><path d="M104 54 107 61 114 64 107 67 104 74 101 67 94 64 101 61ZM181 30 183 35 188 37 183 39 181 44 179 39 174 37 179 35Z"/>'+
+  '<circle cx="176" cy="78" r="2"/><circle cx="111" cy="27" r="1.6"/></g>'+
+  '<g fill="none" stroke="#000" stroke-width="1.5" opacity=".18"><path d="M78 139 80 148M201 140 198 148M140 151V157M57 130 65 133 62 136M217 130 209 133 211 136"/></g></svg>';

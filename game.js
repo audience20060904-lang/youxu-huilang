@@ -359,6 +359,7 @@ function newRun(){
   heroStart();                // 角色：出战的那个人定死在 P 上（一趟一个人）
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
   G = { floor:0, paused:false, over:false };
+  P.hp=stats().maxHp;           // 包含出战角色的生命加成，从满血开始。
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
   lastDmgRec = lastHurtRec = null;   // 「构成」：上一趟的不带过来
@@ -558,6 +559,8 @@ function stats(){
     s.atk = Math.max(1, Math.round(s.atk * (1 + hv / 100)));
     hpMul(1 + hv / 100);
   }
+  s.atk+=heroRelicRank();
+  s.crit+=statusN(P,"edge")*5;
   if(heroOn("reader", 5) && readerAccOk()) s.crit += HERO_READ_CRIT;
   if(heroSkyOn(2)) s.crit += astroS();                                   // 星象师（暮月）：暴击率 + 强度
   return s;
@@ -1757,7 +1760,7 @@ let partsTab = "dmg";
 function partName(k){
   const sp = {"@base":L("基础属性", "Base stats"), "@combo":L("连击", "Combo"), "@gild":L("金坛", "Gold altar"),
     "@crit":L("暴击", "Crit"), "@wager":L("冒险", "Risk"), "@weak":L("弱点", "Weakness"), "@mix":L("相互叠加", "Interplay"),
-    "@other":L("其它", "Others"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
+    "@other":L("其它", "Others"), "@status":L("祝福与负面状态", "Blessings and afflictions"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
   if(sp[k]) return sp[k];
   if(String(k).indexOf("holy:") === 0){ const h = holyById(k.slice(5)); return h ? h.n : k; }   // 圣器
   if(k === "hero"){ const h = heroById(P && P.hero); return h ? L("角色 · ", "Hero · ") + h.n : k; }   // 角色
@@ -2293,6 +2296,7 @@ function showWeak(m){
   el.innerHTML = T("弱点 · <b>") + cn + T("</b>类词伤害更高");
 }
 function renderBattleBars(){
+  renderStatuses();
   const m = B.mob, s = stats();
   clampShield(s);
   paintHeroBadge();               // 角色第二批：小人像上的角标（法力 / 魂 / 怀表 / 悬赏）
@@ -3436,7 +3440,7 @@ function answer(btn, ok){
     if(heroOn("saint")){
       let sd = Math.max(1, Math.round(dmg * heroV("saint") / 100));
       if(heroOn("saint", 3) && !crit) sd = Math.round(sd * critMult);
-      const nS = heroOn("saint", 5) ? 2 : 1;
+      const nS = heroOn("saint",6) ? 3 : heroOn("saint", 5) ? 2 : 1;
       for(let k = 0; k < nS; k++){
         dealt += sd; landed += landedOn(m, sd); coopDealDamage(m, sd);
         if(lastDmgRec) lastDmgRec.more.push(["hero", sd]);
@@ -3905,6 +3909,7 @@ function answer(btn, ok){
       if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
     }
   }
+  heroRoundEnd(ok,word,m,s);
   LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   $("verdict").innerHTML = head +
@@ -3925,7 +3930,7 @@ function answer(btn, ok){
   $("btnFlee").hidden = true;
 
   /* 缓刑：这一题扣的账把人扣倒了（薪火 / 回魂也没救回来）—— 倒下优先于怪倒下 */
-  if(oweLog && P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
+  if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
   // 最后一击：多留一会儿，让人看清这一题的词和释义 —— 之后直接关窗，没有中间画面了
   if(m.hp <= 0){
     if(COOP && coopTrySwitchTarget(m)){
@@ -4121,11 +4126,13 @@ function pctSteady(s){
   pct += bookPct();                                                                            // 万言圣典
   if(holyOn("goldidol")) pct += idolTiers() * HOLY_IDOL_PCT;                                  // 黄金圣像：金币 → 伤害（最多 层数 档）
   if(holyOn("meltheart")) pct += meltN() * HOLY_MELT_PCT;                                     // 熔铸之心：每分解过一件 +2%（最多算 100 件）
+  pct += statusDamagePct();
   pct += heroPctSteady();                                                                      // 角色：晨读者 / 博物学者 / 造句者 / 乐师
   return pct;
 }
 function cutState(s, wrong){
   let cut = cutCore(s, wrong);
+  cut += statusCutPct();
   if(holyOn("scales")) cut += Math.min(HOLY_SCALE_MAX, Math.floor(Math.max(0, pctCore(s)) / HOLY_SCALE_DIV));   // 公义天平：伤害 → 减伤
   return cut;
 }
@@ -4320,6 +4327,7 @@ function partsOf(wrong, pin){
     P.face.ids.forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
   (P.holy || []).forEach(function(id){ ids.push("holy:" + id); });   // 圣器也逐件拿掉算一遍（holyOn 认 "holy:<id>"）
   if(P.hero) ids.push("hero");                                        // 角色单列一行（heroOn 认 RMASK 的 "hero"）
+  if(Object.keys(P.status||{}).length || (B&&B.mob&&Object.keys(B.mob.status||{}).length))ids.push("@status");
   let all, base;
   const per = {};
   try{
@@ -5165,6 +5173,7 @@ function buildChestLetters(word){
   box.appendChild(back);
 }
 function judgeChest(){
+  if(!chestQ || chestQ.done) return;
   const w = chestQ.word, ok = chestQ.spell === spellOf(w);
   // 钥匙：拼错也照样开箱。⚠️ 熟练度和心魔照常按「拼错」记 —— 撬开的是锁，不是这个词
   const opened = ok || hasRelic("key");
@@ -5183,6 +5192,7 @@ function judgeChest(){
     if(!P.missN) P.missN = {};
     P.missN[w.en] = (P.missN[w.en] || 0) + 1;
   }
+  heroRoundEnd(ok,w,null,stats());
   LEX[lexKey(w)] = rec;        // 同上，等存档点
   $("chestVerdict").innerHTML = (ok
       ? T("<span class=\"big ok\">咔哒 —— 开了</span>")
@@ -5198,6 +5208,7 @@ function judgeChest(){
 }
 function closeChest(){
   const th = pendingRoom; pendingRoom = null;
+  if(P.hp<=0){ $("veilChest").hidden=true;chestQ=null;G.paused=false;endRun(false);return; }
   const ok = chestQ && chestQ.ok;
   const spelled = !!(chestQ && chestQ.spelled);   // 真的拼对了（钥匙撬开的不算）
   chestQ = null;
@@ -5714,7 +5725,7 @@ function rc(r){ return "<span style=\"color:var(--q" + (r.r || 0) + ")\">" + r.n
 function relicPool(){
   const own = (P && P.relics) || [];
   return RELICS.filter(function(r){
-    if(own.indexOf(r.id) >= 0) return false;
+    if(r.heroOnly || own.indexOf(r.id) >= 0) return false;
     if(COOP && r.id === "shed") return false;    // 联机里禁用撤退，脱壳是纯废牌，别让它掉出来
     if(blessBanned(r.id)) return false;          // 祝福·封印：这一局它根本不出现
     return true;
@@ -5839,10 +5850,11 @@ function rerollBudget(){
 }
 function offerRelics(){
   const pool = relicPool();      // ⚠️ 走这一个口，封印/已拥有/联机禁用件都在里面滤掉了
-  if(!pool.length){ G.relicDone = true; return false; }
+  const exclusive=relicById("hx_"+P.hero);
+  if(!pool.length && !exclusive){ G.relicDone = true; return false; }
   // 每一件都按层数权重单抽，互不重复（2026-09 从三选一改成五选一，RELIC_OFFER_N）
-  const picks = [];
-  for(let i = 0; i < RELIC_OFFER_N; i++){
+  const picks = exclusive ? [exclusive] : [];
+  for(let i = picks.length; i < RELIC_OFFER_N; i++){
     let r = null;
     for(let g = 0; g < 30 && !r; g++){
       const c = rollRelic(null, 0, picks);
@@ -5851,7 +5863,7 @@ function offerRelics(){
     if(r) picks.push(r);
   }
   /* 慧眼（第十二批）：五件里一件史诗以上都没有，就把最后一件换成史诗（没货才退到传奇，抬不到神圣）*/
-  if(hasRelic("keeneye") && picks.length && !picks.some(function(r){ return (r.r || 0) >= 2; })){
+  if(hasRelic("keeneye") && picks.length>1 && !picks.some(function(r){ return (r.r || 0) >= 2; })){
     for(const t of [2, 3]){
       const hi = pool.filter(function(x){ return (x.r || 0) === t && picks.indexOf(x) < 0; });
       if(hi.length){ picks[picks.length - 1] = blessPick(hi); break; }
@@ -5867,7 +5879,7 @@ function offerRelics(){
   picks.forEach(function(r){
     const d = document.createElement("button");
     d.type = "button"; d.className = "relic"; d.dataset.id = r.id;
-    d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + RAR_CN[r.r || 0] + "</span>" +
+    d.innerHTML = "<span class=\"rt q" + (r.r || 0) + "\">" + (r.heroOnly?L("专属 · 阶 ","Exclusive · Rank ")+Math.min(999,1+(P.heroRelicRanks&&P.heroRelicRanks[r.id]||((P.relics||[]).includes(r.id)?1:0))):RAR_CN[r.r || 0]) + "</span>" +
       "<span class=\"rn q" + (r.r || 0) + "\">" + r.n + "</span>" +
       "<span class=\"rp\">" + r.pw + "</span>" +
       "<span class=\"rl\">" + r.lore + "</span>";
@@ -5882,7 +5894,13 @@ function offerRelics(){
 }
 function takeRelic(id){
   const r = relicById(id);
-  if(!r) return;
+  if(!r || (r.heroOnly && r.heroOnly!==P.hero)) return;
+  if(r.heroOnly && P.relics.indexOf(id)>=0){
+    if(!P.heroRelicRanks)P.heroRelicRanks={};
+    P.heroRelicRanks[id]=Math.min(999,(P.heroRelicRanks[id]||1)+1);
+    G.relicDone=true;G.spoilsOn=false;G.paused=false;$("veilRelic").hidden=true;
+    say(r.n+L("强化至 "," upgraded to ")+P.heroRelicRanks[id]+L(" 阶。","."),"crit");renderHud();render();maybeRelic();return;
+  }
   G.relicDone = true;
   G.spoilsOn = false;
   $("veilRelic").hidden = true;
@@ -5900,7 +5918,10 @@ function maybeRelic(){
   if(!G || G.over) return false;
   if(G.mobs.length > 0) return false;
   if(pendingLoot) return false;
-  if(!G.relicDone) return holyFloor() ? offerHoly() : offerRelics();   // 每 20 层的 Boss 层：换成圣器二选一
+  if(!G.relicDone){
+    if(holyFloor() && G.heroHolyFloor!==G.floor){ G.heroHolyFloor=G.floor; G.spoils=(G.spoils||0)+1;return offerHoly(); }
+    return offerRelics();
+  }   // 每 20 层的 Boss 层：换成圣器二选一
   /* 战利品（第十二批）：清层那次挑完（取舍窗也关了）再开一次五选一 */
   if((G.spoils || 0) > 0 && !pendingSwap){
     G.spoils--;
@@ -6300,7 +6321,7 @@ function fixBless(b){
       if(o) out.open[k][r] = k === "fav" ? Math.max(1, Math.min(BLESS_LV_MAX, Math.floor(+o) || 1)) : 1;
       const id = (b.pick && b.pick[k] && b.pick[k][r]) || "";
       const R = id ? relicById(id) : null;
-      if(R && (R.r || 0) === r && out.open[k][r]) out.pick[k][r] = id;
+      if(R && !R.heroOnly && (R.r || 0) === r && out.open[k][r]) out.pick[k][r] = id;
     }
   });
   return out;
@@ -6400,7 +6421,7 @@ function blessWorth(b){
 function blessSet(kind, rar, id){
   if(!blessOpen(kind, rar)) return;
   const R = id ? relicById(id) : null;
-  if(id && (!R || (R.r || 0) !== rar)) return;        // 槽位的品质是钉死的
+  if(id && (!R || R.heroOnly || (R.r || 0) !== rar)) return;        // 槽位的品质是钉死的
   /* 同一件不能又偏爱又封印 —— 塞进这一边就把另一边那个槽位空出来。
      两边的槽位按品质一一对应，所以只可能撞在同一个下标上。*/
   const other = kind === "fav" ? "ban" : "fav";
@@ -6494,7 +6515,7 @@ function renderBlessPick(){
   const f = $("blessFind"), q = f ? f.value.trim().toLowerCase() : "";
   const box = $("blessPickList");
   box.innerHTML = "";
-  RELICS.filter(function(R){ return (R.r || 0) === rar; })
+  RELICS.filter(function(R){ return !R.heroOnly && (R.r || 0) === rar; })
     .filter(function(R){ return !q || (R.n + R.pw + R.lore).toLowerCase().indexOf(q) >= 0; })
     .forEach(function(R){
       const d = document.createElement("button");
@@ -6956,6 +6977,100 @@ function renderOrbShop(){
    - 一趟一个人：进洞那一刻的 id / 等级 / 星级定死在 P.hero / P.heroLv / P.heroStar 上，这一趟攒的经验记在 P.heroXp，
      **结算 / 回镇上那一下**才并进 TOWN（heroFoldXp）—— 洞里面板不会突然跳，续玩档也对得上。
    - 判定一律 heroOn(id, 星级)：认 RMASK 的 "hero"（「构成」逐件拿掉算差时它单列一行）。*/
+function heroRelicRank(){
+  if(!P || !(P.relics||[]).includes("hx_"+P.hero)) return 0;
+  if(RMASK && (RMASK==="all" || RMASK["hx_"+P.hero]))return 0;
+  return Math.max(1,Math.min(999,Math.floor((P.heroRelicRanks||{})["hx_"+P.hero])||1));
+}
+function statusN(owner,key){
+  if(RMASK && (RMASK==="all" || RMASK["@status"]))return 0;
+  const cap=owner===P && !HeroRules.negative.includes(key)?statusCap():4;
+  return owner && owner.status ? Math.min(cap,owner.status[key]||0) : 0;
+}
+function statusCap(){ return Math.min(8,4+((P&&P.heroStar||1)>=4?1:0)+Math.min(3,heroRelicRank())); }
+function statusGain(owner,key,n){
+  if(!owner || !n) return;
+  if(!owner.status)owner.status={};
+  HeroRules.gain(owner.status,key,n,owner===P&&!HeroRules.negative.includes(key)?statusCap():4);
+}
+function statusDamagePct(){
+  if(!P || P.study || P.tut)return 0;
+  const m=B&&B.mob;
+  return statusN(P,"fury")*8+statusN(P,"echo")*6-Math.max(0,statusN(P,"weak")*6-statusN(P,"clarity")*3)+statusN(m,"exposed")*5;
+}
+function statusCutPct(){
+  if(!P || P.study || P.tut)return 0;
+  return statusN(P,"stone")*5-statusN(P,"exposed")*5+statusN(B&&B.mob,"weak")*6;
+}
+function statusLabel(k){return HeroRules.effects[k][UI_EN?1:0];}
+function statusChips(owner,enemy){
+  if(!owner || !owner.status)return "";
+  return Object.keys(HeroRules.effects).filter(k=>statusN(owner,k)>0).map(function(k){
+    const debuff=HeroRules.negative.includes(k),n=statusN(owner,k);
+    return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+(enemy?L("敌·","Foe·"):"")+statusLabel(k)+" <b>"+n+"</b></button>";
+  }).join("");
+}
+function renderStatuses(){
+  const el=$("battleStatuses");if(!el)return;
+  el.innerHTML=statusChips(P,false)+statusChips(B&&B.mob,true);
+  if(!el.innerHTML)el.innerHTML="<span class=\"status-empty\">"+L("祝福随答题回合流转","Blessings flow with each answer")+"</span>";
+}
+function statusInfoHtml(cap){
+  return "<b>"+L("祝福上限 ","Blessing cap ")+(cap||statusCap())+"</b><p>"+L("每回答一次结算一回合：旧效果生效后减少一层，再获得新层数。超时不结算。答错时敌人会轮流施加衰弱、破绽或侵毒（普通 1 层，Boss 2 层）。","Each submitted answer settles old effects, removes one stack, then grants new stacks. Timeouts do not advance rounds. Wrong answers rotate Weakness, Exposed and Venom (1 stack, or 2 for bosses).")+"</p>"+
+    Object.keys(HeroRules.effects).map(k=>"<div><b>"+statusLabel(k)+"</b> · "+HeroRules.effects[k][UI_EN?3:2]+"</div>").join("");
+}
+function heroRoundEnd(ok,word,m,s){
+  if(!P || P.study || P.tut)return;
+  P.status=HeroRules.clean(P.status);if(m)m.status=HeroRules.clean(m.status);
+  for(const key in P.status)P.status[key]=Math.min(P.status[key],HeroRules.negative.includes(key)?4:statusCap());
+  P.statusTurn=(P.statusTurn||0)+1;
+  /* Existing charges settle before decay; newly earned charges start next round. */
+  if(m && m.hp>0){
+    const dot=Math.round(s.atk*(statusN(m,"burn")*.12+statusN(m,"bleed")*.10)+m.max*.01*statusN(m,"poison"));
+    if(dot>0 && Number.isFinite(dot)){coopDealDamage(m,dot);say(L("侵蚀造成 ","Damage over time: ")+dot,"good");}
+  }
+  const hurt=Math.ceil(s.maxHp*.01*statusN(P,"poison")+s.atk*(statusN(P,"burn")*.12+statusN(P,"bleed")*.10));
+  if(P.hp>0 && hurt>0){takeHit(hurt,m||{name:L("侵蚀","Affliction")},false);say(L("侵蚀造成 ","Affliction: ")+hurt+L(" 点伤害。"," damage."),"hurt");}
+  if(P.hp<=0){const saved=deathSave();if(saved)say(saved,"sys");}
+  if(P.hp>0){
+    const heal=Math.round(s.maxHp*(statusN(P,"renew")*.02+(ok?statusN(P,"drain")*.01:0)));
+    if(heal>0)healUp(heal,s);
+    const shield=Math.round(s.maxHp*statusN(P,"ward")*.03);
+    if(shield>0){P.shield=Math.min(shieldCap(s),(P.shield||0)+shield);}
+  }
+  if(statusN(P,"clarity"))for(const k of HeroRules.negative)if(P.status[k]){P.status[k]--;break;}
+  HeroRules.decay(P.status);if(m)HeroRules.decay(m.status);
+  if(P.hp<=0)return;
+  const kit=HeroRules.kits[P.hero];if(!kit)return;
+  if(ok){
+    P.heroFlow=(P.heroFlow||0)+1;
+    const t=P.heroFlow,st=P.heroStar||1,rank=heroRelicRank();
+    if(st>=2 && t%2===0)statusGain(P,kit[0],st>=4?3:2);
+    if(rank){statusGain(P,kit[0],rank>=3?2:1);if(t%3===0)statusGain(m,"exposed",2);}
+    if(st>=6){
+      if(P.hero==="bard" && t%4===0){for(const k of ["renew","ward","fury"])statusGain(P,k,4);}
+      else if(t%3===0){
+        switch(P.hero){
+          case "naturalist":for(const k of ["stone","fury","renew"])statusGain(P,k,3);statusGain(m,"exposed",3);break;
+          case "poet":statusGain(P,"echo",4);statusGain(P,"edge",4);statusGain(m,"burn",3);break;
+          case "necro":P.heroSouls=Math.min(12,(P.heroSouls||0)+1);statusGain(m,"bleed",3);statusGain(m,"weak",3);break;
+          case "bounty":statusGain(m,"exposed",4);statusGain(m,"bleed",3);statusGain(P,"drain",3);break;
+          case "medium":statusGain(P,"echo",3);statusGain(P,"clarity",3);break;
+          case "collector":{const keys=["stone","fury","renew","edge","ward","clarity","echo","drain"];for(let j=0;j<3;j++)statusGain(P,keys.splice(ri(0,keys.length-1),1)[0],3);break;}
+          case "rewinder":for(const k of HeroRules.negative)delete P.status[k];healUp(Math.round(s.maxHp*.08),s);statusGain(P,"stone",3);break;
+          case "saint":statusGain(m,"exposed",3);statusGain(P,"edge",3);break;
+          case "bard":break;
+          default:statusGain(P,kit[2],3);statusGain(P,kit[3],3);statusGain(m,"weak",2);
+        }
+      }
+    }
+    if(P.hero==="mage" && st>=2 && t%3===0)statusGain(m,["burn","weak","exposed"][Math.floor(t/3-1)%3],2);
+    if(P.hero==="tamer" && st>=2 && t%3===0)statusGain(m,"bleed",2);
+    if(P.hero==="debater" && st>=2 && t%3===0)statusGain(m,"weak",2);
+  }else if(m && m.hp>0){
+    const k=["weak","exposed","poison"][P.statusTurn%3];statusGain(P,k,m.boss?2:1);
+  }
+}
 function heroById(id){ for(let i = 0; i < HEROES.length; i++) if(HEROES[i].id === id) return HEROES[i]; return null; }
 function fixHero(h){
   const o = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0, shard:0};
@@ -6966,7 +7081,7 @@ function fixHero(h){
       if(!heroById(id)) continue;                       // 删掉的角色不认
       const x = own[id] || {};
       const star = Math.max(1, Math.min(HERO_STAR_MAX, int(x.star) || 1));
-      o.own[id] = {star: star, xp: int(x.xp), cp: star < HERO_STAR_MAX ? Math.min(heroStarNeed(star) - 1, int(x.cp)) : 0};
+      o.own[id] = {star: star, xp: int(x.xp), cp: star < HERO_STAR_MAX ? int(x.cp) : 0};
     }
     o.pity = Math.min(HERO_PITY - 1, int(h.pity));
     o.spent = int(h.spent);
@@ -6979,6 +7094,7 @@ function fixHero(h){
   }
   if(!o.own[HERO_DEFAULT]) o.own[HERO_DEFAULT] = {star:1, xp:0};   // 冒险者一开始就有
   if(!o.own[o.cur]) o.cur = HERO_DEFAULT;
+  for(const id in o.own){ const r=o.own[id], extra=Math.max(0,(r.cp||0)-(HERO_STAR_MAX-r.star)); if(extra){ o.shard+=extra*HERO_SHARD[heroById(id).r]; r.cp-=extra; } }
   return o;
 }
 /* 经验 → 等级：从 n 级升到 n+1 级要 n × (HERO_XP_A + HERO_XP_B × n)（2026-10-15 用户要「养成变难」改成这条更陡的）。
@@ -6991,15 +7107,15 @@ function heroLvOf(xp){
   while(left >= heroXpNeed(lv)){ left -= heroXpNeed(lv); lv++; }
   return {lv:lv, cur:left, need:heroXpNeed(lv)};
 }
-/* 升星：从 ★n 升到 ★n+1 要 n 张重复的（攒着的记在 own[id].cp 上）*/
-function heroStarNeed(star){ return star * HERO_STAR_STEP; }
+/* 升星：每次一张重复卡，最高六星，必须手动点击（own[id].cp）。*/
+function heroStarNeed(star){ return 1; }
 /* 被动里那个数：pv:[1 级, 30 级] 之间按等级线性取，留一位小数 */
 function heroValAt(h, lv){
   const t = (Math.max(1, Math.min(HERO_LV_MAX, lv || 1)) - 1) / (HERO_LV_MAX - 1);
   return Math.round((h.pv[0] + (h.pv[1] - h.pv[0]) * t) * 10) / 10;
 }
 function heroFmt(v){ const r = Math.round(v * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); }
-function heroText(h, lv){ return h.p.replace("{v}", heroFmt(heroValAt(h, lv))); }
+function heroText(h, lv, star){ return h.p.replaceAll("{v}", heroFmt(heroValAt(h, lv)*HeroRules.factor(star||1))); }
 /* 这一趟出战的是不是它（star 给了就再要求星级够）。RMASK 拿掉 "hero" 时当没有（「构成」）。*/
 function heroOn(id, star){
   if(!P || !P.hero) return false;
@@ -7007,7 +7123,7 @@ function heroOn(id, star){
   if(P.hero === id) return !star || (P.heroStar || 1) >= star;
   /* 灵媒（第二批）：这一层附身的那一个（或两个）也算「在场」—— 星级按它自己的，最多到灵媒给的那一档（★1 只带被动，★3 连 ★3 一起带）*/
   const g = heroGuest(id);
-  return !!g && (!star || Math.min(g.star || 1, heroOn("medium", 3) ? 3 : 1) >= star);
+  return !!g && (!star || Math.min(g.star || 1, heroOn("medium", 6) ? 5 : heroOn("medium", 3) ? 3 : 1) >= star);
 }
 function heroGuest(id){
   if(P.hero !== "medium" || !P.heroGuest) return null;
@@ -7017,10 +7133,10 @@ function heroGuest(id){
 /* 被动里那个数（按等级）。灵媒请来的那一个按它自己的等级算，再乘灵媒的「数值 +{v}%」。*/
 function heroV(id){
   if(!P || !P.hero) return 0;
-  if(!id || id === P.hero){ const h = heroById(P.hero); return h ? heroValAt(h, P.heroLv || 1) : 0; }
+  if(!id || id === P.hero){ const h = heroById(P.hero); return h ? heroValAt(h, P.heroLv || 1)*HeroRules.factor(P.heroStar||1) : 0; }
   const g = heroGuest(id), h = heroById(id), m = heroById("medium");
   if(!g || !h || !m) return 0;
-  return Math.round(heroValAt(h, g.lv) * (1 + heroValAt(m, P.heroLv || 1) / 100) * 10) / 10;
+  return Math.round(heroValAt(h, g.lv)*HeroRules.factor(Math.min(g.star||1,heroOn("medium",6)?5:heroOn("medium",3)?3:1)) * (1 + heroValAt(m, P.heroLv || 1)*HeroRules.factor(P.heroStar||1) / 100) * 10) / 10;
 }
 function heroRec(id){ return TOWN.hero.own[id] || null; }
 /* 进洞那一刻：出战的那个人定死在 P 上（教程固定冒险者 1 级 ★1），这一趟要用的状态清零 */
@@ -7029,6 +7145,7 @@ function heroStart(){
   P.hero = id;
   P.heroLv = P.tut ? 1 : heroLvOf(rec.xp).lv;
   P.heroStar = P.tut ? 1 : rec.star;
+  P.status={}; P.statusTurn=0; P.heroFlow=0; P.heroRelicRanks={};
   P.heroXp = 0;
   P.heroStack = 0; P.heroPos = null;          // 造句者
   P.heroBeat = 0; P.heroBeatT = null;         // 乐师
@@ -7053,9 +7170,11 @@ function heroStart(){
 }
 /* 读老续玩档：没有这些字段的一律当冒险者 1 级（RUN_V 不动）*/
 function heroResume(){
+  P.status=HeroRules.clean(P.status); P.statusTurn=Math.max(0,Math.floor(P.statusTurn||0)); P.heroFlow=Math.max(0,Math.floor(P.heroFlow||0));
+  P.heroRelicRanks=P.heroRelicRanks&&typeof P.heroRelicRanks==="object"?P.heroRelicRanks:{};
   if(!heroById(P.hero)){ P.hero = HERO_DEFAULT; P.heroLv = 1; P.heroStar = 1; }
   if(typeof P.heroLv !== "number") P.heroLv = 1;
-  if(typeof P.heroStar !== "number") P.heroStar = 1;
+  P.heroStar = Math.max(1,Math.min(6,Math.floor(P.heroStar)||1));
   ["heroXp", "heroStack", "heroBeat", "heroRun", "heroSand", "heroMana", "heroSpell", "heroSouls", "heroBounty", "heroFlask", "heroRewound", "heroPetN"].forEach(function(k){ if(typeof P[k] !== "number") P[k] = 0; });
   /* 第二批每层定的那几样：读档沿用进层时定好的（存档存的就是进层那一刻），坏的就当没有 */
   if(!Array.isArray(P.heroGuest)) P.heroGuest = null;
@@ -7216,7 +7335,7 @@ const ASTRO_NAME = function(i){ return [L("晨星", "Dawn"), L("烈日", "Sun"),
 function astroS(){ return heroOn("astro") ? Math.round(heroV("astro") * (P.heroSkyWk ? HERO_ASTRO_WEEKEND : 1) * 10) / 10 : 0; }
 function heroSkyOn(i){ return !!(P && P.heroSky && P.heroSky.indexOf(i) >= 0 && heroOn("astro")); }
 /* 招魂者：魂的上限 */
-function necroCap(){ return heroOn("necro", 5) ? HERO_NECRO_MAX5 : HERO_NECRO_MAX; }
+function necroCap(){ return heroOn("necro",6) ? 12 : heroOn("necro", 5) ? HERO_NECRO_MAX5 : HERO_NECRO_MAX; }
 /* 赏金猎人：开一张悬赏。题都是「答题就能做」的（Boss 层、深渊也做得了）：某类的词 / 某词性 / 连对 / 3 秒内答对 */
 function bountyMake(n){
   const pool = scopeToLevels(ALLW, quizLvs());
@@ -7242,7 +7361,7 @@ function heroFloorPick(){
   P.heroGuest = null;
   if(P.hero === "medium"){
     const ids = Object.keys(TOWN.hero.own).filter(function(id){ return heroById(id) && HERO_NO_GUEST.indexOf(id) < 0; })
-                      .sort(function(){ return Math.random() - .5; }).slice(0, heroOn("medium", 5) ? 2 : 1);
+                      .sort(function(){ return Math.random() - .5; }).slice(0, heroOn("medium",6) ? 3 : heroOn("medium", 5) ? 2 : 1);
     P.heroGuest = ids.map(function(id){ const r = TOWN.hero.own[id]; return {id:id, lv:heroLvOf(r.xp).lv, star:r.star}; });
     if(P.heroGuest.length) say(L("灵媒 —— 这一层附身的是 ", "Medium — possessed this floor by ") +
       P.heroGuest.map(function(g){ return "<b>" + heroById(g.id).n + "</b> Lv" + g.lv; }).join(L("、", ", ")) + L("。", "."), "sys");
@@ -7293,7 +7412,7 @@ function heroFloorPick(){
     }
     if(bits.length) say(L("后继者 —— 接过上一趟：", "Heir — picking up the last run: ") + bits.join(L("，", ", ")) + L("。", "."), "good");
     if(heroOn("heir", 5)){
-      const ids = (last.r || []).filter(function(id){ const r = relicById(id); return r && (r.r || 0) < 4; });
+      const ids = (last.r || []).filter(function(id){ const r = relicById(id); return r && !r.heroOnly && (r.r || 0) < 4; });
       if(ids.length) grantRelic(relicById(pick(ids)), L("后继者从上一趟带来了", "The Heir brought from the last run"));
     }
   }
@@ -7445,8 +7564,8 @@ function heroBadge(){
   return "";
 }
 /* 详情页被动下面多写几行：法师的三个法术、星象师的四个星象（按这一级的数现算）*/
-function heroEx(h, lv){
-  const v = heroValAt(h, lv);
+function heroEx(h, lv, star){
+  const v = heroValAt(h, lv)*HeroRules.factor(star||1);
   if(h.id === "mage"){
     const pw = v / 100;
     return [L("火球：这一刀额外伤害 + 攻击 ×" + heroFmt(pw), "Fireball: extra damage + ATK ×" + heroFmt(pw)),
@@ -7466,20 +7585,26 @@ function heroEx(h, lv){
 /* ---- 抽卡 ----
    单抽 / 十连。每一抽先看保底（离上一次传奇满 HERO_PITY − 1 抽，这一抽必是传奇），再按 HERO_RATE 掷品质，
    同品质里平均挑一个；十连一个史诗以上都没有就把最后一抽换成史诗。
-   没有的 → 拿到（★1）；有了 → 攒一张，攒够 ★n 张升一星（heroStarNeed）；★5 了 → 变成 HERO_SHARD 个万能碎片。返回每一抽的结果（结果窗照着画）。*/
+   没有的 → 拿到（★1）；有了 → 储存重复卡，点击升星时一张一星；六星所需卡已备齐 → 变成 HERO_SHARD 个碎片。返回每一抽的结果（结果窗照着画）。*/
 /* 给一张这个角色的卡（抽卡和碎片合成共用）：没有就拿到、有就攒一张升星、满星了变碎片 */
 function heroGrant(h){
   const H = TOWN.hero, rec = H.own[h.id], r = h.r;
   if(!rec){ H.own[h.id] = {star:1, xp:0, cp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
-  if(rec.star < HERO_STAR_MAX){
-    rec.cp = (rec.cp || 0) + 1;                          // 重复的先攒着，攒够 ★n 张升一星
-    if(rec.cp >= heroStarNeed(rec.star)){ rec.star++; rec.cp = 0; return {id:h.id, r:r, kind:"star", star:rec.star}; }
-    return {id:h.id, r:r, kind:"copy", star:rec.star, cp:rec.cp, need:heroStarNeed(rec.star)};
+  if(rec.star+(rec.cp||0) < HERO_STAR_MAX){
+    rec.cp=(rec.cp||0)+1;
+    return {id:h.id,r:r,kind:"copy",star:rec.star,cp:rec.cp,need:1};
   }
   H.shard = (H.shard || 0) + HERO_SHARD[r];               // 满星之后：变成万能碎片（用户 2026-10-15）
   return {id:h.id, r:r, kind:"shard", shard:HERO_SHARD[r]};
 }
+function heroUpgrade(){
+  const rec=heroRec(heroInfoId);
+  if(SCENE==="run" || !rec || rec.star>=6 || !(rec.cp>0)) return;
+  rec.cp--; rec.star++; commitPerm(); renderHeroInfo(); renderHero(); renderTown();
+  toast(L("升星成功 · ★","Upgraded · ★")+rec.star);
+}
 function heroPull(n){
+  if(n!==1 && n!==10) return null;
   const cost = n >= 10 ? HERO_PULL10 : HERO_PULL * n;
   if((TOWN.gem || 0) < cost) return null;
   const H = TOWN.hero, rars = [];
@@ -7505,7 +7630,7 @@ function heroPull(n){
 /* 合成（用户 2026-10-15）：HERO_CRAFT 个万能碎片换一张自选角色的卡（满星的不能选）。返回结果（跟抽卡一个样子），不够就 null */
 function heroCraft(id){
   const H = TOWN.hero, h = heroById(id), rec = h && H.own[id];
-  if(!h || (H.shard || 0) < HERO_CRAFT || (rec && rec.star >= HERO_STAR_MAX)) return null;
+  if(!h || (H.shard || 0) < HERO_CRAFT || (rec && rec.star+(rec.cp||0) >= HERO_STAR_MAX)) return null;
   H.shard -= HERO_CRAFT;
   const res = heroGrant(h);
   commitPerm();                // 碎片 / 角色都在 TOWN 上，就地写一次（跟换出战的人一样）
@@ -7542,7 +7667,7 @@ function renderHero(){
       return "<button class=\"hrcell hq" + h.r + (H.cur === h.id ? " cur" : "") + "\" type=\"button\" data-id=\"" + h.id + "\">" +
         (H.cur === h.id ? "<em class=\"hrcur\">" + L("出战", "Active") + "</em>" : "") + heroArtHtml(h.id) +
         "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) +
-          (rec.star < HERO_STAR_MAX ? "<i>" + (rec.cp || 0) + "/" + heroStarNeed(rec.star) + "</i>" : "") + "</span>" +
+          (rec.star < HERO_STAR_MAX ? "<i>" + L("卡 ×", "Cards ×") + (rec.cp || 0) + "</i>" : "") + "</span>" +
         "<span class=\"hrlv\">Lv " + lv.lv + "<i class=\"hrbar\"><i style=\"width:" + pc + "%\"></i></i></span></button>";
     }).join("") + "</div>";
   } else {
@@ -7553,19 +7678,11 @@ function renderHero(){
         "<b>" + (armed ? L("再点一次", "Tap again") : n === 1 ? L("单抽", "Pull ×1") : L("十连", "Pull ×10")) + "</b>" +
         "<i>" + cost + L(" 宝石", " gems") + "</i></button>";
     };
-    const pool = [3, 2, 1].map(function(r){
-      return "<div class=\"hrpool\"><span class=\"q" + r + "\">" + HERO_RAR(r) + " " + Math.round(HERO_RATE[r] * 100) + "%</span>" +
-        HEROES.filter(function(h){ return h.r === r; }).map(function(h){
-          const rec = H.own[h.id];
-          return "<i class=\"" + (rec ? "own" : "") + "\">" + h.n + (rec ? " " + "★" + rec.star : "") + "</i>";
-        }).join("") + "</div>";
-    }).join("");
     box.innerHTML = "<div class=\"hrpull\">" +
       "<div class=\"hrpity\">" + L("再 <b>" + left + "</b> 抽必出传奇", "Legendary guaranteed within <b>" + left + "</b> pulls") + "</div>" +
       "<div class=\"hrbtns\">" + btn(1, HERO_PULL) + btn(10, HERO_PULL10) + "</div>" +
-      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 重复的攒着升星（★n 升 ★n+1 要 n 张），★5 之后变成万能碎片",
-                                       "Ten-pull: at least one Epic · Duplicates stack toward stars (★n→★n+1 needs n), past ★5 they become shards") + "</div>" +
-      pool + "</div>";
+      "<div class=\"summon-stage\" aria-label=\""+L("召唤台","Summoning altar")+"\">"+SUMMON_ART+"<span>"+L("以星石为引，唤回回廊中的旅人","Call a traveler back from the corridor")+"</span></div>"+
+      "<div class=\"summon-rules\">"+L("传奇 1% · 80 抽保底 · 十连至少一位史诗","Legendary 1% · 80-pull pity · Epic guaranteed in ten")+"</div></div>";
   }
 }
 function heroPullClick(n){
@@ -7582,7 +7699,7 @@ function heroPullClick(n){
 /* 「合成」选项卡：碎片进度、合成按钮（两步确认，定宽定高）、挑一个角色（满星的灰着不能挑）*/
 function renderHeroCraft(box){
   const H = TOWN.hero, n = H.shard || 0, sel = heroById(heroCraftSel);
-  if(sel && H.own[sel.id] && H.own[sel.id].star >= HERO_STAR_MAX){ heroCraftSel = null; }
+  if(sel && H.own[sel.id] && H.own[sel.id].star+(H.own[sel.id].cp||0) >= HERO_STAR_MAX){ heroCraftSel = null; }
   const s2 = heroById(heroCraftSel), ok = !!s2 && n >= HERO_CRAFT, armed = heroArmed === "craft" && ok;
   const label = armed ? L("再点一次 · ", "Tap again · ") + s2.n : !s2 ? L("先挑一个角色", "Pick a hero") : n < HERO_CRAFT ? L("碎片不够", "Not enough shards")
               : L("合成 · ", "Fuse · ") + s2.n;
@@ -7591,14 +7708,14 @@ function renderHeroCraft(box){
       "<i class=\"hrbar\"><i style=\"width:" + Math.min(100, Math.round(n / HERO_CRAFT * 100)) + "%\"></i></i></div>" +
     "<button class=\"btn hrpb hrcgo" + (armed ? " armed" : "") + "\" type=\"button\" data-craftgo=\"1\"" + (ok ? "" : " disabled") + ">" +
       "<b>" + label + "</b><i>" + HERO_CRAFT + L(" 碎片", " shards") + "</i></button>" +
-    "<div class=\"hrnote\">" + L("★5 之后再抽到重复的：稀有 +" + HERO_SHARD[1] + " · 史诗 +" + HERO_SHARD[2] + " · 传奇 +" + HERO_SHARD[3],
-                                   "Duplicates past ★5: Rare +" + HERO_SHARD[1] + " · Epic +" + HERO_SHARD[2] + " · Legendary +" + HERO_SHARD[3]) + "</div>" +
+    "<div class=\"hrnote\">" + L("六星卡片备齐后再抽到重复的：稀有 +" + HERO_SHARD[1] + " · 史诗 +" + HERO_SHARD[2] + " · 传奇 +" + HERO_SHARD[3],
+                                   "Duplicates after six-star copies: Rare +" + HERO_SHARD[1] + " · Epic +" + HERO_SHARD[2] + " · Legendary +" + HERO_SHARD[3]) + "</div>" +
     "<div class=\"hrgrid\">" + heroesByRar().map(function(h){
-      const rec = H.own[h.id], full = !!rec && rec.star >= HERO_STAR_MAX;
+      const rec = H.own[h.id], full = !!rec && rec.star+(rec.cp||0) >= HERO_STAR_MAX;
       return "<button class=\"hrcell hq" + h.r + (rec ? "" : " locked") + (heroCraftSel === h.id ? " sel" : "") + "\" type=\"button\" data-craft=\"" + h.id + "\"" + (full ? " disabled" : "") + ">" +
         heroArtHtml(h.id) + "<b>" + h.n + "</b>" +
-        "<span class=\"hrstar\">" + (rec ? heroStars(rec.star) + (rec.star < HERO_STAR_MAX ? "<i>" + (rec.cp || 0) + "/" + heroStarNeed(rec.star) + "</i>" : "") : L("未招募", "Not yet")) + "</span>" +
-        "<span class=\"hrlv\">" + (full ? L("已满星", "Max ★") : HERO_RAR(h.r)) + "</span></button>";
+        "<span class=\"hrstar\">" + (rec ? heroStars(rec.star) + (rec.star < HERO_STAR_MAX ? "<i>" + L("卡 ×", "Cards ×") + (rec.cp || 0) + "</i>" : "") : L("未招募", "Not yet")) + "</span>" +
+        "<span class=\"hrlv\">" + (full ? L("六星卡已备齐", "Six-star copies ready") : HERO_RAR(h.r)) + "</span></button>";
     }).join("") + "</div></div>";
 }
 function heroCraftClick(){
@@ -7620,7 +7737,7 @@ function renderHeroGot(res){
     const ten = res.length > 1;
     const tag = x.kind === "new" ? "<em class=\"new\">" + L("新", "New") + "</em>"
               : x.kind === "star" ? "<em class=\"up\">" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
-              : x.kind === "copy" ? "<em>★" + x.star + " · " + x.cp + "/" + x.need + "</em>"
+              : x.kind === "copy" ? "<em>"+L("重复卡 ×","Copy ×")+x.cp+"</em>"
               : "<em class=\"gem\">+" + x.shard + (ten ? "" : L(" 碎片", " shards")) + "</em>";
     return "<div class=\"hrgc hq" + x.r + "\" style=\"animation-delay:" + (i * 90) + "ms\">" + heroArtHtml(x.id) +
       "<b>" + (h ? h.n : x.id) + "</b>" + tag + "</div>";
@@ -7634,10 +7751,12 @@ function openHeroInfo(id){
 function renderHeroInfo(){
   const h = heroById(heroInfoId);
   if(!h) return;
-  const rec = TOWN.hero.own[h.id], lv = rec ? heroLvOf(rec.xp) : {lv:1, cur:0, need:heroXpNeed(1)}, star = rec ? rec.star : 0;
+  const run=SCENE==="run" && P && P.hero===h.id;
+  const owned=TOWN.hero.own[h.id], rec=run?{star:P.heroStar,xp:(owned?owned.xp:0),cp:0}:owned;
+  const lv=run?{lv:P.heroLv,cur:0,need:heroXpNeed(P.heroLv)}:rec?heroLvOf(rec.xp):{lv:1,cur:0,need:heroXpNeed(1)}, star=rec?rec.star:0;
   $("heroInfoEyebrow").textContent = L("角色 · ", "Hero · ") + HERO_RAR(h.r);
   const pctU = h.p.indexOf("{v}%") >= 0 ? "%" : "";
-  const next = !rec ? "" : lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)) + pctU + L("）", ")")
+  const next = !rec ? "" : lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)*HeroRules.factor(star||1)) + pctU + L("）", ")")
              : L("（" + HERO_LV_MAX + " 级封顶，再往上只记等级）", " (maxed at Lv " + HERO_LV_MAX + "; higher levels are just a record)");
   const sline = function(n, txt){
     return "<div class=\"hrs" + (star >= n ? " on" : "") + "\"><span>★" + n + "</span><p>" + txt + "</p></div>";
@@ -7646,23 +7765,25 @@ function renderHeroInfo(){
     "<div class=\"hrhead hq" + h.r + "\">" + heroArtHtml(h.id, "big") +
       "<div class=\"hrname\"><b>" + h.n + "</b><i>" + h.line + "</i>" +
       "<span class=\"hrstar\">" + (rec ? heroStars(star) +
-        (star < HERO_STAR_MAX ? "<i>" + L("再抽到 " + (heroStarNeed(star) - (rec.cp || 0)) + " 张升 ★" + (star + 1),
-                                           (heroStarNeed(star) - (rec.cp || 0)) + " more to ★" + (star + 1)) + "</i>" : "")
+        (star < HERO_STAR_MAX ? "<i>" + (run?L("本局出战快照","Run snapshot"):L("重复卡 ","Copies ")+(rec.cp||0)+L(" · 点击按钮升星"," · Tap to upgrade")) + "</i>" : "")
         : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
     (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + "</span>" +
              "<i class=\"hrbar\"><i style=\"width:" + Math.round(lv.cur / lv.need * 100) + "%\"></i></i>" +
              "<span>" + lv.cur + " / " + lv.need + "</span></div>" : "") +
-    "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1) + "<em>" + next + "</em>" +
-      heroEx(h, rec ? lv.lv : 1).map(function(t){ return "<i class=\"hrex\">" + t + "</i>"; }).join("") + "</p></div>" +
-    sline(3, h.s3) + sline(5, h.s5) +
-    "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 重复的攒着升星",
-                                  "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · Duplicates stack toward stars") + "</div>";
+    "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1,star||1) + "<em>" + next + "</em>" +
+      heroEx(h, rec ? lv.lv : 1,star||1).map(function(t){ return "<i class=\"hrex\">" + t + "</i>"; }).join("") + "</p></div>" +
+    h.growth.map(function(t,i){return sline(i+1,t);}).join("") +
+    "<details class=\"hero-status-info\"><summary>"+L("祝福与负面状态 · 说明","Blessings and afflictions · Guide")+"</summary>"+statusInfoHtml(run?statusCap():4+(star>=4?1:0))+"</details>" +
+    "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 重复卡需手动升星，每次一张，最高六星",
+                                  "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · One duplicate per manual upgrade, up to six stars") + "</div>";
   const go = $("btnHeroGo"), cur = TOWN.hero.cur === h.id;
   go.textContent = cur ? L("出战中", "Active") : L("出战", "Set active");
-  go.disabled = !rec || cur;
+  go.disabled = !rec || cur || SCENE==="run";
+  const up=$("btnHeroUpgrade"); up.disabled=SCENE==="run" || !rec || star>=6 || !(rec.cp>0);
+  up.textContent=SCENE==="run"?L("回城后升星","Upgrade in town"):star>=6?L("已达六星","Six stars"):L("升至 ★","Upgrade to ★")+(star+1)+L(" · 1 张"," · 1 copy");
 }
 function heroGo(){
-  if(!heroInfoId || !TOWN.hero.own[heroInfoId]) return;
+  if(SCENE==="run" || !heroInfoId || !TOWN.hero.own[heroInfoId]) return;
   TOWN.hero.cur = heroInfoId;
   commitPerm();                 // 换出战的人是存档管理，就地写一次（跟换祝福一样）
   const h = heroById(heroInfoId);
@@ -8093,7 +8214,7 @@ function writeRun(){
       // 怪只存 defId + 当前状态，读档时重新链回 FOES
       mobs: G.mobs.map(function(m){
         return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen};
+                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status)};
       }),
       things: G.things
     });
@@ -8232,7 +8353,7 @@ function resumeRun(s){
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, layer:m.ly || 1,
-                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s});
+                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s, status:HeroRules.clean(m.status)});
     if(def.study){ const sm = G.mobs[G.mobs.length - 1]; sm.art = studyArt(); sm.dmg = studyDmgNow(); }   // 书灵的立绘跟着这一章走
   });
   /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
@@ -8603,7 +8724,7 @@ function anyVeil(){
 var CODE_TAG = "YX1.";          // 老码（JSON + base64），只读
 var CODE2_TAG = "YX2";          // 老码（紧凑位流），只读
 var CODE2_V = 2;
-var CODE3_TAG = "YX3";          // 现在生成的
+var CODE3_TAG = "YX3";          // 旧版只读；现在生成 YX4
 var CODE3_CH0 = 0x3400;         // 一个字 = 12 bit：U+3400 ~ U+43FF
 
 /* ---- 16 位校验：既给「词库有没有变过」用，也给「码有没有被截断」用 ---- */
@@ -8893,24 +9014,16 @@ function codeIO(io){
   return out;
 }
 
-/* ---- 生成：字节流 → 两个字节的校验 + 正文，每 3 个字节换成 2 个字 ---- */
+/* ---- 永久码：原区间编码字节流 → CompactSave YX4（旧段顺序不变） ---- */
 function makeCode(){
   const io = new RcIO(null);
   codeIO(io);
-  const body = io.finish();
-  while((body.length + 2) % 3) body.push(0);             // 读过头本来就当 0，补几个 0 不碍事
-  const ck = sumHash(body), all = [ck & 255, ck >> 8].concat(body);
-  let s = CODE3_TAG;
-  for(let i = 0; i < all.length; i += 3){
-    const v = all[i] * 65536 + all[i + 1] * 256 + all[i + 2];
-    s += String.fromCharCode(CODE3_CH0 + (v >> 12), CODE3_CH0 + (v & 4095));
-  }
-  return s;
+  return CompactSave.pack("YX4",io.finish());
 }
 /* ================ 本局码（测试用，用户 2026-10-15）================
    「加一个测试用的导出码，可以复制我这一局，局内的遗物信息，你拿到我的码之后可以复现我这一局，做遗物平衡性调整」。
    信息页属性下面「复制本局码」→ 这一刻的整局（P 全部 + 这一层的地图 / 怪 / 物件 + G 上的每层计数 + 当前面板 + 构成记录），
-   JSON → UTF-8 → 跟 YX3 一样每 3 个字节换成 2 个生僻字、带 2 字节校验，前面挂 YXR。
+   新码：JSON → UTF-8 → CompactSave 压缩与 15-bit 字符打包，前缀 YXS。旧 YXR 仍按 12-bit 字符和旧校验读取。
    粘进「粘贴存档码」（只在镇上）= 原样接着走这一局（写进续玩档）。**永久数据一个字都不碰**。
    ⚠️ P 上跟背词有关的大字典（这一趟答对过哪些词 / 按层的答题数 / 这一趟答错的词）不带，导进来是空的 —— 不影响数值。*/
 var RUNCODE_TAG = "YXR";
@@ -8958,21 +9071,21 @@ function makeRunCode(){
     stair: G.stair, rooms: G.rooms || null,
     mobs: G.mobs.map(function(m){
       return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen};
+              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status)};
     }),
     things: G.things, g: g,
     /* 对账用：导出那一刻的面板（信息页同一套函数）+ 上一刀 / 上一口的构成 */
     snap: Object.assign(partSnap(false), {maxHp:s.maxHp, hp:P.hp, crit:critSteady(s, pctSteady(s)).rate, shield:P.shield || 0}),
     dmg: lastDmgRec, hurt: lastHurtRec
   };
-  return bytesToCode(RUNCODE_TAG, new TextEncoder().encode(JSON.stringify(o)));
+  return CompactSave.pack("YXS", new TextEncoder().encode(JSON.stringify(o)));
 }
 function applyRunCode(code){
   if(COOP) return T("联机里不能导入本局码。");
   if(SCENE === "run" && G && !G.over) return T("洞里不能导入本局码 —— 先回镇上（它会盖掉没走完的那一趟）。");
   let o;
   try{
-    const by = codeToBytes(RUNCODE_TAG, code);
+    const by = Array.from(code.startsWith("YXS")?CompactSave.unpack("YXS",code):codeToBytes(RUNCODE_TAG, code));
     while(by.length && by[by.length - 1] === 0) by.pop();   // 凑 3 的倍数补的 0（JSON 不会以 0 结尾）
     o = JSON.parse(new TextDecoder().decode(new Uint8Array(by)));
   }
@@ -9148,8 +9261,11 @@ function applyCode(txt){
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
     catch(e){ return T("这段文本读不出来 —— 像是存档文件但缺了一截。"); }
-  } else if(code.indexOf(RUNCODE_TAG) === 0){
+  } else if(code.startsWith("YXS") || code.indexOf(RUNCODE_TAG) === 0){
     return applyRunCode(code);                    // 本局码（测试用）：接着走那一局，不碰永久数据
+  } else if(code.startsWith("YX4")){
+    try{o=codeIO(new RcIO(Array.from(CompactSave.unpack("YX4",code))));}
+    catch(e){return T("这串码读不出来：")+e.message;}
   } else if(code.indexOf(CODE3_TAG) === 0 || code.indexOf(CODE2_TAG) === 0){
     try{ o = code.indexOf(CODE3_TAG) === 0 ? parseCode3(code) : parseCode2(code); }
     catch(e){ return T("这串码读不出来：") + e.message + T("。"); }
@@ -9157,7 +9273,7 @@ function applyCode(txt){
     try{ o = JSON.parse(b64dec(code.slice(CODE_TAG.length))); }
     catch(e){ return T("这串老码读不出来，多半是复制时漏了一截。"); }
   } else {
-    return T("这不像存档码 —— 它应该以 ") + CODE3_TAG + T(" 开头。");
+    return T("这不像存档码 —— 它应该以 ") + "YX4 / YXS" + T(" 开头。");
   }
   if(!o || typeof o !== "object" || !o.lex) return T("这串码里没有存档数据。");
   const note = o.note;
@@ -9247,7 +9363,10 @@ function mergeData(o){
   if(o.town && o.town.hero){
     const inH = fixHero(o.town.hero), mine = TOWN.hero;
     const keep = inH.spent > (mine.spent || 0) ? inH : mine, other = keep === inH ? mine : inH;
-    for(const id in keep.own) if(other.own[id]) keep.own[id].xp = Math.max(keep.own[id].xp, other.own[id].xp);
+    for(const id in keep.own) if(other.own[id]){
+      const a=keep.own[id],b=other.own[id]; a.xp=Math.max(a.xp,b.xp);
+      if(inH.spent===mine.spent && a.star+(a.cp||0)===b.star+(b.cp||0) && b.star>a.star){a.star=b.star;a.cp=b.cp||0;}
+    }
     if(keep.own[mine.cur]) keep.cur = mine.cur;
     keep.last = mine.last || inH.last;          // 后继者的「上一趟」：本机有就留本机的
     if(!keep.last) delete keep.last;
@@ -9362,6 +9481,9 @@ function parseSave(txt){
   if(txt.charAt(0) === "{"){
     try{ o = JSON.parse(txt); }
     catch(e){ return {err:T("这个文件读不出来 —— 内容不完整，或者根本不是存档。")}; }
+  } else if(/^(YX4|YX3|YX2)/.test(txt)){
+    try{const c=txt.replace(/[\s\u200B-\u200D\uFEFF]+/g, "");o=c.startsWith("YX4")?codeIO(new RcIO(Array.from(CompactSave.unpack("YX4",c)))):c.startsWith("YX3")?parseCode3(c):parseCode2(c);}
+    catch(e){return {err:T("存档码读不出来：")+e.message};}
   } else if(txt.indexOf(CODE_TAG) === 0){
     try{ o = JSON.parse(b64dec(txt.replace(/\s+/g, "").slice(CODE_TAG.length))); }
     catch(e){ return {err:T("文件里的导出码读不出来，多半是复制时漏了一截。")}; }
@@ -9858,6 +9980,10 @@ $("heroBody").addEventListener("click", function(e){
 });
 $("btnHeroInfoBack").addEventListener("click", function(){ $("veilHeroInfo").hidden = true; });
 $("btnHeroGo").addEventListener("click", heroGo);
+$("btnHeroUpgrade").addEventListener("click",heroUpgrade);
+$("btnHeroRun").addEventListener("click",function(){if(P&&P.hero)openHeroInfo(P.hero);});
+$("btnHeroRun").textContent=L("角色详情","Hero details");
+$("battleStatuses").addEventListener("click",function(e){const b=e.target.closest("[data-status]");if(b){const d=HeroRules.effects[b.dataset.status];toast(d[UI_EN?3:2]);}});
 $("btnHeroGotOk").addEventListener("click", function(){ $("veilHeroGot").hidden = true; renderHero(); });
 $("btnCloseBless").addEventListener("click", closeBless);
 /* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */
