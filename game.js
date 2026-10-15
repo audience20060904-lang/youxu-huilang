@@ -7503,6 +7503,7 @@ function showScene(){
   if(nb){
     const want = inRun ? "viewRelic" : "viewOrb", gone = inRun ? "viewOrb" : "viewRelic";
     nb.dataset.view = want;
+    nb.setAttribute("aria-controls", want);
     nb.querySelector("i").textContent = inRun ? "✦" : "◎";
     nb.querySelector("span").textContent = inRun ? T("遗物") : T("背包");
     if($(gone).classList.contains("on")) showView(want);
@@ -9202,27 +9203,34 @@ function overwriteAll(o){
 
 /* ================= 事件 ================= */
 document.addEventListener("keydown", function(ev){
-  if(ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if(ev.defaultPrevented || ev.isComposing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
   const v = anyVeil();
+  // 设置、搜索和可编辑内容里的按键交给控件，方向键不能同时驱动角色。
+  const target = ev.target, tag = target && target.tagName;
+  if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (target && target.isContentEditable)){
+    if(v && ev.key === "Escape" && (tag === "INPUT" || tag === "TEXTAREA")) target.blur();
+    return;
+  }
   if(v){
-    // 正在输入框里打字（图鉴搜索）：键盘全交给它，别被 Enter/Esc 的快捷键抢走
-    const tag = ev.target && ev.target.tagName;
-    if(tag === "INPUT" || tag === "TEXTAREA"){
-      if(ev.key === "Escape") ev.target.blur();
+    // Enter 优先激活当前聚焦的按钮；不能把「再待一会儿」变成「下去」。
+    const action = target && target.closest ? target.closest("button, a[href], summary") : null;
+    if(ev.key === "Enter" && action && v.contains(action) && !action.disabled && action.getClientRects().length){
+      if(ev.repeat) ev.preventDefault();
       return;
     }
     if(v.id === "veilBattle"){
       if(/^[1-4]$/.test(ev.key) && B && !B.locked && B.q && B.q.type !== "spell"){
         const b = $("opts").children[+ev.key - 1];
-        if(b){ ev.preventDefault(); b.click(); }
+        if(b){ ev.preventDefault(); if(!ev.repeat) b.click(); }
       } else if(ev.key === "Enter" && !$("btnNextQ").hidden){
-        ev.preventDefault(); $("btnNextQ").click();
+        ev.preventDefault(); if(!ev.repeat) $("btnNextQ").click();
       }
       return;
     }
     if(ev.key === "Enter"){
+      if(ev.repeat){ ev.preventDefault(); return; }
       const b = v.querySelector(".btn.primary");
-      if(b){ ev.preventDefault(); b.click(); }
+      if(b && !b.disabled && b.getClientRects().length){ ev.preventDefault(); b.click(); }
     } else if(ev.key === "Escape"){
       if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
       else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
@@ -9265,7 +9273,11 @@ function showView(id){
     v.classList.toggle("on", v.id === id);
   });
   Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
-    b.classList.toggle("on", b.dataset.view === id);
+    const selected = b.dataset.view === id;
+    b.classList.toggle("on", selected);
+    b.setAttribute("aria-selected", selected ? "true" : "false");
+    b.setAttribute("aria-controls", b.dataset.view);
+    b.tabIndex = selected ? 0 : -1;
   });
   // 地图在隐藏时量不到尺寸，切回来必须重算一次
   if(id === "viewAdv") sizeMap();
@@ -9276,6 +9288,20 @@ function showView(id){
 }
 Array.prototype.forEach.call(document.querySelectorAll(".nav"), function(b){
   b.addEventListener("click", function(){ showView(b.dataset.view); });
+  b.addEventListener("keydown", function(ev){
+    if(ev.defaultPrevented || ev.isComposing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if(ev.key !== "ArrowLeft" && ev.key !== "ArrowRight" && ev.key !== "Home" && ev.key !== "End") return;
+    const tabs = Array.prototype.filter.call(document.querySelectorAll(".nav"), function(tab){
+      return !tab.disabled && tab.getClientRects().length;
+    });
+    const at = tabs.indexOf(b);
+    if(at < 0) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const next = ev.key === "Home" ? 0 : ev.key === "End" ? tabs.length - 1
+      : (at + (ev.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    showView(tabs[next].dataset.view);
+    tabs[next].focus();
+  });
 });
 
 /* ---- 宝珠：背包 / 人物 / 商店（用户 2026-09-23）---- */

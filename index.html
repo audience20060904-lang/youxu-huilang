@@ -80,7 +80,7 @@
   <div class="views">
 
     <!-- ---------- 冒险 ---------- -->
-    <section class="view on" id="viewAdv">
+    <section class="view on" id="viewAdv" role="tabpanel" aria-labelledby="navAdv" tabindex="0">
       <!-- ===== 主城 ===== -->
       <div class="town" id="townPanel" hidden>
         <div class="townhead">
@@ -151,7 +151,7 @@
     </section>
 
     <!-- ---------- 信息 ---------- -->
-    <section class="view" id="viewInfo">
+    <section class="view" id="viewInfo" role="tabpanel" aria-labelledby="navInfo" tabindex="0">
       <!-- 跟「本局战绩」一样，没进冒险时整块藏起来（用户 2026-09-25） -->
       <div class="panel" id="panelStats">
         <div class="phead">属性 Attributes</div>
@@ -184,7 +184,7 @@
     </section>
 
     <!-- ---------- 遗物 ---------- -->
-    <section class="view" id="viewRelic">
+    <section class="view" id="viewRelic" role="tabpanel" aria-labelledby="navBag" tabindex="0">
       <!-- 列表自己滚，合成面板钉在标签页下方（带满 15 件时不用滚半天才看得见） -->
       <div class="panel grow">
         <div class="phead"><span id="relicHead">遗物 0</span></div>
@@ -204,7 +204,7 @@
     <!-- ---------- 背包（宝珠，用户 2026-09-23）----------
          主城里第三个标签是它，进了洞变回「遗物」（showScene 换 #navBag 的 data-view）。
          两个子栏目：背包（没戴着的：鉴定 / 强化 / 装备）/ 人物（六个位置，点一个弹窗挑宝珠 + 总效果）。 -->
-    <section class="view" id="viewOrb">
+    <section class="view" id="viewOrb" role="tabpanel" aria-labelledby="navBag" tabindex="0">
       <div class="orbtabs">
         <button class="osub on" data-osub="bag" type="button">背包</button>
         <button class="osub" data-osub="me" type="button">人物</button>
@@ -231,7 +231,7 @@
     </section>
 
     <!-- ---------- 设置 ---------- -->
-    <section class="view" id="viewSet">
+    <section class="view" id="viewSet" role="tabpanel" aria-labelledby="navSet" tabindex="0">
       <div class="panel">
         <div class="phead">设置 Settings</div>
         <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>答完自动朗读</b><i>每题答完念一遍这个词；也能自己点题面右上角的 🔊</i></span></label>
@@ -239,12 +239,12 @@
         <label class="setopt" id="optDefQRow"><input type="checkbox" id="optDefQ" checked><span><b>释义句题</b><i>已掌握的词会出「哪一句在说这个词」</i></span></label>
         <!-- 发音（2026-09-24）：挑声音 + 语速，game.js 的 renderVoiceSet()。浏览器不支持朗读就整块藏掉 -->
         <div class="langset voiceset" id="voiceSet">
-          <div class="langrow"><span class="lk">声音</span><select class="vsel" id="optVoice"></select><button class="lchip vtry" id="btnVoiceTry" type="button">试听</button></div>
+          <div class="langrow"><label class="lk" for="optVoice">声音</label><select class="vsel" id="optVoice"></select><button class="lchip vtry" id="btnVoiceTry" type="button">试听</button></div>
           <div class="langrow" id="rateRow"><span class="lk">语速</span><button class="lchip" data-rate="0.7" type="button">慢</button><button class="lchip" data-rate="0.9" type="button">标准</button><button class="lchip" data-rate="1.05" type="button">快</button></div>
         </div>
         <!-- 自定义答题时间（2026-09-25）：粘贴存档码「snow」才露出来，game.js 的 renderQTimeSet() -->
         <div class="langset voiceset" id="qtimeSet" hidden>
-          <div class="langrow"><span class="lk">答题时间</span><input class="qtin" id="optQTime" type="number" inputmode="numeric" min="1" max="999" step="1"><span class="qtu">秒</span><button class="lchip" id="btnQTimeOff" type="button">不限时</button><button class="lchip" id="btnQTimeReset" type="button">默认</button></div>
+          <div class="langrow"><label class="lk" for="optQTime">答题时间</label><input class="qtin" id="optQTime" type="number" inputmode="numeric" min="1" max="999" step="1"><span class="qtu">秒</span><button class="lchip" id="btnQTimeOff" type="button">不限时</button><button class="lchip" id="btnQTimeReset" type="button">默认</button></div>
         </div>
       </div>
       <!-- 语言（2026-09-23）：母语 = 界面语言，学习 = 背哪门的词。换了就重载页面（game.js 的 setLang）-->
@@ -275,7 +275,7 @@
           <button class="btn" id="btnSaveFile" type="button">下载存档文件</button>
           <button class="btn" id="btnPickFile" type="button">读取存档文件…</button>
         </div>
-        <input type="file" id="fileIn" accept=".json,.txt,application/json" hidden>
+        <input type="file" id="fileIn" aria-labelledby="btnPickFile" accept=".json,.txt,application/json" hidden>
         <div class="drop" id="dropZone">把存档文件拖到这里也行</div>
         <div class="filecard" id="fileCard" hidden>
           <div class="eyebrow" id="fileName">存档文件</div>
@@ -301,7 +301,7 @@
           <button class="btn primary" id="btnCopySave" type="button">复制存档码</button>
           <button class="btn" id="btnPasteSave" type="button">粘贴存档码</button>
         </div>
-        <textarea class="code" id="codeBox" rows="3" hidden></textarea>
+        <textarea class="code" id="codeBox" aria-label="云存档 · 换设备" rows="3" hidden></textarea>
       </div>
       <div class="panel">
         <div class="phead">别的</div>
@@ -313,12 +313,12 @@
   </div>
 
   <!-- ===== 底部四标签（第三个在主城是「背包」，进洞是「遗物」）===== -->
-  <nav class="tabbar">
-    <button class="nav on" data-view="viewAdv" type="button"><i>⌖</i><span>冒险</span></button>
-    <button class="nav" data-view="viewInfo" type="button"><i>◈</i><span>信息</span></button>
+  <nav class="tabbar" role="tablist" aria-label="幽墟回廊">
+    <button class="nav on" id="navAdv" data-view="viewAdv" type="button" role="tab" aria-controls="viewAdv" aria-selected="true" tabindex="0"><i aria-hidden="true">⌖</i><span>冒险</span></button>
+    <button class="nav" id="navInfo" data-view="viewInfo" type="button" role="tab" aria-controls="viewInfo" aria-selected="false" tabindex="-1"><i aria-hidden="true">◈</i><span>信息</span></button>
     <!-- 第三个标签：主城里是「背包」，进洞变回「遗物」（showScene 里换，用户 2026-09-23） -->
-    <button class="nav" id="navBag" data-view="viewOrb" type="button"><i>◎</i><span>背包</span><em class="dot" id="bagDot" hidden></em></button>
-    <button class="nav" data-view="viewSet" type="button"><i>⚙</i><span>设置</span></button>
+    <button class="nav" id="navBag" data-view="viewOrb" type="button" role="tab" aria-controls="viewOrb" aria-selected="false" tabindex="-1"><i aria-hidden="true">◎</i><span>背包</span><em class="dot" id="bagDot" aria-hidden="true" hidden></em></button>
+    <button class="nav" id="navSet" data-view="viewSet" type="button" role="tab" aria-controls="viewSet" aria-selected="false" tabindex="-1"><i aria-hidden="true">⚙</i><span>设置</span></button>
   </nav>
 </div>
 
@@ -636,7 +636,7 @@
   <div class="sheet tall">
     <div class="eyebrow" id="blessPickEyebrow">偏爱 · 普通</div>
     <h2 id="blessPickTitle">什么是你的最爱</h2>
-    <input class="findbox" id="blessFind" type="search" autocomplete="off"
+    <input class="findbox" id="blessFind" type="search" autocomplete="off" aria-label="搜索：名字 / 效果 / 铭文"
            placeholder="搜索：名字 / 效果 / 铭文">
     <div class="relics sx" id="blessPickList"></div>
     <div class="rowb">
@@ -729,7 +729,7 @@
     </div>
     <h2 id="codexTitle">词库</h2>
     <div class="tally" id="codexTally"></div>
-    <input class="findbox" id="codexFind" type="search" autocomplete="off"
+    <input class="findbox" id="codexFind" type="search" autocomplete="off" aria-label="搜索：英文 / 中文 / 遗物名"
            placeholder="搜索：英文 / 中文 / 遗物名">
     <div class="rfilt" id="codexFilter" hidden></div>
     <div class="codex sx" id="codexList"></div>
