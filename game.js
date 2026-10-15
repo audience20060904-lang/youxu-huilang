@@ -462,11 +462,26 @@ function ampOn(raw, s){
   if(!ampNeed()) return v;
   return v + Math.round(ampDelta(function(){ return {v: raw(s)}; }, ["v"]).v);
 }
-const ST_KEYS = ["atk", "maxHp", "def", "defGear", "crit"];
+const ST_KEYS = ["atk", "maxHp", "def", "defGear", "crit", "hpAdd"];
 /* 殉道者之冠：本局打倒过几只 Boss / 层间守者（P.bossKills 只是个事实，换算包在 holyOn 里）*/
 /* 追加攻击概率（%）：回响之厅 / 疾风相加，赐福照翻。过 100 就是必中（一题仍然只追加一次，风暴之翼除外）。*/
 function followChance(){
   return (hasRelic("hall") ? hx("hall", HALL_RATE) : 0) + (hasRelic("gale") ? hx("gale", GALE_RATE) : 0);
+}
+/* 黄金圣像：身上每 100 金一档，最多「层数 × HOLY_IDOL_CAP」档（2026-10-15，跟利滚利的「层数 ×20」一个写法） */
+function idolTiers(){
+  const f = (G && G.floor) || 1;
+  return Math.min(Math.floor((P.gold || 0) / HOLY_IDOL_PER), f * HOLY_IDOL_CAP);
+}
+/* 熔铸之心：P.melted 照实记，换算时最多算 HOLY_MELT_MAX 件（2026-10-15） */
+function meltN(){ return Math.min(P.melted || 0, HOLY_MELT_MAX); }
+/* 护盾封顶（2026-10-15，用户定的方案 A）：最大生命 ×SHIELD_MAX_X，跟战场一个数。
+   不一处处改给盾的地方 —— 在挨打之前、刷血条时、进层存档前收口，读护盾换伤害的（圣徒之盾）也按封顶后的数算。*/
+function shieldCap(s){ return Math.round((s || stats()).maxHp * SHIELD_MAX_X); }
+function clampShield(s){
+  if(!P || !(P.shield > 0)) return;
+  const cap = shieldCap(s);
+  if(P.shield > cap) P.shield = cap;
 }
 function crownPct(){ return holyOn("crown") ? (P.bossKills || 0) * HOLY_CROWN_PCT : 0; }
 /* 万言圣典：+30%，正在学的这门语言每掌握 50 个词再 +5%（掌握的词数每进一层量一次，存在 P.holyWords）*/
@@ -494,11 +509,14 @@ function stats(){
     const dg = Math.round((s.defGear || 0) * cp / 100);
     s.def += dg; s.defGear += dg;
   }
-  if(cp || bp) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + cp / 100) * (1 + bp / 100)));
+  /* 圣器的生命乘法只乘「加法件以外」的那截：厚血 / 不周 / 血肉（s.hpAdd）按设计不被放大（2026-10-15） */
+  const ha = Math.max(0, Math.min(s.hpAdd || 0, s.maxHp));
+  const hpMul = function(f){ s.maxHp = Math.max(1, Math.round((s.maxHp - ha) * f) + ha); };
+  if(cp || bp) hpMul((1 + cp / 100) * (1 + bp / 100));
   /* 流派圣器（2026-10-02）：每件把一种资源再放大一截，另一半（换成伤害 / 护甲）在 extraSteady / critSteady / 下面 */
-  if(holyOn("goldidol")) s.atk += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_ATK;         // 黄金圣像：每 100 金攻击 +1（排在战神之刃前面，会被它放大）
-  if(holyOn("grail")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + HOLY_GRAIL_HP / 100)) +
-                                 Math.floor((P.kills || 0) / HOLY_GRAIL_KILLS) * HOLY_GRAIL_PER);     // 血之圣杯：+50%，每 10 杀 +2
+  if(holyOn("goldidol")) s.atk += idolTiers() * HOLY_IDOL_ATK;                                         // 黄金圣像：每 100 金攻击 +1（排在战神之刃前面，会被它放大）
+  if(holyOn("grail")){ hpMul(1 + HOLY_GRAIL_HP / 100);
+                       s.maxHp += Math.floor((P.kills || 0) / HOLY_GRAIL_KILLS) * HOLY_GRAIL_PER; }  // 血之圣杯：+50%，每 10 杀 +2
   if(holyOn("warblade")) s.atk = Math.max(1, Math.round(s.atk * HOLY_BLADE_X));                      // 战神之刃
   if(holyOn("bulwark")){                                                                              // 不朽圣铠：(护甲 + 10) × 1.5
     const d0 = s.defGear || 0, d1 = Math.round((d0 + HOLY_PLATE_BASE) * HOLY_PLATE_X);
@@ -506,8 +524,7 @@ function stats(){
   }
   if(holyOn("warblade")){ const d = Math.round(s.atk * HOLY_BLADE_DEF); s.def += d; s.defGear += d; } // 战神之刃：攻击 → 护甲
   if(holyOn("fateeye")) s.crit += HOLY_EYE_CRIT;                                                     // 天命之眼
-  if(holyOn("meltheart") && P.melted)                                                                 // 熔铸之心：每分解过一件 +1%
-    s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + P.melted * HOLY_MELT_HP / 100)));
+  if(holyOn("meltheart") && P.melted) hpMul(1 + meltN() * HOLY_MELT_HP / 100);                       // 熔铸之心：每分解过一件 +1%（最多算 100 件）
   return s;
 }
 function statsRaw(){
@@ -595,10 +612,12 @@ function statsRaw(){
   if(hasRelic("adamant")) s.maxHp = Math.max(1, Math.round(s.maxHp * (1 + adamantPct(s) / 100)));
   /* 厚血 / 不周（第十六批）：按这一层怪物的攻击直接加，排在所有生命乘法**之后** —— 不被铁躯 / 巨骨 / 山岳 / 不坏放大。
      放大了就是「怪涨多少、生命翻几倍地涨多少」，无尽就没有底了。献身照样减半（在下面）。*/
-  if(hasRelic("thickblood") && G) s.maxHp += Math.round(floorFoeDmg() * THICKB_X);
-  if(hasRelic("pillar") && G)     s.maxHp += Math.round(floorFoeDmg() * PILLAR_X);
+  /* s.hpAdd 记着这几件加法给了多少 —— stats() 里圣器的生命乘法（殉道者之冠 / 万言圣典 / 血之圣杯 / 熔铸之心）不放大这一截（2026-10-15） */
+  s.hpAdd = 0;
+  if(hasRelic("thickblood") && G){ const v = Math.round(floorFoeDmg() * THICKB_X); s.maxHp += v; s.hpAdd += v; }
+  if(hasRelic("pillar") && G)    { const v = Math.round(floorFoeDmg() * PILLAR_X); s.maxHp += v; s.hpAdd += v; }
   /* 献身：最大生命减半 —— **必须放在所有加血遗物之后**，下面的背水也按减半后的上限判 */
-  if(hasRelic("offer")) s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2));
+  if(hasRelic("offer")){ s.maxHp = Math.max(1, Math.ceil(s.maxHp / 2)); s.hpAdd = Math.floor(s.hpAdd / 2); }
   if(hasRelic("stand") && P.hp < s.maxHp / 2) s.def += STAND_ARMOR;   // 背水
   /* ===== 第十批：高血线 + 连杀线（2026-09-21）=====
      ⚠️ 全部排在这儿 —— 生命上限已经定死（铁躯/献身/铭心都算完了），而护甲还没进重装/硬茧的乘法。
@@ -657,7 +676,7 @@ function statsRaw(){
   if(hasRelic("noedge")) s.atk = Math.round(s.atk * NOEDGE_MULT);
   /* 血肉（第十六批）：最大生命 +攻击的 FLESH_PCT —— 攻击全算完之后折（淬血 / 镇纸在上面，读的是折之前的上限，不会绕圈）。
      练习模式 / 难度倍率那一刀在下面，不算进来。*/
-  if(hasRelic("flesh")) s.maxHp += Math.round(Math.max(0, s.atk) * FLESH_PCT);
+  if(hasRelic("flesh")){ const v = Math.round(Math.max(0, s.atk) * FLESH_PCT); s.maxHp += v; s.hpAdd += v; }
   s.atk = Math.max(1, s.atk);
   s.maxHp = Math.max(1, s.maxHp);
   s.defGear = s.def;
@@ -909,6 +928,7 @@ function nextFloor(){
   lockInput(320);
   if(P.tut){ tutBegin(); commitPerm(); return; }   // 教程关不写续玩档：半路关掉页面，下次重新走一遍
   sayFloorIntro();
+  clampShield();         // 护盾封顶：进层发的那一堆种子收一次再存档
   commit(true);          // 存档点之二：下一层
   const lk = $("btnLockWager"); if(lk) lk.classList.remove("tipmark");   // 「锁定冒险」那一闪只留一层
   if(G.floor === 1) tip("path");                   // 第一趟的提示：寻路
@@ -1291,7 +1311,7 @@ function foeNums(def, floor){
 /* 第 150 层往后再平滑涨到 ×HOLY_DEEP_X（用户 2026-10-02）：150 层 ×1，每层 +2%，250 层 ×3，之后不再涨。
    跟「深渊狂潮」一个写法 —— 逐层线性爬坡，不在某一层突然跳。只有无尽章走得到。*/
 function holyDeep(floor){
-  const t = Math.min(1, Math.max(0, (floor - HOLY_DEEP_FROM) / HOLY_DEEP_SPAN));
+  const t = Math.max(0, (floor - HOLY_DEEP_FROM) / HOLY_DEEP_SPAN);   // 2026-10-15 起不封顶：250 层 ×3 之后照样每层 +2%
   return 1 + (HOLY_DEEP_X - 1) * t;
 }
 /* 第 floor 层「一只普通小怪」的平均数值 —— Boss 房就是照着上一层的这个数放大的 */
@@ -1582,6 +1602,7 @@ function render(){
 function renderHud(){
   const s = stats();
   if(P.hp > s.maxHp) P.hp = s.maxHp;
+  if(SCENE === "run") clampShield(s);
   if(SCENE !== "run"){          // 主城里没有层数、没有怪，只刷属性/背包那几块
     renderSheets(s);
     return;
@@ -2214,6 +2235,7 @@ function showWeak(m){
 }
 function renderBattleBars(){
   const m = B.mob, s = stats();
+  clampShield(s);
   const abyss = !!(m.def && m.def.abyss);
   /* 无终之影的血条画的是**当前这一层**（血量无限，画不出总条），第几层写在名字后面。*/
   if(abyss) $("foeName").textContent = m.name + T(" · 第 ") + (m.layer || 1) + T(" 层");
@@ -3765,7 +3787,11 @@ function healUp(n, s0, force){
   let sh = 0;
   if(spill > 0 && (force || hasRelic("well"))){
     sh = Math.floor(spill * (hasRelic("well") ? rmul("well") : 1) / SPILL_RATE);   // 赐福泉涌：同样的溢出换两倍的盾
-    if(sh > 0) P.shield = (P.shield || 0) + sh;
+    if(sh > 0){
+      const before = P.shield || 0;
+      P.shield = Math.min(before + sh, Math.max(before, shieldCap(s)));
+      sh = P.shield - before;
+    }
   }
   return {hp:up, sh:sh};
 }
@@ -3859,8 +3885,8 @@ function pctSteady(s){
   let pct = pctCore(s);
   if(holyOn("scales")) pct += HOLY_SCALE_PCT * Math.max(0, Math.floor(cutCore(s, true)));   // 公义天平：减伤 → 伤害（堆过封顶的那截也算）
   pct += bookPct();                                                                            // 万言圣典
-  if(holyOn("goldidol")) pct += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_PCT;    // 黄金圣像：金币 → 伤害
-  if(holyOn("meltheart")) pct += (P.melted || 0) * HOLY_MELT_PCT;                             // 熔铸之心：每分解过一件 +2%
+  if(holyOn("goldidol")) pct += idolTiers() * HOLY_IDOL_PCT;                                  // 黄金圣像：金币 → 伤害（最多 层数 档）
+  if(holyOn("meltheart")) pct += meltN() * HOLY_MELT_PCT;                                     // 熔铸之心：每分解过一件 +2%（最多算 100 件）
   return pct;
 }
 function cutState(s, wrong){
@@ -3870,13 +3896,13 @@ function cutState(s, wrong){
 }
 function flatSteady(s){
   let f = ampOn(flatSteadyRaw, s);
-  if(holyOn("goldidol")) f += Math.floor((P.gold || 0) / HOLY_IDOL_PER) * HOLY_IDOL_FLAT;   // 黄金圣像：每 100 金点伤 +1
+  if(holyOn("goldidol")) f += idolTiers() * HOLY_IDOL_FLAT;                                 // 黄金圣像：每 100 金点伤 +1
   return f;
 }
 function extraSteady(s){
   let e = ampOn(extraSteadyRaw, s);
   if(holyOn("bulwark")) e += Math.round((s.defGear || 0) * HOLY_PLATE_EXTRA);      // 不朽圣铠：护甲 → 额外伤害（练习模式那 +50 不算）
-  if(holyOn("saintshield")) e += Math.floor((P.shield || 0) * HOLY_SAINT_EXTRA);  // 圣徒之盾：护盾 → 额外伤害
+  if(holyOn("saintshield")) e += Math.floor(Math.min(P.shield || 0, shieldCap(s)) * HOLY_SAINT_EXTRA);  // 圣徒之盾：护盾 → 额外伤害（按封顶后的盾）
   return e;
 }
 function critSteady(s, pct){
@@ -4295,6 +4321,7 @@ function redirectStore(raw){
   return got;
 }
 function landHit(dmg, m, haunted){
+  clampShield();
   let left = dmg, ate = 0;
   const hadShield = (P.shield || 0) > 0;
   if((P.shield || 0) > 0){

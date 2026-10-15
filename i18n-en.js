@@ -2464,9 +2464,9 @@ var HOLY_EN = {
   fateeye: ["Eye of Fate", "Crit chance +20%, crit damage +100%; each crit: crit damage +1% (at most +2% per floor)", "It saw the gap long ago, and waits for your blade.", "Crit build"],
   saintshield: ["Saint's Shield", "Each floor gain a shield of 20% max HP; extra damage + 10% of current shield", "What you block and what you strike with are the same slab.", "Shield build"],
   eternal: ["Eternal Chain", "Combo damage bonus ×5; combo gained from correct answers ×2; wrong answers only halve combo", "Link by link — where it breaks, it grows back.", "Combo build"],
-  goldidol: ["Golden Idol", "Gold income +100%; every 100 gold you carry: damage +1%, ATK +1, damage +1", "It says nothing, only grows brighter.", "Gold build"],
+  goldidol: ["Golden Idol", "Gold income +100%; every 100 gold you carry: damage +1%, ATK +1, damage +1 (max tiers = floor)", "It says nothing, only grows brighter.", "Gold build"],
   storm: ["Wings of the Storm", "After a follow-up, roll again at half the previous chance (90% → 45% → 22.5% …)", "One beat of the wing, a rain of blades.", "Multi-hit build"],
-  meltheart: ["Melting Heart", "Breaking down a relic no longer gives gold; each one broken down this run: damage +2%, max HP +1%", "What melts in the fire grows into your bones.", "Melt build"],
+  meltheart: ["Melting Heart", "Breaking down a relic no longer gives gold; each one broken down this run: damage +2%, max HP +1% (max 100)", "What melts in the fire grows into your bones.", "Melt build"],
   thunderbox: ["Thunder Box", "Killing a regular foe stores 5% of the overkill damage; your first correct answer in a Boss room unleashes all of it", "Nine floors of thunder, on one head.", "Thunder build"]
 };
 var CH_EN = {1:"Stone Hall", 2:"Rust Court", 3:"Ember Abyss", 4:"Ruin's Heart", 5:"Endless", 6:"Book Barrow"};
