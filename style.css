@@ -1349,6 +1349,13 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrpool > span{flex:0 0 100%;font-weight:600;font-size:12px}
 .hrpool i{font-style:normal;padding:2px 7px;border:1px dashed var(--edge);border-radius:2px;color:var(--faint)}
 .hrpool i.own{border-style:solid;color:var(--bone);background:var(--stone-2)}
+/* 合成（2026-10-15）：碎片进度 + 一颗整行的合成钮（定高，跟单抽十连一样两步确认）+ 挑角色的方格（挑中的描金边，满星的灰着）*/
+.hrshard{display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;color:var(--dim)}
+.hrshard b{color:var(--q3);font-size:15px}
+.hrshard .hrbar{width:110px;height:6px}
+.hrpb.hrcgo{width:100%}
+.hrcell.sel{background:#FDF6E7;border-color:var(--torch-deep);box-shadow:0 0 0 1px var(--torch-deep) inset}
+.hrcell:disabled{opacity:.45;cursor:default}
 /* 详情 */
 .hrinfo{display:flex;flex-direction:column;gap:10px}
 .hrhead{display:flex;gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--edge);border-left:4px solid var(--edge);border-radius:3px;background:var(--stone-2)}

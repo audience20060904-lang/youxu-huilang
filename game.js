@@ -6958,7 +6958,7 @@ function renderOrbShop(){
    - 判定一律 heroOn(id, 星级)：认 RMASK 的 "hero"（「构成」逐件拿掉算差时它单列一行）。*/
 function heroById(id){ for(let i = 0; i < HEROES.length; i++) if(HEROES[i].id === id) return HEROES[i]; return null; }
 function fixHero(h){
-  const o = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0};
+  const o = {cur:HERO_DEFAULT, own:{}, pity:0, spent:0, shard:0};
   const int = function(v){ return Math.max(0, Math.floor(+v || 0)); };
   if(h && typeof h === "object"){
     const own = h.own && typeof h.own === "object" ? h.own : {};
@@ -6970,6 +6970,7 @@ function fixHero(h){
     }
     o.pity = Math.min(HERO_PITY - 1, int(h.pity));
     o.spent = int(h.spent);
+    o.shard = int(h.shard);                             // 万能碎片（满星之后的重复变的）
     if(o.own[h.cur]) o.cur = h.cur;
     /* 后继者要接的「上一趟」（只存本机，存档码不带）*/
     if(h.last && typeof h.last === "object")
@@ -7463,7 +7464,19 @@ function heroEx(h, lv){
 /* ---- 抽卡 ----
    单抽 / 十连。每一抽先看保底（离上一次传奇满 HERO_PITY − 1 抽，这一抽必是传奇），再按 HERO_RATE 掷品质，
    同品质里平均挑一个；十连一个史诗以上都没有就把最后一抽换成史诗。
-   没有的 → 拿到（★1）；有了 → 攒一张，攒够 ★n 张升一星（heroStarNeed）；★5 了 → 退 HERO_REFUND 宝石。返回每一抽的结果（结果窗照着画）。*/
+   没有的 → 拿到（★1）；有了 → 攒一张，攒够 ★n 张升一星（heroStarNeed）；★5 了 → 变成 HERO_SHARD 个万能碎片。返回每一抽的结果（结果窗照着画）。*/
+/* 给一张这个角色的卡（抽卡和碎片合成共用）：没有就拿到、有就攒一张升星、满星了变碎片 */
+function heroGrant(h){
+  const H = TOWN.hero, rec = H.own[h.id], r = h.r;
+  if(!rec){ H.own[h.id] = {star:1, xp:0, cp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
+  if(rec.star < HERO_STAR_MAX){
+    rec.cp = (rec.cp || 0) + 1;                          // 重复的先攒着，攒够 ★n 张升一星
+    if(rec.cp >= heroStarNeed(rec.star)){ rec.star++; rec.cp = 0; return {id:h.id, r:r, kind:"star", star:rec.star}; }
+    return {id:h.id, r:r, kind:"copy", star:rec.star, cp:rec.cp, need:heroStarNeed(rec.star)};
+  }
+  H.shard = (H.shard || 0) + HERO_SHARD[r];               // 满星之后：变成万能碎片（用户 2026-10-15）
+  return {id:h.id, r:r, kind:"shard", shard:HERO_SHARD[r]};
+}
 function heroPull(n){
   const cost = n >= 10 ? HERO_PULL10 : HERO_PULL * n;
   if((TOWN.gem || 0) < cost) return null;
@@ -7479,26 +7492,26 @@ function heroPull(n){
     rars.push(r);
   }
   if(n >= 10 && !rars.some(function(r){ return r >= 2; })) rars[rars.length - 1] = 2;
-  let refund = 0;
   const out = rars.map(function(r){
     const pool = HEROES.filter(function(h){ return h.r === r; });
-    const h = pool[Math.floor(Math.random() * pool.length)], rec = H.own[h.id];
-    if(!rec){ H.own[h.id] = {star:1, xp:0, cp:0}; return {id:h.id, r:r, kind:"new", star:1}; }
-    if(rec.star < HERO_STAR_MAX){
-      rec.cp = (rec.cp || 0) + 1;                          // 重复的先攒着，攒够 ★n 张升一星
-      if(rec.cp >= heroStarNeed(rec.star)){ rec.star++; rec.cp = 0; return {id:h.id, r:r, kind:"star", star:rec.star}; }
-      return {id:h.id, r:r, kind:"copy", star:rec.star, cp:rec.cp, need:heroStarNeed(rec.star)};
-    }
-    refund += HERO_REFUND[r];
-    return {id:h.id, r:r, kind:"gem", gem:HERO_REFUND[r]};
+    return heroGrant(pool[Math.floor(Math.random() * pool.length)]);
   });
   H.spent += cost;
-  addGems(refund - cost);      // 宝石一变就落盘（角色那一份跟着一起写进去）
+  addGems(-cost);              // 宝石一变就落盘（角色那一份跟着一起写进去）
   return out;
+}
+/* 合成（用户 2026-10-15）：HERO_CRAFT 个万能碎片换一张自选角色的卡（满星的不能选）。返回结果（跟抽卡一个样子），不够就 null */
+function heroCraft(id){
+  const H = TOWN.hero, h = heroById(id), rec = h && H.own[id];
+  if(!h || (H.shard || 0) < HERO_CRAFT || (rec && rec.star >= HERO_STAR_MAX)) return null;
+  H.shard -= HERO_CRAFT;
+  const res = heroGrant(h);
+  commitPerm();                // 碎片 / 角色都在 TOWN 上，就地写一次（跟换出战的人一样）
+  return res;
 }
 /* ---- 角色的界面：主城「角色」→ veilHero（名册 / 招募）→ veilHeroInfo（详情 · 出战）；抽完弹 veilHeroGot ----
    纯界面状态（heroTab / heroArmed / heroInfoId）不进存档。花宝石的按钮两步确认（跟祝福 / 宝珠一样）。*/
-let heroTab = "roster", heroArmed = "", heroInfoId = null;
+let heroTab = "roster", heroArmed = "", heroInfoId = null, heroCraftSel = null;   // heroCraftSel：「合成」里挑中的那一个
 const HERO_RAR = function(r){ return [L("普通", "Common"), L("稀有", "Rare"), L("史诗", "Epic"), L("传奇", "Legendary")][r] || ""; };
 function heroStars(n){ return "★".repeat(n) + "☆".repeat(Math.max(0, HERO_STAR_MAX - n)); }
 function heroArtHtml(id, cls){ return "<span class=\"hrart hr-" + id + (cls ? " " + cls : "") + "\">" + heroArt(id) + "</span>"; }
@@ -7511,8 +7524,10 @@ function openHero(tab){
 function closeHero(){ $("veilHero").hidden = true; heroArmed = ""; renderTown(); }
 function renderHero(){
   Array.prototype.forEach.call(document.querySelectorAll(".hrsub"), function(b){ b.classList.toggle("on", b.dataset.hrsub === heroTab); });
-  $("heroGem").innerHTML = L("宝石 ", "Gems ") + "<b>" + (TOWN.gem || 0) + "</b>";
+  $("heroGem").innerHTML = L("宝石 ", "Gems ") + "<b>" + (TOWN.gem || 0) + "</b>" +
+    L(" · 碎片 ", " · Shards ") + "<b>" + (TOWN.hero.shard || 0) + "</b>";
   const H = TOWN.hero, box = $("heroBody");
+  if(heroTab === "craft"){ renderHeroCraft(box); return; }
   if(heroTab === "roster"){
     box.innerHTML = "<div class=\"hrgrid\">" + HEROES.map(function(h){
       const rec = H.own[h.id];
@@ -7543,8 +7558,8 @@ function renderHero(){
     box.innerHTML = "<div class=\"hrpull\">" +
       "<div class=\"hrpity\">" + L("再 <b>" + left + "</b> 抽必出传奇", "Legendary guaranteed within <b>" + left + "</b> pulls") + "</div>" +
       "<div class=\"hrbtns\">" + btn(1, HERO_PULL) + btn(10, HERO_PULL10) + "</div>" +
-      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 重复的攒着升星（★n 升 ★n+1 要 n 张），★5 之后退宝石",
-                                       "Ten-pull: at least one Epic · Duplicates stack toward stars (★n→★n+1 needs n), past ★5 they refund gems") + "</div>" +
+      "<div class=\"hrnote\">" + L("十连至少一个史诗 · 重复的攒着升星（★n 升 ★n+1 要 n 张），★5 之后变成万能碎片",
+                                       "Ten-pull: at least one Epic · Duplicates stack toward stars (★n→★n+1 needs n), past ★5 they become shards") + "</div>" +
       pool + "</div>";
   }
 }
@@ -7556,6 +7571,39 @@ function heroPullClick(n){
   renderHero();
   if(!res){ toast(L("宝石不够", "Not enough gems")); return; }
   renderHeroGot(res);
+  $("heroGotEyebrow").textContent = L("招募结果", "Recruited");
+  $("veilHeroGot").hidden = false;
+}
+/* 「合成」选项卡：碎片进度、合成按钮（两步确认，定宽定高）、挑一个角色（满星的灰着不能挑）*/
+function renderHeroCraft(box){
+  const H = TOWN.hero, n = H.shard || 0, sel = heroById(heroCraftSel);
+  if(sel && H.own[sel.id] && H.own[sel.id].star >= HERO_STAR_MAX){ heroCraftSel = null; }
+  const s2 = heroById(heroCraftSel), ok = !!s2 && n >= HERO_CRAFT, armed = heroArmed === "craft" && ok;
+  const label = armed ? L("再点一次 · ", "Tap again · ") + s2.n : !s2 ? L("先挑一个角色", "Pick a hero") : n < HERO_CRAFT ? L("碎片不够", "Not enough shards")
+              : L("合成 · ", "Fuse · ") + s2.n;
+  box.innerHTML = "<div class=\"hrpull\">" +
+    "<div class=\"hrshard\"><span>" + L("万能碎片", "Shards") + " <b>" + n + "</b> / " + HERO_CRAFT + "</span>" +
+      "<i class=\"hrbar\"><i style=\"width:" + Math.min(100, Math.round(n / HERO_CRAFT * 100)) + "%\"></i></i></div>" +
+    "<button class=\"btn hrpb hrcgo" + (armed ? " armed" : "") + "\" type=\"button\" data-craftgo=\"1\"" + (ok ? "" : " disabled") + ">" +
+      "<b>" + label + "</b><i>" + HERO_CRAFT + L(" 碎片", " shards") + "</i></button>" +
+    "<div class=\"hrnote\">" + L("★5 之后再抽到重复的：稀有 +" + HERO_SHARD[1] + " · 史诗 +" + HERO_SHARD[2] + " · 传奇 +" + HERO_SHARD[3],
+                                   "Duplicates past ★5: Rare +" + HERO_SHARD[1] + " · Epic +" + HERO_SHARD[2] + " · Legendary +" + HERO_SHARD[3]) + "</div>" +
+    "<div class=\"hrgrid\">" + HEROES.map(function(h){
+      const rec = H.own[h.id], full = !!rec && rec.star >= HERO_STAR_MAX;
+      return "<button class=\"hrcell hq" + h.r + (rec ? "" : " locked") + (heroCraftSel === h.id ? " sel" : "") + "\" type=\"button\" data-craft=\"" + h.id + "\"" + (full ? " disabled" : "") + ">" +
+        heroArtHtml(h.id) + "<b>" + h.n + "</b>" +
+        "<span class=\"hrstar\">" + (rec ? heroStars(rec.star) + (rec.star < HERO_STAR_MAX ? "<i>" + (rec.cp || 0) + "/" + heroStarNeed(rec.star) + "</i>" : "") : L("未招募", "Not yet")) + "</span>" +
+        "<span class=\"hrlv\">" + (full ? L("已满星", "Max ★") : HERO_RAR(h.r)) + "</span></button>";
+    }).join("") + "</div></div>";
+}
+function heroCraftClick(){
+  if(heroArmed !== "craft"){ heroArmed = "craft"; renderHero(); return; }
+  heroArmed = "";
+  const res = heroCraft(heroCraftSel);
+  renderHero();
+  if(!res){ toast(L("碎片不够", "Not enough shards")); return; }
+  renderHeroGot([res]);
+  $("heroGotEyebrow").textContent = L("合成结果", "Fused");
   $("veilHeroGot").hidden = false;
 }
 function renderHeroGot(res){
@@ -7563,12 +7611,12 @@ function renderHeroGot(res){
   box.className = "hrgot" + (res.length > 1 ? " ten" + (UI_EN ? " en" : "") : "");   // 英文名长，十连排 4 列
   box.innerHTML = res.map(function(x, i){
     const h = heroById(x.id);
-    /* 十连的卡片窄（360 宽上一格五十来像素），标签写短的：升星只写升到几星、退宝石只写数 */
+    /* 十连的卡片窄（360 宽上一格五十来像素），标签写短的：升星只写升到几星、碎片只写数 */
     const ten = res.length > 1;
     const tag = x.kind === "new" ? "<em class=\"new\">" + L("新", "New") + "</em>"
               : x.kind === "star" ? "<em class=\"up\">" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
               : x.kind === "copy" ? "<em>★" + x.star + " · " + x.cp + "/" + x.need + "</em>"
-              : "<em class=\"gem\">+" + x.gem + (ten ? "" : L(" 宝石", " gems")) + "</em>";
+              : "<em class=\"gem\">+" + x.shard + (ten ? "" : L(" 碎片", " shards")) + "</em>";
     return "<div class=\"hrgc hq" + x.r + "\" style=\"animation-delay:" + (i * 90) + "ms\">" + heroArtHtml(x.id) +
       "<b>" + (h ? h.n : x.id) + "</b>" + tag + "</div>";
   }).join("");
@@ -8826,6 +8874,10 @@ function codeIO(io){
         const cp = io.num("hk", E ? rec.cp || 0 : 0);
         if(!E && h && out.town.hero.own[h.id]) out.town.hero.own[h.id].cp = cp;
       }
+    },
+    function(){                                            // 角色的万能碎片（2026-10-15，满星之后的重复变的）
+      const v = io.num("hf", E ? TOWN.hero.shard || 0 : 0);
+      if(!E && out.town.hero) out.town.hero.shard = v;
     }
     /* ⚠️ 新的一段只许加在这儿（最后）*/
   ];
@@ -9791,9 +9843,11 @@ Array.prototype.forEach.call(document.querySelectorAll(".hrsub"), function(b){
   b.addEventListener("click", function(){ heroTab = b.dataset.hrsub; heroArmed = ""; renderHero(); $("heroBody").scrollTop = 0; });
 });
 $("heroBody").addEventListener("click", function(e){
-  const c = e.target.closest ? e.target.closest("[data-id],[data-pull]") : null;
+  const c = e.target.closest ? e.target.closest("[data-id],[data-pull],[data-craft],[data-craftgo]") : null;
   if(!c || c.disabled) return;
   if(c.dataset.pull) heroPullClick(+c.dataset.pull);
+  else if(c.dataset.craftgo) heroCraftClick();
+  else if(c.dataset.craft){ heroCraftSel = c.dataset.craft; heroArmed = ""; const st = $("heroBody").scrollTop; renderHero(); $("heroBody").scrollTop = st; }
   else openHeroInfo(c.dataset.id);
 });
 $("btnHeroInfoBack").addEventListener("click", function(){ $("veilHeroInfo").hidden = true; });
