@@ -6982,12 +6982,14 @@ function fixHero(h){
   return o;
 }
 /* 经验 → 等级：从 n 级升到 n+1 级要 n × (HERO_XP_A + HERO_XP_B × n)（2026-10-15 用户要「养成变难」改成这条更陡的）。
-   返回 {lv, cur:这一级攒了多少, need:这一级要多少（满级是 0）} */
+   等级不封顶（用户 2026-10-15：「等级不做上限，但是 30 级之后就没有提升了，只是做一个记录」）：
+   经验照这条曲线一直往上算等级，数值在 heroValAt() 里按 HERO_LV_MAX 封住。
+   返回 {lv, cur:这一级攒了多少, need:这一级要多少} */
 function heroXpNeed(lv){ return lv * (HERO_XP_A + HERO_XP_B * lv); }
 function heroLvOf(xp){
   let lv = 1, left = Math.max(0, xp || 0);
-  while(lv < HERO_LV_MAX && left >= heroXpNeed(lv)){ left -= heroXpNeed(lv); lv++; }
-  return {lv:lv, cur:lv < HERO_LV_MAX ? left : 0, need:lv < HERO_LV_MAX ? heroXpNeed(lv) : 0};
+  while(left >= heroXpNeed(lv)){ left -= heroXpNeed(lv); lv++; }
+  return {lv:lv, cur:left, need:heroXpNeed(lv)};
 }
 /* 升星：从 ★n 升到 ★n+1 要 n 张重复的（攒着的记在 own[id].cp 上）*/
 function heroStarNeed(star){ return star * HERO_STAR_STEP; }
@@ -7536,7 +7538,7 @@ function renderHero(){
       const rec = H.own[h.id];
       if(!rec) return "<button class=\"hrcell locked hq" + h.r + "\" type=\"button\" data-id=\"" + h.id + "\">" + heroArtHtml(h.id) +
         "<b>" + h.n + "</b><span class=\"hrstar\">" + L("未招募", "Not yet") + "</span><span class=\"hrlv\">" + HERO_RAR(h.r) + "</span></button>";
-      const lv = heroLvOf(rec.xp), pc = lv.need ? Math.round(lv.cur / lv.need * 100) : 100;
+      const lv = heroLvOf(rec.xp), pc = Math.round(lv.cur / lv.need * 100);
       return "<button class=\"hrcell hq" + h.r + (H.cur === h.id ? " cur" : "") + "\" type=\"button\" data-id=\"" + h.id + "\">" +
         (H.cur === h.id ? "<em class=\"hrcur\">" + L("出战", "Active") + "</em>" : "") + heroArtHtml(h.id) +
         "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) +
@@ -7635,7 +7637,8 @@ function renderHeroInfo(){
   const rec = TOWN.hero.own[h.id], lv = rec ? heroLvOf(rec.xp) : {lv:1, cur:0, need:heroXpNeed(1)}, star = rec ? rec.star : 0;
   $("heroInfoEyebrow").textContent = L("角色 · ", "Hero · ") + HERO_RAR(h.r);
   const pctU = h.p.indexOf("{v}%") >= 0 ? "%" : "";
-  const next = rec && lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)) + pctU + L("）", ")") : "";
+  const next = !rec ? "" : lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)) + pctU + L("）", ")")
+             : L("（" + HERO_LV_MAX + " 级封顶，再往上只记等级）", " (maxed at Lv " + HERO_LV_MAX + "; higher levels are just a record)");
   const sline = function(n, txt){
     return "<div class=\"hrs" + (star >= n ? " on" : "") + "\"><span>★" + n + "</span><p>" + txt + "</p></div>";
   };
@@ -7646,9 +7649,9 @@ function renderHeroInfo(){
         (star < HERO_STAR_MAX ? "<i>" + L("再抽到 " + (heroStarNeed(star) - (rec.cp || 0)) + " 张升 ★" + (star + 1),
                                            (heroStarNeed(star) - (rec.cp || 0)) + " more to ★" + (star + 1)) + "</i>" : "")
         : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
-    (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + " / " + HERO_LV_MAX + "</span>" +
-             "<i class=\"hrbar\"><i style=\"width:" + (lv.need ? Math.round(lv.cur / lv.need * 100) : 100) + "%\"></i></i>" +
-             "<span>" + (lv.need ? lv.cur + " / " + lv.need : L("满级", "Max")) + "</span></div>" : "") +
+    (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + "</span>" +
+             "<i class=\"hrbar\"><i style=\"width:" + Math.round(lv.cur / lv.need * 100) + "%\"></i></i>" +
+             "<span>" + lv.cur + " / " + lv.need + "</span></div>" : "") +
     "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1) + "<em>" + next + "</em>" +
       heroEx(h, rec ? lv.lv : 1).map(function(t){ return "<i class=\"hrex\">" + t + "</i>"; }).join("") + "</p></div>" +
     sline(3, h.s3) + sline(5, h.s5) +

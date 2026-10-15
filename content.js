@@ -1875,7 +1875,7 @@ var HERO_STAR_MAX = 5;
    升星：从 ★n 升到 ★n+1 要 n × HERO_STAR_STEP 张重复的（★5 一共要 10 张重复，原来 4 张），攒着的张数记在 own[id].cp 上。
    升级：从 n 级升到 n+1 级要 n × (HERO_XP_A + HERO_XP_B × n) 经验（满级累计 21460，原来 15 × n、累计 6525）。*/
 var HERO_STAR_STEP = 1;
-var HERO_LV_MAX   = 30;
+var HERO_LV_MAX   = 30;       // 数值长到 30 级为止；等级本身不封顶，往上只是记录（用户 2026-10-15）
 var HERO_XP_A     = 10;
 var HERO_XP_B     = 2;
 var HERO_XP_RIGHT = 1;         // 出战时答对一题
