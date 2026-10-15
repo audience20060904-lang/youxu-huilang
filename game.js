@@ -1649,6 +1649,7 @@ function render(){
     }
   }
   camera();
+  if(window.DungeonFX) DungeonFX.move($("map"), cells, W, G.map, P.x, P.y, heroArt(P.hero), heroCls(P.hero));
   renderHud();
 }
 function renderHud(){
@@ -2272,6 +2273,7 @@ function startBattle(m){
   $("foeArt").innerHTML = ART[m.art];
   $("meArt").innerHTML = heroArt(P.hero);
   $("meArt").className = "me" + heroCls(P.hero);
+  if(window.DungeonFX) DungeonFX.resetBattle();
   $("foeName").textContent = m.name;
   $("foeTag").textContent = (m.def && m.def.study) ? L("纯净学习 · 血量无限，随时能撤退", "Pure study · endless HP, retreat any time")
                           : (m.def && m.def.abyss) ? T("深渊 · 血量无限，打穿一层还有一层")
@@ -2373,6 +2375,7 @@ function renderCombo(){
   const was = comboShown;
   comboShown = n;
   if(was === null || was === n || REDUCE_MOTION) return;
+  if(window.DungeonFX && n > was) DungeonFX.combo(n, Math.floor(n / step) > Math.floor(was / step));
   void c.offsetWidth;                       // 强制回流，连着涨两次也能再播一遍
   const cls = n > was ? "up" : "down";
   c.classList.add(cls);
@@ -3073,6 +3076,7 @@ function fxGold(x, y){
 /* 怪倒下：掉的金币飞向「金」，经验飞向「等级」（绿色，跟血/金区分开）*/
 function fxKill(x, y){
   const cell = cells[y * W + x] || $("stageBox");
+  if(window.DungeonFX) DungeonFX.mapKill($("map"), cells[y * W + x]);
   fxFly(cell, $("hGold"), "coin", 6);
   const green = getComputedStyle(document.documentElement)
                   .getPropertyValue("--venom").trim() || "#47702F";
@@ -3702,7 +3706,7 @@ function answer(btn, ok){
       }
     }
     floatNum("foe", "-" + dmg, "dmg");
-    $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
+    if(window.DungeonFX) DungeonFX.attack(crit);
     head = "<span class=\"big ok\">" +
            (B.wager ? T("答对了！") : crit ? T("暴击！") : isSpell ? T("拼对了！") : T("命中！")) + "</span>";
     note = T("你砍中 ") + m.name + T("，造成 <b>") + dmg + T("</b> 点伤害") +
@@ -3944,6 +3948,7 @@ function answer(btn, ok){
       say(m.name + T("晃了一下，血条空了 —— 等确认最后一下。"), "sys");
       return;
     } else {
+      if(window.DungeonFX) DungeonFX.kill();
       setTimeout(function(){ finishBattle(true); }, 760);
       return;
     }
@@ -4023,6 +4028,7 @@ function healUp(n, s0, force){
   if(up > 0) P.hp += up;
   // 汗巾／血锤按「这一层回了多少血」给加成 —— 只算真的进了血条的那部分，转成护盾的不算
   if(up > 0 && G) G.healed = (G.healed || 0) + up;
+  if(up > 0 && B && window.DungeonFX) DungeonFX.heal();
   /* 药剂师（角色第三批）：溢出的那部分存进药瓶（封顶 flaskCap）—— 跟泉涌各算各的 */
   if(spill > 0 && heroOn("apothecary")) P.heroFlask = Math.min(flaskCap(s), (P.heroFlask || 0) + spill);
   let sh = 0;
@@ -4412,6 +4418,11 @@ function hurtSplit(k, v, extra){
 }
 function hurtEnd(final){
   if(!HR) return;
+  // 只在真实结算后播免伤反馈；减伤预览和纯净学习不算格挡。
+  if(final === 0 && !studyNoHurt() && window.DungeonFX){
+    if(HR.rows.slip || HR.rows.glimmer) DungeonFX.dodge();
+    else DungeonFX.block();
+  }
   HR.total = final;
   lastHurtRec = HR;
   HR = null;
@@ -4592,6 +4603,7 @@ function landHit(dmg, m, haunted){
   }
   if(HR) HR.shield += ate;   // 「构成」：护盾吃掉的那一截
   hitLost = left;
+  if(window.DungeonFX) DungeonFX.hurt(left, ate);
   if(left > 0){
     P.hp -= left;
     P.killStreak = 0;         // 连杀线（第十批）：真的掉了血就从头数（护盾全吃掉的那种不算）
