@@ -65,9 +65,9 @@
     if(!r.width || !r.height) return null;
     return {x:r.left+r.width/2, y:r.top+r.height/2, size:Math.max(r.width,r.height)};
   }
-  function stamp(el, type, shape, size){
+  function stamp(el, type, shape, size, position){
     if(!enabled() || !battleOpen()) return null;
-    const p = point(el);
+    const p = position || point(el);
     if(!p) return null;
     const fx = document.createElement("span");
     fx.className = "dfx dfx-" + type;
@@ -83,8 +83,10 @@
     if(fx) fx.textContent = label(zh, en);
   }
   function sparks(el, type, n){
+    // 粒子共享同一次布局读取，避免每追加一颗都强制重新计算页面。
+    const position=point(el);if(!position)return;
     for(let i=0;i<n;i++){
-      const fx = stamp(el, "spark " + type, null, 5);
+      const fx = stamp(el, "spark " + type, null, 5, position);
       if(!fx) break;
       const angle = i * Math.PI * 2 / n + .3;
       const reach = type === "slain" ? 42 : 27;

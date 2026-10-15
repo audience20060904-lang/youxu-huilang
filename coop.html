@@ -1,11 +1,17 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}#gameLoader{position:fixed;inset:0;z-index:9999;background:#f1ebdd;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}#gameLoader[hidden]{display:none}</style></head><body data-coop-page>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>幽墟回廊 · 联机</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" href="style.css">
+<!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
+<link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261016-preload2">
+<script src="preload.js?v=20261016-preload2" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
+  <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
+  <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
+  <button id="loadRetry" type="button" onclick="location.reload()" hidden>重新加载</button>
+  <noscript>请启用 JavaScript 后重新加载游戏。</noscript>
+</div>
 
 <!-- 报错横幅：跟单人版一模一样，出问题直接显示在页面顶部 -->
 <div class="errbar" id="errbar" hidden>
@@ -26,6 +32,7 @@
   }
   window.showErr = show;
   window.addEventListener("error", function(e){
+    if(e.target && e.target.hasAttribute && e.target.hasAttribute("data-optional-font")) return;
     if(e.target && e.target.tagName && /SCRIPT|LINK/.test(e.target.tagName)){
       show("文件加载失败：" + (e.target.src || e.target.href || "?"));
       return;
@@ -832,26 +839,5 @@
   </div>
 </div>
 
-<!-- 加载顺序不能乱：util 提供全局函数，data 依赖 util，net 提供联机通道，game 依赖全部。
-     window.__COOP 必须在 i18n.js 之前设好（联机固定中文界面 + 学英语）。 -->
-<script>window.__COOP = true;</script>
-<script src="util.js"></script>
-<script src="i18n.js"></script>
-<script src="words-a1.js"></script>
-<script src="words-zh.js"></script>
-<script src="words-es.js"></script>
-<script src="words-ja.js"></script>
-<script src="syn.js"></script>
-<script src="defs-en.js"></script>
-<script src="content.js"></script>
-<script src="orb.js"></script>
-<script src="art.js"></script>
-<script src="monster-art.js"></script>
-<script src="dungeon-scene.js"></script>
-<script src="net.js"></script>
-<script src="compact-save.js"></script>
-<script src="hero-system.js"></script>
-<script src="heirlooms.js"></script>
-<script src="dungeon-fx.js"></script>
-<script src="game.js"></script>
+<!-- preload.js 并行预取资源，按依赖顺序执行；词库索引准备完后再启动游戏。 -->
 </body></html>

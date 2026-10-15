@@ -1,9 +1,9 @@
 /* Run: node dev/check-dungeon-fx.js. UI lifecycle + actual damage settlement hooks. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
-const root=path.join(__dirname,'..'),timers=new Map(),nodes=[],listeners={};let nextTimer=0,groups=0;
+const root=path.join(__dirname,'..'),timers=new Map(),nodes=[],listeners={};let nextTimer=0,groups=0,layoutReads=0;
 function element(id){
  const el={id,children:[],style:{setProperty(k,v){this[k]=v;}},className:'',hidden:false,offsetWidth:30,offsetHeight:30,offsetLeft:0,offsetTop:0,
-  setAttribute(k,v){this[k]=v;},addEventListener(){},getClientRects(){return [{}];},getBoundingClientRect(){return {left:10,top:10,width:40,height:40};},
+  setAttribute(k,v){this[k]=v;},addEventListener(){},getClientRects(){return [{}];},getBoundingClientRect(){layoutReads++;return {left:10,top:10,width:40,height:40};},
   appendChild(n){n.parentNode=this;this.children.push(n);},remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);},
   animate(frames,options){const a={frames,options,cancelled:false,cancel(){this.cancelled=true;},finished:new Promise(()=>{})};this.lastMotion=a;return a;}};
  return el;
@@ -22,6 +22,10 @@ check('Attack and critical hits are distinct, decorative, and bounded under rapi
  assert(body.children.every(n=>n['aria-hidden']==='true'));
  fx.resetBattle();fx.attack(true);assert.equal(count('dfx-slash'),2);assert.equal(count('dfx-spark'),9);
  for(let i=0;i<20;i++)fx.attack(true);assert(body.children.length<=48);drain();assert.equal(body.children.length,0);
+});
+check('Critical and kill particle bursts share geometry reads instead of one layout read per particle',()=>{
+ fx.resetBattle();let before=layoutReads;fx.attack(true);assert.equal(layoutReads-before,4);drain();
+ before=layoutReads;fx.kill();assert.equal(layoutReads-before,3);fx.resetBattle();drain();
 });
 check('Shield, HP damage, dodge, and healing have separate feedback',()=>{
  fx.hurt(0,8);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),0);drain();

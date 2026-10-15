@@ -18,6 +18,14 @@
 /* 必须自己声明：下面很多类显式设了 display，会盖掉浏览器对 hidden 的默认样式。
    artifact 外壳自带这条，所以缺了只有本地会穿帮。 */
 [hidden]{display:none !important}
+.game-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:radial-gradient(ellipse at 50% 38%,#fdf9ed,#e7dfce);color:#4b493e;font-family:var(--body);text-align:center}
+.game-loader h1{font-family:var(--disp);font-size:28px;font-weight:600;letter-spacing:7px;margin:0 0 12px}
+.loader-emblem{width:76px;height:76px;border:1px solid #bca982;border-radius:50%;display:grid;place-items:center;font-size:49px;color:#977640;background:#faf5e655;box-shadow:0 0 0 8px #aa956414,inset 0 0 18px #bcaa7d22}
+.game-loader p{font-size:13px;min-height:20px;color:#7a715d;margin:0}
+.game-loader progress{appearance:none;width:min(250px,76vw);height:5px;border:0;border-radius:4px;background:#d7cdb6;overflow:hidden}
+.game-loader progress::-webkit-progress-bar{background:#d7cdb6}.game-loader progress::-webkit-progress-value{background:#a38342}.game-loader progress::-moz-progress-bar{background:#a38342}
+#loadCount{font:12px var(--mono);color:#8a795b}#loadRetry{font:14px var(--body);padding:9px 24px;background:#f9f4e8;border:1px solid #b9a77b;border-radius:5px;color:#65512b;cursor:pointer}
+.game-loader[data-failed="true"] progress{opacity:.35}
 html,body{height:100%}
 /* 双击不放大、也不给页面回弹的空间 —— 整个界面是固定一屏的游戏画面。
    manipulation 只砍掉「双击缩放」这一项，单击、滚动、长按全都照常。 */
@@ -417,6 +425,7 @@ body{
 .veil{position:fixed;inset:0;background:rgba(58,48,32,.42);backdrop-filter:blur(2px);
   display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;z-index:30}
 .veil[hidden]{display:none !important}
+#veilBattle{backdrop-filter:none;-webkit-backdrop-filter:none}
 .sheet{width:100%;max-width:560px;background:var(--stone);border:1px solid var(--edge);border-radius:4px;
   box-shadow:0 18px 50px rgba(70,58,38,.28);padding:18px;display:flex;flex-direction:column;gap:13px;margin-block:auto;
   max-height:calc(100dvh - 28px);overflow:hidden}

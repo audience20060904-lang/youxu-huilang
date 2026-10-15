@@ -1591,8 +1591,9 @@ function thingAt(x,y){
 }
 function paintMapCell(c,html){
   if(c._sceneHtml!==html){c.innerHTML=html;c._sceneHtml=html;}
-  const mate=c.querySelector(".matepawn");if(mate)mate.remove();
+  if(COOP){const mate=c.querySelector(".matepawn");if(mate)mate.remove();}
 }
+function paintMapClass(c,classes){if(c.className!==classes)c.className=classes;}
 function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer");}
 function render(){
   const cleared = G.mobs.length === 0;
@@ -1600,11 +1601,11 @@ function render(){
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const c = cells[y*W + x];
     const isGoal = G.goal && G.goal.x === x && G.goal.y === y;
-    if(!G.seen[y][x]){ paintMapCell(c,""); c.className = "c dark"; continue; }
+    if(!G.seen[y][x]){ paintMapCell(c,""); paintMapClass(c,"c dark"); continue; }
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
     // 离地板两格以上的实心墙不画，露出取景框的底（见上面 wallEdge）
-    if(isWall && !wallEdge(x, y)){ c.textContent = ""; c.className = "c void"; continue; }
+    if(isWall && !wallEdge(x, y)){ paintMapCell(c,""); paintMapClass(c,"c void"); continue; }
     const base = isWall ? "wall" : "floor";
     let glyph = "";              // 地图上已经没有字符了；留着是给没配图的怪兜底
     let content = isWall ? "" : "dot";   // 空地板上那个点是 CSS 画的（.c.dot::before），不占内容
@@ -1636,13 +1637,13 @@ function render(){
     }
     if(x === P.x && y === P.y){
       paintMapCell(c,""); // 人物独立于格子，和镜头以同样的曲线连续移动。
-      c.className = "c floor you walkable" + heroCls(P.hero) + (isGoal ? " goal" : "");
+      paintMapClass(c,"c floor you walkable" + heroCls(P.hero) + (isGoal ? " goal" : ""));
       continue;
     }
     // 地图上的东西全是画出来的。glyph 只在某只怪没配图时才派上用场
     paintMapCell(c,art || glyph);
-    c.className = "c " + base + " " + content + (visible ? "" : " mem") +
-                  (isWall ? "" : " walkable") + (isGoal ? " goal" : "");
+    paintMapClass(c,"c " + base + " " + content + (visible ? "" : " mem") +
+                  (isWall ? "" : " walkable") + (isGoal ? " goal" : ""));
     if(tutAt && tutAt.x === x && tutAt.y === y) c.classList.add("tutmark");   // 新手教程：这一步要点的那一格
   }
   // 联机：队友棋子（逻辑不占格子，纯视觉叠一层在队友最后上报的位置上，见 coopMateX/Y）
@@ -1919,6 +1920,11 @@ function renderRunAttributes(s,pct,cc){
     '<section class="attribute-group"><h3>'+L("遗物效果与触发进度","Relic effects and progress")+'</h3>'+(traits?'<ul class="attribute-traits">'+traits+'</ul>':'<p class="info-caption">'+L("尚未装备遗物。","No relics equipped.")+'</p>')+'</section>';
 }
 function renderSheets(s){
+  const own=(P&&P.relics)||[],dot=$("bagDot");dot.textContent=own.length;dot.hidden=!own.length;
+  renderMate();
+  const infoOn=$("viewInfo").classList.contains("on"),bagOn=$("viewRelic").classList.contains("on");
+  if(!infoOn){if(bagOn)renderRelics();return;}
+
   /* 「属性」（用户 2026-09-25 要补全）：伤害公式里每一桶都摆出来。
      数字全走 answer() / mitigate() 用的同一套函数（pctSteady / flatSteady / extraSteady / critSteady / cutState），
      只算**常驻**的那部分 —— 拼对、打中弱点、冒险、答得快这种「这一刀才有」的不算。
@@ -1963,8 +1969,6 @@ function renderSheets(s){
     st(T("正确率"), acc) + st(T("击杀"), P.kills) +
     st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl)) +
     st(L("最高连击","Best combo"),P.maxCombo||0);
-  renderRelics();
-  renderMate();
 }
 
 /* 错题本（用户 2026-09-27，信息页）：按「一共答错过几次」排，只列正在学的这门语言，前 MISS_BOOK_N 个 */
@@ -2495,21 +2499,9 @@ function chapterPos(){
 }
 /* 把词池收到**某一个难度**上。干扰项走的是这一条（跟题目那个词同难度，见 nextQuestion）。
    筛得太窄就逐级回退，**永远不返回空数组** —— 出不出题直接关系到能不能打。*/
-function scopeToLevel(pool, want){
-  let out = pool.filter(function(w){ return (w.lv || 1) === want; });
-  if(out.length >= 6) return out;
-  out = ALLW.filter(function(w){ return (w.lv || 1) === want; });
-  return out.length >= 6 ? out : pool;
-}
-/* 把词池收到**这一章的那几档难度**上（无尽章是三档，别的章就一档）。*/
-function scopeToLevels(pool, want){
-  const set = {};
-  want.forEach(function(l){ set[l] = true; });
-  let out = pool.filter(function(w){ return set[w.lv || 1]; });
-  if(out.length >= 6) return out;
-  out = ALLW.filter(function(w){ return set[w.lv || 1]; });
-  return out.length >= 6 ? out : pool;
-}
+function scopeToLevel(pool, want){ return LearningCache.scope(pool,[want],ALLW); }
+/* 静态词池按难度组合缓存；熟练度、到期时间和本局已答仍实时筛选。 */
+function scopeToLevels(pool, want){ return LearningCache.scope(pool,want,ALLW); }
 function scopeByLevel(pool){
   return scopeToLevels(pool, quizLvs());
 }
@@ -2548,26 +2540,21 @@ function pickQuizWord(cat){
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
   const dueMin = heroOn("keeper") ? Math.max(DUE_MIN, HERO_KEEPER_DUE) : DUE_MIN;   // 守夜人：复习题至少占 40%
   const dueRate = dueMin + (DUE_MAX - dueMin) * Math.min(1, due.length / DUE_FULL);
-  const bag = [];
+  let draw;
   if(due.length && Math.random() < dueRate){
-    /* 到期的词里「现在还记得住的概率」越低放得越多 —— 最快要忘的先出 */
-    due.forEach(function(w){
-      const n = 1 + Math.round((1 - lexRecall(LEX[lexKey(w)], today)) * 10);
-      for(let i=0;i<n;i++) bag.push(w);
-    });
+    draw=LearningCache.weighted(due,function(w){return 1+Math.round((1-lexRecall(LEX[lexKey(w)],today))*10);});
   } else {
-    if(fresh.length && Math.random() < NEW_WORD_RATE) pool = fresh;
-    /* 袋子里放几份：熟练度越低越多，上次答错 +3，难度（df）每高出 5 一格再 +1 */
-    pool.forEach(function(w){
-      const r = LEX[lexKey(w)], s = r ? (r.str || 0) : 0;
-      let wt = s >= 3 ? 1 : s === 2 ? 2 : s === 1 ? 3 : 4;
-      if(r && r.wrong) wt += 3;
-      if(r && r.df) wt += Math.max(0, Math.round(r.df) - 5);
-      for(let i=0;i<wt;i++) bag.push(w);
+    if(fresh.length && Math.random() < NEW_WORD_RATE) pool=fresh;
+    draw=LearningCache.weighted(pool,function(w){
+      const r=LEX[lexKey(w)],s=r?(r.str||0):0;
+      let wt=s>=3?1:s===2?2:s===1?3:4;
+      if(r&&r.wrong)wt+=3;
+      if(r&&r.df)wt+=Math.max(0,Math.round(r.df)-5);
+      return wt;
     });
   }
-  let w = pick(bag), guard = 0;
-  while(B && B.q && w.en === B.q.word.en && guard++ < 12) w = pick(bag);
+  let w=draw(),guard=0;
+  while(B&&B.q&&w.en===B.q.word.en&&guard++<12)w=draw();
   return w;
 }
 /* 这一题出拼写的概率：底子 10%，拼写流的两件遗物各再加 15%。
@@ -9741,6 +9728,7 @@ function showView(id){
   });
   // 地图在隐藏时量不到尺寸，切回来必须重算一次
   if(id === "viewAdv") sizeMap();
+  if(id === "viewInfo" || id === "viewRelic") renderHud();
   // 进设置页就把本地存档重读一遍，省得看着上一趟的数字
   if(id === "viewSet") refreshSaveState();
   // 宝珠的两页：换页就把没点完的两步确认和上一条消息清掉
@@ -11092,6 +11080,7 @@ if(COOP){ $("panelLang").hidden = true; $("btnTutorial").hidden = true; }   // �
 /* ================= 启动 =================
    打开就自动接着上次存下的那一层 —— 不问、不弹窗（单人版、联机版都一样，
    联机版没组队也能先逛主城）。不想接着走的话，取景框左下角有「放弃」。 */
+function bootGame(){
 renderLock();                      // 「锁定冒险」的开关状态存在 OPT 里，开局先摆正
 (function boot(){
   const s = readRun();
@@ -11110,4 +11099,12 @@ renderLock();                      // 「锁定冒险」的开关状态存在 OP
   if(autoMasterBasics()) commitPerm();   // 老档可能早就满足条件了，开页面时补一次
 })();
 refreshSaveState();
+}
+if(window.GameBoot)GameBoot.register({
+  prepare:[
+    {label:"整理词义与近义词",run:function(){synIndex();}},
+    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}}
+  ],start:bootGame
+});
+else bootGame();
 })();
