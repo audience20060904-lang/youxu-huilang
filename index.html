@@ -359,6 +359,7 @@
 <div class="veil" id="veilBattle" hidden>
   <div class="sheet battle">
     <div class="foe">
+      <div class="battle-statuses foe-statuses" id="foeStatuses" aria-label="怪物的祝福与负面状态" hidden></div>
       <div class="portrait" id="foeArt"></div>
       <div class="foe-info">
         <div class="foe-tag" id="foeTag">遭遇</div>
@@ -373,7 +374,6 @@
     <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
 
     <div class="qcard" id="qcard">
-      <div class="battle-statuses" id="battleStatuses" aria-label="祝福与负面状态"></div>
       <!-- 7 秒读条：绝对定位压在卡片顶边，不占纵向空间（战斗窗答题前后必须同高）。
            拼写题不上它。 -->
       <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
@@ -408,7 +408,10 @@
     <div class="mybar">
       <div class="me" id="meArt"></div>
       <div class="col">
+        <div class="player-vitals">
+          <div class="battle-statuses player-statuses" id="playerStatuses" aria-label="玩家的祝福与负面状态" hidden></div>
         <div class="hpbar" id="bHpBar"><div class="fill" id="bHpFill"></div><div class="sh" id="bHpShield"></div><div class="txt" id="bHpTxt"></div></div>
+        </div>
       </div>
     </div>
   </div>

@@ -143,7 +143,7 @@ Object.assign(I18N, {
 " <span class=\"sys\">(驱邪 · 回 ": " <span class=\"sys\">(Exorcism · healed ",
 " <span class=\"sys\">(刹那攒满了 —— 下一刀 +": " <span class=\"sys\">(Instant is charged — next strike +",
 " <span class=\"sys\">(凝盾 · 护盾 ": " <span class=\"sys\">(Aegis · shield ",
-"冒对了！": "Risk paid off!",
+"答对了！": "Correct!",
 "暴击！": "Critical!",
 "拼对了！": "Spelled it!",
 "命中！": "Hit!",

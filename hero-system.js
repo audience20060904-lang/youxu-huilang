@@ -48,11 +48,11 @@ if(typeof HEROES!=='undefined') HEROES.forEach(function(h){
   const k=HeroRules.kits[h.id],en=typeof UI_EN!=='undefined'&&UI_EN;
   const name=key=>HeroRules.effects[key][en?1:0];
   h.growth=[en?'Base passive unlocked':'解锁基础被动',
-    en?'Passive values +12%; every 2 right answers gain 2 '+name(k[0]):'被动数值累计 +12%；每答对 2 题获得 2 层'+name(k[0]),
-    (en?'Passive values +24%; ':'被动数值累计 +24%；')+h.s3,
-    en?'Passive values +36%; blessing caps +1; signature grants 3 stacks':'被动数值累计 +36%；所有祝福上限 +1；招牌祝福改为 3 层',
-    (en?'Passive values +48%; ':'被动数值累计 +48%；')+h.s5,
-    (en?'Passive values +60%; ':'被动数值累计 +60%；')+(HeroRules.finales[h.id]?HeroRules.finales[h.id][en?1:0]:en?'Every 3 right answers gain 3 '+name(k[2])+' and '+name(k[3])+'; apply 2 Weakness':'每答对 3 题获得'+name(k[2])+'、'+name(k[3])+'各 3 层，并使敌人衰弱 2 层')];
+    en?'Every 2 right answers gain 2 '+name(k[0]):'每答对 2 题获得 2 层'+name(k[0]),
+    h.s3,
+    en?'Blessing caps +1; signature grants 3 stacks':'所有祝福上限 +1；招牌祝福改为 3 层',
+    h.s5,
+    HeroRules.finales[h.id]?HeroRules.finales[h.id][en?1:0]:en?'Every 3 right answers gain 3 '+name(k[2])+' and '+name(k[3])+'; apply 2 Weakness':'每答对 3 题获得'+name(k[2])+'、'+name(k[3])+'各 3 层，并使敌人衰弱 2 层'];
   if(['mage','tamer','debater'].includes(h.id))h.growth[1]+=en?'; every 3 right answers apply 2 '+(h.id==='mage'?'rotating Scorch / Weakness / Exposed':h.id==='tamer'?'Bleed':'Weakness'):'；每答对 3 题施加 2 层'+(h.id==='mage'?'灼蚀／衰弱／破绽（轮转）':h.id==='tamer'?'裂伤':'衰弱');
   if(typeof HOLY_NO_BLESS!=='undefined')HOLY_NO_BLESS.push('hx_'+h.id);
   RELICS.push({id:'hx_'+h.id,r:h.r===3?3:2,n:en?h.n+' · Heirloom':k[1],heroOnly:h.id,nobf:true,

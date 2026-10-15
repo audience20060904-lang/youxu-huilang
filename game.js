@@ -3345,7 +3345,7 @@ function answer(btn, ok){
     // 第三层 · 点伤（百分比之后才加，吃暴击、被护甲减）
     let flat = 0;
     if(hitWeak) flat += tg("f", "@weak", 2);                                                  // 打中弱点：③点伤 +2
-    if(B.wager && hasRelic("gambler")) flat += tg("f", "gambler", GAMBLER_FLAT);                // 赌徒：冒对了再加一笔点伤
+    if(B.wager && hasRelic("gambler")) flat += tg("f", "gambler", GAMBLER_FLAT);                // 赌徒：冒险答对后再加一笔点伤
     let surge = false;
     if(hasRelic("surge") && luck(.25, "surge")){ flat += tg("f", "surge", SURGE_FLAT); surge = true; } // 潮汐
     flat += flatSteady(s);                                                  // 镜盾 / 血锤 / 沉拳 / 血刃（信息页同一个口径）
@@ -3702,7 +3702,7 @@ function answer(btn, ok){
     floatNum("foe", "-" + dmg, "dmg");
     $("foeArt").classList.remove("hurt"); void $("foeArt").offsetWidth; $("foeArt").classList.add("hurt");
     head = "<span class=\"big ok\">" +
-           (B.wager ? T("冒对了！") : crit ? T("暴击！") : isSpell ? T("拼对了！") : T("命中！")) + "</span>";
+           (B.wager ? T("答对了！") : crit ? T("暴击！") : isSpell ? T("拼对了！") : T("命中！")) + "</span>";
     note = T("你砍中 ") + m.name + T("，造成 <b>") + dmg + T("</b> 点伤害") +
            (hitWeak ? T("（正中弱点）") : "") +
            (surge ? T("，浪涌炸开") : "") +
@@ -7003,17 +7003,19 @@ function statusCutPct(){
   return statusN(P,"stone")*5-statusN(P,"exposed")*5+statusN(B&&B.mob,"weak")*6;
 }
 function statusLabel(k){return HeroRules.effects[k][UI_EN?1:0];}
-function statusChips(owner,enemy){
+function statusChips(owner){
   if(!owner || !owner.status)return "";
   return Object.keys(HeroRules.effects).filter(k=>statusN(owner,k)>0).map(function(k){
     const debuff=HeroRules.negative.includes(k),n=statusN(owner,k);
-    return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+(enemy?L("敌·","Foe·"):"")+statusLabel(k)+" <b>"+n+"</b></button>";
+    return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+statusLabel(k)+" <b>"+n+"</b></button>";
   }).join("");
 }
 function renderStatuses(){
-  const el=$("battleStatuses");if(!el)return;
-  el.innerHTML=statusChips(P,false)+statusChips(B&&B.mob,true);
-  if(!el.innerHTML)el.innerHTML="<span class=\"status-empty\">"+L("祝福随答题回合流转","Blessings flow with each answer")+"</span>";
+  [{id:"playerStatuses",owner:P},{id:"foeStatuses",owner:B&&B.mob}].forEach(function(row){
+    const el=$(row.id);if(!el)return;
+    el.innerHTML=statusChips(row.owner);
+    el.hidden=!el.innerHTML;
+  });
 }
 function statusInfoHtml(cap){
   return "<b>"+L("祝福上限 ","Blessing cap ")+(cap||statusCap())+"</b><p>"+L("每回答一次结算一回合：旧效果生效后减少一层，再获得新层数。超时不结算。答错时敌人会轮流施加衰弱、破绽或侵毒（普通 1 层，Boss 2 层）。","Each submitted answer settles old effects, removes one stack, then grants new stacks. Timeouts do not advance rounds. Wrong answers rotate Weakness, Exposed and Venom (1 stack, or 2 for bosses).")+"</p>"+
@@ -7601,7 +7603,7 @@ function heroUpgrade(){
   const rec=heroRec(heroInfoId);
   if(SCENE==="run" || !rec || rec.star>=6 || !(rec.cp>0)) return;
   rec.cp--; rec.star++; commitPerm(); renderHeroInfo(); renderHero(); renderTown();
-  toast(L("升星成功 · ★","Upgraded · ★")+rec.star);
+  toast(L("升星成功 · ","Upgraded · ")+rec.star);
 }
 function heroPull(n){
   if(n!==1 && n!==10) return null;
@@ -7640,8 +7642,11 @@ function heroCraft(id){
    纯界面状态（heroTab / heroArmed / heroInfoId）不进存档。花宝石的按钮两步确认（跟祝福 / 宝珠一样）。*/
 let heroTab = "roster", heroArmed = "", heroInfoId = null, heroCraftSel = null;   // heroCraftSel：「合成」里挑中的那一个
 const HERO_RAR = function(r){ return [L("普通", "Common"), L("稀有", "Rare"), L("史诗", "Epic"), L("传奇", "Legendary")][r] || ""; };
-function heroStars(n){ return "★".repeat(n) + "☆".repeat(Math.max(0, HERO_STAR_MAX - n)); }
-function heroArtHtml(id, cls){ return "<span class=\"hrart hr-" + id + (cls ? " " + cls : "") + "\">" + heroArt(id) + "</span>"; }
+function heroArtHtml(id, cls, star){
+  const rec=heroRec(id), n=star==null?(rec?rec.star:0):star;
+  return "<span class=\"hrart hr-" + id + (cls ? " " + cls : "") + "\">" + heroArt(id) +
+    (n?"<span class=\"hr-rank\" aria-label=\""+L("星级 ","Star rank ")+n+"\">"+n+"</span>":"")+"</span>";
+}
 function openHero(tab){
   heroTab = tab || heroTab;
   heroArmed = "";
@@ -7666,7 +7671,7 @@ function renderHero(){
       const lv = heroLvOf(rec.xp), pc = Math.round(lv.cur / lv.need * 100);
       return "<button class=\"hrcell hq" + h.r + (H.cur === h.id ? " cur" : "") + "\" type=\"button\" data-id=\"" + h.id + "\">" +
         (H.cur === h.id ? "<em class=\"hrcur\">" + L("出战", "Active") + "</em>" : "") + heroArtHtml(h.id) +
-        "<b>" + h.n + "</b><span class=\"hrstar\">" + heroStars(rec.star) +
+        "<b>" + h.n + "</b><span class=\"hrstar\">" +
           (rec.star < HERO_STAR_MAX ? "<i>" + L("卡 ×", "Cards ×") + (rec.cp || 0) + "</i>" : "") + "</span>" +
         "<span class=\"hrlv\">Lv " + lv.lv + "<i class=\"hrbar\"><i style=\"width:" + pc + "%\"></i></i></span></button>";
     }).join("") + "</div>";
@@ -7714,7 +7719,7 @@ function renderHeroCraft(box){
       const rec = H.own[h.id], full = !!rec && rec.star+(rec.cp||0) >= HERO_STAR_MAX;
       return "<button class=\"hrcell hq" + h.r + (rec ? "" : " locked") + (heroCraftSel === h.id ? " sel" : "") + "\" type=\"button\" data-craft=\"" + h.id + "\"" + (full ? " disabled" : "") + ">" +
         heroArtHtml(h.id) + "<b>" + h.n + "</b>" +
-        "<span class=\"hrstar\">" + (rec ? heroStars(rec.star) + (rec.star < HERO_STAR_MAX ? "<i>" + L("卡 ×", "Cards ×") + (rec.cp || 0) + "</i>" : "") : L("未招募", "Not yet")) + "</span>" +
+        "<span class=\"hrstar\">" + (rec ? (rec.star < HERO_STAR_MAX ? "<i>" + L("卡 ×", "Cards ×") + (rec.cp || 0) + "</i>" : "") : L("未招募", "Not yet")) + "</span>" +
         "<span class=\"hrlv\">" + (full ? L("六星卡已备齐", "Six-star copies ready") : HERO_RAR(h.r)) + "</span></button>";
     }).join("") + "</div></div>";
 }
@@ -7736,7 +7741,7 @@ function renderHeroGot(res){
     /* 十连的卡片窄（360 宽上一格五十来像素），标签写短的：升星只写升到几星、碎片只写数 */
     const ten = res.length > 1;
     const tag = x.kind === "new" ? "<em class=\"new\">" + L("新", "New") + "</em>"
-              : x.kind === "star" ? "<em class=\"up\">" + (ten ? "" : "★" + (x.star - 1) + " → ") + "★" + x.star + "</em>"
+              : x.kind === "star" ? "<em class=\"up\">" + (ten ? "" : (x.star - 1) + " → ") + x.star + "</em>"
               : x.kind === "copy" ? "<em>"+L("重复卡 ×","Copy ×")+x.cp+"</em>"
               : "<em class=\"gem\">+" + x.shard + (ten ? "" : L(" 碎片", " shards")) + "</em>";
     return "<div class=\"hrgc hq" + x.r + "\" style=\"animation-delay:" + (i * 90) + "ms\">" + heroArtHtml(x.id) +
@@ -7759,12 +7764,12 @@ function renderHeroInfo(){
   const next = !rec ? "" : lv.lv < HERO_LV_MAX ? L("（下一级 ", " (next level ") + heroFmt(heroValAt(h, lv.lv + 1)*HeroRules.factor(star||1)) + pctU + L("）", ")")
              : L("（" + HERO_LV_MAX + " 级封顶，再往上只记等级）", " (maxed at Lv " + HERO_LV_MAX + "; higher levels are just a record)");
   const sline = function(n, txt){
-    return "<div class=\"hrs" + (star >= n ? " on" : "") + "\"><span>★" + n + "</span><p>" + txt + "</p></div>";
+    return "<div class=\"hrs" + (star >= n ? " on" : "") + "\"><span>" + n + "</span><p>" + txt + "</p></div>";
   };
   $("heroInfoBody").innerHTML =
-    "<div class=\"hrhead hq" + h.r + "\">" + heroArtHtml(h.id, "big") +
+    "<div class=\"hrhead hq" + h.r + "\">" + heroArtHtml(h.id, "big",star) +
       "<div class=\"hrname\"><b>" + h.n + "</b><i>" + h.line + "</i>" +
-      "<span class=\"hrstar\">" + (rec ? heroStars(star) +
+      "<span class=\"hrstar\">" + (rec ?
         (star < HERO_STAR_MAX ? "<i>" + (run?L("本局出战快照","Run snapshot"):L("重复卡 ","Copies ")+(rec.cp||0)+L(" · 点击按钮升星"," · Tap to upgrade")) + "</i>" : "")
         : L("未招募 · 去招募里抽", "Not recruited yet · pull for it")) + "</span></div></div>" +
     (rec ? "<div class=\"hrxp\"><span>Lv " + lv.lv + "</span>" +
@@ -7780,7 +7785,7 @@ function renderHeroInfo(){
   go.textContent = cur ? L("出战中", "Active") : L("出战", "Set active");
   go.disabled = !rec || cur || SCENE==="run";
   const up=$("btnHeroUpgrade"); up.disabled=SCENE==="run" || !rec || star>=6 || !(rec.cp>0);
-  up.textContent=SCENE==="run"?L("回城后升星","Upgrade in town"):star>=6?L("已达六星","Six stars"):L("升至 ★","Upgrade to ★")+(star+1)+L(" · 1 张"," · 1 copy");
+  up.textContent=SCENE==="run"?L("回城后升星","Upgrade in town"):star>=6?L("已达六星","Six stars"):L("升至 ","Upgrade to ")+(star+1)+L(" 星 · 1 张"," stars · 1 copy");
 }
 function heroGo(){
   if(SCENE==="run" || !heroInfoId || !TOWN.hero.own[heroInfoId]) return;
@@ -9983,7 +9988,10 @@ $("btnHeroGo").addEventListener("click", heroGo);
 $("btnHeroUpgrade").addEventListener("click",heroUpgrade);
 $("btnHeroRun").addEventListener("click",function(){if(P&&P.hero)openHeroInfo(P.hero);});
 $("btnHeroRun").textContent=L("角色详情","Hero details");
-$("battleStatuses").addEventListener("click",function(e){const b=e.target.closest("[data-status]");if(b){const d=HeroRules.effects[b.dataset.status];toast(d[UI_EN?3:2]);}});
+["playerStatuses","foeStatuses"].forEach(function(id){
+  const el=$(id);if(!el)return;
+  el.addEventListener("click",function(e){const b=e.target.closest("[data-status]");if(b){const d=HeroRules.effects[b.dataset.status];toast(d[UI_EN?3:2]);}});
+});
 $("btnHeroGotOk").addEventListener("click", function(){ $("veilHeroGot").hidden = true; renderHero(); });
 $("btnCloseBless").addEventListener("click", closeBless);
 /* 整块委托：开槽位（两步确认）/ 点开着的槽位去挑遗物 */

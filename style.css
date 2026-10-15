@@ -378,19 +378,19 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   max-width:520px;height:min(820px,calc(100svh - 28px));
   display:grid;gap:var(--battle-gap);padding:clamp(10px,1.5svh,16px);
   grid-template-columns:minmax(0,1fr);
-  grid-template-rows:clamp(90px,14svh,112px) clamp(16px,2.4svh,20px)
-    clamp(82px,13svh,112px) minmax(0,1fr) clamp(44px,6.7svh,60px) 38px clamp(38px,5svh,44px);
+  grid-template-rows:clamp(112px,17svh,136px) clamp(16px,2.4svh,20px)
+    clamp(82px,13svh,112px) minmax(0,1fr) clamp(44px,6.7svh,60px) 38px clamp(60px,9svh,76px);
   overflow:hidden;
 }
 /* 每块都有自己的固定位置；换题型只换作答区内容，不改变窗口或底部按钮的位置。 */
 .battle > *{min-width:0}
-.battle > .foe{min-height:0;gap:10px}
+.battle > .foe{position:relative;min-height:0;gap:10px;padding-top:24px}
 .battle > .foe .portrait{width:clamp(60px,10svh,86px);height:auto;aspect-ratio:1;max-height:100%}
 .battle > .foe .foe-info{gap:2px}
 .battle > .foe .foe-name,.battle > .foe .foe-tag{line-height:1.2}
 .battle > .foe .foe-weak{line-height:1.25;margin-top:0}
 .battle > .combo{min-height:0}
-.battle > .qcard{min-height:0;padding:6px 10px 27px;gap:4px;justify-content:center}
+.battle > .qcard{min-height:0;padding:6px 10px;gap:4px;justify-content:center}
 .battle > .qcard .qlabel{flex:none;font-size:clamp(9px,1.5svh,10px);line-height:1.3}
 .battle > .qcard .qword{min-height:0;max-width:100%;overflow-y:auto;overscroll-behavior:contain;
   font-size:clamp(20px,3.5svh,28px);line-height:1.15}
@@ -405,7 +405,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   height:min(100%,318px);width:auto;max-width:100%;aspect-ratio:1;margin:0;
   grid-template-rows:repeat(2,minmax(0,1fr));gap:var(--battle-gap)}
 .quiz-input > .opts .opt{min-width:0;min-height:0;aspect-ratio:auto;padding:5px;}
-.quiz-input > .opts.def{width:100%;aspect-ratio:auto;grid-template-rows:repeat(4,minmax(0,1fr))}
+.quiz-input > .opts.def{width:100%;height:min(100%,318px);min-height:0;aspect-ratio:auto;grid-template-rows:repeat(4,minmax(0,1fr))}
 .quiz-input > .opts.def .opt{padding:5px 10px 4px 32px}
 .quiz-input > .spellbar .spellrow{flex-wrap:nowrap;min-width:0}
 .quiz-input > .spellbar .sbox{height:var(--quiz-control-h);max-height:100%;flex-shrink:1;min-width:0}
@@ -417,10 +417,11 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .battle > .verdict .big{font-size:16px}
 .battle > .rowb{min-height:0;flex-wrap:nowrap}
 .battle > .rowb .btn{height:100%;padding:0 12px;white-space:nowrap}
-.battle > .mybar{min-height:0}
+.battle > .mybar{min-height:0;align-items:flex-end}
 .battle > .mybar .me{max-height:100%}
+.player-vitals{position:relative;padding-top:24px}
 @media (max-height:600px){
-  .sheet.battle{grid-template-rows:78px 16px 74px minmax(0,1fr) 44px 36px 38px}
+  .sheet.battle{grid-template-rows:104px 16px 74px minmax(0,1fr) 44px 36px 60px}
   .battle > .foe .foe-name{font-size:15px}
   .battle > .foe .foe-tag{font-size:9px}
   .battle > .foe .foe-weak{font-size:10px}
@@ -1366,9 +1367,12 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrsubs{display:flex;gap:6px}
 .hrgem{font-size:13px;color:var(--dim)}
 .hrgem b{color:var(--q3)}
-.hrart{display:block;width:44px;height:44px;flex:none}
+.hrart{position:relative;display:block;width:44px;height:44px;flex:none}
 .hrart svg{width:100%;height:100%;display:block}
 .hrart.big{width:72px;height:72px}
+.hr-rank{position:absolute;top:-3px;left:-4px;display:grid;place-items:center;min-width:18px;height:18px;padding:0 3px;
+  border:1px solid #BE964C;border-radius:4px;background:#765318;color:#FFF9EC;font:700 11px/1 var(--mono);box-shadow:0 0 0 1px #FFF9EC;pointer-events:none}
+.hrart.big .hr-rank{min-width:22px;height:22px;font-size:13px}
 .hrbar{display:inline-block;width:40px;height:4px;background:var(--stone-3);border-radius:2px;overflow:hidden;vertical-align:middle}
 .hrbar > i{display:block;height:100%;background:var(--coin)}
 .hrstar{font-size:11px;color:var(--torch);letter-spacing:.5px;white-space:nowrap}
@@ -1386,7 +1390,8 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hrcell.cur{background:#FDF6E7;border-left-color:var(--torch-deep);border-right-color:var(--torch-deep);border-bottom-color:var(--torch-deep)}
 .hrcell{height:132px}
 .hrcell .hrart{width:56px;height:56px}
-.hrcell .hrstar i{position:absolute;top:3px;left:3px;margin:0;padding:0 3px;font-size:9px;line-height:14px;background:var(--stone-2);border-radius:2px}
+.hrcell .hrstar{min-height:16px}
+.hrcell .hrstar i{margin:0;font-size:10px;line-height:14px}
 .hrcell b{font-size:13px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .hrcell.locked .hrart{opacity:.28;filter:grayscale(1)}
 .hrcell.locked b, .hrcell.locked .hrstar{color:var(--faint)}
@@ -1408,10 +1413,9 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .summon-stage svg{width:min(100%,300px);height:auto;filter:drop-shadow(0 8px 9px #51402018)}
 .summon-stage>span{font-size:12px;color:var(--dim);text-align:center;letter-spacing:1px}
 .summon-rules{font-size:11px;color:var(--dim);text-align:center;border-top:1px solid var(--edge-soft);padding:9px 0}
-.battle-statuses{position:absolute;bottom:3px;left:5px;right:5px;display:flex;gap:4px;align-items:center;height:20px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap}
+.battle-statuses{position:absolute;top:0;left:0;right:0;display:flex;gap:4px;align-items:center;height:20px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap}
 .status-chip{flex:none;font:10px/16px var(--mono);padding:0 5px;border:1px solid #68877B66;border-radius:3px;color:#345B46;background:#E9EFE3;cursor:pointer}
 .status-chip.negative{color:#8A3B34;border-color:#B9675F66;background:#F7E9DD}
-.status-empty{font-size:10px;color:var(--faint);margin:auto}
 .hero-status-info{font-size:12px;color:var(--dim);line-height:1.55;border-top:1px dashed var(--edge);padding-top:8px}
 .hero-status-info p{margin:4px 0 8px}
 #veilHeroInfo .rowb{flex-wrap:wrap;gap:6px}

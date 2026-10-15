@@ -406,6 +406,7 @@
 <div class="veil" id="veilBattle" hidden>
   <div class="sheet battle">
     <div class="foe">
+      <div class="battle-statuses foe-statuses" id="foeStatuses" aria-label="怪物的祝福与负面状态" hidden></div>
       <div class="portrait" id="foeArt"></div>
       <div class="foe-info">
         <div class="foe-tag" id="foeTag">遭遇</div>
@@ -419,7 +420,6 @@
     <div class="combo none" id="combo"><span class="cmb-n">连击 <b>×0</b></span><span class="cmb-p off">伤害 +0%</span><span class="cmb-next">再对 5 个 +2%</span></div>
 
     <div class="qcard" id="qcard">
-      <div class="battle-statuses" id="battleStatuses" aria-label="祝福与负面状态"></div>
       <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
       <div class="qlabel" id="qLabel">这个词是什么意思？</div>
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
@@ -453,7 +453,10 @@
       <div class="me" id="meArt"></div>
       <div class="col">
         <div class="hpbar mate" id="bMateHpBar" hidden><div class="fill" id="bMateHpFill"></div><div class="txt" id="bMateHpTxt"></div></div>
+        <div class="player-vitals">
+          <div class="battle-statuses player-statuses" id="playerStatuses" aria-label="玩家的祝福与负面状态" hidden></div>
         <div class="hpbar" id="bHpBar"><div class="fill" id="bHpFill"></div><div class="sh" id="bHpShield"></div><div class="txt" id="bHpTxt"></div></div>
+        </div>
       </div>
     </div>
   </div>
