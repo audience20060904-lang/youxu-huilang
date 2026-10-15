@@ -141,33 +141,30 @@
     </section>
 
     <section class="view" id="viewInfo" role="tabpanel" aria-labelledby="navInfo" tabindex="0">
-      <!-- 跟「本局战绩」一样，没进冒险时整块藏起来（用户 2026-09-25） -->
-      <div class="panel" id="panelStats">
-        <div class="phead">属性 Attributes</div>
-        <div class="stats" id="stats"></div>
-        <!-- 复制本局码：测试用（用户 2026-10-15），把这一局整份复制成一串码，发给 Claude 复现 / 调平衡 -->
-        <div class="partsrow">
-          <button class="btn ghost partsbtn" id="btnParts" type="button">构成</button>
-          <button class="btn ghost partsbtn" id="btnHeroRun" type="button">角色详情</button>
-          <button class="btn ghost partsbtn" id="btnRunCode" type="button">复制本局码</button>
+      <div class="info-tabs" role="tablist" aria-label="信息分类">
+        <button type="button" class="info-tab on" id="infoTabRun" role="tab" aria-controls="infoRun" aria-selected="true" data-info="run">角色局内信息</button>
+        <button type="button" class="info-tab" id="infoTabLearn" role="tab" aria-controls="infoLearn" aria-selected="false" tabindex="-1" data-info="learn">学习与图鉴</button>
+      </div>
+      <div class="info-page" id="infoRun" role="tabpanel" aria-labelledby="infoTabRun" tabindex="0">
+        <div class="panel info-empty" id="infoRunEmpty"><b>尚未开始冒险</b><p>进入冒险后，可查看本局角色、属性、技能与战绩。</p></div>
+        <div class="panel" id="panelStats">
+          <div class="run-hero" id="runHeroIdentity"></div>
+          <div class="phead">主要属性</div>
+          <div class="stats primary-stats" id="stats"></div>
+          <details class="full-stats" id="fullStats"><summary><span>完整属性</span><small>攻击 · 防御 · 资源 · 当前效果</small></summary><div id="statsMore"></div></details>
+          <div class="partsrow">
+            <button class="btn ghost partsbtn" id="btnParts" type="button">伤害构成</button>
+            <button class="btn ghost partsbtn" id="btnHeroRun" type="button">角色详情</button>
+            <button class="btn ghost partsbtn" id="btnRunCode" type="button">复制本局码</button>
+          </div>
         </div>
+        <div class="panel" id="panelHeroState" hidden><div class="phead">角色机制</div><div class="stats" id="heroRunState"></div><div id="borrowedSkills"></div></div>
+        <div class="panel" id="panelHoly" hidden><div class="phead">圣器</div><div class="holyslots" id="holySlots"></div></div>
+        <div class="panel" id="panelRun" hidden><div class="phead">本局战绩</div><div class="stats" id="runStats"></div></div>
       </div>
-      <!-- 圣器（用户 2026-10-01）：属性下面三个方格，没带就写「空」；同样只在洞里露 -->
-      <div class="panel" id="panelHoly" hidden>
-        <div class="phead">圣器 Holy Relics</div>
-        <div class="holyslots" id="holySlots"></div>
-      </div>
-      <div class="panel" id="panelRun" hidden>
-        <div class="phead">本局战绩</div>
-        <div class="stats" id="runStats"></div>
-      </div>
-      <div class="panel">
-        <div class="phead">词汇记录</div>
-        <div class="stats" id="vocab"></div>
-        <!-- 错题本（用户 2026-09-27）：单独一个按钮，点开是弹窗（veilMiss） -->
-        <div class="vbtns">
-          <button class="btn" id="btnCodex" type="button">查看图鉴 · 跨局记录</button>
-          <button class="btn" id="btnMiss" type="button">错题本</button>
+      <div class="info-page" id="infoLearn" role="tabpanel" aria-labelledby="infoTabLearn" tabindex="0" hidden>
+        <div class="panel"><div class="phead">学习记录</div><p class="info-caption">学习进度与收集图鉴会跨冒险保留。</p><div class="stats" id="vocab"></div>
+          <div class="vbtns"><button class="btn" id="btnCodex" type="button">遗物图鉴 · 跨局记录</button><button class="btn" id="btnMiss" type="button">错题本</button></div>
         </div>
       </div>
     </section>
@@ -534,7 +531,7 @@
   <div class="sheet">
     <div class="eyebrow">上锁的木箱</div>
     <h2 id="chestTitle">锁上刻着一个词</h2>
-    <p class="note">把它<b>拼对</b>，箱子就开。拼错，锁会彻底咬死 —— 只有一次机会。</p>
+    <p class="note">把它<b>拼对</b>，箱子就开。拼写错误后宝箱锁定，不能重试。每个宝箱只有一次机会。</p>
     <div class="qcard">
       <div class="qlabel" id="chestHint">这个词是什么意思？</div>
       <div class="qword" id="chestClue">cat</div>
@@ -824,7 +821,7 @@
           其它规则和单人版一样。</li>
         <li><b>走路</b>：<b>点地图上任何走过的地面，角色会自己找路过去</b>。点怪物就走过去开战，点 <span style="color:var(--venom)">▼</span> 就走去下楼。</li>
         <li><b>探索</b>：怪物待在原地不动。每层清完怪，下行阶梯才会出现。</li>
-        <li><b>战斗</b>：走到怪物身上就进入战斗。答对砍它一刀，答错挨它一口。</li>
+        <li><b>战斗</b>：走到怪物身上就进入战斗。答对时发动攻击，答错时受到敌人攻击。</li>
         <li><b>词汇</b>：一章只出一个难度的词，章与章之间不重复。</li>
         <li><b>遗物</b>：每清完一层五选一，只在这一趟里管用。</li>
         <li><b>追加攻击</b>：答对后按「追加攻击概率」掷一次，中了就把这一刀<b>原样再打一次</b>（不重掷暴击、不加连击）。<b>一题最多追加一次</b>，概率超过 100% 也一样。</li>
@@ -849,6 +846,7 @@
 <script src="content.js"></script>
 <script src="orb.js"></script>
 <script src="art.js"></script>
+<script src="monster-art.js"></script>
 <script src="dungeon-scene.js"></script>
 <script src="net.js"></script>
 <script src="compact-save.js"></script>

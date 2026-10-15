@@ -217,6 +217,56 @@ body{
 @keyframes dfx-sigil{0%{opacity:0;transform:translate(-50%,-50%) rotate(-15deg) scale(.45)}30%{opacity:.8}100%{opacity:0;transform:translate(-50%,-70%) rotate(15deg) scale(1.3)}}
 @media (prefers-reduced-motion:reduce){.map,.map-pawn,.map-pet{transition:none!important}}
 
+/* 洞窟深处：墙外岩盘与暗处共用底材，地图边界不露纸色。 */
+.stage{--cave-rock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cpath fill='%23242321' d='M0 0h128v128H0z'/%3E%3Cg stroke='%231b1c1c' stroke-width='2'%3E%3Cpath fill='%232e2e29' d='m0 14 34-14 20 22-9 31L7 61 0 48Z'/%3E%3Cpath fill='%2333332d' d='m54 22 40-22 34 17-10 38-38 8-35-10Z'/%3E%3Cpath fill='%232a2c29' d='m7 61 38-8 25 29-17 36-53-8Z'/%3E%3Cpath fill='%2332322b' d='m80 63 38-8 10 26v47H91L70 82Z'/%3E%3Cpath fill='%232a2926' d='m53 118 17-36 21 46H47Z'/%3E%3C/g%3E%3Cpath d='m7 20 23-9 12 6M61 27l31-15 20 9M17 68l23-4 12 13M91 72l19-7 8 10' fill='none' stroke='%2347473b' stroke-opacity='.42'/%3E%3Cpath d='m19 38 9 7-5 11m76-23-9 14 9 10m-72 38 7 10-8 9m71-25-6 10 9 11' fill='none' stroke='%23171918'/%3E%3C/svg%3E");background:#242321 var(--cave-rock);border-color:#655e4e;box-shadow:0 3px 12px #30291d29,inset 0 0 25px #0e1114}
+.stage::after{background:radial-gradient(ellipse at 50% 48%,transparent 32%,#11171a29 72%,#090f164d);box-shadow:inset 0 0 35px 9px #0e13183d}
+.map .c.dark{background:#242321;background-image:radial-gradient(ellipse at 35% 28%,#32322c38,transparent 70%);color:transparent}
+.map .c.void{background:#242321 var(--cave-rock);background-position:calc(var(--cell) * -1 * var(--rock-x,0)) calc(var(--cell) * -1 * var(--rock-y,0));color:transparent}
+.map .c.wall{background-color:#696b5c;background-image:linear-gradient(155deg,#c1b99945 0 12%,transparent 13% 70%,#171d1b77 72%),linear-gradient(22deg,transparent 38%,#2b302c99 39% 43%,transparent 44%),linear-gradient(95deg,transparent 64%,#2d322b77 65% 68%,transparent 69%);box-shadow:inset 0 2px #b7b59855,inset -2px -3px #1b24264d;border:0}
+.map .c.wall::before{content:"";position:absolute;inset:5% 6% 20%;background:linear-gradient(130deg,#a7a48a36,#343e3938);clip-path:polygon(8% 9%,48% 0,92% 18%,100% 54%,74% 97%,29% 89%,0 64%);pointer-events:none}
+.map .c.wall[data-face*="s"]{box-shadow:inset 0 2px #c0b99966,inset 0 -7px #303a38,inset 0 -9px #8d8e7333}
+.map .c.wall[data-face*="n"]{border-top:2px solid #b3ad8a}
+.map .c.wall[data-face*="e"]{border-right:3px solid #414d47}
+.map .c.wall[data-face*="w"]{border-left:2px solid #a19e80}
+.map .c.wall[data-detail="7"]::after,.map .c.wall[data-detail="19"]::after{content:"";position:absolute;left:43%;top:43%;width:14%;height:25%;border-bottom:4px solid #463a2d;background:#ffc966;box-shadow:0 0 5px 2px #f7b44a99,0 0 17px 7px #e6a34533;clip-path:polygon(50% 0,100% 53%,76% 100%,10% 100%,0 42%);pointer-events:none}
+.map .c.wall[data-detail="4"]::before,.map .c.wall[data-detail="13"]::before{background:linear-gradient(135deg,#77987877,#37493844);clip-path:polygon(5% 2%,85% 12%,73% 40%,40% 31%,28% 70%,4% 50%)}
+.map .c.floor{background-color:#d9d1b9;background-image:radial-gradient(ellipse at 20% 8%,#fff3,transparent 60%),linear-gradient(174deg,transparent 66%,#7a795722 67% 68%,transparent 69%),linear-gradient(0deg,#6a6a5522 1px,transparent 1px),linear-gradient(90deg,#6a6a551c 1px,transparent 1px);box-shadow:inset 1px 1px #fff2,inset -1px -1px #62654613}
+.map .c.floor[data-detail="5"]::before,.map .c.floor[data-detail="16"]::before{content:"";position:absolute;left:15%;top:60%;width:50%;height:20%;border-radius:50%;background:#698b8638;border:1px solid #6d8f8f2b;transform:rotate(-18deg);box-shadow:3px -2px #edf0d22e;pointer-events:none}
+.map .c.floor[data-detail="21"]::before{width:3px;height:2px;background:#72706066;box-shadow:5px 2px #72706055,-4px -4px #72706044}
+.map .c.mem.floor{background-color:#9a9b89}.map .c.mem.wall{background-color:#4d564d}
+.map .c.mem svg{opacity:.52;filter:saturate(.45)}
+.map .c.mob svg{width:100%;height:100%;filter:drop-shadow(0 1px 1px #32261e44)}
+.map .c.mob.mem svg{filter:saturate(.35);opacity:.6}
+.map .c.mob.boss::before{content:"";position:absolute;width:78%;height:30%;left:11%;top:70%;border:1px solid #b8714666;border-radius:50%;background:#c87a3b14;pointer-events:none}
+
+/* 信息双页：默认六项主属性；完整属性保留原生折叠的焦点和展开状态。 */
+#viewInfo{overflow:hidden;gap:10px}
+.info-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;flex:none;padding:4px;background:var(--stone-3);border:1px solid var(--edge);border-radius:9px}
+.info-tab{appearance:none;border:1px solid transparent;background:none;color:var(--dim);font:600 13px var(--body);padding:10px 6px;border-radius:6px;cursor:pointer}
+.info-tab.on{background:var(--stone);border-color:var(--edge);color:var(--torch-deep);box-shadow:0 1px 3px #63583913}
+.info-page{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:0 1px 8px;scrollbar-gutter:stable}
+.info-page>.panel{flex:none}
+.info-caption{color:var(--dim);font-size:12px;line-height:1.7;margin:8px 0 12px}
+.info-empty{text-align:center;padding:38px 18px!important}.info-empty p{color:var(--dim);margin:10px 0 0}
+.run-hero{display:flex;align-items:center;gap:14px;padding:0 0 14px;margin-bottom:12px;border-bottom:1px solid var(--edge-soft)}
+.run-hero .hrart{width:66px;height:76px;flex:none}.run-hero>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.run-hero small{font-size:10px;letter-spacing:2px;color:var(--torch)}.run-hero b{font-size:21px}.run-hero span{font-size:12px;color:var(--dim)}
+.primary-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.primary-stats .s{padding:10px 12px;background:#e9e3d455;border:1px solid #d7cbb744;border-radius:5px;min-width:0}.primary-stats .s b{font-size:19px;overflow-wrap:anywhere}
+.full-stats{margin-top:14px;border:1px solid var(--edge-soft);border-radius:6px;overflow:hidden}
+.full-stats>summary{cursor:pointer;padding:12px;color:var(--torch-deep);font-weight:600;font-size:13px}.full-stats>summary small{font-size:10px;font-weight:400;color:var(--dim);margin-left:8px}
+.full-stats[open]>summary{border-bottom:1px solid var(--edge-soft);background:var(--stone-2)}
+#statsMore{padding:0 12px 8px}.attribute-group{padding:12px 0;border-bottom:1px solid var(--edge-soft)}.attribute-group:last-child{border:0}
+.attribute-group h3,.borrowed-list h3{font-size:12px;margin:0 0 10px;color:var(--torch-deep);font-weight:600;letter-spacing:1px}
+.attribute-group .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.attribute-group .s{min-width:0;overflow-wrap:anywhere;font-size:11px}.attribute-group .s b{font-size:14px}
+.attribute-traits{list-style:none;margin:0;padding:0}.attribute-traits li{display:flex;flex-direction:column;gap:3px;padding:9px 0;border-top:1px dashed var(--edge-soft);font-size:12px;line-height:1.65}.attribute-traits li:first-child{border:0;padding-top:0}.attribute-traits span{color:var(--dim);overflow-wrap:anywhere}
+.borrowed-list{margin-top:18px}.borrowed-card{background:var(--stone-2);border:1px solid var(--edge-soft);border-left:3px solid #ac7c9e;border-radius:5px;padding:12px;margin:8px 0}
+.borrowed-head{display:flex;gap:10px;align-items:center}.borrowed-head .hrart{width:42px;height:46px;flex:none}.borrowed-head>div{display:flex;flex-direction:column}.borrowed-head b{font-size:14px}.borrowed-head small{font-size:11px;color:var(--dim)}
+.borrowed-card p{font-size:12px;line-height:1.75;margin:9px 0 0;overflow-wrap:anywhere}.borrowed-card p>b{display:block;font-size:10px;color:#8b617e;margin-bottom:2px}
+#heroRunState{grid-template-columns:minmax(0,1fr);gap:7px}
+#heroRunState .s{align-items:baseline;gap:12px}
+#heroRunState .s b{max-width:75%;text-align:right;overflow-wrap:anywhere}
+@media(max-width:380px){.info-tab{font-size:12px;padding:10px 3px}.primary-stats .s{padding:8px}.primary-stats .s b{font-size:17px}.full-stats>summary small{display:block;margin:4px 0 0 15px}}
+
 /* ===== 地图上的状态浮层 =====
    层/等级/金/敌 + 血条压在取景窗顶上，不再吃纵向预算 —— 地图因此大一圈。
    pointer-events:none 让点击穿过去落到底下的格子，整张地图仍然可点。
@@ -1505,6 +1555,9 @@ body.tutmode #btnPathfind, body.tutmode #btnLockWager{visibility:hidden}
 .hslot.ask .hsub{color:var(--blood)}
 .hslot.empty{border-style:dashed;border-color:var(--edge);background:var(--stone-2);cursor:default}
 .hslot.empty .hname{color:var(--faint);font-family:var(--body);font-weight:400}
+#infoRun .hslot{aspect-ratio:auto;min-height:84px;padding:8px 3px}
+#infoRun .hslot .hicon{width:34px}
+#infoRun .hslot .hname{font-size:11px}
 @media (hover:hover){ .hslot:not(.empty):hover{border-color:var(--holy-deep)} }
 .relic.holyc{flex-direction:row;align-items:flex-start;gap:10px;border-color:var(--holy);background:var(--holy-bg);flex-shrink:0}
 @media (hover:hover){ .relic.holyc:hover{border-color:var(--holy-deep);background:#F8EBC5} }

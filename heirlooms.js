@@ -276,8 +276,29 @@ var Heirlooms=(function(){
       '晚年的剑圣把名剑一一归还原主。院中只留一根木枝，等下一个想学剑的孩子来。'
     ]
   };
-  const triggers={right:'答对',spell:'拼写答对',fast:'3 秒内答对',patient:'用时至少 3 秒答对',fresh:'答对生词',due:'答对到期复习词',haunt:'答对心魔词',wager:'冒险答对',unique:'答对本件尚未记录的不同词',variety:'答对本轮尚未记录的不同类别',verse:'相邻两题词性不同且答对',rhythm:'相邻两次答对用时相差不超过 1 秒',sand:'答对存入剩余秒数（每题最多 6 秒，非限时题记 3 秒）',repeat:'答对本件曾记录的词',battle:'进入战斗',kill:'击杀',combo:'连击至少 5 时答对',floor:'进入新层',shielded:'持盾答对',blocked:'护盾吸收伤害',wardbreak:'护盾被击破',marked:'答对有负面状态的敌人',afflicted:'身有负面状态时答对',low:'半血以下答对',rich:'持有至少 100 金时答对',collection:'集齐至少三种遗物品质时答对',reversal:'失手后首次答对'};
-  const actionNames={hit:'追加攻击 ×',echohit:'剑气追击 ×',pet:'宠物扑击 ×',spread:'震荡攻击 ×（其它怪最低留 1 血）',heal:'回复最大生命 ',shield:'获得最大生命护盾 ',cleanse:'净化负面状态层数 ',guard:'获得格挡次数 ',extend:'仍存续的祝福各延长层数 ',mirror:'将一种负面状态转移给敌人 ',gold:'获得金币 ',spendshield:'消耗最多 10% 生命上限的现有护盾，按消耗值造成伤害 ×',cycle:'元素轮转：灼蚀→灵盾→回春，层数 ',phase:'星象轮转：锋芒→烈意→回春→灵盾，层数 ',soul:'收集游魂（最多 5）；此后每次答对，每魂追击攻击的 10%，新增魂 ',spendgold:'花费金币换一次攻击 ×1、破绽 2 层，金币 ',revive:'每层一次致死时回复最大生命 '};
+  const triggers={right:'答对',spell:'拼写答对',fast:'3 秒内答对',patient:'用时至少 3 秒答对',fresh:'答对生词',due:'答对到期复习词',haunt:'答对心魔词',wager:'冒险答对',unique:'答对本件尚未记录的不同词',variety:'答对本轮尚未记录的不同类别',verse:'相邻两题词性不同且答对',rhythm:'相邻两次答对用时相差不超过 1 秒',sand:'答对存入剩余秒数（每题最多 6 秒，非限时题记 3 秒）',repeat:'答对本件曾记录的词',battle:'进入战斗',kill:'击杀',combo:'连击至少 5 时答对',floor:'进入新层',shielded:'持有护盾时答对',blocked:'护盾吸收伤害',wardbreak:'护盾被击破',marked:'答对有负面状态的敌人',afflicted:'身有负面状态时答对',low:'生命不高于最大生命 50% 时答对',rich:'持有至少 100 金时答对',collection:'已装备遗物包含至少三种品质时答对',reversal:'答错后的首次答对'};
+  function actionText(key,n){
+    const pct=Math.round(n*100)+'%';
+    if(key.startsWith('foe.'))return '对当前敌人施加 '+n+' 层'+HeroRules.effects[key.slice(4)][0];
+    if(HeroRules.effects[key])return '自身获得 '+n+' 层'+HeroRules.effects[key][0];
+    switch(key){
+      case 'hit':case 'echohit':case 'pet':return (key==='pet'?'宠物攻击':key==='echohit'?'剑气追击':'追加攻击')+' 1 次，造成攻击力 '+pct+' 的独立伤害';
+      case 'spread':return '对本层其他所有敌人造成攻击力 '+pct+' 的独立伤害，最多使其降至 1 生命';
+      case 'heal':return '回复最大生命的 '+pct;
+      case 'shield':return '获得最大生命 '+pct+' 的护盾，受护盾上限限制';
+      case 'cleanse':return '移除自身共 '+n+' 层负面状态';
+      case 'guard':return '储存 '+n+' 次格挡，下次受到攻击时消耗 1 次并免疫该次伤害，最多储存 2 次';
+      case 'extend':return '自身当前每种祝福增加 '+n+' 层，受祝福层数上限限制';
+      case 'mirror':return '将自身一种负面状态的全部层数转移至当前敌人，敌方最多保留 4 层';
+      case 'gold':return '获得 '+n+' 金币';
+      case 'spendshield':return '消耗现有护盾（最多为最大生命的 10%），对当前敌人造成消耗量 '+pct+' 的独立伤害';
+      case 'cycle':return '依次轮转：对敌人施加灼蚀 → 自身获得灵盾 → 自身获得回春灵息，每次 '+n+' 层';
+      case 'phase':return '依次轮转：锋芒 → 烈意 → 回春灵息 → 灵盾，每次自身获得 '+n+' 层';
+      case 'soul':return '获得 '+n+' 个游魂，最多 5 个；此后每次答对，每个游魂造成攻击力 10% 的独立追击伤害';
+      case 'spendgold':return '若金币足够，消耗 '+n+' 金币，对当前敌人造成攻击力 100% 的独立伤害，并施加 2 层破绽';
+      default:return '';
+    }
+  }
   const statScale={atk:[2,3,4,5,7],hp:[4,7,10,14,20],crit:[2,3,5,7,10],def:[1,1,2,2,3]};
   const statNames={atk:'攻击',hp:'最大生命',crit:'暴击率',def:'护甲'};
   function actions(rule){return rule.split(',').map(s=>{const [key,n]=s.split(':');return [key,Number(n)];});}
@@ -286,14 +307,21 @@ var Heirlooms=(function(){
   const items=[];
   for(const [hero,stat,names,rules] of sets)for(let q=0;q<5;q++){
     const [trigger,every,raw]=rules[q].split('/'),acts=actions(raw),name=names.split(',')[q];
-    const text=acts.filter(a=>a[0]!=='revive').map(([key,n])=>{
-      if(key.startsWith('foe.'))return '敌人获得'+HeroRules.effects[key.slice(4)][0]+' '+n+' 层';
-      if(HeroRules.effects[key])return '获得'+HeroRules.effects[key][0]+' '+n+' 层';
-      return (actionNames[key]||key)+(['heal','shield'].includes(key)?Math.round(n*100)+'%':n);
+    const lines=[];
+    for(const [key,n] of acts.filter(a=>a[0]!=='revive')){
+      const last=lines[lines.length-1];
+      if(last&&last.key===key&&last.n===n)last.count++;
+      else lines.push({key,n,count:1});
+    }
+    const text=lines.map(({key,n,count})=>{
+      const txt=actionText(key,n);
+      if(count===1)return txt;
+      if(['hit','echohit','pet'].includes(key))return txt.replace('1 次，造成',count+' 次，每次造成');
+      return '连续执行 '+count+' 次：'+txt;
     }).join('；');
     const revive=acts.find(a=>a[0]==='revive');
     items.push({id:id(hero,q),r:q,n:name,heroOnly:hero,nobf:true,heirloom:true,stat:stat,amount:statScale[stat][q],trigger:trigger,every:Number(every),actions:acts,
-      pw:statNames[stat]+' +'+statScale[stat][q]+(stat==='crit'?'%':'')+'；每'+every+(trigger==='sand'?'秒':'次')+triggers[trigger]+'：'+text+(revive?'；每层一次致死时回复 '+Math.round(revive[1]*100)+'% 生命':'')+'。',
+      pw:statNames[stat]+' +'+statScale[stat][q]+(stat==='crit'?'%':'')+'；'+(trigger==='sand'?'累计储时 '+every+' 秒时（限时题存剩余秒数，每题最多 6 秒；不限时题记 3 秒）':'每累计 '+every+' 次'+triggers[trigger])+'：'+text+(trigger==='battle'&&acts.some(a=>['hit','echohit','pet'].includes(a[0]))?'；开场攻击最多使敌人降至 1 生命':'')+(revive?'；每层首次生命降至 0 或以下时，恢复至最大生命的 '+Math.round(revive[1]*100)+'%':'')+'。',
       lore:stories[hero][q]});
   }
   const byId=Object.fromEntries(items.map(r=>[r.id,r]));

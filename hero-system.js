@@ -11,8 +11,8 @@ var HeroRules=(function(){
     drain:['汲能','Siphon','答对后每层回复 1% 最大生命','Heal 1% max HP per stack after a right answer'],
     exposed:['破绽','Exposed','每层受到的伤害 +5%','+5% incoming damage per stack'],
     weak:['衰弱','Weakness','每层造成的伤害 −6%','−6% damage per stack'],
-    burn:['灼蚀','Scorch','回合末每层受到攻击力 12% 的伤害','Take 12% attack damage per stack at round end'],
-    bleed:['裂伤','Bleed','回合末每层受到攻击力 10% 的伤害','Take 10% attack damage per stack at round end'],
+    burn:['灼蚀','Scorch','回合末每层受到玩家攻击力 12% 的伤害','Take 12% of player ATK as damage per stack at round end'],
+    bleed:['裂伤','Bleed','回合末每层受到玩家攻击力 10% 的伤害','Take 10% of player ATK as damage per stack at round end'],
     poison:['侵毒','Venom','回合末每层失去 1% 最大生命','Lose 1% max HP per stack at round end']
   };
   const negative=['exposed','weak','burn','bleed','poison'];

@@ -20,7 +20,15 @@ var DungeonScene=(function(){
       if(pawn)pawn.remove();if(companion)companion.remove();
       pawn=document.createElement('span');pawn.className='map-pawn';pawn.setAttribute('aria-hidden','true');map.appendChild(pawn);
       companion=document.createElement('span');companion.className='map-pet';companion.innerHTML=pet;companion.setAttribute('aria-hidden','true');map.appendChild(companion);
-      for(let i=0;i<cells.length;i++){const c=cells[i],cx=i%w,cy=Math.floor(i/w);c.style.setProperty('--tile-tone',((cx*13+cy*7)%5)*.025);c.dataset.detail=String((cx*17+cy*31)%23);}
+      for(let i=0;i<cells.length;i++){
+        const c=cells[i],cx=i%w,cy=Math.floor(i/w);
+        c.style.setProperty('--tile-tone',((cx*13+cy*7)%5)*.025);c.dataset.detail=String((cx*17+cy*31)%23);c.style.setProperty('--rock-x',cx);c.style.setProperty('--rock-y',cy);
+        // 只记录真实相邻地板，石壁的受光边与凹陷面随房间方向走，不改变碰撞。
+        let faces='';
+        for(const [dx,dy,key] of [[0,-1,'n'],[1,0,'e'],[0,1,'s'],[-1,0,'w']])
+          if(grid[cy+dy]&&grid[cy+dy][cx+dx]===1)faces+=key;
+        c.dataset.face=faces;
+      }
     }
     if(pawn._art!==art){pawn.innerHTML=art;pawn._art=art;}
     const size=cell.offsetWidth;if(!size)return;pawn._cellSize=size;

@@ -373,7 +373,7 @@ function newRun(){
           "每 " + STUDY_COMBO_PER + " 连击回 " + STUDY_COMBO_HEAL + " 点生命。随时能撤退，不掉血、自动存档。",
           "<b>Pure study</b>: " + STUDY_HP + " HP, one Book Spirit that can't die — attack starts at 1, +1 per " + STUDY_RAMP_PER + " damage it takes (max " + (STUDY_FOE.dmg + STUDY_RAMP_MAX) + "). " +
           "Every " + STUDY_COMBO_PER + " combo heals " + STUDY_COMBO_HEAL + ". Retreat any time — no HP lost, progress saved."), "sys");
-    if(P.practice) say(L("<b>练习模式</b>：书灵咬不疼你，这一趟不计纪录。", "<b>Practice mode</b>: the spirit can't hurt you; this run won't set a record."), "sys");
+    if(P.practice) say(L("<b>练习模式</b>：护甲 +"+CHAPTER.practiceDef+"，攻击力减半；本局不计入冒险纪录。", "<b>Practice mode</b>: armor +"+CHAPTER.practiceDef+", ATK halved; this run does not set a record."), "sys");
   } else if(!P.tut){
     say(T("石门在身后合上。走廊里只有火把的回声。"), "sys");
     say(T("这一层有几只东西待在原地不动 —— 找到它们，念对那个词。"), "sys");
@@ -1438,7 +1438,7 @@ function abyssAbsorb(m, n){
   if(broke){
     P.abyss = (P.abyss || 0) + broke;
     say(T("无终之影碎了 <b>") + broke + T("</b> 层（累计 ") + P.abyss + T(" 层）—— 底下那层 <b>") +
-        m.max + T("</b> 血，一口 <b>") + m.dmg + T("</b> 点。"), "crit");
+        m.max + T("</b> 生命，攻击力 <b>") + m.dmg + T("</b> 点。"), "crit");
   }
   return broke;
 }
@@ -1842,8 +1842,81 @@ function renderParts(){
 /* 减伤超过上限时写成「−75/125%」，后面那个是堆出来的总数、标红（用户 2026-09-26：看得出堆超了多少）*/
 function cutShow(cut){
   const cap = cutMax();
+  if(cut < 0) return "+" + (-cut) + "%";
   if(cut <= cap) return "−" + cut + "%";
   return "−" + cap + "/<span class=\"over\">" + cut + "</span>%";
+}
+let infoTab = "run", infoWasRun = null;
+function selectInfoTab(tab){
+  infoTab = tab === "learn" ? "learn" : "run";
+  document.querySelectorAll("[data-info]").forEach(function(b){
+    const on = b.dataset.info === infoTab;
+    b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1;
+  });
+  $("infoRun").hidden = infoTab !== "run"; $("infoLearn").hidden = infoTab !== "learn";
+}
+/* 预览遗物概率，复用 luck 的倍率与重掷公式；不掷骰、不消耗任何战斗资源。 */
+function infoLuckRate(p,id){
+  let q = id ? Math.min(1,p*rmul(id)) : p;
+  if(hasRelic("fortune")) q = Math.min(1,q*(1+hx("fortune",FORTUNE_X)/100));
+  return q+(1-q)*(hasRelic("reshake")?Math.min(1,hx("reshake",RESHAKE_P)):0)*q;
+}
+function borrowedSkillsHtml(){
+  if(!P || P.hero !== "medium") return "";
+  const guests=(P.heroGuest||[]).filter(g=>heroById(g.id));
+  if(!guests.length) return '<p class="info-caption">'+L("本层没有可借用的角色。招募更多角色后，下一层会重新选择。","No heroes channeled this floor. Recruit more heroes for future floors.")+'</p>';
+  return '<div class="borrowed-list"><h3>'+L("本层借用技能","Channeled skills this floor")+'</h3>'+guests.map(function(g){
+    const h=heroById(g.id),star=Math.min(g.star||1,heroOn("medium",6)?5:heroOn("medium",3)?3:1);
+    const passive=h.p.replaceAll("{v}",heroFmt(heroV(g.id)));
+    return '<article class="borrowed-card"><div class="borrowed-head">'+heroArtHtml(h.id,"",g.star||1)+'<div><b>'+h.n+'</b><small>Lv '+(g.lv||1)+' · '+L("本层继承至 ","Inherited through ")+star+L(" 星"," stars")+'</small></div></div>'+
+      '<p><b>'+L("被动","Passive")+'</b>'+passive+'</p>'+heroEx(h,g.lv,star,h.id==="astro"?astroS():heroV(g.id)).map(t=>'<p class="info-caption">'+t+'</p>').join('')+
+      (star>=3?'<p><b>'+L("三星效果","Third-star trait")+'</b>'+h.s3+'</p>':'')+
+      (star>=5?'<p><b>'+L("五星效果","Fifth-star trait")+'</b>'+h.s5+'</p>':'')+'</article>';
+  }).join('')+'<p class="info-caption">'+L("以上被动数值已计入灵媒强化；仅展示本层已继承的技能。","Passive values include the Medium’s amplification. Only inherited traits are listed.")+'</p></div>';
+}
+function renderRunAttributes(s,pct,cc){
+  const percent=v=>heroFmt(v)+"%", signed=v=>(v<0?"−":"+")+heroFmt(Math.abs(v)), noCrit=hasRelic("noedge");
+  const critRate=noCrit?"—":hasRelic("fate")?"100%":percent(Math.max(0,cc.rate));
+  $("stats").innerHTML=st(L("生命","HP"),Math.max(0,P.hp)+" / "+s.maxHp)+st(T("攻击"),s.atk)+
+    st(T("护甲"),s.def)+st(T("暴击率"),critRate)+st(T("伤害加成"),signed(pct)+"%")+
+    st(L("答错所受伤害","Wrong-answer damage"),cutShow(cutState(s,true)));
+  const h=heroById(P.hero);
+  $("runHeroIdentity").innerHTML=h?heroArtHtml(h.id,"",P.heroStar||1)+'<div><small>'+L("本局出战","Active this run")+'</small><b>'+h.n+'</b><span>Lv '+(P.heroLv||1)+' · '+(P.heroStar||1)+L(" 星"," stars")+' · '+CH.name+' '+G.floor+L(" 层","F")+'</span></div>':'';
+  if(!$("fullStats").open)return;
+  const group=(title,body)=>'<section class="attribute-group"><h3>'+title+'</h3><div class="stats">'+body+'</div></section>';
+  const slip=hasRelic("slip")?infoLuckRate(SLIP_RATE,"slip"):0, glimmer=hasRelic("glimmer")?infoLuckRate(GLIMMER_RATE,"glimmer"):0;
+  const sip=(hasRelic("thirst")?hx("thirst",THIRST_PCT):0)+(hasRelic("bloodriver")?hx("bloodriver",RIVER_PCT):0)+(heroSkyOn(3)?astroS()/5:0);
+  const owe=(P.owe||[]).reduce((a,b)=>a+(b||0),0);
+  const statuses=Object.keys(HeroRules.effects).filter(k=>statusN(P,k)>0).map(k=>'<li><b>'+statusLabel(k)+' ×'+statusN(P,k)+'</b><span>'+HeroRules.effects[k][UI_EN?3:2]+'</span></li>').join('');
+  const traitIds=(P.relics||[]).slice();
+  if(hasRelic("thousandface") && P.face && P.face.f===G.floor)
+    (P.face.ids||[]).forEach(id=>{if(!traitIds.includes(id))traitIds.push(id);});
+  const traits=traitIds.map(relicById).filter(Boolean).map(function(r){
+    const mul=r.heirloom?1:rmul(r.id),state=P.heirState&&P.heirState[r.id];
+    return '<li><b>'+r.n+(mul!==1?' · '+L("数值倍率","Value multiplier")+' ×'+heroFmt(mul):'')+'</b><span>'+r.pw+'</span>'+
+      (state?'<small>'+L("触发进度 ","Trigger progress ")+(state.n||0)+' / '+r.every+(state.souls?L(" · 游魂 "," · Souls ")+state.souls:'')+'</small>':'')+'</li>';
+  }).join('');
+  $("statsMore").innerHTML=
+    group(L("攻击与暴击","Offense and critical hits"),st(T("攻击"),s.atk)+st(T("伤害加成"),signed(pct)+"%")+
+      st(T("额外伤害"),signed(extraSteady(s)))+st(L("固定点伤","Flat damage"),signed(flatSteady(s)))+
+      st(T("暴击率"),critRate)+st(T("暴击伤害"),noCrit?"—":"×"+heroFmt(cc.mult))+
+      st(L("概率追加攻击","Random follow-up chance"),percent(infoLuckRate(Math.min(1,followChance()/100))*100))+
+      st(L("连击伤害加成","Combo damage bonus"),signed(comboPct())+"%")+
+      st(L("吸血 · 实际伤害","Lifesteal · landed damage"),percent(sip))+st(L("暴击额外吸血","Additional critical lifesteal"),percent(hasRelic("bloodmoon")?hx("bloodmoon",MOON_PCT):0)))+
+    group(L("生命与防御","Health and defense"),st(L("当前生命","Current HP"),Math.max(0,P.hp))+st(L("最大生命","Maximum HP"),s.maxHp)+
+      st(T("护甲"),s.def)+st(T("护盾"),P.shield||0)+st(L("护盾上限","Shield cap"),shieldCap(s))+
+      st(L("答错所受伤害","Wrong-answer damage"),cutShow(cutState(s,true)))+st(L("超时所受伤害","Timeout damage"),cutShow(cutState(s,false)))+
+      st(L("减伤上限","Reduction cap"),percent(cutMax()))+st(L("闪避概率","Dodge chance"),percent((1-(1-slip)*(1-glimmer))*100))+
+      st(L("已储存格挡","Stored guards"),P.heirGuard||0)+st(L("待结算延迟伤害","Pending deferred damage"),owe)+
+      st(L("泉水回复","Spring healing"),springHeal(s)))+
+    group(L("本局资源与答题","Run resources and answers"),st(T("等级"),P.lvl)+st(T("经验"),(P.xp||0)+" / "+xpNeed(P.lvl))+
+      st(T("连击"),P.combo||0)+st(L("最高连击","Best combo"),P.maxCombo||0)+st(L("金币","Gold"),P.gold||0)+
+      st(L("遗物容量","Relic slots"),relicLoad()+" / "+relicCap())+st(L("持有遗物","Relics held"),(P.relics||[]).length)+st(T("拼写题"),percent(spellChance()*100))+
+      st(L("祝福层数上限","Blessing stack cap"),statusCap())+st(L("已结算回合","Settled rounds"),P.statusTurn||0)+
+      st(L("本层回复生命","Healing this floor"),G.healed||0)+st(L("已存雷霆伤害","Stored thunder damage"),Math.floor(P.thunder||0)))+
+    '<p class="info-caption">'+L("伤害加成与减伤按当前状态计算。拼写、弱点、冒险、一次性格挡等条件效果，在触发时结算；最终伤害可查看「伤害构成」。","Bonuses reflect your current state. Conditional effects settle when triggered; see Damage breakdown for the last actual hit.")+'</p>'+
+    '<section class="attribute-group"><h3>'+L("当前祝福与负面状态","Active blessings and afflictions")+'</h3>'+(statuses?'<ul class="attribute-traits">'+statuses+'</ul>':'<p class="info-caption">'+L("当前无祝福或负面状态。","No active blessings or afflictions.")+'</p>')+'</section>'+
+    '<section class="attribute-group"><h3>'+L("遗物效果与触发进度","Relic effects and progress")+'</h3>'+(traits?'<ul class="attribute-traits">'+traits+'</ul>':'<p class="info-caption">'+L("尚未装备遗物。","No relics equipped.")+'</p>')+'</section>';
 }
 function renderSheets(s){
   /* 「属性」（用户 2026-09-25 要补全）：伤害公式里每一桶都摆出来。
@@ -1851,16 +1924,7 @@ function renderSheets(s){
      只算**常驻**的那部分 —— 拼对、打中弱点、冒险、答得快这种「这一刀才有」的不算。
      减伤按「答错挨一口」算（绝大多数挨打都是它），封在 MIT_CUT_MAX。 */
   const pct = pctSteady(s), cc = critSteady(s, pct);
-  const noCrit = hasRelic("noedge");
-  const pm = function(v, u){ return (v < 0 ? "−" + (-v) : "+" + v) + (u || ""); };
-  $("stats").innerHTML =
-    st(T("攻击"), s.atk) + st(T("伤害加成"), pm(pct, "%")) +
-    st(T("额外伤害"), pm(extraSteady(s))) + st(T("点伤"), pm(flatSteady(s))) +
-    st(T("暴击率"), noCrit ? "—" : hasRelic("fate") ? "100%" : Math.round(cc.rate) + "%") +
-    st(T("暴击伤害"), noCrit ? "—" : "×" + (Math.round(cc.mult * 100) / 100)) +
-    st(T("生命"), Math.max(0, P.hp) + " / " + s.maxHp) + st(T("护甲"), s.def) +
-    st(T("护盾"), P.shield || 0) + st(T("受到的伤害"), cutShow(cutState(s, true))) +
-    st(T("连击"), P.combo || 0) + st(T("拼写题"), Math.round(spellChance() * 100) + "%");
+  if(SCENE === "run" && G && !G.over)renderRunAttributes(s,pct,cc);
   // 老存档里可能还留着已经删掉的词（比如整类删掉的虚词），统计时过一遍 WMAP
   const keys = Object.keys(LEX).filter(function(k){ return !!lexWord(k); });
   let mastered = 0;
@@ -1887,6 +1951,10 @@ function renderSheets(s){
                          st(T("总数"), WORDS.length) + st(T("累计学词"), studied + T(" 次"));
   /* 「本局战绩」只在洞里才有意义 —— 没进冒险整块藏起来（用户 2026-09）*/
   const inRun = (SCENE === "run" && G && !G.over);
+  if(infoWasRun!==!!inRun){infoWasRun=!!inRun;selectInfoTab(inRun?"run":"learn");}
+  $("infoRunEmpty").hidden=!!inRun;
+  $("panelHeroState").hidden=!inRun;
+  if(inRun){$("heroRunState").innerHTML=heroRunCells();$("borrowedSkills").innerHTML=borrowedSkillsHtml();}
   renderHoly();                         // 圣器的三个方格（属性下面，同样只在洞里露）
   $("panelRun").hidden = !inRun;
   $("panelStats").hidden = !inRun;      // 「属性」也一样：镇上没有这一趟，面板上全是 1 级的底子，没意义（用户 2026-09-25）
@@ -1894,7 +1962,7 @@ function renderSheets(s){
   $("runStats").innerHTML = st(T("答对"), P.right) + st(T("答错"), P.wrong) +
     st(T("正确率"), acc) + st(T("击杀"), P.kills) +
     st(T("等级"), "Lv." + P.lvl) + st(T("经验"), P.xp + " / " + xpNeed(P.lvl)) +
-    heroRunCells();
+    st(L("最高连击","Best combo"),P.maxCombo||0);
   renderRelics();
   renderMate();
 }
@@ -2273,7 +2341,7 @@ function startBattle(m){
   /* 驯兽师（角色第三批）：开战宠物先咬一口 —— 跟余劲一样永远给怪留 1 点（不会不答题就打死一只）。深渊 / 书灵 / 联机不走这条 */
   if(heroOn("tamer") && !COOP && !(m.def && (m.def.abyss || m.def.study))){
     const bite = Math.min(petBite(stats()), m.hp - 1);
-    if(bite > 0){ m.hp -= bite; say(L("宠物先扑了上去，咬掉 " + m.name + " <b>" + bite + "</b> 点。", "Your pet pounces first — " + m.name + " loses <b>" + bite + "</b>."), "good"); }
+    if(bite > 0){ m.hp -= bite; say(L("宠物开场攻击：" + m.name + " 受到 <b>" + bite + "</b> 点伤害。", "Pet opening attack: " + m.name + " takes <b>" + bite + "</b> damage."), "good"); }
   }
   clearQTimer();          // 上一场要是被别的路子掐断了，读条可能还挂着
   G.paused = true;
@@ -2606,7 +2674,7 @@ function timeUp(){
   if(heroOn("hermit", 3) && !B.heroTO){
     B.heroTO = true;
     hurtBegin(m, s, false); hurtRow("hero", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
-    say(L("时间到 —— 隐士定了定神，这一口没挨上。题还在，接着答。", "Time's up — the Hermit holds steady; no bite this time. Same question, keep going."), "good");
+    say(L("超时：隐士免疫本场首次超时伤害。题目保留，请继续作答。", "Timeout: the Hermit prevents the first timeout hit this battle. Keep answering."), "good");
     startQTimer();
     return;
   }
@@ -2615,8 +2683,8 @@ function timeUp(){
   if(heroOn("clock") && (P.heroSand || 0) >= lap){
     P.heroSand -= lap;
     hurtBegin(m, s, false); hurtRow("hero", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
-    say(L("时间到 —— 钟表匠从怀表里拨出 " + lap + " 秒顶上，没挨咬（还剩 " + P.heroSand + " 秒）。题还在，接着答。",
-          "Time's up — the Clockmaker pays " + lap + "s from the watch; no bite (" + P.heroSand + "s left). Same question, keep going."), "good");
+    say(L("时间到 —— 钟表匠从怀表里拨出 " + lap + " 秒，免疫本次超时伤害（剩余 " + P.heroSand + " 秒）。题还在，接着答。",
+          "Time's up — the Clockmaker pays " + lap + "s from the watch; damage prevented (" + P.heroSand + "s left). Same question, keep going."), "good");
     renderBattleBars();
     startQTimer();
     return;
@@ -2625,7 +2693,7 @@ function timeUp(){
   if(m.stun && heroOn("debater")){
     m.stun = false;
     hurtBegin(m, s, false); hurtRow("hero", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
-    say(L("时间到 —— " + m.name + " 还愣着，没咬上。题还在，接着答。", "Time's up — " + m.name + " is still stunned and doesn't bite. Same question, keep going."), "good");
+    say(L("时间到 —— " + m.name + " 处于眩晕：本次超时攻击无效，并消耗眩晕。题目保留，请继续作答。", "Time's up — " + m.name + " is stunned: this timeout hit is prevented and the stun is consumed. Keep answering."), "good");
     startQTimer();
     return;
   }
@@ -2634,7 +2702,7 @@ function timeUp(){
   if(B.shatterFree){
     B.shatterFree = false;
     hurtBegin(m, s, false); hurtRow("shatter", -Math.max(1, m.dmg - s.def)); hurtEnd(0);
-    say(T("时间到，但破盾余威替你接住了这一口。题还在，接着答。"), "good");
+    say(T("超时：破盾余威免疫本次伤害。题目保留，请继续作答。"), "good");
     startQTimer();
     return;
   }
@@ -2644,9 +2712,8 @@ function timeUp(){
   if(mit.dodged){
     say(T("时间到 —— 你侧了半步躲开。题还在，接着答。"), "hurt");
   } else {
-    takeHit(mit.dmg, m, false);
-    say(T("时间到，") + m.name + T(" 咬了你 <b>") + mit.dmg + T("</b> 点。题还在，接着答。") +
-        (hasRelic("reprieve") ? T("（缓刑：分 3 题扣）") : ""), "hurt");
+    const damageText=takeHit(mit.dmg, m, false);
+    say(L("超时：","Timeout: ")+damageText+mit.why+L("题目保留，请继续作答。","The question stays; keep answering."),"hurt");
   }
   hurtEnd(mit.dmg);
   redirectStore(m.dmg);
@@ -3849,12 +3916,12 @@ function answer(btn, ok){
       if(dmg > 0 && unchain){
         hurtRow("unchain", -dmg); dmg = 0;
         head = T("<span class=\"big no\">断链 —— 链子替你挨了</span>");
-        note = T("连击 −") + unchainAt() + T("，血一点没掉。");
+        note = T("连击 −") + unchainAt() + T("，生命损失为 0。");
       }
       if(dmg > 0 && m.stun && heroOn("debater")){   // 辩手（角色第三批）：怪还愣着，这一口咬不出来
         m.stun = false;
         hurtRow("hero", -dmg); dmg = 0;
-        head = L("<span class=\"big no\">它还愣着 —— 没咬上</span>", "<span class=\"big no\">Still stunned — no bite</span>");
+        head = L("<span class=\"big no\">眩晕 · 本次攻击无效</span>", "<span class=\"big no\">Stunned · attack prevented</span>");
         note = L("辩手把它说愣了，这一下没落到身上。", "The Debater left it speechless; the blow never landed.");
       }
       if(dmg > 0 && studyNoHurt()){             // 纯净学习 + 练习模式：一律不掉血
@@ -3863,7 +3930,7 @@ function answer(btn, ok){
       }
       if(dmg > 0 && fearless){
         hurtRow("fearless", -dmg); dmg = 0;
-        head = T("<span class=\"big no\">无惧 —— 旧账咬不动你</span>");
+        head = T("<span class=\"big no\">无惧 · 免疫本次心魔伤害</span>");
         note = T("心魔答错不掉血，这个词也没再加重。");
       }
       /* 驱魔人 ★5：每层两次，心魔词答错不掉血（G.heroExoN 每层清零）*/
@@ -3987,7 +4054,7 @@ function deathSave(){
   if(hasRelic("lastgasp") && G && !G.gaspUsed){
     G.gaspUsed = true;
     P.hp = 1;
-    return T("一息 —— 还剩一口气，你没倒下（这一层就这一次）。");
+    return T("一息：致死伤害后恢复至 1 生命；每层最多触发 1 次。");
   }
   if(hasRelic("undying") && !P.undying){
     P.undying = true;
@@ -4583,7 +4650,7 @@ function takeHit(dmg, m, haunted){
     for(let i = 0; i < REPRIEVE_N; i++) P.owe[i] = (P.owe[i] || 0) + q + (i < r ? 1 : 0);
     hitLost = dmg;
     floatNum("me", "…" + dmg, "ouch");
-    return m.name + T(" 咬中你 —— <b>") + dmg + T("</b> 点记在账上，分 ") + REPRIEVE_N + T(" 题扣（答对少扣）") +
+    return m.name + T(" 攻击：<b>") + dmg + T("</b> 点延迟伤害，分 ") + REPRIEVE_N + T(" 题结算（答对时降低该期伤害）") +
       (haunted ? T("（心魔加重）") : "") + T("。");
   }
   return landHit(dmg, m, haunted);
@@ -4666,8 +4733,8 @@ function landHit(dmg, m, haunted){
   }
   flaskDrink();             // 药剂师（角色第三批）：掉到 30% 以下自动喝药瓶
   floatNum("me", "-" + dmg, "ouch");
-  return m.name + T(" 咬中你，") +
-    (ate ? (T("护盾吃掉 <b>") + ate + T("</b> 点") + (left ? T("，你失去 <b>") + left + T("</b> 点生命") : T("，血一点没掉")) + "")
+  return m.name + T(" 攻击：") +
+    (ate ? (T("护盾吸收 <b>") + ate + T("</b> 点") + (left ? T("，你失去 <b>") + left + T("</b> 点生命") : T("，生命损失为 0")) + "")
          : (T("你失去 <b>") + left + T("</b> 点生命"))) +
     (haunted ? T("（心魔加重）") : "") + T("。");
 }
@@ -5236,7 +5303,7 @@ function judgeChest(){
       ? T("<span class=\"big ok\">咔哒 —— 开了</span>")
       : opened
         ? T("<span class=\"big ok\">拼错了 —— 钥匙替你撬开了</span>")
-        : T("<span class=\"big no\">锁咬死了</span>")) +
+        : T("<span class=\"big no\">开锁失败</span>")) +
     "<span class=\"mean\"><b>" + wordFull(w) + "</b>" + (w.py ? " " + w.py : "") + T("　") + w.cn + "</span>";
   $("btnChestLeave").hidden = true;
   $("btnChestDone").hidden = false;
@@ -5282,7 +5349,7 @@ function closeChest(){
     renderHud(); render();
     return;
   }
-  say(T("锁彻底咬死了。这箱子谁也打不开了。"), "hurt");
+  say(T("开锁失败：该宝箱已锁定，不能再次尝试。"), "hurt");
   lockInput(200);
   renderHud(); render();
 }
@@ -7347,8 +7414,7 @@ function heroFloorReset(){
 function heroRunCells(){
   const h = P && heroById(P.hero);
   if(!h) return "";
-  let out = st(L("出战", "Hero"), h.n + " Lv" + (P.heroLv || 1) + " ★" + (P.heroStar || 1)) +
-            st(L("角色经验", "Hero XP"), "+" + (P.heroXp || 0));
+  let out = st(L("角色经验", "Hero XP"), "+" + (P.heroXp || 0));
   /* 第二批：各自的小机制现在攒到哪儿了（值写短，两列的格子装得下）*/
   if(P.hero === "medium" && P.heroGuest && P.heroGuest.length)
     out += st(L("附身", "Possessed by"), P.heroGuest.map(function(g){ return heroById(g.id).n; }).join(L("、", ", ")));
@@ -7362,7 +7428,10 @@ function heroRunCells(){
   if(heroOn("astro") && P.heroSky) out += st(L("星象", "Sky"), P.heroSky.map(ASTRO_NAME).join("+"));
   if(heroOn("apothecary")) out += st(L("药瓶", "Flask"), Math.floor(P.heroFlask || 0) + " / " + flaskCap());
   if(heroOn("rewinder")) out += st(L("回溯", "Rewinds"), L("还剩 ", "") + rewindLeft() + L(" 次", " left"));
-  if(heroOn("tamer")) out += st(L("宠物一口", "Pet bite"), petBite());
+  if(heroOn("tamer")) out += st(L("宠物攻击伤害", "Pet attack damage"), petBite());
+  if(heroOn("poet")) out += st(L("诗章层数", "Verse stacks"), (P.heroStack||0)+" / "+HERO_POET_MAX);
+  if(heroOn("bard")) out += st(L("节拍层数", "Rhythm stacks"), (P.heroBeat||0)+" / "+HERO_BARD_MAX);
+  if(heroOn("duelist",5)) out += st(L("连续速答", "Fast answer streak"), (P.heroRun||0)+" / 3");
   if(heroOn("collector")) out += st(L("图鉴", "Codex"), codexN() + L(" 件", ""));
   if(heroOn("bounty")){
     const q = (P.heroQuest || []).map(function(x){ return x.done ? "✓" : x.got + "/" + x.n; }).join(" · ");
@@ -7553,7 +7622,7 @@ function heroAfterHit(o){
   if(heroOn("debater") && o.m && o.m.hp > 0 && !o.m.stun &&
      ((o.hitWeak && heroOn("debater", 5)) || Math.random() * 100 < heroV("debater"))){
     o.m.stun = true;
-    log += L(" <span class=\"sys\">(辩手 · " + o.m.name + " 愣住了)</span>", " <span class=\"sys\">(Debater · " + o.m.name + " is stunned)</span>");
+    log += L(" <span class=\"sys\">(辩手 · " + o.m.name + " 眩晕；下一次攻击无效)</span>", " <span class=\"sys\">(Debater · " + o.m.name + " is stunned)</span>");
   }
   return log;
 }
@@ -7578,8 +7647,8 @@ function flaskDrink(){
   if(amt <= 0) return;
   P.heroFlask -= amt; P.hp += amt;
   if(G) G.healed = (G.healed || 0) + amt;
-  say(L("药剂师 —— 灌下一口药，回 <b>" + amt + "</b> 点生命（瓶里还剩 " + Math.floor(P.heroFlask) + "）。",
-        "Apothecary — a swig from the flask, +<b>" + amt + "</b> HP (" + Math.floor(P.heroFlask) + " left)."), "good");
+  say(L("药剂师：消耗药液回复 <b>" + amt + "</b> 点生命（瓶里还剩 " + Math.floor(P.heroFlask) + "）。",
+        "Apothecary: consume flask healing to restore <b>" + amt + "</b> HP (" + Math.floor(P.heroFlask) + " left)."), "good");
 }
 /* 回溯者：本局还能回溯几次（★3 多一次，★5 每往下 10 层再多一次）*/
 function rewindLeft(){
@@ -7622,11 +7691,10 @@ function heroBadge(){
   return "";
 }
 /* 详情页被动下面多写几行：法师的三个法术、星象师的四个星象（按这一级的数现算）*/
-function heroEx(h, lv, star){
-  const v = heroValAt(h, lv)*HeroRules.factor(star||1);
+function heroEx(h, lv, star, value){
+  const v = value === undefined ? heroValAt(h, lv)*HeroRules.factor(star||1) : value;
   if(h.id === "mage"){
-    const pw = v / 100;
-    return [L("火球：这一刀额外伤害 + 攻击 ×" + heroFmt(pw), "Fireball: extra damage + ATK ×" + heroFmt(pw)),
+    return [L("火球：增加攻击力 " + heroFmt(v) + "% 的额外伤害", "Fireball: add " + heroFmt(v) + "% ATK as extra damage"),
             L("霜甲：护盾 +" + heroFmt(HERO_MAGE_SH * v) + "% 最大生命", "Frost Armor: shield +" + heroFmt(HERO_MAGE_SH * v) + "% max HP"),
             L("回春：回复 " + heroFmt(HERO_MAGE_HEAL * v) + "% 最大生命", "Renew: restore " + heroFmt(HERO_MAGE_HEAL * v) + "% max HP")];
   }
@@ -7834,6 +7902,7 @@ function renderHeroInfo(){
     "<div class=\"hrs on main\"><span>" + L("被动", "Passive") + "</span><p>" + heroText(h, rec ? lv.lv : 1,star||1) + "<em>" + next + "</em>" +
       heroEx(h, rec ? lv.lv : 1,star||1).map(function(t){ return "<i class=\"hrex\">" + t + "</i>"; }).join("") + "</p></div>" +
     h.growth.map(function(t,i){return sline(i+1,t);}).join("") +
+    (run?borrowedSkillsHtml():"") +
     "<details class=\"hero-status-info\"><summary>"+L("祝福与负面状态 · 说明","Blessings and afflictions · Guide")+"</summary>"+statusInfoHtml(run?statusCap():4+(star>=4?1:0))+"</details>" +
     "<div class=\"hrhow\">" + L("出战时答对 +1 经验、拼对 +2、把一个词练到「已掌握」+10 · 重复卡需手动升星，每次一张，最高六星",
                                   "While active: +1 XP per right answer, +2 per spelling, +10 when a word becomes mastered · One duplicate per manual upgrade, up to six stars") + "</div>";
@@ -9630,6 +9699,8 @@ document.addEventListener("keydown", function(ev){
     }
     return;
   }
+  // 信息页的方向键用于滚动属性和技能，不能在背后驱动地图。
+  if($("viewInfo").classList.contains("on")) return;
   const k = ev.key.toLowerCase(), rep = !!ev.repeat;
   if(k === "arrowup" || k === "w"){ ev.preventDefault(); tryMove(0,-1,rep); }
   else if(k === "arrowdown" || k === "s"){ ev.preventDefault(); tryMove(0,1,rep); }
@@ -10044,6 +10115,21 @@ $("btnHeroGo").addEventListener("click", heroGo);
 $("btnHeroUpgrade").addEventListener("click",heroUpgrade);
 $("btnHeroRun").addEventListener("click",function(){if(P&&P.hero)openHeroInfo(P.hero);});
 $("btnHeroRun").textContent=L("角色详情","Hero details");
+$("infoTabRun").textContent=L("角色局内信息","Character & run");
+$("infoTabLearn").textContent=L("学习与图鉴","Learning & codex");
+$("fullStats").querySelector("summary span").textContent=L("完整属性","Full attributes");
+$("fullStats").querySelector("summary small").textContent=L("攻击 · 防御 · 资源 · 当前效果","Offense · Defense · Resources · Effects");
+document.querySelectorAll("[data-info]").forEach(function(b){
+  b.addEventListener("click",function(){selectInfoTab(b.dataset.info);});
+  b.addEventListener("keydown",function(e){
+    if(e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey)return;
+    if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key))return;
+    e.preventDefault();e.stopPropagation();
+    const tab=e.key==="Home"?"run":e.key==="End"?"learn":b.dataset.info==="run"?"learn":"run";
+    selectInfoTab(tab);$(tab==="run"?"infoTabRun":"infoTabLearn").focus();
+  });
+});
+$("fullStats").addEventListener("toggle",function(){if(this.open && SCENE==="run" && P && G)renderHud();});
 ["playerStatuses","foeStatuses"].forEach(function(id){
   const el=$(id);if(!el)return;
   el.addEventListener("click",function(e){const b=e.target.closest("[data-status]");if(b){const d=HeroRules.effects[b.dataset.status];toast(d[UI_EN?3:2]);}});
@@ -10817,8 +10903,8 @@ const TUT_TEXT = {
              "Tap the <b>gold</b> to walk over and pick it up."],
   gold:  [2, "点一下<b>怪物</b>，开始战斗。",
              "Tap a <b>monster</b> to fight it."],
-  fight: [2, "选出意思：<b>答对你砍它，答错它咬你</b>。",
-             "<b>Right</b>: you hit it. <b>Wrong</b>: it bites you."],
+  fight: [2, "选出意思：<b>答对时发动攻击，答错时受到敌人攻击</b>。",
+             "<b>Right</b>: you hit it. <b>Wrong</b>: it attacks you."],
   right: [2, "答对了！<b>连着答对</b>，伤害越来越高。",
              "Correct! <b>Keep a streak</b> for more damage."],
   wrong: [2, "答错会掉血。这个词<b>过一会儿还会再考</b>。",
