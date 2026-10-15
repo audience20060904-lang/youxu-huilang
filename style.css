@@ -372,7 +372,63 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 /* ===== 战斗界面 ===== */
 /* 战斗窗要**整屏放得下**：立绘、题面、选项、间距全部跟着视口高度缩。
    矮屏（600-700）缩到最小档，高屏也有上限，免得方块越长越大反而顶出去。 */
-.battle{max-width:520px;gap:clamp(6px,1.2vh,11px);padding:clamp(11px,1.8vh,18px)}
+.sheet.battle{
+  --battle-gap:clamp(4px,.75svh,7px);
+  --quiz-control-h:clamp(32px,5.1svh,44px);
+  max-width:520px;height:min(820px,calc(100svh - 28px));
+  display:grid;gap:var(--battle-gap);padding:clamp(10px,1.5svh,16px);
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:clamp(90px,14svh,112px) clamp(16px,2.4svh,20px)
+    clamp(82px,13svh,112px) minmax(0,1fr) clamp(44px,6.7svh,60px) 38px clamp(38px,5svh,44px);
+  overflow:hidden;
+}
+/* 每块都有自己的固定位置；换题型只换作答区内容，不改变窗口或底部按钮的位置。 */
+.battle > *{min-width:0}
+.battle > .foe{min-height:0;gap:10px}
+.battle > .foe .portrait{width:clamp(60px,10svh,86px);height:auto;aspect-ratio:1;max-height:100%}
+.battle > .foe .foe-info{gap:2px}
+.battle > .foe .foe-name,.battle > .foe .foe-tag{line-height:1.2}
+.battle > .foe .foe-weak{line-height:1.25;margin-top:0}
+.battle > .combo{min-height:0}
+.battle > .qcard{min-height:0;padding:6px 10px;gap:4px;justify-content:center}
+.battle > .qcard .qlabel{flex:none;font-size:clamp(9px,1.5svh,10px);line-height:1.3}
+.battle > .qcard .qword{min-height:0;max-width:100%;overflow-y:auto;overscroll-behavior:contain;
+  font-size:clamp(20px,3.5svh,28px);line-height:1.15}
+.battle > .qcard .qword.cn{font-size:clamp(18px,3.2svh,25px)}
+.battle > .qcard .qword.zh{font-size:clamp(21px,3.7svh,30px)}
+.battle > .quiz-input{min-height:0;display:grid;gap:var(--battle-gap);grid-template-columns:minmax(0,1fr);
+  grid-template-rows:var(--quiz-control-h) minmax(0,1fr)}
+.quiz-input > .wagerrow,.quiz-input > .spellbar{grid-area:1/1;min-height:0}
+.quiz-input > .wagerrow .wager{padding:2px 8px;justify-content:center;line-height:1.2}
+.quiz-input > .wagerrow .wager em{font-size:10px;line-height:1.2}
+.quiz-input > .opts{grid-area:2/1;justify-self:center;align-self:center;
+  height:min(100%,318px);width:auto;max-width:100%;aspect-ratio:1;margin:0;
+  grid-template-rows:repeat(2,minmax(0,1fr));gap:var(--battle-gap)}
+.quiz-input > .opts .opt{min-width:0;min-height:0;aspect-ratio:auto;padding:5px;}
+.quiz-input > .opts.def{width:100%;aspect-ratio:auto;grid-template-rows:repeat(4,minmax(0,1fr))}
+.quiz-input > .opts.def .opt{padding:5px 10px 4px 32px}
+.quiz-input > .spellbar .spellrow{flex-wrap:nowrap;min-width:0}
+.quiz-input > .spellbar .sbox{height:var(--quiz-control-h);max-height:100%;flex-shrink:1;min-width:0}
+.quiz-input > .letters{grid-area:2/1;justify-self:center;align-self:center;
+  height:auto;max-height:100%;width:min(100%,380px);aspect-ratio:5/3;margin:0;
+  grid-template-rows:repeat(3,minmax(0,1fr));gap:var(--battle-gap)}
+.quiz-input > .letters .lbtn{min-height:0;min-width:0;aspect-ratio:auto}
+.battle > .verdict{min-height:0;overflow-y:auto;overscroll-behavior:contain;gap:2px;line-height:1.3}
+.battle > .verdict .big{font-size:16px}
+.battle > .rowb{min-height:0;flex-wrap:nowrap}
+.battle > .rowb .btn{height:100%;padding:0 12px;white-space:nowrap}
+.battle > .mybar{min-height:0}
+.battle > .mybar .me{max-height:100%}
+@media (max-height:600px){
+  .sheet.battle{grid-template-rows:78px 16px 74px minmax(0,1fr) 44px 36px 38px}
+  .battle > .foe .foe-name{font-size:15px}
+  .battle > .foe .foe-tag{font-size:9px}
+  .battle > .foe .foe-weak{font-size:10px}
+  .battle > .foe .fbar{height:13px}
+  .quiz-input > .opts:not(.def) .opt{padding:18px 4px 4px;font-size:12.5px;line-height:1.2;gap:1px}
+  .quiz-input > .opts .opt .sub{font-size:10px;line-height:1.1}
+  .quiz-input > .opts.def .opt{font-size:11.5px;line-height:1.15;padding-top:3px;padding-bottom:3px}
+}
 .foe{display:flex;align-items:center;gap:13px;position:relative}
 .portrait{width:clamp(58px,11vh,96px);height:clamp(58px,11vh,96px);
   flex:none;border:1px solid var(--edge);border-radius:4px;
