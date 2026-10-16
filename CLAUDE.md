@@ -7,6 +7,18 @@
 
 ---
 
+## 2026-10-16 · iPhone Safari 行走卡顿排查（最新）
+
+用户设备为 iPhone 17 / Safari，手动与自动都卡。本次定位共用逐步渲染链：原每 144ms 调 render 扫 825 格、wallEdge/实体查找、renderHud/stats；camera 写 transform 后读 offset，三道拖尾又逐颗追加 SVG 后读 offset。100 步受控样本：82500 次 paintMapCell、69500 次 wallEdge、3100 次 offset 尺寸/位置读取 + 100 次 computed style。拖尾含 sepia/drop-shadow 且每步重建 SVG。镜头/人物原 160ms 缓动长于 144ms 步进，不断被新目标打断。
+
+修复：renderStep 用于手动/自动空地移动，只改人物/镜头与前后目标格；静态地形不再挂 you 类、每步不触碰地板。mapRenderState 检查地图、cells、怪物/物件数组与数量；拾取/怪物变化、重建、教程/联机走完整 render，保留 HUD 和队友语义。fov 仅新 map/seen/vis 初始化全亮，新怪仍标记 seen。buildGrid 一次 Fragment 构建 .map-tiles，地形 grid 以 contain:layout paint 隔离人物/拖尾的增删。
+
+sizeMap 缓存 map._cellSize；camera、DungeonScene.paint 和 DungeonFX.move 用格坐标×格宽，不读 offset/计算样式。重复位置不写相同 transform/尺寸，跨层/缩放/远跳仍瞬移。镜头与人物共享 --walk-ms=CHAPTER.stepMs（144ms）线性过渡，宠物保留跟随。拖尾回收复用至多 15 个 SVG 容器（同时显示最多 12），去除拖尾滤镜，用 Web Animations 显式重播每次淡出（不靠强制布局重启 CSS 动画），位置/淡出/减少动态效果保留；无新增存档字段。
+
+验证：原 77 组 + 场景零布局读 1 + 拖尾复用 1 + dev/check-walking.js 7，共 86 组通过。相同桌面浏览器三轮 100 步脚本耗时中位 511.6ms→14.5ms（约 -97.2%，含最终复用拖尾动画）；空地样本仅两次目标格刷新、0 次 offset/计算样式读取、0 次 stats/HUD。该数据不是 iPhone 真机帧率。393×852 连走 58 步终点正确、人物居中、拖尾回收；手动点地面与金币拾取/头栏刷新正常，正式单人/合作入口检查无错误。未运行 Safari 远程性能时间线或双端联网对局。
+
+资源版本统一为 `20261016-walk1`。新增地形容器后，查格子请继续用 cells 或 .map .c，不能假定 .c 是 #map 的直接子节点。
+
 ## 2026-10-16 · 战斗分区与冒险独立乘区（最新）
 
 index/coop 的 battle-arena / battle-learning 替代旧七行布局，见 `角色系统.md` 最新战斗排版。怪物上/玩家下，所属状态挂在各自血条附近；冒险、撤退和战斗反馈留在场景。题目、答案、学习反馈在下区，连击仅 ×数字置于题目左上角。旧 id 保留，独立 battle.html 不改。地图 mapStatuses 在经验条下实时显示，renderStatusOwner 比较 HTML 后才更新，可点击查看说明。
@@ -21,7 +33,7 @@ DungeonFX.strike 根据双方坐标生成冲刺和轨迹，宠物同样定向；
 
 index/coop 由 `preload.js` 统一启动：20 个本地脚本先通过 `rel=preload` 并行预取，按原依赖顺序逐个执行，每步让出渲染帧显示真实准备进度；game.js 只注册 prepare/start，近义词及难度索引准备后才 bootGame，避免进入前已经跑答题计时。资源/样式失败保留重试按钮；preload.js 本身下载失败也有 HTML 重试兜底。主应用准备期间 inert，按键不透传。装饰字体使用非阻塞 stylesheet，失败不触发错误横幅；系统字体可直接进入。
 
-**资源版本必须一起更新**：当前 `20261016-arena1` 写在 preload.js 的 version、index/coop 的 preload.js 和 style.css 查询参数上。以后修改启动链或资源时同步升级，保证旧缓存不会混入新启动控制器。所有词库仍加载，跨语言短码兼容不改；新增根目录 JS 已由现有部署的 `*.js` 打包，无 SW、无额外存档键。独立 battle.html 不改。
+**资源版本必须一起更新**：当前 `20261016-walk1` 写在 preload.js 的 version、index/coop 的 preload.js 和 style.css 查询参数上。以后修改启动链或资源时同步升级，保证旧缓存不会混入新启动控制器。所有词库仍加载，跨语言短码兼容不改；新增根目录 JS 已由现有部署的 `*.js` 打包，无 SW、无额外存档键。独立 battle.html 不改。
 
 `learning-cache.js` 用 WeakMap 缓存只读词池及难度组合；到期/生词/已回答筛选仍每题实时计算。整数累计权重替代多份重复词对象的抽题袋，保持原概率及随机数调用次数，测试逐袋位置等价。renderSheets 只在信息/遗物页可见时重建相应内容，切页时 renderHud 刷新最新状态；背包计数/队友 HUD 继续实时更新。地图仅改写发生变化的 class，单人地图不逐格查询队友节点。战斗弹层移除背景模糊；攻击/击杀粒子组共享一次坐标读取，暴击 4 次、击杀 3 次布局读取，动画数量、触发和回收规则不变。
 

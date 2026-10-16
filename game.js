@@ -1495,8 +1495,12 @@ function say(t, cls){
    所以 G.vis / G.seen 现在恒为 true：两张表留着是因为
    render()、findPath()、续玩档都按它们写的，抹掉要动一片地方，没必要。
    ⚠️ 别再把「半径 R + 视线遮挡（los）」那一套加回来，是用户明确不要的。 */
+let fovGrid=null, fovSeen=null, fovVis=null;
 function fov(){
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ G.vis[y][x] = true; G.seen[y][x] = true; }
+  if(fovGrid!==G.map || fovSeen!==G.seen || fovVis!==G.vis){
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ G.vis[y][x] = true; G.seen[y][x] = true; }
+    fovGrid=G.map;fovSeen=G.seen;fovVis=G.vis;
+  }
   G.mobs.forEach(function(m){ m.seen = true; });
 }
 
@@ -1521,12 +1525,18 @@ function buildGrid(){
   const m = $("map");
   m.innerHTML = "";
   m.style.gridTemplateColumns = "repeat(" + W + ", var(--cell))";
+  m.style.setProperty("--walk-ms",CHAPTER.stepMs+"ms");
+  mapRenderState=null;
+  const terrain=document.createElement("div"), fragment=document.createDocumentFragment();
+  terrain.className="map-tiles";
+  terrain.style.gridTemplateColumns=m.style.gridTemplateColumns;
   cells = [];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const c = document.createElement("div");
     c.className = "c"; c.dataset.x = x; c.dataset.y = y;
-    m.appendChild(c); cells.push(c);
+    fragment.appendChild(c); cells.push(c);
   }
+  terrain.appendChild(fragment);m.appendChild(terrain);
   sizeMap();
 }
 /* 取景窗实际显示多少格。CHAPTER.view 是**基准**（也是下限），
@@ -1571,6 +1581,7 @@ function sizeMap(){
   VIEW.w = Math.max(BW, Math.min(MW, W, Math.floor((availW - 2) / cell)));
   VIEW.h = Math.max(BH, Math.min(MH, H, Math.floor((availH - 2) / cell)));
 
+  $("map")._cellSize=cell;
   $("map").style.setProperty("--cell", cell + "px");
   st.style.width  = (VIEW.w * cell + 2) + "px";     // +2 是边框（全局 border-box）
   st.style.height = (VIEW.h * cell + 2) + "px";
@@ -1580,14 +1591,14 @@ function sizeMap(){
 function camera(){
   if(!P || !G || !G.map) return;
   const m = $("map");
-  const cell = parseFloat(getComputedStyle(m).getPropertyValue("--cell")) || 20;
+  const cell = m._cellSize || 20;
   const VW = VIEW.w, VH = VIEW.h;
   /* 人永远在取景窗正中：**不夹边界**。
      以前这里把 cx/cy 夹在 [0, 地图-视野] 里，走到地图上下/左右边缘时镜头就顶住不动了，
      人会跑到画面边上。现在宁可让取景窗露出地图外的空白，也要保证视角始终居中。 */
   const cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
   DungeonScene.camera(m,-cx*cell,-cy*cell,G.map,cell);
-  DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id);
+  DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id,cell);
 }
 function mobAt(x,y){
   for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y) return G.mobs[i];
@@ -1603,17 +1614,15 @@ function paintMapCell(c,html){
 }
 function paintMapClass(c,classes){if(c.className!==classes)c.className=classes;}
 function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer");}
-function render(){
-  const cleared = G.mobs.length === 0;
-  const tutAt = (P && P.tut) ? tutTarget() : null;
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+let mapRenderState=null;
+function renderMapTile(x,y,cleared,tutAt){
     const c = cells[y*W + x];
     const isGoal = G.goal && G.goal.x === x && G.goal.y === y;
-    if(!G.seen[y][x]){ paintMapCell(c,""); paintMapClass(c,"c dark"); continue; }
+    if(!G.seen[y][x]){ paintMapCell(c,""); paintMapClass(c,"c dark"); return; }
     const visible = G.vis[y][x];
     const isWall = G.map[y][x] === 0;
     // 离地板两格以上的实心墙不画，露出取景框的底（见上面 wallEdge）
-    if(isWall && !wallEdge(x, y)){ paintMapCell(c,""); paintMapClass(c,"c void"); continue; }
+    if(isWall && !wallEdge(x, y)){ paintMapCell(c,""); paintMapClass(c,"c void"); return; }
     const base = isWall ? "wall" : "floor";
     let glyph = "";              // 地图上已经没有字符了；留着是给没配图的怪兜底
     let content = isWall ? "" : "dot";   // 空地板上那个点是 CSS 画的（.c.dot::before），不占内容
@@ -1643,17 +1652,32 @@ function render(){
       art = MOB_ART[mid] || null;
       glyph = art ? "" : mo.g;
     }
-    if(x === P.x && y === P.y){
-      paintMapCell(c,""); // 人物独立于格子，和镜头以同样的曲线连续移动。
-      paintMapClass(c,"c floor you walkable" + heroCls(P.hero) + (isGoal ? " goal" : ""));
-      continue;
-    }
     // 地图上的东西全是画出来的。glyph 只在某只怪没配图时才派上用场
     paintMapCell(c,art || glyph);
     paintMapClass(c,"c " + base + " " + content + (visible ? "" : " mem") +
                   (isWall ? "" : " walkable") + (isGoal ? " goal" : ""));
     if(tutAt && tutAt.x === x && tutAt.y === y) c.classList.add("tutmark");   // 新手教程：这一步要点的那一格
+}
+/* 空地移动只更新镜头、人物和目标圈；拾取/战斗/换层仍走完整渲染。 */
+function renderStep(){
+  const old=mapRenderState;
+  if(!old || COOP || P.tut || old.world!==G.map || old.grid!==cells ||
+     old.mobs!==G.mobs || old.mobCount!==G.mobs.length || old.things!==G.things || old.thingCount!==G.things.length){
+    render();return;
   }
+  const goal=G.goal ? G.goal.y*W+G.goal.x : -1;
+  if(old.goal!==goal){
+    for(const index of [old.goal,goal])if(index>=0)renderMapTile(index%W,Math.floor(index/W),G.mobs.length===0,null);
+    old.goal=goal;
+  }
+  camera();
+  if(window.DungeonFX) DungeonFX.move($("map"),cells,W,G.map,P.x,P.y,heroArt(P.hero),heroCls(P.hero));
+}
+function render(){
+  const cleared = G.mobs.length === 0;
+  const tutAt = (P && P.tut) ? tutTarget() : null;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++)renderMapTile(x,y,cleared,tutAt);
+  mapRenderState={world:G.map,grid:cells,mobs:G.mobs,mobCount:G.mobs.length,things:G.things,thingCount:G.things.length,goal:G.goal?G.goal.y*W+G.goal.x:-1};
   // 联机：队友棋子（逻辑不占格子，纯视觉叠一层在队友最后上报的位置上，见 coopMateX/Y）
   if(COOP && coopMateX != null && coopMateY != null &&
      coopMateX >= 0 && coopMateY >= 0 && coopMateX < W && coopMateY < H){
@@ -2094,7 +2118,7 @@ function goTo(tx, ty, blind){
   // 怪清完之后每人自己决定去哪找自己的金币，不该再把这条路塞给队友（coopLocked() 已经是 false）
   if(COOP && coopIsHost() && coopLocked() && window.NET) NET.send({t:"path", steps: path.map(function(p){ return {x:p.x, y:p.y}; })});
   G.goal = {x:tx, y:ty};
-  render();
+  renderStep();
   stepWalk();
   return true;
 }
@@ -2211,7 +2235,7 @@ function stepWalk(){
   if(G.paused || G.floor !== floorBefore){ cancelWalk(); if(!G.paused){ fov(); render(); } return; }
   fov();
   if(!walkPath.length){ cancelWalk(); }
-  render();
+  renderStep();
   if(walkPath && walkPath.length) walkTimer = setTimeout(stepWalk, CHAPTER.stepMs);
 }
 function tryMove(dx, dy, rep){
@@ -2229,7 +2253,7 @@ function tryMove(dx, dy, rep){
   P.x = nx; P.y = ny;
   const floorBefore = G.floor;
   onEnter();
-  if(!G.paused && !G.over && G.floor === floorBefore){ fov(); render(); }
+  if(!G.paused && !G.over && G.floor === floorBefore){ fov(); renderStep(); }
 }
 function onEnter(){
   const th = thingAt(P.x, P.y);

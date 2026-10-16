@@ -66,6 +66,19 @@ check('Reduced motion, hidden documents, and hidden battle skip effects and clea
  media.matches=false;fx.attack(false);document.hidden=true;listeners.visibilitychange();assert.equal(body.children.length,0);fx.hurt(3,0);assert.equal(body.children.length,0);
  document.hidden=false;ids.veilBattle.hidden=true;fx.kill();assert.equal(body.children.length,0);ids.veilBattle.hidden=false;
 });
+check('Cached map coordinates avoid layout reads and expired trails reuse SVG nodes',()=>{
+ const map=element('map'),world=[],cells=Array.from({length:2},()=>element());map._cellSize=30;
+ for(const el of cells)for(const key of ['offsetWidth','offsetHeight','offsetLeft','offsetTop'])Object.defineProperty(el,key,{get(){throw Error('Unexpected layout read '+key);}});
+ fx.move(map,cells,2,world,0,0,'<svg/>','');const start=nodes.length;
+ let prior=null;
+ for(let i=0;i<100;i++){
+  fx.move(map,cells,2,world,i%2?0:1,0,'<svg/>','');assert(map.children.length<=12);
+  const motion=map.children[0].lastMotion;assert(motion&&motion!==prior);assert.equal(motion.frames.at(-1).opacity,0);
+  drain();assert(motion.cancelled);prior=motion;
+ }
+ assert(nodes.length-start<=3,'One set of three trails is reused after expiration');
+ assert.equal(map.children.length,0);
+});
 // Extract real settlement functions so effects cannot drift from damage semantics.
 const source=fs.readFileSync(path.join(root,'game.js'),'utf8').replace(/\r\n/g,'\n'),calls=[];
 Object.assign(c,{DungeonFX:{hurt:(...v)=>calls.push(['hurt',...v]),block:()=>calls.push(['block']),dodge:()=>calls.push(['dodge']),heal:()=>calls.push(['heal'])},

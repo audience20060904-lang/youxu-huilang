@@ -3,6 +3,7 @@
   "use strict";
   const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
   const live = new Set(), motions = new Map();
+  const trailPool=[];
   let anchor = null;
   const skillAt=new Map();
   const $ = id => document.getElementById(id);
@@ -37,6 +38,7 @@
     const active=motions.get(el);
     if(active){active.animation.cancel();motions.delete(el);}
     el.remove();
+    if(el._moveTrail && trailPool.length<15)trailPool.push(el);
   }
   function keep(el, ms, kind){
     while(live.size >= 48) forget(live.values().next().value.el);
@@ -50,7 +52,7 @@
     motions.forEach((motion, el) => {
       if(!kind || motion.kind === kind){ motion.animation.cancel(); motions.delete(el); }
     });
-    if(!kind || kind === "map") anchor = null;
+    if(!kind || kind === "map"){anchor = null;trailPool.length=0;}
   }
   function motion(el, frames, ms, kind, hold){
     if(!enabled() || !el || !el.animate) return;
@@ -193,18 +195,23 @@
       }
       if(Math.abs(x-previous.x)+Math.abs(y-previous.y) !== 1) return;
       const from = cells[previous.y*width+previous.x], to = cells[y*width+x];
-      if(!from || !to || !to.offsetWidth) return;
+      if(!from || !to) return;
+      const size=map._cellSize||to.offsetWidth;if(!size)return;
+      const x0=map._cellSize?previous.x*size:from.offsetLeft,y0=map._cellSize?previous.y*size:from.offsetTop;
+      const x1=map._cellSize?x*size:to.offsetLeft,y1=map._cellSize?y*size:to.offsetTop;
       // 直接挂在地图上，格子重绘不会擦掉；相机平移时残影留在原来的路上。
       for(let i=0;i<3;i++){
-        const trail = document.createElement("span"), t = i/3;
-        trail.className = "move-trail" + cls;
-        trail.setAttribute("aria-hidden", "true");
-        trail.innerHTML = svg;
-        trail.style.left = (from.offsetLeft+(to.offsetLeft-from.offsetLeft)*t) + "px";
-        trail.style.top = (from.offsetTop+(to.offsetTop-from.offsetTop)*t) + "px";
-        trail.style.width = from.offsetWidth + "px"; trail.style.height = from.offsetHeight + "px";
-        trail.style.setProperty("--trail-alpha", .14+i*.09);
+        const trail = trailPool.pop()||document.createElement("span"), t = i/3;
+        trail._moveTrail=true;
+        if(trail.className!=="move-trail"+cls)trail.className="move-trail"+cls;
+        if(!trail._decorative){trail.setAttribute("aria-hidden", "true");trail._decorative=true;}
+        if(trail._art!==svg){trail.innerHTML = svg;trail._art=svg;}
+        trail.style.left = (x0+(x1-x0)*t) + "px";
+        trail.style.top = (y0+(y1-y0)*t) + "px";
+        if(trail._size!==size){trail.style.width=trail.style.height=size+"px";trail._size=size;}
         map.appendChild(trail); keep(trail, 500, "map");
+        // 复用节点时显式重启淡出，不通过 offsetWidth 强制重排来重启 CSS 动画。
+        motion(trail,[{opacity:.14+i*.09,transform:"scale(.92)"},{opacity:0,transform:"scale(.6)"}],420,"map",true);
       }
       const trails = Array.from(live).filter(item => item.kind === "map");
       trails.slice(0,Math.max(0,trails.length-12)).forEach(item => forget(item.el));

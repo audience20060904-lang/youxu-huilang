@@ -11,10 +11,12 @@ var DungeonScene=(function(){
   STAIR=svg(shadow+'<path d="M5 8h22v19H5Z" fill="#554e48"/><path d="M8 11h16v4H8Zm0 5h16v4H8Zm0 5h16v5H8Z" fill="#a69b83"/><path d="M9 12h14M9 17h14M9 22h14" stroke="#e5d2a2" opacity=".5"/><path d="m16 3 4 4h-3v3h-2V7h-3Z" fill="#e1b450"/>');
   const pet=svg(shadow+'<path d="m6 15 1-9 6 5 7-2 7 7-4 9H9Z" fill="#b59a70" stroke="#4d4337"/><path d="m9 11 1-3 3 4M23 13l2 3-4 7-5-2" fill="#ead6ac"/><path d="m10 25-2 4M22 25l2 4M6 20l-4-4" stroke="#7c6950" stroke-width="3" stroke-linecap="round"/><circle cx="19" cy="16" r="1.5" fill="#32535c"/><path d="m24 19 4-1-1 4" fill="#3a3431"/><path d="M11 15h3M9 18h4" stroke="#715b42"/>');
   let world=null,mapNode=null,pawn=null,companion=null;
-  function paint(map,cells,w,grid,x,y,art,hasPet,chapter){
+  function paint(map,cells,w,grid,x,y,art,hasPet,chapter,cellSize){
     if(!map)return;const cell=cells[y*w+x];if(!cell)return;
     const fresh=world!==grid||mapNode!==map||!pawn||!pawn.isConnected;
-    const snap=fresh||pawn._cellSize!==cell.offsetWidth;
+    const size=cellSize||map._cellSize||cell.offsetWidth;if(!size)return;
+    const resize=fresh||pawn._cellSize!==size;
+    const snap=resize||(!fresh&&Math.abs(pawn._x-x)+Math.abs(pawn._y-y)>3);
     if(fresh){
       world=grid;mapNode=map;map.dataset.biome=String(chapter||1);
       if(pawn)pawn.remove();if(companion)companion.remove();
@@ -31,11 +33,14 @@ var DungeonScene=(function(){
       }
     }
     if(pawn._art!==art){pawn.innerHTML=art;pawn._art=art;}
-    const size=cell.offsetWidth;if(!size)return;pawn._cellSize=size;
-    for(const node of [pawn,companion]){node.style.width=node.style.height=size+'px';node.style.transition=snap?'none':'';}
-    pawn.style.transform='translate('+cell.offsetLeft+'px,'+cell.offsetTop+'px)';
-    companion.hidden=!hasPet;companion.style.transform='translate('+(cell.offsetLeft-size*.58)+'px,'+(cell.offsetTop+size*.27)+'px)';
-    if(snap){void pawn.offsetWidth;void companion.offsetWidth;}
+    if(resize)for(const node of [pawn,companion])node.style.width=node.style.height=size+'px';
+    if(fresh||resize||pawn._x!==x||pawn._y!==y){
+      for(const node of [pawn,companion])node.style.transition=snap?'none':'';
+      pawn.style.transform='translate('+(x*size)+'px,'+(y*size)+'px)';
+      companion.style.transform='translate('+(x*size-size*.58)+'px,'+(y*size+size*.27)+'px)';
+    }
+    if(companion.hidden!==!hasPet)companion.hidden=!hasPet;
+    pawn._cellSize=size;pawn._x=x;pawn._y=y;
   }
   function battlePet(show){
     const host=document.getElementById('meArt');if(!host)return;
@@ -45,8 +50,9 @@ var DungeonScene=(function(){
   }
   function camera(map,targetX,targetY,key,size){
     const prior=map._camera,far=!prior||prior.key!==key||prior.size!==size||Math.abs(prior.x-targetX)+Math.abs(prior.y-targetY)>size*3;
+    if(prior&&prior.key===key&&prior.size===size&&prior.x===targetX&&prior.y===targetY)return;
     map.style.transition=far?'none':'';map.style.transform='translate('+targetX+'px,'+targetY+'px)';
-    if(far)void map.offsetWidth;map._camera={x:targetX,y:targetY,key:key,size:size};
+    map._camera={x:targetX,y:targetY,key:key,size:size};
   }
   return {paint:paint,battlePet:battlePet,camera:camera,pet:pet};
 })();

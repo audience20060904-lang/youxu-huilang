@@ -197,10 +197,11 @@ body{
 .stage{flex:0 1 auto;align-self:center;position:relative;overflow:hidden;
   border:1px solid var(--edge);background:var(--unseen);border-radius:3px;
   box-shadow:inset 0 1px 5px rgba(90,76,50,.28)}
-.map{position:absolute;top:0;left:0;display:grid;gap:0;width:max-content;
-  will-change:transform;transition:transform .16s cubic-bezier(.2,.65,.35,1)}
+.map{position:absolute;top:0;left:0;display:block;width:max-content;
+  will-change:transform;transition:transform var(--walk-ms,144ms) linear}
+.map-tiles{display:grid;gap:0;width:max-content;contain:layout paint}
 .map-pawn,.map-pet{position:absolute;top:0;left:0;z-index:3;pointer-events:none;user-select:none;
-  color:var(--hero);transition:transform .16s cubic-bezier(.2,.65,.35,1);will-change:transform}
+  color:var(--hero);transition:transform var(--walk-ms,144ms) linear;will-change:transform}
 .map-pawn svg{display:block;width:100%;height:100%}
 .map-pet{z-index:2;transition-duration:.2s}.map-pet svg{width:70%;height:70%;display:block;filter:drop-shadow(0 1px 1px #3c302547)}
 .map .c.you{background:transparent}
@@ -598,7 +599,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .dfx-text.slain,.dfx-text.critical{color:#FFDD92}
 .dfx-text.combo-burst{font-size:17px;letter-spacing:.04em}
 .move-trail{position:absolute;z-index:1;display:grid;place-items:center;pointer-events:none;user-select:none;
-  color:var(--hero);filter:sepia(.4) drop-shadow(0 0 3px #D6A447);animation:dfx-trail .42s ease-out both}
+  color:var(--hero);opacity:0}
 .move-trail svg{width:84%;height:84%}
 .map-burst{position:absolute;z-index:2;pointer-events:none;color:#DBAF59;animation:dfx-ring .65s ease-out both}
 .map-burst svg{display:block;width:100%;height:100%}
@@ -629,9 +630,6 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   0%{opacity:0;transform:translate(-50%,-40%) scale(.5)}
   25%{opacity:.85}
   100%{opacity:0;transform:translate(-50%,-75%) scale(1.15)}}
-@keyframes dfx-trail{
-  0%{opacity:var(--trail-alpha);transform:scale(.92)}
-  100%{opacity:0;transform:scale(.6)}}
 @media (prefers-reduced-motion:reduce){.dfx,.move-trail,.map-burst{display:none!important;animation:none!important}}
 @keyframes jolt{25%{transform:translateX(-5px)}60%{transform:translateX(5px)}100%{transform:translateX(0)}}
 .foe-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}

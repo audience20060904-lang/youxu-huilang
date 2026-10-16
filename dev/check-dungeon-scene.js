@@ -25,4 +25,14 @@ check('New floors discard old actors; ordinary movement interpolates, teleports 
  scene.camera(map,0,0,grid,20);assert.equal(map.style.transition,'none');scene.camera(map,-20,0,grid,20);assert.equal(map.style.transition,'');
  scene.camera(map,-200,0,grid,20);assert.equal(map.style.transition,'none');scene.camera(map,-210,0,grid,10);assert.equal(map.style.transition,'none');scene.camera(map,-220,0,[],10);assert.equal(map.style.transition,'none');
 });
+check('Cached geometry needs no layout reads; stationary paints and cameras do not rewrite transforms',()=>{
+ const m=node(),g=[[1,1]],cs=[node(),node()];m._cellSize=30;
+ for(const el of [m,...cs])for(const key of ['offsetWidth','offsetLeft','offsetTop'])Object.defineProperty(el,key,{get(){throw Error('Unexpected layout read '+key);}});
+ scene.camera(m,0,0,g,30);scene.paint(m,cs,2,g,0,0,'<svg/>',true,1);
+ const actor=m.children[0];let writes=0,value=actor.style.transform;
+ Object.defineProperty(actor.style,'transform',{get:()=>value,set(v){writes++;value=v;}});
+ scene.paint(m,cs,2,g,0,0,'<svg/>',true,1);assert.equal(writes,0);
+ scene.paint(m,cs,2,g,1,0,'<svg/>',true,1);assert.equal(writes,1);assert.equal(value,'translate(30px,0px)');
+ let cameraWrites=0;Object.defineProperty(m.style,'transform',{set(){cameraWrites++;}});scene.camera(m,0,0,g,30);assert.equal(cameraWrites,0);
+});
 console.log(groups+' scene checks passed.');
