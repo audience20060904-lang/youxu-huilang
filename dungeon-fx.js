@@ -9,7 +9,8 @@
   const skillAt=new Map();
   const $ = id => document.getElementById(id);
   const enabled = () => !(reduce && reduce.matches) && !document.hidden;
-  const light=()=>typeof DungeonRaster!=='undefined'&&DungeonRaster.light();
+  const mobile=window.matchMedia?window.matchMedia('(max-width:600px), (pointer:coarse)'):null;
+  const light=()=>!!(mobile&&mobile.matches);
   function later(fn,ms){const token=round;const id=setTimeout(()=>{scheduled.delete(id);if(token===round)fn();},ms);scheduled.add(id);return id;}
   function resetRound(){round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");}
   const battleOpen = () => $("veilBattle") && !$("veilBattle").hidden;
@@ -58,11 +59,11 @@
     });
     if(!kind || kind === "map"){anchor = null;trailPool.length=0;}
   }
-  function motion(el, frames, ms, kind, hold){
+  function motion(el, frames, ms, kind, hold, easing){
     if(!enabled() || !el || !el.animate) return;
     const old = motions.get(el);
     if(old) old.animation.cancel();
-    const animation = el.animate(frames, {duration:ms, easing:"cubic-bezier(.2,.7,.25,1)", fill:hold ? "forwards" : "none"});
+    const animation = el.animate(frames, {duration:ms, easing:easing||"cubic-bezier(.2,.7,.25,1)", fill:hold ? "forwards" : "none"});
     motions.set(el, {animation:animation, kind:kind || "battle"});
     const done = () => { if(!hold && motions.get(el)?.animation === animation) motions.delete(el); };
     animation.finished.then(done, done);
@@ -234,7 +235,7 @@
       const size=map._cellSize||to.offsetWidth;if(!size)return;
       const x0=map._cellSize?previous.x*size:from.offsetLeft,y0=map._cellSize?previous.y*size:from.offsetTop;
       const x1=map._cellSize?x*size:to.offsetLeft,y1=map._cellSize?y*size:to.offsetTop;
-      const visual=typeof DungeonRaster!=='undefined'?DungeonRaster.sprite(svg,cls):svg;
+      const visual=svg;
       // 直接挂在地图上，格子重绘不会擦掉；相机平移时残影留在原来的路上。
       for(let i=0;i<3;i++){
         const trail = trailPool.pop()||document.createElement("span"), t = i/3;
@@ -247,7 +248,7 @@
         if(trail._size!==size){trail.style.width=trail.style.height=size+"px";trail._size=size;}
         map.appendChild(trail); keep(trail, 500, "map");
         // 复用节点时显式重启淡出，不通过 offsetWidth 强制重排来重启 CSS 动画。
-        motion(trail,[{opacity:.14+i*.09,transform:"scale(.92)"},{opacity:0,transform:"scale(.6)"}],420,"map",true);
+        motion(trail,[{opacity:.14+i*.09,transform:"scale(.92)"},{opacity:0,transform:"scale(.6)"}],420,"map",true,"ease-out");
       }
       const trails = Array.from(live).filter(item => item.kind === "map");
       trails.slice(0,Math.max(0,trails.length-12)).forEach(item => forget(item.el));

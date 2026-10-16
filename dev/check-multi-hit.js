@@ -16,7 +16,7 @@ function el(name){return {id:name,hidden:false,style:{setProperty(){}},children:
  animate(frames,options){const a={frames,options,cancelled:false,cancel(){this.cancelled=true},finished:new Promise(()=>{})};this.motion=a;return a;}};}
 for(const id of ['veilBattle','meArt','foeArt','foeFill','foeTxt','battleSoul0','battlePet'])ids[id]=el(id);
 const body=el('body'),media={matches:false,addEventListener(_,fn){this.change=fn;}},document={hidden:false,body,getElementById:id=>ids[id],querySelector:()=>ids.battlePet,createElement:()=>el(),addEventListener:(k,f)=>listeners[k]=f};
-const ctx=vm.createContext({window:{matchMedia:()=>media,addEventListener:(k,f)=>listeners[k]=f},document,L:a=>a,setTimeout(f,ms){const n=++id;timers.set(n,{fn:f,at:now+(ms||0)});return n;},clearTimeout:n=>timers.delete(n)});
+const ctx=vm.createContext({window:{matchMedia:q=>q.includes('prefers-reduced-motion')?media:{matches:false},addEventListener:(k,f)=>listeners[k]=f},document,L:a=>a,setTimeout(f,ms){const n=++id;timers.set(n,{fn:f,at:now+(ms||0)});return n;},clearTimeout:n=>timers.delete(n)});
 vm.runInContext(read('dungeon-fx.js'),ctx);const fx=ctx.window.DungeonFX;
 function advance(target){while(true){const next=[...timers].filter(x=>x[1].at<=target).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;now=next[1].at;timers.delete(next[0]);next[1].fn();}now=target;}
 check('Player, soul and pet have distinct launch times, impact times and source actors',()=>{

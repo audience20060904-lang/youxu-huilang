@@ -1586,7 +1586,6 @@ function sizeMap(){
   st.style.width  = (VIEW.w * cell + 2) + "px";     // +2 是边框（全局 border-box）
   st.style.height = (VIEW.h * cell + 2) + "px";
   camera();
-  paintMapRaster();
 }
 /* 镜头：把玩家尽量放在取景窗中间，贴边时停住（不露白） */
 function camera(){
@@ -1601,10 +1600,7 @@ function camera(){
   DungeonScene.camera(m,-cx*cell,-cy*cell,G.map,cell);
   DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id,cell,heroCls(P.hero));
 }
-function paintMapRaster(){
-  if(!P||!G||!G.map||!cells.length)return;
-  if(window.DungeonRaster)DungeonRaster.paint($("map"),cells,W,H,$("map")._cellSize||20,CH.id,G.goal,COOP||!!P.tut);
-}
+
 function mobAt(x,y){
   for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y) return G.mobs[i];
   return null;
@@ -1672,9 +1668,8 @@ function renderStep(){
   }
   const goal=G.goal ? G.goal.y*W+G.goal.x : -1;
   if(old.goal!==goal){
-    for(const index of [old.goal,goal])if(index>=0)renderMapTile(index%W,Math.floor(index/W),G.mobs.length===0,null);
+    for(const index of [old.goal,goal])if(index>=0&&cells[index])cells[index].classList.toggle("goal",index===goal);
     old.goal=goal;
-    paintMapRaster();
   }
   camera();
   if(window.DungeonFX) DungeonFX.move($("map"),cells,W,G.map,P.x,P.y,heroArt(P.hero),heroCls(P.hero));
@@ -1696,7 +1691,6 @@ function render(){
     }
   }
   camera();
-  paintMapRaster();
   if(window.DungeonFX) DungeonFX.move($("map"), cells, W, G.map, P.x, P.y, heroArt(P.hero), heroCls(P.hero));
   renderHud();
 }
@@ -2125,7 +2119,6 @@ function goTo(tx, ty, blind){
   // 怪清完之后每人自己决定去哪找自己的金币，不该再把这条路塞给队友（coopLocked() 已经是 false）
   if(COOP && coopIsHost() && coopLocked() && window.NET) NET.send({t:"path", steps: path.map(function(p){ return {x:p.x, y:p.y}; })});
   G.goal = {x:tx, y:ty};
-  renderStep();
   stepWalk();
   return true;
 }
@@ -8019,7 +8012,7 @@ function heroCls(id){ return heroById(id) ? " hr-" + id : ""; }
   const st = document.createElement("style");
   st.textContent = HEROES.map(function(h){
     const c = ".hr-" + h.id;
-    return ".c.you" + c + ",.mybar .me" + c + ",.hrart" + c + "{color:" + h.col + "}";
+    return ".c.you" + c + ",.mybar .me" + c + ",.hrart" + c + ",.map-pawn" + c + ",.move-trail" + c + "{color:" + h.col + "}";
   }).join("\n");
   document.head.appendChild(st);
 })();
@@ -11206,8 +11199,7 @@ refreshSaveState();
 if(window.GameBoot)GameBoot.register({
   prepare:[
     {label:"整理词义与近义词",run:function(){synIndex();}},
-    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}},
-    {label:"缓存地图绘制资源",run:function(){return window.DungeonRaster?DungeonRaster.prepare():null;}}
+    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}}
   ],start:bootGame
 });
 else bootGame();

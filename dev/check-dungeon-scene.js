@@ -35,4 +35,12 @@ check('Cached geometry needs no layout reads; stationary paints and cameras do n
  scene.paint(m,cs,2,g,1,0,'<svg/>',true,1);assert.equal(writes,1);assert.equal(value,'translate(30px,0px)');
  let cameraWrites=0;Object.defineProperty(m.style,'transform',{set(){cameraWrites++;}});scene.camera(m,0,0,g,30);assert.equal(cameraWrites,0);
 });
+check('Mobile movement retains native SVGs and skips heavy tile decoration; desktop restores details',()=>{
+ const media={matches:true},m=node(),g=[[1,1]],cs=[node(),node()];m._cellSize=30;
+ const sandbox=vm.createContext({window:{matchMedia:()=>media},document:{createElement:node,getElementById:()=>null}});
+ vm.runInContext('var COIN,CHEST,SPRING,ALTAR,SHOP,STAIR;'+fs.readFileSync(path.join(__dirname,'..','dungeon-scene.js'),'utf8'),sandbox);
+ const paint=x=>sandbox.DungeonScene.paint(m,cs,2,g,x,0,'<svg/>',true,1,30,' hr-medium');
+ paint(0);paint(1);assert.equal(m.children.length,2);assert.equal(m.children[0].innerHTML,'<svg/>');assert.equal(m.children[0].className,'map-pawn hr-medium');assert.equal(cs[0].dataset.detail,undefined);
+ media.matches=false;paint(1);assert.equal(cs[0].dataset.detail,'0');assert.equal(cs[0].dataset.face,'e');assert.equal(m.children.length,2);
+});
 console.log(groups+' scene checks passed.');

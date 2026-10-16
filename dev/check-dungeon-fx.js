@@ -11,7 +11,7 @@ function element(id){
 const ids={};['veilBattle','foeArt','meArt','combo'].forEach(id=>ids[id]=element(id));
 const body=element('body'),media={matches:false,addEventListener(k,f){this.changed=f;}};
 const document={body,hidden:false,getElementById:id=>ids[id],createElement(){const n=element();nodes.push(n);return n;},addEventListener(k,f){listeners[k]=f;}};
-const window={matchMedia:()=>media,addEventListener(k,f){listeners[k]=f;}};
+const window={matchMedia:q=>q.includes('prefers-reduced-motion')?media:{matches:false},addEventListener(k,f){listeners[k]=f;}};
 const c=vm.createContext({window,document,L:a=>a,console,setTimeout(f){const i=++nextTimer;timers.set(i,f);return i;},clearTimeout:i=>timers.delete(i)});
 vm.runInContext(fs.readFileSync(path.join(root,'dungeon-fx.js'),'utf8'),c);const fx=window.DungeonFX;
 function drain(){for(const [id,f] of [...timers]){timers.delete(id);f();}}
@@ -73,7 +73,7 @@ check('Cached map coordinates avoid layout reads and expired trails reuse SVG no
  let prior=null;
  for(let i=0;i<100;i++){
   fx.move(map,cells,2,world,i%2?0:1,0,'<svg/>','');assert(map.children.length<=12);
-  const motion=map.children[0].lastMotion;assert(motion&&motion!==prior);assert.equal(motion.frames.at(-1).opacity,0);
+  const motion=map.children[0].lastMotion;assert(motion&&motion!==prior);assert.equal(map.children[0].innerHTML,'<svg/>');assert.equal(motion.options.easing,'ease-out');assert.equal(motion.options.duration,420);assert.equal(motion.frames.at(-1).opacity,0);
   drain();assert(motion.cancelled);prior=motion;
  }
  assert(nodes.length-start<=3,'One set of three trails is reused after expiration');

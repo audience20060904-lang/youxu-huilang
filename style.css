@@ -200,16 +200,12 @@ body{
 .map{position:absolute;top:0;left:0;display:block;width:max-content;
   will-change:transform;transition:transform var(--walk-ms,144ms) linear}
 .map-tiles{display:grid;gap:0;width:max-content;contain:layout paint}
-.map-raster{position:absolute;top:0;left:0;z-index:0;pointer-events:none}
-.raster-map .map-tiles{opacity:0}
-.raster-goal{position:absolute;top:0;left:0;z-index:1;pointer-events:none}
-.raster-goal:after{content:"";position:absolute;inset:12%;border:2px solid var(--torch);border-radius:50%}
 .map-pawn,.map-pet{position:absolute;top:0;left:0;z-index:3;pointer-events:none;user-select:none;
   color:var(--hero);transition:transform var(--walk-ms,144ms) linear;will-change:transform}
 .map-pawn svg{display:block;width:100%;height:100%}
-.map-pawn img{display:block;width:100%;height:100%;pointer-events:none}
 .map-pet{z-index:2;transition-duration:.2s}.map-pet svg{width:70%;height:70%;display:block;filter:drop-shadow(0 1px 1px #3c302547)}
 .map .c.you{background:transparent}
+@media (min-width:601px) and (pointer:fine){
 .stage{isolation:isolate}.stage::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 46px 12px #30291d24}
 .map .c.floor{background-color:#e8dfca;background-image:linear-gradient(135deg,#fff5 0%,#fff0 56%),linear-gradient(0deg,#8f775214 1px,transparent 1px),linear-gradient(90deg,#8f775214 1px,transparent 1px);
   box-shadow:inset 1px 1px #fff2,inset -1px -1px #836e4b0c}
@@ -225,6 +221,7 @@ body{
 .map[data-biome="5"] .c.floor{background-color:#d5cfe0}.map[data-biome="5"] .c.wall{background-color:#655c75}
 .map .c.gold svg,.map .c.chest svg{filter:drop-shadow(0 1px 1px #73552a44)}
 .map .c.feat svg{filter:drop-shadow(0 0 3px #77ccd366)}
+}
 .battle-pet{position:absolute;right:-14px;bottom:-2px;width:26px;height:26px;pointer-events:none;z-index:2}
 .battle-pet svg{display:block;width:100%;height:100%}
 .dfx-skill{animation:dfx-sigil .65s ease-out both}.dfx-skill.pet-strike{animation-name:dfx-slash}
@@ -232,6 +229,7 @@ body{
 @media (prefers-reduced-motion:reduce){.map,.map-pawn,.map-pet{transition:none!important}}
 
 /* 洞窟深处：墙外岩盘与暗处共用底材，地图边界不露纸色。 */
+@media (min-width:601px) and (pointer:fine){
 .stage{--cave-rock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cpath fill='%23242321' d='M0 0h128v128H0z'/%3E%3Cg stroke='%231b1c1c' stroke-width='2'%3E%3Cpath fill='%232e2e29' d='m0 14 34-14 20 22-9 31L7 61 0 48Z'/%3E%3Cpath fill='%2333332d' d='m54 22 40-22 34 17-10 38-38 8-35-10Z'/%3E%3Cpath fill='%232a2c29' d='m7 61 38-8 25 29-17 36-53-8Z'/%3E%3Cpath fill='%2332322b' d='m80 63 38-8 10 26v47H91L70 82Z'/%3E%3Cpath fill='%232a2926' d='m53 118 17-36 21 46H47Z'/%3E%3C/g%3E%3Cpath d='m7 20 23-9 12 6M61 27l31-15 20 9M17 68l23-4 12 13M91 72l19-7 8 10' fill='none' stroke='%2347473b' stroke-opacity='.42'/%3E%3Cpath d='m19 38 9 7-5 11m76-23-9 14 9 10m-72 38 7 10-8 9m71-25-6 10 9 11' fill='none' stroke='%23171918'/%3E%3C/svg%3E");background:#242321 var(--cave-rock);border-color:#655e4e;box-shadow:0 3px 12px #30291d29,inset 0 0 25px #0e1114}
 .stage::after{background:radial-gradient(ellipse at 50% 48%,transparent 32%,#11171a29 72%,#090f164d);box-shadow:inset 0 0 35px 9px #0e13183d}
 .map .c.dark{background:#242321;background-image:radial-gradient(ellipse at 35% 28%,#32322c38,transparent 70%);color:transparent}
@@ -252,6 +250,8 @@ body{
 .map .c.mob svg{width:100%;height:100%;filter:drop-shadow(0 1px 1px #32261e44)}
 .map .c.mob.mem svg{filter:saturate(.35);opacity:.6}
 .map .c.mob.boss::before{content:"";position:absolute;width:78%;height:30%;left:11%;top:70%;border:1px solid #b8714666;border-radius:50%;background:#c87a3b14;pointer-events:none}
+
+}
 
 /* 信息双页：默认六项主属性；完整属性保留原生折叠的焦点和展开状态。 */
 #viewInfo{overflow:hidden;gap:10px}
@@ -280,6 +280,12 @@ body{
 #heroRunState .s{align-items:baseline;gap:12px}
 #heroRunState .s b{max-width:75%;text-align:right;overflow-wrap:anywhere}
 @media(max-width:380px){.info-tab{font-size:12px;padding:10px 3px}.primary-stats .s{padding:8px}.primary-stats .s b{font-size:17px}.full-stats>summary small{display:block;margin:4px 0 0 15px}}
+
+/* 手机回到旧版逐格镜头与轻量地格，避免起步创建整幅纹理合成层。 */
+@media (max-width:600px),(pointer:coarse){
+ .map,.map-pawn,.map-pet{transition:none!important;will-change:auto}
+ .map .c{transition:none}
+}
 
 /* ===== 地图上的状态浮层 =====
    层/等级/金/敌 + 血条压在取景窗顶上，不再吃纵向预算 —— 地图因此大一圈。
@@ -619,9 +625,8 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .dfx-text.slain,.dfx-text.critical{color:#FFDD92}
 .dfx-text.combo-burst{font-size:17px;letter-spacing:.04em}
 .move-trail{position:absolute;z-index:1;display:grid;place-items:center;pointer-events:none;user-select:none;
-  color:var(--hero);opacity:0}
+  color:var(--hero);filter:sepia(.4) drop-shadow(0 0 3px #D6A447);opacity:0}
 .move-trail svg{width:84%;height:84%}
-.move-trail img{width:84%;height:84%;pointer-events:none}
 .map-burst{position:absolute;z-index:2;pointer-events:none;color:#DBAF59;animation:dfx-ring .65s ease-out both}
 .map-burst svg{display:block;width:100%;height:100%}
 @keyframes dfx-slash{
