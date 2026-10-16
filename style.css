@@ -229,8 +229,9 @@ body{
 @media (prefers-reduced-motion:reduce){.map,.map-pawn,.map-pet{transition:none!important}}
 
 /* 洞窟深处：墙外岩盘与暗处共用底材，地图边界不露纸色。 */
+.stage{--cave-rock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cpath fill='%23242321' d='M0 0h128v128H0z'/%3E%3Cg stroke='%231b1c1c' stroke-width='2'%3E%3Cpath fill='%232e2e29' d='m0 14 34-14 20 22-9 31L7 61 0 48Z'/%3E%3Cpath fill='%2333332d' d='m54 22 40-22 34 17-10 38-38 8-35-10Z'/%3E%3Cpath fill='%232a2c29' d='m7 61 38-8 25 29-17 36-53-8Z'/%3E%3Cpath fill='%2332322b' d='m80 63 38-8 10 26v47H91L70 82Z'/%3E%3Cpath fill='%232a2926' d='m53 118 17-36 21 46H47Z'/%3E%3C/g%3E%3Cpath d='m7 20 23-9 12 6M61 27l31-15 20 9M17 68l23-4 12 13M91 72l19-7 8 10' fill='none' stroke='%2347473b' stroke-opacity='.42'/%3E%3Cpath d='m19 38 9 7-5 11m76-23-9 14 9 10m-72 38 7 10-8 9m71-25-6 10 9 11' fill='none' stroke='%23171918'/%3E%3C/svg%3E")}
 @media (min-width:601px) and (pointer:fine){
-.stage{--cave-rock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cpath fill='%23242321' d='M0 0h128v128H0z'/%3E%3Cg stroke='%231b1c1c' stroke-width='2'%3E%3Cpath fill='%232e2e29' d='m0 14 34-14 20 22-9 31L7 61 0 48Z'/%3E%3Cpath fill='%2333332d' d='m54 22 40-22 34 17-10 38-38 8-35-10Z'/%3E%3Cpath fill='%232a2c29' d='m7 61 38-8 25 29-17 36-53-8Z'/%3E%3Cpath fill='%2332322b' d='m80 63 38-8 10 26v47H91L70 82Z'/%3E%3Cpath fill='%232a2926' d='m53 118 17-36 21 46H47Z'/%3E%3C/g%3E%3Cpath d='m7 20 23-9 12 6M61 27l31-15 20 9M17 68l23-4 12 13M91 72l19-7 8 10' fill='none' stroke='%2347473b' stroke-opacity='.42'/%3E%3Cpath d='m19 38 9 7-5 11m76-23-9 14 9 10m-72 38 7 10-8 9m71-25-6 10 9 11' fill='none' stroke='%23171918'/%3E%3C/svg%3E");background:#242321 var(--cave-rock);border-color:#655e4e;box-shadow:0 3px 12px #30291d29,inset 0 0 25px #0e1114}
+.stage{background:#242321 var(--cave-rock);border-color:#655e4e;box-shadow:0 3px 12px #30291d29,inset 0 0 25px #0e1114}
 .stage::after{background:radial-gradient(ellipse at 50% 48%,transparent 32%,#11171a29 72%,#090f164d);box-shadow:inset 0 0 35px 9px #0e13183d}
 .map .c.dark{background:#242321;background-image:radial-gradient(ellipse at 35% 28%,#32322c38,transparent 70%);color:transparent}
 .map .c.void{background:#242321 var(--cave-rock);background-position:calc(var(--cell) * -1 * var(--rock-x,0)) calc(var(--cell) * -1 * var(--rock-y,0));color:transparent}
@@ -281,10 +282,22 @@ body{
 #heroRunState .s b{max-width:75%;text-align:right;overflow-wrap:anywhere}
 @media(max-width:380px){.info-tab{font-size:12px;padding:10px 3px}.primary-stats .s{padding:8px}.primary-stats .s b{font-size:17px}.full-stats>summary small{display:block;margin:4px 0 0 15px}}
 
-/* 手机回到旧版逐格镜头与轻量地格，避免起步创建整幅纹理合成层。 */
+/* 手机：纹理只铺在固定取景窗；移动地格仅纯色和边线，沿用已确认流畅的镜头与拖尾。 */
 @media (max-width:600px),(pointer:coarse){
+ .stage{background:#242321 var(--cave-rock);border-color:#626455}
+ .map{--floor:#d8d2bf;--wall:#707466;--wall-top:#a0a18a;--wall-side:#59614f;--wall-bottom:#424d40;--dot:#96917c}
+ .map[data-biome="2"]{--floor:#d2d8c0;--wall:#61745d;--wall-top:#92a184;--wall-side:#4e6047;--wall-bottom:#354b3e;--dot:#879578}
+ .map[data-biome="3"]{--floor:#ddc9b6;--wall:#7b6658;--wall-top:#ae9075;--wall-side:#654d40;--wall-bottom:#4f3932;--dot:#ab8970}
+ .map[data-biome="4"]{--floor:#cfd4d6;--wall:#616d7a;--wall-top:#919da6;--wall-side:#4b5869;--wall-bottom:#354452;--dot:#8a979c}
+ .map[data-biome="5"]{--floor:#d6cee0;--wall:#71657f;--wall-top:#a195b3;--wall-side:#5b4e6a;--wall-bottom:#443b55;--dot:#9b8dab}
  .map,.map-pawn,.map-pet{transition:none!important;will-change:auto}
  .map .c{transition:none}
+ .map .c.void{background:transparent}
+ .map .c.dark{background:#242321}
+ .map .c.floor{background:var(--floor);border:solid #7f7b6a22;border-width:0 1px 1px 0}
+ .map .c.wall{background:var(--wall);border-style:solid;border-width:1px 1px 3px 0;border-color:var(--wall-top) var(--wall-side) var(--wall-bottom)}
+ .map .c.dot:not(.tutmark)::before{width:3px;height:2px;min-width:0;min-height:0;background:var(--dot);border-radius:1px}
+ .map .c.mem.floor{background:#a6a894}.map .c.mem.wall{background:#4e5b4b}
 }
 
 /* ===== 地图上的状态浮层 =====
