@@ -28,7 +28,7 @@ check('Rogue strengthens only the outer risk stage and preserves the fifth-star 
 check('Solo and coop keep combat owners/controls in the arena and all questions in the learning region',()=>{
  for(const file of ['index.html','coop.html']){const html=read(file),battle=html.slice(html.indexOf('id="veilBattle"'),html.indexOf('id="veilSpring"')),split=battle.indexOf('<section class="battle-learning"');assert(split>0);
   const arena=battle.slice(0,split),learn=battle.slice(split);
-  for(const id of ['foeArt','meArt','foeStatuses','playerStatuses','btnFlee','btnWager','combatFeedback'])assert(arena.includes('id="'+id+'"'),file+' '+id);
+  for(const id of ['foeArt','meArt','foeStatuses','playerStatuses','btnFlee','btnWager','combatFeedback','battleEffects'])assert(arena.includes('id="'+id+'"'),file+' '+id);
   for(const id of ['qWord','qLabel','combo','opts','letters','spellBar','verdict','btnNextQ'])assert(learn.includes('id="'+id+'"'),file+' '+id);
   assert(!learn.includes('id="bHpBar"'));assert(html.indexOf('id="mapStatuses"')>html.indexOf('id="xpFill"'));
  }

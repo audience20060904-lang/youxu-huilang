@@ -1,6 +1,6 @@
 /* Run: node dev/check-dungeon-fx.js. UI lifecycle + actual damage settlement hooks. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
-const root=path.join(__dirname,'..'),timers=new Map(),nodes=[],listeners={};let nextTimer=0,groups=0,layoutReads=0;
+const root=path.join(__dirname,'..'),timers=new Map(),nodes=[],listeners={};let nextTimer=0,groups=0,layoutReads=0,now=0;
 function element(id){
  const el={id,children:[],style:{setProperty(k,v){this[k]=v;}},className:'',hidden:false,offsetWidth:30,offsetHeight:30,offsetLeft:0,offsetTop:0,
   setAttribute(k,v){this[k]=v;},addEventListener(){},getClientRects(){return [{}];},getBoundingClientRect(){layoutReads++;return {left:10,top:10,width:40,height:40};},
@@ -12,9 +12,10 @@ const ids={};['veilBattle','foeArt','meArt','combo'].forEach(id=>ids[id]=element
 const body=element('body'),media={matches:false,addEventListener(k,f){this.changed=f;}};
 const document={body,hidden:false,getElementById:id=>ids[id],createElement(){const n=element();nodes.push(n);return n;},addEventListener(k,f){listeners[k]=f;}};
 const window={matchMedia:q=>q.includes('prefers-reduced-motion')?media:{matches:false},addEventListener(k,f){listeners[k]=f;}};
-const c=vm.createContext({window,document,L:a=>a,console,setTimeout(f){const i=++nextTimer;timers.set(i,f);return i;},clearTimeout:i=>timers.delete(i)});
+const c=vm.createContext({window,document,L:a=>a,console,setTimeout(f,ms){const i=++nextTimer;timers.set(i,{fn:f,at:now+(ms||0)});return i;},clearTimeout:i=>timers.delete(i)});
 vm.runInContext(fs.readFileSync(path.join(root,'dungeon-fx.js'),'utf8'),c);const fx=window.DungeonFX;
-function drain(){for(const [id,f] of [...timers]){timers.delete(id);f();}}
+function advance(target){while(true){const n=[...timers].filter(x=>x[1].at<=target).sort((a,b)=>a[1].at-b[1].at)[0];if(!n)break;now=n[1].at;timers.delete(n[0]);n[1].fn();}now=target;}
+function drain(){while(timers.size)advance(Math.max(...[...timers.values()].map(t=>t.at)));}
 function check(name,f){f();groups++;console.log('PASS '+name);}
 const count=type=>body.children.filter(n=>n.className.includes(type)).length;
 check('Attack and critical hits are distinct, decorative, and bounded under rapid input',()=>{
@@ -25,7 +26,7 @@ check('Attack and critical hits are distinct, decorative, and bounded under rapi
 });
 check('Critical and kill particle bursts share geometry reads instead of one layout read per particle',()=>{
  fx.resetBattle();let before=layoutReads;fx.attack(true);assert.equal(layoutReads-before,2);drain();
- before=layoutReads;fx.kill();assert.equal(layoutReads-before,3);fx.resetBattle();drain();
+ before=layoutReads;fx.kill();assert.equal(layoutReads-before,1);fx.resetBattle();drain();
 });
 check('Attacks travel toward the other lane; incoming attacks reverse direction and clean up',()=>{
  const foeRect=ids.foeArt.getBoundingClientRect,meRect=ids.meArt.getBoundingClientRect;
@@ -35,15 +36,15 @@ check('Attacks travel toward the other lane; incoming attacks reverse direction 
  let bolt=body.children.find(n=>n.className==='dfx dfx-bolt');assert(bolt);
  assert(bolt.lastMotion.frames.at(-1).transform.includes('150px'));
  assert(bolt.lastMotion.frames.at(-1).transform.includes('-150px'));
- assert.match(ids.meArt.lastMotion.frames[1].transform,/translate\([\d.]+px,-[\d.]+px\)/);
+ assert.match(ids.meArt.lastMotion.frames[2].transform,/translate\([\d.]+px,-[\d.]+px\)/);
  fx.resetBattle();fx.block();bolt=body.children.find(n=>n.className==='dfx dfx-bolt');assert(bolt);
- assert.match(ids.foeArt.lastMotion.frames[1].transform,/translate\(-[\d.]+px,[\d.]+px\)/);
+ assert.match(ids.foeArt.lastMotion.frames[2].transform,/translate\(-[\d.]+px,[\d.]+px\)/);
  const animation=bolt.lastMotion;drain();assert(animation.cancelled);assert.equal(body.children.length,0);
  ids.foeArt.getBoundingClientRect=foeRect;ids.meArt.getBoundingClientRect=meRect;
 });
 check('Shield, HP damage, dodge, and healing have separate feedback',()=>{
- fx.hurt(0,8);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),0);drain();
- fx.hurt(3,2);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),1);drain();
+ fx.hurt(0,8);assert.equal(count('dfx-guard'),0);advance(now+90);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),0);drain();
+ fx.hurt(3,2);advance(now+90);assert.equal(count('dfx-guard'),1);assert.equal(count('dfx-hurt'),1);drain();
  fx.dodge();assert.equal(count('dfx-ghost'),1);assert.equal(count('dfx-hurt'),0);drain();
  fx.heal();assert.equal(count('dfx-heal'),1);drain();
 });

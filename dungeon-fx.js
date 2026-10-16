@@ -4,15 +4,21 @@
   const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
   const live = new Set(), motions = new Map();
   const trailPool=[];
-  const scheduled=new Set();let round=0,roundText=null;
+  const scheduled=new Set(),responses=new Set();let round=0,responseEpoch=0,roundText=null,roundBar=null;
   let anchor = null;
   const skillAt=new Map();
   const $ = id => document.getElementById(id);
   const enabled = () => !(reduce && reduce.matches) && !document.hidden;
   const mobile=window.matchMedia?window.matchMedia('(max-width:600px), (pointer:coarse)'):null;
   const light=()=>!!(mobile&&mobile.matches);
-  function later(fn,ms){const token=round;const id=setTimeout(()=>{scheduled.delete(id);if(token===round)fn();},ms);scheduled.add(id);return id;}
-  function resetRound(){round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");}
+  function later(fn,ms,response){const bucket=response?responses:scheduled,token=response?responseEpoch:round;const id=setTimeout(()=>{bucket.delete(id);if(token===(response?responseEpoch:round))fn();},ms);bucket.add(id);return id;}
+  function restoreBar(){
+    if(!roundBar)return;
+    const bar=roundBar;roundBar=null;
+    const active=motions.get(bar.el);if(active){active.animation.cancel();motions.delete(bar.el);}
+    bar.el.style.width=bar.width;
+  }
+  function resetRound(){restoreBar();round++;responseEpoch++;for(const bucket of [scheduled,responses]){for(const id of bucket)clearTimeout(id);bucket.clear();}if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");}
   const battleOpen = () => $("veilBattle") && !$("veilBattle").hidden;
   const label = (zh, en) => typeof L === "function" ? L(zh, en) : zh;
   const shapes = {
@@ -68,15 +74,21 @@
     const done = () => { if(!hold && motions.get(el)?.animation === animation) motions.delete(el); };
     animation.finished.then(done, done);
   }
-  function point(el){
+  function effectSpace(){
+    const host=$("battleEffects");if(!host)return null;
+    const r=host.getBoundingClientRect(),w=host.clientWidth||r.width,h=host.clientHeight||r.height;
+    return {host:host,x:r.left,y:r.top,width:w,height:h,sx:r.width/w||1,sy:r.height/h||1};
+  }
+  function actor(el){return el&&el.querySelector?(el.querySelector(':scope > svg')||el):el;}
+  function point(el,space){
     if(!el || !el.getClientRects().length) return null;
     const r = el.getBoundingClientRect();
     if(!r.width || !r.height) return null;
-    return {x:r.left+r.width/2, y:r.top+r.height/2, size:Math.max(r.width,r.height)};
+    return {x:(r.left+r.width/2-(space?space.x:0))/(space?space.sx:1), y:(r.top+r.height/2-(space?space.y:0))/(space?space.sy:1), size:Math.max(r.width/(space?space.sx:1),r.height/(space?space.sy:1)),space:space};
   }
-  function stamp(el, type, shape, size, position){
+  function stamp(el, type, shape, size, position, lifetime){
     if(!enabled() || !battleOpen()) return null;
-    const p = position || point(el);
+    const p = position || point(el,effectSpace());
     if(!p) return null;
     const fx = document.createElement("span");
     fx.className = "dfx dfx-" + type;
@@ -84,17 +96,18 @@
     fx.style.left = p.x + "px"; fx.style.top = p.y + "px";
     fx.style.width = fx.style.height = (size || p.size * 1.5) + "px";
     if(shape) fx.innerHTML = '<svg viewBox="0 0 100 100">' + shapes[shape] + '</svg>';
-    keep(fx,950,"battle");document.body.appendChild(fx);
+    keep(fx,lifetime||950,"battle");(p.space?p.space.host:document.body).appendChild(fx);
     return fx;
   }
   function text(el, zh, en, type, position){
     const fx = stamp(el, "text " + type, null, 140, position);
     if(fx) fx.textContent = label(zh, en);
+    return fx;
   }
   function sparks(el, type, n, at){
     if(light())n=Math.min(n,2);
     // 粒子共享同一次布局读取，避免每追加一颗都强制重新计算页面。
-    const position=at||point(el);if(!position)return;
+    const position=at||point(el,effectSpace());if(!position)return;
     for(let i=0;i<n;i++){
       const fx = stamp(el, "spark " + type, null, 5, position);
       if(!fx) break;
@@ -105,50 +118,73 @@
       fx.style.setProperty("--turn", Math.round(angle*180/Math.PI) + "deg");
     }
   }
-  function strike(from, to, color, origin, target){
-    const a=origin||point(from), b=target||point(to);if(!a||!b)return;
-    const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,reach=Math.min(48,length*.42);
-    motion(from,[{transform:"translate(0,0)"},{transform:"translate("+(dx/length*reach)+"px,"+(dy/length*reach)+"px) rotate("+(dy<0?-8:8)+"deg)",offset:.38},{transform:"translate(0,0)"}],360);
-    const bolt=stamp(from,"bolt", "slash",22,a);
+  const casters=new Set(['clerk','reader','naturalist','poet','bard','clock','examiner','mage','astro','necro','medium','apothecary','mentor','collector','rewinder','exorcist']);
+  function strike(from,to,color,origin,target,shape){
+    const space=origin?origin.space:effectSpace(),a=origin||point(from,space),b=target||point(to,space);if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,reach=Math.min(!shape||shape==='slash'||shape==='claw'?32:10,length*.28),ux=dx/length,uy=dy/length;
+    motion(actor(from),[{transform:'translate(0,0) scale(1)'},{transform:'translate('+(-ux*3)+'px,'+(-uy*3)+'px) scale(.96)',offset:.14},
+      {transform:'translate('+(ux*reach)+'px,'+(uy*reach)+'px) rotate('+(dy<0?-6:6)+'deg) scale(1.04)',offset:.4},{transform:'translate(0,0) scale(1)'}],220);
+    const bolt=stamp(from,'bolt',shape||'slash',shape&&shape!=='slash'?27:22,a,180);
     if(bolt){
       bolt.style.color=color;
-      const rotate=" rotate("+(Math.atan2(dy,dx)*180/Math.PI+45)+"deg)";
-      motion(bolt,[{transform:"translate(-50%,-50%)"+rotate,opacity:0},{transform:"translate(-50%,-50%)"+rotate,opacity:1,offset:.15},{transform:"translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))"+rotate,opacity:1,offset:.78},{transform:"translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))"+rotate,opacity:0}],300,"battle",true);
+      const rotate=shape&&shape!=='slash'?'':' rotate('+(Math.atan2(dy,dx)*180/Math.PI+45)+'deg)';
+      motion(bolt,[{transform:'translate(-50%,-50%)'+rotate+' scale(.65)',opacity:.2},
+        {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px))'+rotate+' scale(1)',opacity:1,offset:.94},{transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px))'+rotate+' scale(1)',opacity:0}],90,'battle',true,'linear');
     }
   }
-  function incoming(){
-    strike($("foeArt"),$("meArt"),"#d59b82");
+  function incoming(impact){
+    const space=effectSpace(),target=point($("meArt"),space),origin=point($("foeArt"),space);
+    strike($("foeArt"),$("meArt"),'#d59b82',origin,target);
+    if(impact)later(()=>{if(battleOpen())impact(target);},90,true);
+  }
+  function guardImpact(shield,target){
+    motion(actor($("meArt")),[{transform:'translate(0,0) scale(1)'},{transform:'translate(-2px,3px) scale(.97)',offset:.25},{transform:'translate(0,0) scale(1)'}],220);
+    stamp($("meArt"),'guard','guard',null,target);
+    text($("meArt"),shield?'护盾格挡':'格挡',shield?'SHIELD':'BLOCK','guard',target);
   }
   const api = {
     resetBattle:() => {resetRound();skillAt.clear();},
     resetRound:resetRound,
     playRound:function(hits,health){
       if(!enabled()||!battleOpen()||!hits.length)return 0;
-      round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();
+      restoreBar();round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();
       const txt=$("foeTxt"),fill=$("foeFill"),gap=hits.length>15?Math.max(20,Math.floor(1200/(hits.length-1))):hits.length>8?85:150;
-      roundText=txt&&!health.study?txt.textContent:null;let remaining=health.hp;
+      // Freeze geometry once before inserting effects; animated SVG children do not move their anchors.
+      const space=effectSpace(),foe=$("foeArt"),target=point(foe,space),positions=new Map();
+      const attacks=hits.map(hit=>{
+        const pet=hit.kind==='pet'?document.querySelector('.battle-pet'):null;
+        const source=hit.kind==='soul'?($("battleSoul"+(hit.index||0))||$("meArt")):pet||$("meArt");
+        if(!positions.has(source))positions.set(source,point(source,space));
+        return {hit:hit,source:source,origin:positions.get(source)};
+      });
+      roundText=txt&&!health.study?txt.textContent:null;let remaining=health.hp,critShown=false;
       if(txt&&!health.study)txt.textContent=Math.max(0,remaining)+' / '+health.max;
-      for(let i=0;i<hits.length;i++){
-        const hit=hits[i],start=i*gap;
+      if(fill&&!health.study&&health.max>0){roundBar={el:fill,width:fill.style.width};fill.style.width='100%';
+        motion(fill,[{transform:'scaleX('+Math.min(1,Math.max(0,remaining/health.max))+')'},{transform:'scaleX('+Math.min(1,Math.max(0,remaining/health.max))+')'}],1,'battle',true);}
+      attacks.forEach(({hit,source,origin},i)=>{
+        const start=i*gap,sig=signatures[hit.hero]||signatures.adv;
+        const shape=hit.kind==='soul'?'spirit':hit.kind==='pet'?'claw':hit.kind==='dot'?'ring':casters.has(hit.hero)?sig[0]:'slash';
         later(()=>{
-          const pet=hit.kind==='pet'?document.querySelector('.battle-pet'):null;
-          const source=hit.kind==='soul'?($("battleSoul"+(hit.index||0))||$("meArt")):pet||$("meArt");
-          const sig=signatures[hit.hero]||signatures.adv;
-          if(hit.kind!=='dot')strike(source,$("foeArt"),sig[1]);
+          if(hit.kind!=='dot')strike(source,foe,sig[1],origin,target,shape);
           later(()=>{
-            const target=point($("foeArt"));
-            motion($("foeArt"),[{transform:'translate(0,0)',opacity:1},{transform:'translate(3px,-2px)',opacity:.65,offset:.35},{transform:'translate(0,0)',opacity:1}],140);
-            const effect=stamp($("foeArt"),'skill round-hit '+hit.kind,hit.kind==='soul'?'spirit':hit.kind==='pet'?'claw':'slash',hit.crit?68:46,target);if(effect)effect.style.color=sig[1];
-            text($("foeArt"),'-'+hit.damage,'-'+hit.damage,'round-number',target);
-            if(hit.crit)sparks($("foeArt"),'critical',light()?2:4,target);
+            const force=hit.crit?6:3,tilt=i%2?-4:4;
+            motion(actor(foe),hit.kind==='dot'?[{opacity:1},{opacity:.7,offset:.4},{opacity:1}]:
+              [{transform:'translate(0,0) scale(1)',opacity:1},{transform:'translate('+force+'px,-'+force+'px) rotate('+tilt+'deg) scale(.95)',opacity:.75,offset:.25},{transform:'translate(0,0) scale(1)',opacity:1}],hit.crit?210:150);
+            const effect=stamp(foe,'skill round-hit '+hit.kind+(hit.crit?' critical':''),shape,hit.crit?62:44,target,300);
+            if(effect){effect.style.color=sig[1];effect.style.setProperty('--cut-turn',(i%2?20:-20)+'deg');}
+            const pos=target?Object.assign({},target,{x:target.x+((i%3)-1)*13,y:target.y-12-(i%2)*8}):null;
+            const number=text(foe,'-'+hit.damage,'-'+hit.damage,'round-number'+(hit.crit?' critical':''),pos);
+            if(number)number.style.setProperty('--number-ms',Math.max(160,Math.min(430,gap*3))+'ms');
+            if(hit.crit&&!critShown){critShown=true;text(foe,'暴击','CRITICAL','critical',target);sparks(foe,'critical',light()?2:4,target);}
             const from=Math.max(0,remaining);remaining-=hit.damage;
             const to=Math.max(0,i===hits.length-1&&Number.isFinite(health.end)?health.end:remaining);
-            if(!health.study&&fill&&health.max>0)motion(fill,[{width:Math.min(100,from/health.max*100)+'%'},{width:Math.min(100,to/health.max*100)+'%'}],100,'battle',true);
+            if(!health.study&&fill&&health.max>0)motion(fill,[{transform:'scaleX('+Math.min(1,from/health.max)+')'},{transform:'scaleX('+Math.min(1,to/health.max)+')'}],100,'battle',true,'ease-out');
             if(txt&&!health.study)txt.textContent=to+' / '+health.max;
             if(i===hits.length-1&&txt&&roundText!==null)txt.textContent=roundText;
           },90);
         },start);
-      }
+      });
+      later(restoreBar,(hits.length-1)*gap+190);
       return (hits.length-1)*gap+250;
     },
     skill:function(hero,kind){
@@ -157,52 +193,51 @@
       let sig=signatures[hero]||signatures.adv;
       if(kind==='frost')sig=['guard','#a0d9ed'];else if(kind==='renew')sig=['heal','#a2d9a0'];else if(kind==='meteor')sig=['star','#ec9c70'];
       const offense=['strike','pet','forge','coin','fire','meteor'].includes(kind);
-      const target=offense?$("foeArt"):$("meArt"),fx=stamp(target,"skill skill-"+hero+" "+(kind==='pet'?'pet-strike':''),sig[0],offense?85:64);
+      const target=offense?$("foeArt"):$("meArt"),space=effectSpace(),at=point(target,space),fx=stamp(target,"skill skill-"+hero+" "+(kind==='pet'?'pet-strike':''),sig[0],offense?76:60,at);
       if(fx)fx.style.color=sig[1];
       if(kind==='pet'){
         const pet=document.querySelector('.battle-pet');
-        strike(pet,$("foeArt"),'#d9bb91');
+        strike(pet,$("foeArt"),'#d9bb91',point(pet,space),at,'claw');
       }
     },
     attack:function(crit){
       if(!enabled() || !battleOpen()) return;
-      const target=point($("foeArt")),origin=point($("meArt"));
+      const space=effectSpace(),target=point($("foeArt"),space),origin=point($("meArt"),space);
       strike($("meArt"),$("foeArt"),crit?"#ffe0a0":"#d1d9bc",origin,target);
-      motion($("foeArt"), [{transform:"translateX(0)",opacity:1},{transform:"translateX(6px) rotate(5deg)",opacity:.6,offset:.25},{transform:"translateX(-3px)",offset:.5},{transform:"translateX(0)",opacity:1}], 360);
+      motion(actor($("foeArt")), [{transform:"translateX(0)",opacity:1},{transform:"translateX(6px) rotate(5deg)",opacity:.6,offset:.25},{transform:"translateX(-3px)",offset:.5},{transform:"translateX(0)",opacity:1}], 360);
       stamp($("foeArt"), crit ? "slash critical" : "slash", "slash",null,target);
       sparks($("foeArt"), crit ? "critical" : "hit", crit ? 9 : 5,target);
       if(crit){ stamp($("foeArt"), "slash cross", "slash",null,target); text($("foeArt"), "暴击", "CRITICAL", "critical",target); }
     },
-    hurt:function(hp, shield){
-      if(!enabled() || !battleOpen()) return;
-      incoming();
-      if(shield > 0) api.block(false, true);
-      if(hp > 0){
-        motion($("meArt"), [{transform:"translate(0,0)"},{transform:"translate(-5px,9px) rotate(-8deg)",offset:.35},{transform:"translate(2px,-2px)",offset:.6},{transform:"translate(0,0)"}], 380);
-        stamp($("meArt"), "hurt", "ring");
-        sparks($("meArt"), "hurt", 5);
-      }
+    hurt:function(hp,shield){
+      if(!enabled()||!battleOpen())return;
+      incoming(target=>{
+        if(shield>0)guardImpact(true,target);
+        if(hp>0){
+          motion(actor($("meArt")),[{transform:'translate(0,0)'},{transform:'translate(-4px,7px) rotate(-6deg) scale(.96)',offset:.25},{transform:'translate(1px,-1px)',offset:.6},{transform:'translate(0,0)'}],300);
+          stamp($("meArt"),'hurt','ring',null,target);sparks($("meArt"),'hurt',light()?2:4,target);
+        }
+      });
     },
-    block:function(lunge, shield){
-      if(!enabled() || !battleOpen()) return;
-      if(lunge !== false) incoming();
-      stamp($("meArt"), "guard", "guard");
-      text($("meArt"), shield ? "护盾格挡" : "格挡", shield ? "SHIELD" : "BLOCK", "guard");
+    block:function(lunge,shield){
+      if(!enabled()||!battleOpen())return;
+      if(lunge!==false)incoming(target=>guardImpact(shield,target));
+      else guardImpact(shield,point($("meArt"),effectSpace()));
     },
     dodge:function(){
-      if(!enabled() || !battleOpen()) return;
-      incoming();
-      const el = $("meArt"), ghost = stamp(el, "ghost", null);
-      if(ghost && el){ ghost.innerHTML = el.innerHTML; ghost.className += " " + el.className; }
-      motion(el, [{transform:"translateX(0)",opacity:1},{transform:"translateX(17px) rotate(9deg)",opacity:.45,offset:.3},{transform:"translateX(0)",opacity:1}], 460);
-      text(el, "闪避", "DODGE", "evade");
+      if(!enabled()||!battleOpen())return;
+      const el=$("meArt"),space=effectSpace(),target=point(el,space),origin=point($("foeArt"),space);
+      strike($("foeArt"),el,'#d59b82',origin,target);
+      const ghost=stamp(el,'ghost',null,target?target.size:null,target),visual=actor(el);
+      if(ghost&&visual){ghost.innerHTML=visual.outerHTML||visual.innerHTML;ghost.style.color='#b5d2df';}
+      motion(visual,[{transform:'translateX(0)',opacity:1},{transform:'translateX(20px) rotate(8deg)',opacity:.55,offset:.25},{transform:'translateX(20px)',opacity:1,offset:.6},{transform:'translateX(0)',opacity:1}],330);
+      later(()=>text(el,'闪避','DODGE','evade',target),90,true);
     },
     kill:function(){
-      if(!enabled() || !battleOpen()) return;
-      stamp($("foeArt"), "slain", "ring");
-      sparks($("foeArt"), "slain", 12);
-      text($("foeArt"), "击破", "DEFEATED", "slain");
-      motion($("foeArt"), [{opacity:1,transform:"scale(1)"},{opacity:1,transform:"scale(1.08)",offset:.2},{opacity:0,transform:"scale(.65) translateY(-12px)"}], 650, "battle", true);
+      if(!enabled()||!battleOpen())return;
+      const foe=$("foeArt"),target=point(foe,effectSpace());
+      stamp(foe,'slain','ring',null,target);sparks(foe,'slain',light()?2:7,target);text(foe,'击破','DEFEATED','slain',target);
+      motion(actor(foe),[{opacity:1,transform:'scale(1)'},{opacity:1,transform:'scale(.95)',offset:.12},{opacity:.85,transform:'scale(1.08)',offset:.3},{opacity:0,transform:'scale(.7) translateY(-12px)'}],650,'battle',true);
     },
     mapKill:function(map, cell){
       if(!enabled() || !map || !cell || !cell.offsetWidth) return;
@@ -218,7 +253,7 @@
     combo:function(n, milestone){
       if(!enabled() || !battleOpen()) return;
       const c = $("combo");
-      motion(c, [{filter:"brightness(1)"},{filter:"brightness(1.4)",offset:.25},{filter:"brightness(1)"}], 420);
+      motion(c,[{transform:"scale(1)"},{transform:"scale(1.13)",offset:.25},{transform:"scale(1)"}],240);
       if(milestone){ sparks($("meArt"),"critical",8); stamp($("meArt"),"skill combo-burst","star",70); }
     },
     heal:function(){ stamp($("meArt"), "heal", "heal"); },

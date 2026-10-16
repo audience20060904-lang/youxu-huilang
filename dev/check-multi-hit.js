@@ -20,11 +20,11 @@ const ctx=vm.createContext({window:{matchMedia:q=>q.includes('prefers-reduced-mo
 vm.runInContext(read('dungeon-fx.js'),ctx);const fx=ctx.window.DungeonFX;
 function advance(target){while(true){const next=[...timers].filter(x=>x[1].at<=target).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;now=next[1].at;timers.delete(next[0]);next[1].fn();}now=target;}
 check('Player, soul and pet have distinct launch times, impact times and source actors',()=>{
- ids.foeTxt.textContent='40 / 100';const duration=fx.playRound([{hero:'necro',kind:'strike',damage:20},{hero:'necro',kind:'soul',damage:30,index:0},{hero:'tamer',kind:'pet',damage:10}],{hp:100,max:100,end:40});
+ ids.foeTxt.textContent='40 / 100';ids.foeFill.style.width='40%';const duration=fx.playRound([{hero:'necro',kind:'strike',damage:20},{hero:'necro',kind:'soul',damage:30,index:0},{hero:'tamer',kind:'pet',damage:10}],{hp:100,max:100,end:40});
  assert.equal(duration,550);advance(0);assert(ids.meArt.motion);assert(!ids.battleSoul0.motion);assert.equal(events.length,0);
  advance(90);assert.equal(events.length,1);assert.equal(ids.foeTxt.textContent,'80 / 100');
  advance(150);assert(ids.battleSoul0.motion);advance(240);assert.equal(events.length,2);assert.equal(ids.foeTxt.textContent,'50 / 100');
- advance(300);assert(ids.battlePet.motion);advance(390);assert.deepEqual(events.map(x=>x.time),[90,240,390]);assert.equal(ids.foeTxt.textContent,'40 / 100');assert.equal(ids.foeFill.motion.frames.at(-1).width,'40%');
+ advance(300);assert(ids.battlePet.motion);advance(390);assert.deepEqual(events.map(x=>x.time),[90,240,390]);assert.equal(ids.foeTxt.textContent,'40 / 100');assert.equal(ids.foeFill.motion.frames.at(-1).transform,'scaleX(0.4)');advance(490);assert.equal(ids.foeFill.style.width,'40%');assert(ids.foeFill.motion.cancelled);
 });
 check('Starting another question cancels pending hits and restores authoritative health text',()=>{
  fx.resetRound();events.length=0;ids.foeTxt.textContent='80 / 100';const start=now;
