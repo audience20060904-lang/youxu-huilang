@@ -1586,6 +1586,7 @@ function sizeMap(){
   st.style.width  = (VIEW.w * cell + 2) + "px";     // +2 是边框（全局 border-box）
   st.style.height = (VIEW.h * cell + 2) + "px";
   camera();
+  paintMapRaster();
 }
 /* 镜头：把玩家尽量放在取景窗中间，贴边时停住（不露白） */
 function camera(){
@@ -1598,7 +1599,11 @@ function camera(){
      人会跑到画面边上。现在宁可让取景窗露出地图外的空白，也要保证视角始终居中。 */
   const cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
   DungeonScene.camera(m,-cx*cell,-cy*cell,G.map,cell);
-  DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id,cell);
+  DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id,cell,heroCls(P.hero));
+}
+function paintMapRaster(){
+  if(!P||!G||!G.map||!cells.length)return;
+  if(window.DungeonRaster)DungeonRaster.paint($("map"),cells,W,H,$("map")._cellSize||20,CH.id,G.goal,COOP||!!P.tut);
 }
 function mobAt(x,y){
   for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y) return G.mobs[i];
@@ -1669,6 +1674,7 @@ function renderStep(){
   if(old.goal!==goal){
     for(const index of [old.goal,goal])if(index>=0)renderMapTile(index%W,Math.floor(index/W),G.mobs.length===0,null);
     old.goal=goal;
+    paintMapRaster();
   }
   camera();
   if(window.DungeonFX) DungeonFX.move($("map"),cells,W,G.map,P.x,P.y,heroArt(P.hero),heroCls(P.hero));
@@ -1690,6 +1696,7 @@ function render(){
     }
   }
   camera();
+  paintMapRaster();
   if(window.DungeonFX) DungeonFX.move($("map"), cells, W, G.map, P.x, P.y, heroArt(P.hero), heroCls(P.hero));
   renderHud();
 }
@@ -2346,6 +2353,8 @@ function startBattle(m){
   B = {mob:m, q:null, locked:false, asked:0,
        wager:false, optCount:4,
        wrongTimes:0, shatterUsed:false, shatterFree:false, deflectUsed:false};
+  const openingHealth={hp:m.hp,max:m.max,study:COOP||!!(m.def&&(m.def.study||m.def.abyss))};
+  B.fxHits=[];
   /* 冒险者 ★3：这一层第一场战斗（G.heroFought 每层清零）*/
   if(!G.heroFought){ G.heroFought = true; B.heroFirst = true; }
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
@@ -2373,12 +2382,12 @@ function startBattle(m){
   if((G.carry || 0) > 0 && !COOP && !(m.def && m.def.abyss)){
     const hit = Math.min(G.carry, Math.floor(m.max * MOMENTUM_MAX), m.hp - 1);
     G.carry = 0;
-    if(hit > 0){ m.hp -= hit; say(T("余劲 —— 上一刀没收住，先砸掉 ") + m.name + T(" <b>") + hit + T("</b> 点。"), "good"); }
+    if(hit > 0){ m.hp -= hit;queueVisualHit(P.hero,"strike",hit);say(T("余劲 —— 上一刀没收住，先砸掉 ") + m.name + T(" <b>") + hit + T("</b> 点。"), "good"); }
   }
   /* 驯兽师（角色第三批）：开战宠物先咬一口 —— 跟余劲一样永远给怪留 1 点（不会不答题就打死一只）。深渊 / 书灵 / 联机不走这条 */
   if(heroOn("tamer") && !COOP && !(m.def && (m.def.abyss || m.def.study))){
     const bite = Math.min(petBite(stats()), m.hp - 1);
-    if(bite > 0){ m.hp -= bite; say(L("宠物开场攻击：" + m.name + " 受到 <b>" + bite + "</b> 点伤害。", "Pet opening attack: " + m.name + " takes <b>" + bite + "</b> damage."), "good"); }
+    if(bite > 0){ m.hp -= bite;queueVisualHit("tamer","pet",bite);say(L("宠物开场攻击：" + m.name + " 受到 <b>" + bite + "</b> 点伤害。", "Pet opening attack: " + m.name + " takes <b>" + bite + "</b> damage."), "good"); }
   }
   clearQTimer();          // 上一场要是被别的路子掐断了，读条可能还挂着
   G.paused = true;
@@ -2397,12 +2406,25 @@ function startBattle(m){
   $("btnFlee").textContent = P.study ? L("撤退 · 不掉血", "Retreat · no HP lost") : T("撤退 · 掉一半血");
   $("veilBattle").hidden = false;
   heirEvent("battle",{mob:m});
-  if(heroOn("tamer") && window.DungeonFX)DungeonFX.skill("tamer","pet");
+  const openings=B.fxHits;B.fxHits=null;openingHealth.end=m.hp;
   say(T("你撞上了 ") + m.name + T("。"), "hurt");
   if(P.combo > 0) say(T("上一场的连击 <b>×") + P.combo + T("</b> 还留着 —— 别断。"), "crit");
   renderBattleBars();
   if(P.tut) tutEvent("battle");
   nextQuestion();
+  if(openings.length&&window.DungeonFX){
+    const wait=DungeonFX.playRound(openings,openingHealth),battle=B,q=B.q;B.fxPlayed=true;
+    if(wait){
+      clearQTimer();
+      const buttons=Array.from(document.querySelectorAll('#opts button,#letters button'));
+      buttons.forEach(b=>b.disabled=true);
+      setTimeout(function(){
+        if(B!==battle||B.q!==q||B.locked)return;
+        buttons.forEach(b=>b.disabled=false);
+        if(q.type!=="spell"&&q.type!=="def")startQTimer();
+      },wait);
+    }
+  }
   if(!P.tut) tip("risk", "veilBattle");
 }
 /* Boss 的弱点是**词性**（POS_CN），普通怪的弱点是**类别**（CAT_CN）—— 看 m.weakPos */
@@ -2413,6 +2435,16 @@ function showWeak(m){
   el.hidden = false;
   el.innerHTML = T("弱点 · <b>") + cn + T("</b>类词伤害更高");
 }
+/* 视觉分段只拆展示，不重复结算伤害、触发或经验。 */
+function queueVisualHit(hero,kind,damage,count,offset,crit){
+  if(!B || !Array.isArray(B.fxHits))return false;
+  const n=Math.max(1,Math.min(17,Math.floor(count||1))),total=Math.max(0,Math.round(damage));
+  for(let i=0;i<n;i++)B.fxHits.push({hero:hero||P.hero,kind:kind||"strike",damage:Math.floor(total/n)+(i<total%n?1:0),index:(offset||0)+i,crit:!!crit});
+  return true;
+}
+function battleSoulCount(){
+  return (heroOn("necro")?(P.heroSouls||0):0)+Heirlooms.equipped(P,RMASK).reduce(function(n,item){return n+((P.heirState&&P.heirState[item.id]&&P.heirState[item.id].souls)||0);},0);
+}
 function renderCombatFeedback(head, note){
   const el=$("combatFeedback");if(!el)return;
   el.innerHTML=head+(note ? '<span class="combat-note">'+note+'</span>' : "");
@@ -2420,6 +2452,7 @@ function renderCombatFeedback(head, note){
 }
 function renderBattleBars(){
   renderStatuses();
+  DungeonScene.battleSummons(battleSoulCount());
   const m = B.mob, s = stats();
   const heroName=$("battleHeroName"), hero=heroById(P.hero);
   if(heroName)heroName.textContent=hero?hero.n:L("冒险者","Adventurer");
@@ -2774,6 +2807,9 @@ function nearSyn(a, b){
 }
 function nextQuestion(){
   clearQTimer();
+  if(B.fxPlayed&&window.DungeonFX)DungeonFX.resetRound();
+  B.fxPlayed=false;
+  B.fxHits=null;
   const m = B.mob;
   /* 追问者（角色第二批）：上一题掷中了追问 —— 这一题就是同一个词反过来考（不再抽词、不掷拼写 / 释义句）*/
   const ask = !!(heroAskQ && heroOn("examiner") && !P.tut && heroAskQ.w);
@@ -2789,6 +2825,7 @@ function nextQuestion(){
   else type = (B.asked % 2 === 1) ? "en2zh" : "zh2en";
   // 听音辨词已经删掉了（用户 2026-09）。🔊 还在，但只能自己点，或者答完自动念。
   B.q = {word:word, type:type, done:false, haunted: hauntReady(word.en), ask:ask};
+  $("qWord").style.setProperty("--word-chars",Math.max(1,Array.from(word.en).length*.65));
   /* 速答线（第十批）：记下这一题是什么时候摆出来的，answer() 里一减就知道答得快不快。
      ⚠️ 超时（timeUp）**不刷新**它 —— 读条走完一圈的人本来就不算「快」。
      ⚠️ 它不进续玩档（B 本来就不存），读档后那一题从头计时。*/
@@ -2813,6 +2850,7 @@ function nextQuestion(){
   $("verdict").innerHTML = "";
   renderCombatFeedback("", "");
   $("btnNextQ").hidden = true;
+  $("btnNextQ").disabled = false;
   $("btnNextQ").textContent = T("继续");
   $("btnFlee").hidden = COOP;    // 联机里没有撤退（联机方案.md）
   $("spellBar").hidden = true;
@@ -3223,6 +3261,9 @@ function answer(btn, ok){
   $("btnWager").disabled = true;
   G.floorAsked = (G.floorAsked || 0) + 1;    // 破晓甲：这一层已经答过几题，nextFloor() 里清零
   const word = B.q.word, m = B.mob, s = stats();
+  const visualHealth={hp:m.hp,max:m.max,study:COOP||!!(m.def&&(m.def.study||m.def.abyss))};
+  B.fxHits=ok?[]:null;
+  let soulExtra=0;
   /* 缓刑（第十三批）：前几题挂着的账，这一题先扣一份（答对少扣）—— 这一题自己要是答错，那一口排到后面三题 */
   const oweLog = payOwe(ok, m);
   const firstSeen = !LEX[lexKey(word)];          // 课业：这个存档从没见过的生词（LEX 里没记录）
@@ -3281,7 +3322,7 @@ function answer(btn, ok){
                                                  : (o.py ? o.en + " " + o.py : wordFull(o));
         b.appendChild(sub);
         b.classList.add("two");
-        if(LANG_LEARN !== "en") b.classList.add("tight");     // 学中文 / 西语：英文释义长，摊开两行时收一号字，别撑出方块
+        if(LANG_LEARN !== "en" || o.en.length>16 || o.cn.length>14) b.classList.add("tight");     // 学中文 / 西语：英文释义长，摊开两行时收一号字，别撑出方块
       }
     });
     if(!ok && btn) btn.classList.add("wrong");
@@ -3473,8 +3514,10 @@ function answer(btn, ok){
     if(heroOn("duelist", 5) && P.heroReady){ extra += tg("e", "hero", Math.round(s.atk * HERO_DUEL_EXTRA)); P.heroReady = false; }
     if(hr.poet5 && heroOn("poet", 3)) extra += tg("e", "hero", Math.round(s.atk * HERO_POET_EXTRA));
     /* 招魂者：每个魂跟着砍一下；法师：火球 / 陨星落在这一刀上（都是④层额外伤害，还是那两个乘区）*/
-    if(heroOn("necro") && (P.heroSouls || 0) > 0) extra += tg("e", "hero", Math.round(s.atk * P.heroSouls * heroV("necro") / 100));
-    if(heroOn("necro") && (P.heroSouls || 0)>0 && window.DungeonFX)DungeonFX.skill("necro","strike");
+    if(heroOn("necro") && (P.heroSouls || 0) > 0){
+      soulExtra=Math.round(s.atk*P.heroSouls*heroV("necro")/100);
+      extra+=tg("e","hero",soulExtra);
+    }
     if(mageSp === "fire" || mageSp === "meteor")
       extra += tg("e", "hero", Math.round(s.atk * heroV("mage") / 100 * (mageSp === "meteor" ? HERO_MAGE_METEOR : 1)));
 
@@ -3532,6 +3575,9 @@ function answer(btn, ok){
     let dealt = dmg;                 // 余劲：这一刀一共打出去多少（回响之厅 / 凿骨也算），减掉真打进血条的就是溢出
     const maxAt = m.max || 0;        // 过载：按这一刀落下之前的最大生命比（深渊那只每穿一层会换）
     coopDealDamage(m, dmg);
+    const soulShare=soulExtra?Math.min(dmg-1,Math.max(0,Math.round(soulExtra*(1+pct/100)*(crit?critMult:1)*wagerOutX()))):0;
+    queueVisualHit(P.hero,"strike",dmg-soulShare,1,0,crit);
+    if(soulExtra)queueVisualHit("necro","soul",soulShare,P.heroSouls,0,crit);
     /* ===== 角色第三批：这一刀落下之后 =====
        战吼者：这一刀的一部分震到这一层别的怪身上（震不死）；剑圣：必定追加一刀（★5 两刀）；驯兽师 ★5：每 5 题宠物再咬一口。
        追加的那几下跟下面遗物的追加攻击一个写法（单独一笔，打倒了也照打，溢出算进余劲）。*/
@@ -3546,14 +3592,13 @@ function answer(btn, ok){
       if(nShook) relicLog += L(" <span class=\"sys\">(战吼 · 震到 " + nShook + " 只，各 −" + sp + ")</span>", " <span class=\"sys\">(War cry · " + nShook + " foes −" + sp + " each)</span>");
     }
     if(heroOn("saint")){
-      if(window.DungeonFX)DungeonFX.skill("saint","strike");
       let sd = Math.max(1, Math.round(dmg * heroV("saint") / 100));
       if(heroOn("saint", 3) && !crit) sd = Math.round(sd * critMult);
       const nS = heroOn("saint",6) ? 3 : heroOn("saint", 5) ? 2 : 1;
       for(let k = 0; k < nS; k++){
         dealt += sd; landed += landedOn(m, sd); coopDealDamage(m, sd);
         if(lastDmgRec) lastDmgRec.more.push(["hero", sd]);
-        setTimeout(function(){ floatNum("foe", "-" + sd, "dmg"); }, 300 + 140 * k);
+        queueVisualHit("saint","strike",sd,1,0,crit||heroOn("saint",3));
       }
       relicLog += L(" <span class=\"sys\">(剑圣 +" + sd * nS + ")</span>", " <span class=\"sys\">(Sword Saint +" + sd * nS + ")</span>");
     }
@@ -3564,7 +3609,7 @@ function answer(btn, ok){
         const bite = petBite(s);
         dealt += bite; landed += landedOn(m, bite); coopDealDamage(m, bite);
         if(lastDmgRec) lastDmgRec.more.push(["hero", bite]);
-        setTimeout(function(){ floatNum("foe", "-" + bite, "dmg"); }, 240);
+        queueVisualHit("tamer","pet",bite);
         relicLog += L(" <span class=\"sys\">(宠物 +" + bite + ")</span>", " <span class=\"sys\">(Pet +" + bite + ")</span>");
       }
     }
@@ -3580,8 +3625,7 @@ function answer(btn, ok){
       landed += landedOn(m, fdmg);
       coopDealDamage(m, fdmg);
       if(lastDmgRec) lastDmgRec.more.push([fn ? "holy:storm" : "@follow", fdmg]);
-      const at = 380 + 150 * fn;
-      setTimeout(function(){ floatNum("foe", "-" + fdmg, "dmg"); }, at);
+      queueVisualHit(P.hero,"strike",fdmg,1,0,crit);
       fsum += fdmg; fn++;
       if(!holyOn("storm")) break;            // 没有风暴之翼：一题最多一次
       fp *= HOLY_STORM_HALF;
@@ -3601,7 +3645,7 @@ function answer(btn, ok){
       if(lastDmgRec) lastDmgRec.more.push(["chisel", chip]);
       landed += landedOn(m, chip);
       coopDealDamage(m, chip);
-      setTimeout(function(){ floatNum("foe", "-" + chip, "dmg"); }, 260);
+      queueVisualHit(P.hero,"strike",chip);
       relicLog += T(" <span class=\"sys\">(凿骨 +") + chip + ")</span>";
     }
     /* ===== 匣子（雷霆之匣 / 雷暴 / 电容共用 P.thunder）=====
@@ -3616,7 +3660,7 @@ function answer(btn, ok){
       if(lastDmgRec) lastDmgRec.more.push([src, bolt]);
       landed += landedOn(m, bolt);
       coopDealDamage(m, bolt);
-      setTimeout(function(){ floatNum("foe", "-" + bolt, "dmg"); }, 320);
+      queueVisualHit(P.hero,"strike",bolt);
       relicLog += " <span class=\"sys\">(" + (src === "capacitor" ? L("电容", "Capacitor") : L("雷霆之匣", "Thunder Box")) + " +" + bolt + ")</span>";
     }
     if(hasRelic("capacitor") && !m.boss && m.hp > 0 && (P.thunder || 0) >= 1) boltOut("capacitor");
@@ -3808,8 +3852,7 @@ function answer(btn, ok){
         if(hp) relicLog += L(" <span class=\"sys\">(守夜人 · 回 " + hp + " 点)</span>", " <span class=\"sys\">(Night Keeper · +" + hp + " HP)</span>");
       }
     }
-    floatNum("foe", "-" + dmg, "dmg");
-    if(window.DungeonFX) DungeonFX.attack(crit);
+
     head = "<span class=\"big ok\">" +
            (crit ? T("暴击！") : T("命中！")) + "</span>";
     note = T("你砍中 ") + m.name + T("，造成 <b>") + dmg + T("</b> 点伤害") +
@@ -4038,6 +4081,12 @@ function answer(btn, ok){
   if(P.tut) tutEvent(ok ? "right" : "wrong");
   renderBattleBars();
   renderHud();
+  const visualBattle=B,visualHits=B.fxHits||[];
+  visualHealth.end=m.hp;
+  const visualMs=window.DungeonFX?DungeonFX.playRound(visualHits,visualHealth):0;
+  B.fxPlayed=true;
+  B.fxHits=null;
+  if(!window.DungeonFX)for(const hit of visualHits)floatNum("foe","-"+hit.damage,"dmg");
   $("btnFlee").hidden = true;
 
   /* 缓刑：这一题扣的账把人扣倒了（薪火 / 回魂也没救回来）—— 倒下优先于怪倒下 */
@@ -4045,6 +4094,8 @@ function answer(btn, ok){
   // 最后一击：多留一会儿，让人看清这一题的词和释义 —— 之后直接关窗，没有中间画面了
   if(m.hp <= 0){
     if(COOP && coopTrySwitchTarget(m)){
+      if(window.DungeonFX)DungeonFX.resetRound();
+      renderBattleBars();
       // 我这条空了、队友那条还有血 —— 转去帮砍，不结束战斗，往下走正常的答题流程
     } else if(COOP){
       /* 两条血条这边看着都空了：怪死是共识事件，等服务器广播的 dead 才真的收（联机方案.md 第 3/6 节）。
@@ -4053,14 +4104,18 @@ function answer(btn, ok){
       say(m.name + T("晃了一下，血条空了 —— 等确认最后一下。"), "sys");
       return;
     } else {
-      if(window.DungeonFX) DungeonFX.kill();
-      setTimeout(function(){ finishBattle(true); }, 760);
+      if(window.DungeonFX)setTimeout(function(){if(B===visualBattle)DungeonFX.kill();},visualMs);
+      setTimeout(function(){if(B===visualBattle)finishBattle(true);},Math.max(760,visualMs+650));
       return;
     }
   }
   if(P.hp <= 0){ setTimeout(function(){ finishBattle(false); }, 480); return; }
-  if(ok && OPT.auto) setTimeout(function(){ if(B && B.locked) nextQuestion(); }, 450);
-  else $("btnNextQ").hidden = false;
+  if(ok && OPT.auto)setTimeout(function(){if(B===visualBattle&&B.locked)nextQuestion();},Math.max(450,visualMs+30));
+  else {
+    $("btnNextQ").hidden=false;
+    $("btnNextQ").disabled=visualMs>0;
+    if(visualMs)setTimeout(function(){if(B===visualBattle)$("btnNextQ").disabled=false;},visualMs);
+  }
 }
 /* ---- 倒下那一刻的保险，**两道都在这儿** ----
    不灭薪火：每层一次，把血钉在 1 点；回魂：整趟一次，回到 REVIVE_PCT 的上限。
@@ -7103,11 +7158,16 @@ function heirEvent(event,details){
   if(!P || !G || P.study || P.tut || P.hp<=0)return;
   const s=stats(),m=details&&details.mob||B&&B.mob;
   const ctx=Object.assign({event:event,p:P,mob:m,stats:s,mask:RMASK,floor:G.floor,rarity:id=>relicRar(id)},details||{});
-  ctx.act=function(item,key,n){
+  ctx.act=function(item,key,n,visual){
     if(P.hp<=0)return;
     if(HeroRules.effects[key]){statusGain(P,key,n);return;}
     if(key.startsWith("foe.")){if(m&&m.hp>0)statusGain(m,key.slice(4),n);return;}
-    const hit=function(amount,kind){if(m&&m.hp>0){let dmg=Math.max(1,Math.round(amount));if(event==="battle")dmg=Math.min(dmg,m.hp-1);if(dmg<=0)return;coopDealDamage(m,dmg);floatNum("foe","-"+dmg,"dmg");if(window.DungeonFX)DungeonFX.skill(item.heroOnly,kind);}};
+    const hit=function(amount,kind){if(m&&m.hp>0){let dmg=Math.max(1,Math.round(amount));if(event==="battle")dmg=Math.min(dmg,m.hp-1);if(dmg<=0)return;coopDealDamage(m,dmg);
+      const souls=visual&&visual.souls;
+      if(typeof queueVisualHit!=="function"||!queueVisualHit(item.heroOnly,souls?"soul":kind,dmg,souls||1,souls&&heroOn("necro")?(P.heroSouls||0):0)){
+        floatNum("foe","-"+dmg,"dmg");if(window.DungeonFX)DungeonFX.skill(item.heroOnly,kind);
+      }
+    }};
     switch(key){
       case "hit":case "echohit":hit(s.atk*n,"strike");break;
       case "pet":hit(s.atk*n,"pet");break;
@@ -7177,7 +7237,7 @@ function heroRoundEnd(ok,word,m,s){
   /* Existing charges settle before decay; newly earned charges start next round. */
   if(m && m.hp>0){
     const dot=Math.round(s.atk*(statusN(m,"burn")*.12+statusN(m,"bleed")*.10)+m.max*.01*statusN(m,"poison"));
-    if(dot>0 && Number.isFinite(dot)){coopDealDamage(m,dot);say(L("侵蚀造成 ","Damage over time: ")+dot,"good");}
+    if(dot>0 && Number.isFinite(dot)){coopDealDamage(m,dot);if(typeof queueVisualHit==="function")queueVisualHit(P.hero,"dot",dot);say(L("侵蚀造成 ","Damage over time: ")+dot,"good");}
   }
   const hurt=Math.ceil(s.maxHp*.01*statusN(P,"poison")+s.atk*(statusN(P,"burn")*.12+statusN(P,"bleed")*.10));
   if(P.hp>0 && hurt>0){takeHit(hurt,m||{name:L("侵蚀","Affliction")},false);say(L("侵蚀造成 ","Affliction: ")+hurt+L(" 点伤害。"," damage."),"hurt");}
@@ -9942,7 +10002,12 @@ Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
 });
 $("btnHelp").addEventListener("click", function(){ $("veilHelp").hidden = false; });
 $("btnCloseHelp").addEventListener("click", function(){ $("veilHelp").hidden = true; });
-window.addEventListener("resize", sizeMap);
+let mapResizeTimer=null;
+function scheduleMapResize(){
+  if(mapResizeTimer!==null)clearTimeout(mapResizeTimer);
+  mapResizeTimer=setTimeout(function(){mapResizeTimer=null;sizeMap();},100);
+}
+window.addEventListener("resize", scheduleMapResize);
 
 /* ---- 存档相关按钮 ---- */
 function refreshSaveState(){
@@ -11141,7 +11206,8 @@ refreshSaveState();
 if(window.GameBoot)GameBoot.register({
   prepare:[
     {label:"整理词义与近义词",run:function(){synIndex();}},
-    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}}
+    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}},
+    {label:"缓存地图绘制资源",run:function(){return window.DungeonRaster?DungeonRaster.prepare():null;}}
   ],start:bootGame
 });
 else bootGame();

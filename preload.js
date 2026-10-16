@@ -5,19 +5,19 @@
   const status=document.getElementById('loadStatus'),bar=document.getElementById('loadProgress'),count=document.getElementById('loadCount'),retry=document.getElementById('loadRetry');
   const app=document.querySelector('.app'),coop=!!document.querySelector('[data-coop-page]');
   if(coop)window.__COOP=true;
-  const version='20261016-walk1';
+  const version='20261016-mobile2';
   const asset=src=>src+'?v='+version;
   const stages=[
     ['util.js','准备基础资源'],['i18n.js','读取语言设置'],
     ['words-a1.js','载入英语词库'],['words-zh.js','载入中文词库'],['words-es.js','载入西语词库'],['words-ja.js','载入日语词库'],
     ['syn.js','载入词义索引'],['defs-en.js','载入释义题'],['content.js','准备冒险玩法'],['orb.js','载入主城资源'],
-    ['art.js','载入角色模型'],['monster-art.js','载入地牢生物'],['dungeon-scene.js','载入洞窟场景'],
+    ['art.js','载入角色模型'],['monster-art.js','载入地牢生物'],['dungeon-scene.js','载入洞窟场景'],['dungeon-raster.js','准备轻量地图'],
     [coop?'net.js':'i18n-en.js',coop?'准备合作模式':'准备界面语言'],
     ['compact-save.js','准备存档'],['hero-system.js','准备角色技能'],['heirlooms.js','载入遗物'],
     ['dungeon-fx.js','准备战斗动画'],['learning-cache.js','准备学习内容'],['game.js','整理游戏进度']
   ];
   let registration=null,fatal=null,finished=false;
-  const total=stages.length+3;
+  const total=stages.length+4;
   window.GameBoot={register:function(value){registration=value;}};
   if(app)app.inert=true;
   const english=()=>typeof window.UI_EN!=='undefined'&&window.UI_EN;

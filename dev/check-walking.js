@@ -5,7 +5,7 @@ let groups=0;function check(name,fn){fn();groups++;console.log('PASS '+name);}
 function load(name,c){const i=source.indexOf('function '+name+'('),j=source.indexOf('\n}',i);assert(i>=0&&j>i,name);vm.runInContext(source.slice(i,j+2),c);}
 function context(){let full=0,camera=0,fx=0,tiles=[];const grid=[[1,1,1],[1,1,1]],mobs=[{x:2,y:0}],things=[];
  const c=vm.createContext({W:3,H:2,COOP:false,P:{x:0,y:1,hero:'adv'},G:{map:grid,mobs,things,goal:null,stair:{x:0,y:0}},cells:[],window:{DungeonFX:true},DungeonFX:{move(){fx++;}},heroArt:()=>'<svg/>',heroCls:()=>'',
-  $:()=>({}),render(){full++;},camera(){camera++;},renderMapTile:(...a)=>tiles.push(a)});
+  $:()=>({}),render(){full++;},camera(){camera++;},paintMapRaster(){},renderMapTile:(...a)=>tiles.push(a)});
  c.mapRenderState={world:grid,grid:c.cells,mobs,mobCount:mobs.length,things,thingCount:things.length,goal:-1};
  load('renderStep',c);return {c,get full(){return full},get camera(){return camera},get fx(){return fx},tiles};
 }
@@ -47,5 +47,10 @@ check('Terrain grid is isolated from actor/trail insertion and retains all click
  function el(){return {children:[],dataset:{},style:{setProperty(){}},appendChild(n){if(n.fragment)this.children.push(...n.children);else this.children.push(n);},set innerHTML(v){this.children=[];}};}
  const map=el();c.$=()=>map;c.document={createElement:el,createDocumentFragment:()=>Object.assign(el(),{fragment:true})};c.CHAPTER={stepMs:144};c.sizeMap=()=>{};
  load('buildGrid',c);c.buildGrid();assert.equal(map.children.length,1);assert.equal(map.children[0].className,'map-tiles');assert.equal(map.children[0].children.length,6);assert.equal(c.cells.length,6);assert.equal(c.cells[5].dataset.x,2);assert.equal(c.cells[5].dataset.y,1);assert.equal(c.mapRenderState,null);
+});
+check('Viewport resize bursts settle once instead of reallocating the map repeatedly',()=>{
+ let id=0,runs=0;const pending=new Map(),c=vm.createContext({mapResizeTimer:null,sizeMap:()=>runs++,setTimeout(fn,ms){assert.equal(ms,100);pending.set(++id,fn);return id;},clearTimeout:id=>pending.delete(id)});
+ load('scheduleMapResize',c);for(let i=0;i<40;i++)c.scheduleMapResize();assert.equal(pending.size,1);assert.equal(runs,0);
+ const fn=[...pending.values()][0];fn();assert.equal(runs,1);assert.equal(c.mapResizeTimer,null);
 });
 console.log(groups+' walking checks passed.');

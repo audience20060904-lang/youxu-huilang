@@ -368,7 +368,7 @@ var Heirlooms=(function(){
         const key=c.mob?c.mob.x+','+c.mob.y:'?';s.battles=s.battles||[];if(s.battles.includes(key))continue;s.battles.push(key);
       }
       if(c.event==='wrong'){s.armed=true;if(item.trigger==='verse'||item.trigger==='rhythm'){delete s.pos;delete s.seconds;}continue;}
-      if(c.event==='right' && s.souls)c.act(item,'echohit',s.souls*.1);
+      if(c.event==='right' && s.souls)c.act(item,'echohit',s.souls*.1,{souls:s.souls});
       const n=test(item.trigger,c,s);if(!n)continue;s.n=(s.n||0)+n;if(s.n<item.every)continue;s.n%=item.every;
       if(item.trigger==='variety')s.seen=[];
       for(const [key,amount] of item.actions){

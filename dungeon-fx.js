@@ -4,10 +4,14 @@
   const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
   const live = new Set(), motions = new Map();
   const trailPool=[];
+  const scheduled=new Set();let round=0,roundText=null;
   let anchor = null;
   const skillAt=new Map();
   const $ = id => document.getElementById(id);
   const enabled = () => !(reduce && reduce.matches) && !document.hidden;
+  const light=()=>typeof DungeonRaster!=='undefined'&&DungeonRaster.light();
+  function later(fn,ms){const token=round;const id=setTimeout(()=>{scheduled.delete(id);if(token===round)fn();},ms);scheduled.add(id);return id;}
+  function resetRound(){round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");}
   const battleOpen = () => $("veilBattle") && !$("veilBattle").hidden;
   const label = (zh, en) => typeof L === "function" ? L(zh, en) : zh;
   const shapes = {
@@ -79,14 +83,15 @@
     fx.style.left = p.x + "px"; fx.style.top = p.y + "px";
     fx.style.width = fx.style.height = (size || p.size * 1.5) + "px";
     if(shape) fx.innerHTML = '<svg viewBox="0 0 100 100">' + shapes[shape] + '</svg>';
-    document.body.appendChild(fx);
-    return keep(fx, 950, "battle");
+    keep(fx,950,"battle");document.body.appendChild(fx);
+    return fx;
   }
   function text(el, zh, en, type, position){
     const fx = stamp(el, "text " + type, null, 140, position);
     if(fx) fx.textContent = label(zh, en);
   }
   function sparks(el, type, n, at){
+    if(light())n=Math.min(n,2);
     // 粒子共享同一次布局读取，避免每追加一颗都强制重新计算页面。
     const position=at||point(el);if(!position)return;
     for(let i=0;i<n;i++){
@@ -114,7 +119,37 @@
     strike($("foeArt"),$("meArt"),"#d59b82");
   }
   const api = {
-    resetBattle:() => {clear("battle");skillAt.clear();},
+    resetBattle:() => {resetRound();skillAt.clear();},
+    resetRound:resetRound,
+    playRound:function(hits,health){
+      if(!enabled()||!battleOpen()||!hits.length)return 0;
+      round++;for(const id of scheduled)clearTimeout(id);scheduled.clear();
+      const txt=$("foeTxt"),fill=$("foeFill"),gap=hits.length>15?Math.max(20,Math.floor(1200/(hits.length-1))):hits.length>8?85:150;
+      roundText=txt&&!health.study?txt.textContent:null;let remaining=health.hp;
+      if(txt&&!health.study)txt.textContent=Math.max(0,remaining)+' / '+health.max;
+      for(let i=0;i<hits.length;i++){
+        const hit=hits[i],start=i*gap;
+        later(()=>{
+          const pet=hit.kind==='pet'?document.querySelector('.battle-pet'):null;
+          const source=hit.kind==='soul'?($("battleSoul"+(hit.index||0))||$("meArt")):pet||$("meArt");
+          const sig=signatures[hit.hero]||signatures.adv;
+          if(hit.kind!=='dot')strike(source,$("foeArt"),sig[1]);
+          later(()=>{
+            const target=point($("foeArt"));
+            motion($("foeArt"),[{transform:'translate(0,0)',opacity:1},{transform:'translate(3px,-2px)',opacity:.65,offset:.35},{transform:'translate(0,0)',opacity:1}],140);
+            const effect=stamp($("foeArt"),'skill round-hit '+hit.kind,hit.kind==='soul'?'spirit':hit.kind==='pet'?'claw':'slash',hit.crit?68:46,target);if(effect)effect.style.color=sig[1];
+            text($("foeArt"),'-'+hit.damage,'-'+hit.damage,'round-number',target);
+            if(hit.crit)sparks($("foeArt"),'critical',light()?2:4,target);
+            const from=Math.max(0,remaining);remaining-=hit.damage;
+            const to=Math.max(0,i===hits.length-1&&Number.isFinite(health.end)?health.end:remaining);
+            if(!health.study&&fill&&health.max>0)motion(fill,[{width:Math.min(100,from/health.max*100)+'%'},{width:Math.min(100,to/health.max*100)+'%'}],100,'battle',true);
+            if(txt&&!health.study)txt.textContent=to+' / '+health.max;
+            if(i===hits.length-1&&txt&&roundText!==null)txt.textContent=roundText;
+          },90);
+        },start);
+      }
+      return (hits.length-1)*gap+250;
+    },
     skill:function(hero,kind){
       if(!enabled() || !battleOpen())return;
       const key=hero+':'+kind,now=Date.now(),last=skillAt.get(key)||0;if(now-last<160)return;skillAt.set(key,now);
@@ -132,7 +167,7 @@
       if(!enabled() || !battleOpen()) return;
       const target=point($("foeArt")),origin=point($("meArt"));
       strike($("meArt"),$("foeArt"),crit?"#ffe0a0":"#d1d9bc",origin,target);
-      motion($("foeArt"), [{transform:"translateX(0)",filter:"brightness(1)"},{transform:"translateX(6px) rotate(5deg)",filter:"brightness(1.9)",offset:.25},{transform:"translateX(-3px)",offset:.5},{transform:"translateX(0)",filter:"brightness(1)"}], 360);
+      motion($("foeArt"), [{transform:"translateX(0)",opacity:1},{transform:"translateX(6px) rotate(5deg)",opacity:.6,offset:.25},{transform:"translateX(-3px)",offset:.5},{transform:"translateX(0)",opacity:1}], 360);
       stamp($("foeArt"), crit ? "slash critical" : "slash", "slash",null,target);
       sparks($("foeArt"), crit ? "critical" : "hit", crit ? 9 : 5,target);
       if(crit){ stamp($("foeArt"), "slash cross", "slash",null,target); text($("foeArt"), "暴击", "CRITICAL", "critical",target); }
@@ -199,13 +234,14 @@
       const size=map._cellSize||to.offsetWidth;if(!size)return;
       const x0=map._cellSize?previous.x*size:from.offsetLeft,y0=map._cellSize?previous.y*size:from.offsetTop;
       const x1=map._cellSize?x*size:to.offsetLeft,y1=map._cellSize?y*size:to.offsetTop;
+      const visual=typeof DungeonRaster!=='undefined'?DungeonRaster.sprite(svg,cls):svg;
       // 直接挂在地图上，格子重绘不会擦掉；相机平移时残影留在原来的路上。
       for(let i=0;i<3;i++){
         const trail = trailPool.pop()||document.createElement("span"), t = i/3;
         trail._moveTrail=true;
         if(trail.className!=="move-trail"+cls)trail.className="move-trail"+cls;
         if(!trail._decorative){trail.setAttribute("aria-hidden", "true");trail._decorative=true;}
-        if(trail._art!==svg){trail.innerHTML = svg;trail._art=svg;}
+        if(trail._art!==visual){trail.innerHTML = visual;trail._art=visual;}
         trail.style.left = (x0+(x1-x0)*t) + "px";
         trail.style.top = (y0+(y1-y0)*t) + "px";
         if(trail._size!==size){trail.style.width=trail.style.height=size+"px";trail._size=size;}
@@ -219,13 +255,13 @@
     }
   };
   if(reduce){
-    const changed = () => { if(reduce.matches) clear(); };
+    const changed = () => { if(reduce.matches){resetRound();clear();} };
     if(reduce.addEventListener) reduce.addEventListener("change", changed);
     else if(reduce.addListener) reduce.addListener(changed);
   }
-  document.addEventListener("visibilitychange", () => { if(document.hidden) clear(); });
-  window.addEventListener("pagehide", () => clear());
+  document.addEventListener("visibilitychange", () => { if(document.hidden){resetRound();clear();} });
+  window.addEventListener("pagehide", () => {resetRound();clear();});
   const veil = $("veilBattle");
-  if(veil && window.MutationObserver) new MutationObserver(() => { if(veil.hidden) clear("battle"); }).observe(veil, {attributes:true, attributeFilter:["hidden"]});
+  if(veil && window.MutationObserver) new MutationObserver(() => { if(veil.hidden) resetRound(); }).observe(veil, {attributes:true, attributeFilter:["hidden"]});
   window.DungeonFX = api;
 })();

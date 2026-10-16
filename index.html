@@ -7,8 +7,8 @@
 <title>幽墟回廊</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261016-walk1">
-<script src="preload.js?v=20261016-walk1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261016-mobile2">
+<script src="preload.js?v=20261016-mobile2" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -385,6 +385,7 @@
         </div>
       </div>
     </div>
+      <div class="battle-summons" id="battleSummons" aria-hidden="true" hidden></div>
       <div class="arena-controls">
     <div class="wagerrow" id="wagerRow">
       <button class="wager" id="btnWager" type="button">冒险 · 我确定
@@ -397,7 +398,7 @@
     <div class="qcard" id="qcard">
       <div class="qtimer" id="qTimer" hidden><i id="qTimerFill"></i></div>
       <div class="combo none" id="combo" aria-label="连击 0"><span class="cmb-n"><b>×0</b></span></div>
-      <div class="qlabel" id="qLabel">这个词是什么意思？</div>
+      <div class="qlabel" id="qLabel" hidden>这个词是什么意思？</div>
       <div class="haunt" id="qHaunt" hidden>心魔 · 上次你答错了它</div>
       <div class="qword" id="qWord">cat</div>
       <button class="spk" id="btnSpeak" type="button" hidden aria-label="朗读这个词">🔊</button>

@@ -11,7 +11,7 @@ var DungeonScene=(function(){
   STAIR=svg(shadow+'<path d="M5 8h22v19H5Z" fill="#554e48"/><path d="M8 11h16v4H8Zm0 5h16v4H8Zm0 5h16v5H8Z" fill="#a69b83"/><path d="M9 12h14M9 17h14M9 22h14" stroke="#e5d2a2" opacity=".5"/><path d="m16 3 4 4h-3v3h-2V7h-3Z" fill="#e1b450"/>');
   const pet=svg(shadow+'<path d="m6 15 1-9 6 5 7-2 7 7-4 9H9Z" fill="#b59a70" stroke="#4d4337"/><path d="m9 11 1-3 3 4M23 13l2 3-4 7-5-2" fill="#ead6ac"/><path d="m10 25-2 4M22 25l2 4M6 20l-4-4" stroke="#7c6950" stroke-width="3" stroke-linecap="round"/><circle cx="19" cy="16" r="1.5" fill="#32535c"/><path d="m24 19 4-1-1 4" fill="#3a3431"/><path d="M11 15h3M9 18h4" stroke="#715b42"/>');
   let world=null,mapNode=null,pawn=null,companion=null;
-  function paint(map,cells,w,grid,x,y,art,hasPet,chapter,cellSize){
+  function paint(map,cells,w,grid,x,y,art,hasPet,chapter,cellSize,cls){
     if(!map)return;const cell=cells[y*w+x];if(!cell)return;
     const fresh=world!==grid||mapNode!==map||!pawn||!pawn.isConnected;
     const size=cellSize||map._cellSize||cell.offsetWidth;if(!size)return;
@@ -32,7 +32,8 @@ var DungeonScene=(function(){
         c.dataset.face=faces;
       }
     }
-    if(pawn._art!==art){pawn.innerHTML=art;pawn._art=art;}
+    const visual=typeof DungeonRaster!=='undefined'?DungeonRaster.sprite(art,cls):art;
+    if(pawn._art!==visual){pawn.innerHTML=visual;pawn._art=visual;}
     if(resize)for(const node of [pawn,companion])node.style.width=node.style.height=size+'px';
     if(fresh||resize||pawn._x!==x||pawn._y!==y){
       for(const node of [pawn,companion])node.style.transition=snap?'none':'';
@@ -48,11 +49,20 @@ var DungeonScene=(function(){
     if(show&&!node){node=document.createElement('span');node.className='battle-pet';node.setAttribute('aria-hidden','true');node.innerHTML=pet;host.appendChild(node);}
     if(node)node.hidden=!show;
   }
+  function battleSummons(count){
+    const host=document.getElementById('battleSummons');if(!host)return;
+    count=Math.max(0,Math.min(17,Math.floor(count||0)));
+    if(host._count!==count){
+      host.style.gridTemplateColumns='repeat('+Math.max(1,Math.ceil(Math.sqrt(count)))+',minmax(0,1fr))';
+      host.innerHTML=Array.from({length:count},(_,i)=>'<span class="battle-soul" id="battleSoul'+i+'"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 28V14C7 1 25 1 25 14V28L20 24 16 29 12 24Z" fill="#a1c8bd" stroke="#52796d"/><path d="M12 13v4m8-4v4" stroke="#23493e" stroke-width="2.4" stroke-linecap="round"/></svg></span>').join('');host._count=count;
+    }
+    host.hidden=!count;
+  }
   function camera(map,targetX,targetY,key,size){
     const prior=map._camera,far=!prior||prior.key!==key||prior.size!==size||Math.abs(prior.x-targetX)+Math.abs(prior.y-targetY)>size*3;
     if(prior&&prior.key===key&&prior.size===size&&prior.x===targetX&&prior.y===targetY)return;
     map.style.transition=far?'none':'';map.style.transform='translate('+targetX+'px,'+targetY+'px)';
     map._camera={x:targetX,y:targetY,key:key,size:size};
   }
-  return {paint:paint,battlePet:battlePet,camera:camera,pet:pet};
+  return {paint:paint,battlePet:battlePet,battleSummons:battleSummons,camera:camera,pet:pet};
 })();
