@@ -1702,7 +1702,7 @@ function say(t, cls){
   p.innerHTML = t;
   box.appendChild(p);
   while(box.children.length > 60) box.removeChild(box.firstChild);
-  box.scrollTop = box.scrollHeight;
+  // Retain a small diagnostic history; the visible map footer now shows current status.
 }
 
 /* ================= 视野 ================= */
@@ -1774,19 +1774,17 @@ function sizeMap(){
   const ml = parseFloat(ms.marginLeft) || 0, mr = parseFloat(ms.marginRight) || 0;
   const availW = view.clientWidth - ml - mr - 2;
 
-  /* 纵向预算：冒险页总高 − 同级可见部件 − 间隙 − 日志最低高。
+  /* 纵向预算：冒险页总高 − 同级可见部件（含固定状态栏）− 间隙。
      状态行和血条现在是压在地图上的浮层（.mapui），不是 viewAdv 的同级部件，
      所以它们不再吃这份预算 —— 这是「地图变大」的主要来源。*/
   let used = 0, shown = 0;
   Array.prototype.forEach.call(view.children, function(el){
     if(el.offsetHeight === 0 && el !== st) return;   // 藏起来的不占位，也不占 gap
     shown++;
-    if(el !== st && el.id !== "log") used += el.offsetHeight;
+    if(el !== st) used += el.offsetHeight;
   });
-  /* LOG_MIN 必须和 style.css 里 .log 的 min-height 一致 ——
-     JS 算小了 CSS 却撑着，stage 就会被 flex 挤扁（rect 高度对不上 style 高度）。*/
-  const gaps = Math.max(0, shown - 1) * 10, LOG_MIN = 62;
-  const availH = view.clientHeight - used - gaps - LOG_MIN;
+  const gaps = Math.max(0, shown - 1) * 10;
+  const availH = view.clientHeight - used - gaps;
 
   /* 格子多大**只看基准视野**，跟以前一条规矩：视野调小 = 格子变大。*/
   const cell = Math.max(14, Math.min(46, Math.min(
@@ -1950,10 +1948,31 @@ function renderHud(){
   paintHp($("hpBar"), $("hpFill"), $("hpTxt"), P.hp, s.maxHp, $("hpShield"));
   const need = xpNeed(P.lvl);
   $("xpFill").style.width = Math.min(100, P.xp / need * 100) + "%";
-  renderStatusOwner("mapStatuses", P);
-  const roomLabel=$("roomLabel");if(roomLabel){const meta=roomMeta();roomLabel.hidden=!meta;if(meta)roomLabel.textContent=DungeonRooms.byId[meta.actual].n;}
+  renderMapStatus();
 
   renderSheets(s);
+}
+function mapRoomName(){
+  const meta=roomMeta();return meta?DungeonRooms.byId[meta.actual].n:P.study?L("纯净学习","Pure study"):isBossFloor(G.floor)?L("守层者大厅","Guardian hall"):L("地牢探索","Dungeon exploration");
+}
+function renderMapStatus(){
+  if(SCENE!=="run"||!P||!G)return;
+  const text=function(id,value){const el=$(id);if(el&&el.textContent!==value)el.textContent=value;};
+  renderStatusOwner("mapStatuses",P);
+  text("mapStatusHeading",L("当前房间","Current room"));text("roomLabel",mapRoomName());text("mapStatusEmpty",L("暂无祝福或负面状态","No active blessings or ailments"));text("btnExpandStatus",L("展开 ↗","Expand ↗"));
+  const list=$("mapStatuses"),empty=$("mapStatusEmpty");if(empty)empty.hidden=!!(list&&!list.hidden);
+}
+function mapStatusHtml(){
+  const cards=Object.keys(HeroRules.effects).filter(k=>statusN(P,k)>0).map(function(k){return '<article class="rule-card'+(HeroRules.negative.includes(k)?' affix':'')+'"><b>'+statusLabel(k)+' ×'+statusN(P,k)+'</b><p>'+HeroRules.effects[k][UI_EN?3:2]+'</p></article>';});
+  if(P.heirGuard>0)cards.push('<article class="rule-card"><b>'+L("遗物格挡 ×","Relic guard ×")+P.heirGuard+'</b><p>'+L("下次实际受到攻击时消耗一次格挡并免疫该次伤害，最多储存两次。","The next incoming attack consumes one guard and deals no damage. Stores up to two guards.")+'</p></article>');
+  return '<h3>'+L("祝福与负面状态","Blessings & ailments")+'</h3>'+(cards.join('')||'<p>'+L("当前没有生效中的祝福或负面状态。","No blessings or ailments are active.")+'</p>')+'<h3>'+L("房间与旅途","Room & journey")+'</h3>'+(runRulesHtml()||'<article class="rule-card"><b>'+mapRoomName()+'</b></article>');
+}
+function openMapStatus(){
+  if(SCENE!=="run"||!P||!G)return;
+  autoOff();cancelWalk();openDungeonRules();
+  $("rulesTitle").textContent=L("当前冒险状态","Current adventure status");
+  const eyebrow=$("rulesEyebrow");if(eyebrow)eyebrow.textContent=L("冒险状态","Adventure status");
+  $("rulesList").innerHTML=mapStatusHtml();$("btnExpandStatus").setAttribute("aria-expanded","true");$("btnCloseDungeonRules").focus();
 }
 /* 联机：队友状态条（血/连击/遗物数），数据来自 coopMateInfo（NET.on("mate",...) 里更新的）。
    index.html 里没有 #mateRow，$() 拿到 null 就直接跳过 —— 单人版调不到这个函数。*/
@@ -7572,6 +7591,8 @@ function renderDungeonRules(){
   const button=$("btnDungeonRules");if(button){const count=Object.values(endlessMods()).reduce((a,b)=>a+b,0),flows=Object.keys(DungeonRules.flows).filter(f=>DungeonRules.items.some(r=>r.flow===f&&hasRelic(r.id))).length;button.hidden=!(count||flows||roomMeta()||roomHasBenefits());button.textContent=roomMeta()||roomHasBenefits()?L("旅途 · 流派与词条","Journey · builds & modifiers"):L("流派 ","Builds ")+flows+(count?L(" · 词条 "," · Modifiers ")+count:"");}
 }
 function openDungeonRules(){
+  const expand=$("btnExpandStatus");if(expand&&expand.setAttribute)expand.setAttribute("aria-expanded","false");
+  const eyebrow=$("rulesEyebrow");if(eyebrow)eyebrow.textContent=L("战斗机制","Combat mechanics");
   $("rulesTitle").textContent=L("流派与无尽词条","Builds & Endless modifiers");
   $("rulesList").innerHTML=runRulesHtml()||L("尚未获得流派遗物或无尽词条。","No build relics or Endless modifiers yet.");
   $("veilDungeonRules").hidden=false;
@@ -7580,6 +7601,8 @@ function openDungeonRules(){
 function closeDungeonRules(){
   $("veilDungeonRules").hidden=true;
   if(B&&B.rulesReadAt){const elapsed=Math.max(0,Date.now()-B.rulesReadAt);B.qAt+=elapsed;B.rulesReadMs=(B.rulesReadMs||0)+elapsed;delete B.rulesReadAt;}
+  const expand=$("btnExpandStatus"),restore=expand&&expand.getAttribute&&expand.getAttribute("aria-expanded")==="true";
+  if(expand&&expand.setAttribute)expand.setAttribute("aria-expanded","false");if(restore&&SCENE==="run"&&expand.focus)expand.focus();
 }
 function statusN(owner,key){
   if(RMASK && (RMASK==="all" || RMASK["@status"]))return 0;
@@ -8428,7 +8451,8 @@ function showScene(){
   const inRun = SCENE === "run";
   if(typeof DungeonGPU!=="undefined")DungeonGPU.setVisible(inRun&&$("viewAdv").classList.contains("on"));
   /* hudRow / barsRow 现在住在 stageBox 里面（.mapui 浮层），跟着 stage 一起显隐，不用单独管 */
-  ["stageBox","log"].forEach(function(id){ $(id).hidden = !inRun; });
+  ["stageBox","adventureStatus"].forEach(function(id){ $(id).hidden = !inRun; });
+  $("log").hidden=true;
   $("townPanel").hidden = inRun;
   /* 探索时顶栏整块收起 —— 章节名挪进了地图浮层的「层」那一格，省下的高度全给地图 */
   $("topBar").hidden = inRun;
@@ -10418,7 +10442,8 @@ $("btnRunCode").addEventListener("click", function(){
 });
 $("btnDungeonRules").addEventListener("click",openDungeonRules);
 $("btnRoomEventClose").addEventListener("click",closeRoomEvent);
-$("roomLabel").addEventListener("click",openDungeonRules);
+$("roomLabel").addEventListener("click",openMapStatus);
+$("btnExpandStatus").addEventListener("click",openMapStatus);
 $("btnCloseDungeonRules").addEventListener("click",closeDungeonRules);
 $("btnMiss").addEventListener("click", function(){ openMiss("all"); });
 document.querySelectorAll("#veilMiss .mtab").forEach(function(b){

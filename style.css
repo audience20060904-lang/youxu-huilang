@@ -423,17 +423,16 @@ body{
 .giveup.lock.on{color:var(--torch-deep);border-color:var(--coin);
   background:rgba(246,241,229,.96);font-weight:600}
 
-/* 地图下面那一行文字按钮（.maptools / .mapbtn）已经整块删了（用户 2026-09）——
-   「锁定冒险」搬去了取景框右下角，空出来的纵向空间归日志栏。 */
-
-.log{flex:1;min-height:62px;border:1px solid var(--edge);background:var(--stone);border-radius:2px;padding:9px 11px;
-  overflow-y:auto;display:flex;flex-direction:column;gap:3px;font-size:13px}
-.log p{margin:0;color:var(--dim)}
-.log .hit{color:var(--bone)}
-.log .crit{color:var(--torch)}
-.log .hurt{color:#A8402F}
-.log .good{color:var(--venom)}
-.log .sys{color:var(--faint)}
+/* 固定状态栏替代地图下方日志；详情用浮窗，不随状态或展开动作改变地图尺寸。 */
+.adventure-status{position:relative;flex:0 0 96px;height:96px;min-height:96px;max-height:96px;min-width:0;margin-top:auto;
+  display:flex;flex-direction:column;gap:4px;padding:8px 12px 36px;border:1px solid var(--edge);border-radius:6px;background:var(--stone);overflow:hidden}
+.status-location{display:flex;align-items:center;gap:8px;flex:none;min-width:0;height:22px}
+.status-location > span{flex:none;font-size:11px;color:var(--faint)}
+.adventure-status .room-label{min-width:0;max-width:100%;min-height:22px;margin:0;padding:1px 7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.adventure-status .map-statuses{flex:none;height:24px;min-height:24px;width:100%;max-width:100%;margin:0}
+.status-empty{font-size:11px;color:var(--faint);line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-expand{position:absolute;right:8px;bottom:5px;min-width:64px;height:30px;padding:3px 10px;border:1px solid var(--edge);border-radius:4px;background:var(--stone-2);color:var(--torch-deep);font:12px var(--body);cursor:pointer}
+.status-expand:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 
 .panel{border:1px solid var(--edge);background:var(--stone);border-radius:2px;padding:11px;
   display:flex;flex-direction:column;gap:10px}

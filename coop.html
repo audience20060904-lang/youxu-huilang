@@ -4,8 +4,8 @@
 <title>幽墟回廊 · 联机</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-crowd1">
-<script src="preload.js?v=20261020-crowd1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-status1">
+<script src="preload.js?v=20261020-status1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -126,8 +126,6 @@
               <div class="txt" id="hpTxt">20 / 20</div>
             </div>
             <div class="xpbar"><div class="fill" id="xpFill"></div></div>
-            <div class="map-statuses" id="mapStatuses" aria-label="当前祝福与负面状态" hidden></div>
-            <button class="room-label" id="roomLabel" type="button" hidden aria-label="查看当前房间详情"></button>
           </div>
           <!-- 联机独有：队友状态条（血/连击/遗物数），index.html 里没有这一块 -->
           <div class="hudline mateline" id="mateRow" hidden>
@@ -146,7 +144,13 @@
         </div>
       </div>
 
-      <div class="log" id="log"></div>
+      <section class="adventure-status" id="adventureStatus" aria-label="当前冒险状态" hidden>
+        <div class="status-location"><span id="mapStatusHeading">当前房间</span><button class="room-label" id="roomLabel" type="button" aria-label="查看当前房间详情"></button></div>
+        <div class="map-statuses" id="mapStatuses" aria-label="当前祝福与负面状态" hidden></div>
+        <span class="status-empty" id="mapStatusEmpty">暂无祝福或负面状态</span>
+        <button class="status-expand" id="btnExpandStatus" type="button" aria-haspopup="dialog" aria-controls="veilDungeonRules" aria-expanded="false">展开 ↗</button>
+      </section>
+      <div id="log" hidden aria-hidden="true"></div>
     </section>
 
     <section class="view" id="viewInfo" role="tabpanel" aria-labelledby="navInfo" tabindex="0">
@@ -663,8 +667,8 @@
 </div>
 
 <div class="veil" id="veilDungeonRules" hidden>
-  <div class="sheet tall">
-    <div class="eyebrow">战斗机制</div><h2 id="rulesTitle">流派与无尽词条</h2>
+  <div class="sheet tall" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="eyebrow" id="rulesEyebrow">战斗机制</div><h2 id="rulesTitle">流派与无尽词条</h2>
     <div class="sx" id="rulesList"></div>
     <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseDungeonRules" type="button">关闭</button></div>
   </div>
