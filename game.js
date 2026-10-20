@@ -780,17 +780,17 @@ function renderRoomRoutes(){
   const box=$("roomRoutes");if(!box)return;const plan=roomPlan(),boss=!!(P&&G&&isBossFloor(G.floor+1));
   box.hidden=!roomOn()||boss;box.innerHTML="";if(box.hidden)return;
   if(!plan){box.textContent=L("等待房主展示三个入口…","Waiting for the host's three doors…");$("btnStairGo").disabled=true;return;}
-  const readonly=COOP&&!coopIsHost();
-  for(const id of plan.ids){const r=DungeonRooms.byId[id];if(!r)continue;const option=document.createElement("div");option.className="room-route-option";
+  const readonly=COOP&&!coopIsHost(),modifierRows=[];
+  for(const id of plan.ids){const r=DungeonRooms.byId[id];if(!r)continue;
     const card=document.createElement("button");card.type="button";card.className="room-route-card"+(plan.selected===id?" selected":"");card.disabled=readonly||!!plan.ready;card.setAttribute("aria-pressed",String(plan.selected===id));
     card.innerHTML='<span class="room-door">'+DungeonRooms.icon(id)+'</span><span><small>'+r.tag+'</small><b>'+r.n+'</b><span>'+r.danger+'</span><em>'+r.reward+'</em></span>';
-    card.addEventListener("click",function(){if(card.disabled||plan.ready)return;plan.selected=id;plan.rev=(plan.rev||0)+1;renderRoomRoutes();if(COOP)coopSendMe();});option.appendChild(card);
+    card.addEventListener("click",function(){if(card.disabled||plan.ready)return;plan.selected=id;plan.rev=(plan.rev||0)+1;renderRoomRoutes();if(COOP)coopSendMe();});box.appendChild(card);
     if(id==="cursed"){const copy={roomRun:{seed:plan.seed,history:[]}},m=DungeonRooms.enter(copy,plan.floor,false,id),affix=DungeonRules.affixById[m.curse];
-      if(affix){const row=document.createElement("div"),label=document.createElement("span"),button=document.createElement("button");row.className="room-route-modifiers";label.textContent=L("房间词缀","Room modifier");button.type="button";button.className="room-affix-chip";button.textContent=affix.n+" ⓘ";button.title=affix.pw;button.setAttribute("aria-label",affix.n+L(" · 查看词缀说明"," · Read modifier details"));button.setAttribute("aria-haspopup","dialog");button.setAttribute("aria-controls","veilDungeonRules");
-        button.addEventListener("click",function(){openRoomAffix(affix.id,button);});row.appendChild(label);row.appendChild(button);option.appendChild(row);}
+      if(affix){const row=document.createElement("div"),label=document.createElement("span"),button=document.createElement("button");row.className="room-route-modifiers";label.textContent=r.n+L(" · 词缀"," · Modifier");button.type="button";button.className="room-affix-chip";button.textContent=affix.n+" ⓘ";button.title=affix.pw;button.setAttribute("aria-label",affix.n+L(" · 查看词缀说明"," · Read modifier details"));button.setAttribute("aria-haspopup","dialog");button.setAttribute("aria-controls","veilDungeonRules");
+        button.addEventListener("click",function(){openRoomAffix(affix.id,button);});row.appendChild(label);row.appendChild(button);modifierRows.push(row);}
     }
-    box.appendChild(option);
   }
+  for(const row of modifierRows)box.appendChild(row);
   $("btnStairGo").disabled=!plan.selected||!!plan.ready;
   $("btnStairGo").textContent=plan.ready?L("等待队友确认…","Waiting for teammate…"):readonly?L("确认房主选择 ▼","Confirm host's choice ▼"):L("进入所选房间 ▼","Enter selected room ▼");
 }

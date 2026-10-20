@@ -22,11 +22,12 @@ check('Three distinct doors are deterministic, avoid the last two rooms, cover a
  const seen=new Set();for(let seed=1;seed<=800;seed++){const p={roomRun:{seed,history:[]}};const a=R.offers(p,2,false);assert.equal(new Set(a).size,3);assert.deepEqual(plain(R.offers(p,2,false)),plain(a));a.forEach(id=>seen.add(id));p.roomRun.history=[{floor:1,id:a[0]},{floor:2,id:a[1]}];assert(R.offers(p,3,false).every(id=>!a.slice(0,2).includes(id)));}
  assert.equal(seen.size,20);assert.equal(R.offers({},10,true).length,0);assert.equal(R.offers({study:true},2,false).length,0);assert.equal(R.offers({tut:true},2,false).length,0);
 });
-check('All eight temporary room modifiers have separate readable chips; previews match entry and never change the selected route',()=>{
+check('All eight temporary room modifiers are collected after the third unchanged door; previews never change the selected route',()=>{
  room('outpost');const original=c.roomPlan,seen=new Set(),history=JSON.stringify(c.P.roomRun);el('veilStair').hidden=false;
  try{for(let seed=1;seed<=100;seed++){
-  const plan={floor:3,seed,ids:['library','cursed','prison'],selected:'library',rev:7},before=JSON.stringify(plan);c.roomPlan=()=>plan;el('roomRoutes').children=[];c.renderRoomRoutes();
-  const option=el('roomRoutes').children[1],main=option.children[0],chip=option.children[1].children[1],expected=R.enter({roomRun:{seed,history:[]}},3,false,'cursed').curse,affix=c.DungeonRules.affixById[expected];seen.add(expected);
+  const ids=['library','prison'];ids.splice(seed%3,0,'cursed');const plan={floor:3,seed,ids,selected:'library',rev:7},before=JSON.stringify(plan);c.roomPlan=()=>plan;el('roomRoutes').children=[];c.renderRoomRoutes();
+  const children=el('roomRoutes').children,main=children[ids.indexOf('cursed')],row=children[3],chip=row.children[1],expected=R.enter({roomRun:{seed,history:[]}},3,false,'cursed').curse,affix=c.DungeonRules.affixById[expected];seen.add(expected);
+  assert.equal(children.length,4);for(let i=0;i<3;i++){assert.equal(children[i].tagName,'BUTTON');assert(children[i].innerHTML.includes(R.byId[ids[i]].n));assert(children[i].innerHTML.includes(R.byId[ids[i]].danger));}assert.equal(row.className,'room-route-modifiers');assert.equal(row.children[0].textContent,'诅咒囚室 · 词缀');
   assert.equal(main.tagName,'BUTTON');assert(!main.innerHTML.includes('<button'));assert(!main.innerHTML.includes('词条：'));assert.equal(chip.textContent,affix.n+' ⓘ');assert.equal(chip.title,affix.pw);assert.equal(chip['aria-controls'],'veilDungeonRules');chip.listeners.click();
   assert.equal(c.anyVeil().id,'veilDungeonRules');assert.equal(el('rulesTitle').textContent,affix.n);assert(el('rulesList').innerHTML.includes(affix.pw));assert.equal(JSON.stringify(plan),before);assert.equal(JSON.stringify(c.P.roomRun),history);c.closeDungeonRules();assert(!el('veilStair').hidden);assert.equal(chip.focused,1);
  }
@@ -37,7 +38,7 @@ check('Peers and ready hosts may read room modifiers without selecting doors, se
  const original=c.roomPlan;
  try{for(const host of [false,true]){
   room('outpost');let sent=0;c.COOP=true;c.window.NET=true;c.NET={isHost:()=>host,send:()=>sent++};const plan={floor:3,seed:77,ids:['library','cursed','prison'],selected:'library',rev:9,ready:host};c.roomPlan=()=>plan;el('veilStair').hidden=false;el('roomRoutes').children=[];c.renderRoomRoutes();
-  const option=el('roomRoutes').children[1],main=option.children[0],chip=option.children[1].children[1],before=JSON.stringify(plan);assert(main.disabled);assert(!chip.disabled);main.listeners.click();chip.listeners.click();assert.equal(JSON.stringify(plan),before);assert.equal(sent,0);
+  const children=el('roomRoutes').children,main=children[1],chip=children[3].children[1],before=JSON.stringify(plan);assert(main.disabled);assert(!chip.disabled);main.listeners.click();chip.listeners.click();assert.equal(JSON.stringify(plan),before);assert.equal(sent,0);
   chip.isConnected=false;let focused=0;const focus=el('btnStairStay').focus;el('btnStairStay').focus=()=>focused++;c.closeDungeonRules();assert.equal(focused,1);el('btnStairStay').focus=focus;assert(!el('veilStair').hidden);
  }}finally{c.roomPlan=original;c.COOP=false;c.window.NET=undefined;c.closeDungeonRules();el('veilStair').hidden=true;}
 });

@@ -702,8 +702,7 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .rule-card.affix{border-left:3px solid #8D5879}
 .room-label{pointer-events:auto;align-self:flex-start;max-width:180px;min-height:25px;padding:2px 8px;margin-top:3px;border:1px solid var(--edge);border-radius:4px;color:var(--torch-deep);background:var(--stone);font:11px var(--body);cursor:pointer}
 .room-routes,.room-event-choices{display:flex;flex-direction:column;gap:9px;padding:2px}
-.room-route-option{flex:none;display:flex;flex-direction:column;gap:6px;min-width:0}
-.room-route-modifiers{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 8px 3px}
+.room-route-modifiers{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 8px 3px}
 .room-route-modifiers > span{font-size:11px;color:var(--faint)}
 .room-affix-chip{min-height:32px;padding:3px 10px;border:1px solid #AF91AD;border-radius:5px;background:#F0E6ED;color:#74496C;font:12px var(--body);white-space:nowrap;cursor:pointer}
 .room-affix-chip:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
