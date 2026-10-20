@@ -130,6 +130,6 @@ check('Both entrypoints expose three-choice and event controls; pathfinding, wal
  for(const f of ['index.html','coop.html']){const html=read(f);for(const id of ['roomRoutes','roomLabel','veilRoomEvent','roomEventTitle','roomEventChoices','btnRoomEventClose'])assert.equal(html.split('id="'+id+'"').length,2,f+' '+id);}
  const cp=require('node:child_process');for(const file of ['dungeon-scene.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
  const base=cp.execFileSync('git',['show','HEAD:game.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');for(const name of ['stepWalk','goTo']){const i=base.indexOf('function '+name+'('),j=base.indexOf('\n}',i)+2;assert.equal(definitions[name],base.slice(i,j),name);}
- const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
+ const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')).replace('      walkPulse(map);\n',''),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
 });
 console.log(groups+' dungeon room checks passed.');

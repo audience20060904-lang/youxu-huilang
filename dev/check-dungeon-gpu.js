@@ -41,7 +41,8 @@ function setup(options={}){
  function tick(ms=16){time+=ms;const tasks=[...frames.values()];frames.clear();tasks.forEach(f=>f(time));}
  function drain(){for(let i=0;frames.size;i++){if(i>200)throw Error('Non-idle render loop');tick();}}
  function move(x,y=10,extra={}){return gpu.move(Object.assign({host,map,world:grid,cell:20,width:280,height:380,x,y,cameraX:-(x-6)*20,cameraY:-(y-9)*20,ms:144,goal:null,pet:true},extra));}
- return {ctx,gpu,host,map,media,document,events,winEvents,frames,move,tick,drain,Node,decodes,counts:()=>({draws,init,uploads,maxDecoders,renders:renders.length})};
+ const visuals=()=>{const mapRoot=renders.at(-1).container.children.find(n=>n.children.length===4);return {root:mapRoot,actor:mapRoot.children[3].children[0],pet:mapRoot.children[3].children[1]};};
+ return {ctx,gpu,host,map,media,document,events,winEvents,frames,move,tick,drain,Node,decodes,visuals,counts:()=>({draws,init,uploads,maxDecoders,renders:renders.length})};
 }
 (async()=>{
  check('Scene snapshot is read-only, respects staged enemies and only reveals stairs after a full clear',()=>{
@@ -59,6 +60,13 @@ function setup(options={}){
   const manifest=JSON.parse(read('dev/pixi-vendor.json'));assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'pixi.min.js'))).digest('hex'),manifest.sha256);assert(read('LICENSE-PIXI.txt').includes('MIT'));
  });
  assert(t.gpu.full(snapshot()));assert(t.move(10));t.drain();
+ check('Each real GPU step enlarges and lifts only the hero, preserving the camera and pet positions, then restores its exact pose',()=>{
+  const writes=t.gpu.status().terrainWrites;t.move(11);t.tick(72);const v=t.visuals();assert(Math.abs(v.actor.width-1.1)<1e-9);assert(Math.abs(v.actor.y-10.35)<1e-9);assert.equal(v.pet.y,10.77);assert.equal(v.root.x,-90);t.tick(72);assert.equal(v.actor.width,1);assert.equal(v.actor.y,10.5);t.drain();assert.equal(t.frames.size,0);assert.equal(t.gpu.status().terrainWrites,writes);
+ });
+ check('Interrupted steps use logical positions instead of lifted artwork; teleports, resize and reduced motion never keep a zoomed pose',()=>{
+  t.move(10);t.tick(40);t.move(10,11);t.drain();let a=t.visuals().actor;assert.equal(a.x,10.5);assert.equal(a.y,11.5);assert.equal(a.width,1);
+  t.move(20,20);t.drain();assert.equal(a.width,1);assert.equal(a.y,20.5);t.move(20,20,{cell:30});t.drain();assert.equal(a.width,1);t.move(20,20);t.drain();t.move(21,20);t.tick(40);assert(a.width>1);t.media.matches=true;t.media.changed();t.drain();assert.equal(a.width,1);assert.equal(a.y,20.5);t.media.matches=false;t.move(10);t.drain();
+ });
  check('Viewport-sized GPU surface settles to idle; a thousand steps do not rebuild terrain, upload textures or resync entities',()=>{
   const before=t.gpu.status();assert.equal(t.frames.size,0);for(let i=0;i<1000;i++){t.move(10+i%2);t.tick(144);}t.drain();const after=t.gpu.status();assert.equal(after.worldBuilds,before.worldBuilds);assert.equal(after.terrainWrites,before.terrainWrites);assert.equal(after.entitySyncs,before.entitySyncs);assert.equal(after.textureUploads,before.textureUploads);assert(after.width*after.height<=900000);assert(after.liveEffects===0);assert(after.pool<=48);
  });

@@ -5,7 +5,7 @@
   const status=document.getElementById('loadStatus'),bar=document.getElementById('loadProgress'),count=document.getElementById('loadCount'),retry=document.getElementById('loadRetry');
   const app=document.querySelector('.app'),coop=!!document.querySelector('[data-coop-page]');
   if(coop)window.__COOP=true;
-  const version='20261020-gpu1';
+  const version='20261020-step1';
   const asset=src=>src+'?v='+(src==='pixi.min.js'?'8.22.0':version);
   const stages=[
     ['util.js','准备基础资源'],['i18n.js','读取语言设置'],

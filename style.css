@@ -206,7 +206,7 @@ body{
 .battle-effects > .dungeon-gpu{pointer-events:none}
 .map-pawn,.map-pet{position:absolute;top:0;left:0;z-index:3;pointer-events:none;user-select:none;
   color:var(--hero);transition:transform var(--walk-ms,144ms) linear;will-change:transform}
-.map-pawn svg{display:block;width:100%;height:100%}
+.map-pawn svg{display:block;width:100%;height:100%;transform-origin:50% 100%}
 .map-pet{z-index:2;transition-duration:.2s}.map-pet svg{width:70%;height:70%;display:block;filter:drop-shadow(0 1px 1px #3c302547)}
 .map .c.you{background:transparent}
 @media (min-width:601px) and (pointer:fine){

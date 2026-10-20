@@ -144,6 +144,10 @@
     stamp($("meArt"),'guard','guard',null,target);
     text($("meArt"),shield?'护盾格挡':'格挡',shield?'SHIELD':'BLOCK','guard',target);
   }
+  function walkPulse(map){
+    const visual=map.querySelector&&map.querySelector('.map-pawn > svg');
+    motion(visual,[{transform:'translateY(0) scale(1)'},{transform:'translateY(-2px) scale(1.1)',offset:.4},{transform:'translateY(0) scale(1)'}],170,'map');
+  }
   const api = {
     resetBattle:() => {resetRound();skillAt.clear();},
     resetRound:resetRound,
@@ -290,6 +294,7 @@
       const trails = Array.from(live).filter(item => item.kind === "map");
       trails.slice(0,Math.max(0,trails.length-12)).forEach(item => forget(item.el));
       // 人物由独立的 map-pawn 平滑移动；格子本身不位移。
+      walkPulse(map);
     }
   };
   if(reduce){

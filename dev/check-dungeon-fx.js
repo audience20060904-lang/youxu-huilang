@@ -62,6 +62,12 @@ check('Movement trails track world coordinates; stationary renders and teleports
  move(0,0,[]);assert.equal(map.children.length,0);move(0,0);
  for(let i=0;i<20;i++)move(i%2?0:1,0);assert(map.children.length<=12);drain();assert.equal(map.children.length,0);
 });
+check('Compatibility walking scales the retained hero SVG without layout reads; stationary renders do not restart the pulse',()=>{
+ const map=element('map'),visual=element('heroSVG'),cells=[element(),element()],world=[];map._cellSize=30;map.querySelector=()=>visual;
+ for(const el of [map,...cells])for(const key of ['offsetWidth','offsetHeight','offsetLeft','offsetTop'])Object.defineProperty(el,key,{get(){throw Error('Unexpected layout read '+key);}});
+ fx.move(map,cells,2,world,0,0,'<svg/>','');assert(!visual.lastMotion);fx.move(map,cells,2,world,1,0,'<svg/>','');const pulse=visual.lastMotion;assert.equal(pulse.options.duration,170);assert(pulse.frames[1].transform.includes('scale(1.1)'));assert.equal(pulse.frames.at(-1).transform,'translateY(0) scale(1)');
+ fx.move(map,cells,2,world,1,0,'<svg/>','');assert.equal(visual.lastMotion,pulse);media.matches=true;media.changed();assert(pulse.cancelled);media.matches=false;drain();
+});
 check('Reduced motion, hidden documents, and hidden battle skip effects and clean up',()=>{
  fx.attack(true);media.matches=true;media.changed();assert.equal(body.children.length,0);fx.attack(true);assert.equal(body.children.length,0);
  media.matches=false;fx.attack(false);document.hidden=true;listeners.visibilitychange();assert.equal(body.children.length,0);fx.hurt(3,0);assert.equal(body.children.length,0);

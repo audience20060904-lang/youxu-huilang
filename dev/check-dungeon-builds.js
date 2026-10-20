@@ -205,6 +205,6 @@ check('Walking timing and fallback classic trails remain unchanged; both entrypo
  for(const file of ['dungeon-scene.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
  for(const file of ['index.html','coop.html']){const html=read(file),a=html.indexOf('id="battleArena"'),b=html.indexOf('class="battle-learning"');assert(html.indexOf('id="btnDungeonRules"')>a&&html.indexOf('id="btnDungeonRules"')<b);for(const id of ['veilDungeonRules','rulesTitle','rulesList','btnCloseDungeonRules'])assert(html.includes('id="'+id+'"'));}
  assert(read('preload.js').indexOf("['dungeon-rules.js'")<read('preload.js').indexOf("['game.js'"));
- const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
+ const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')).replace('      walkPulse(map);\n',''),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
 });
 console.log(groups+' dungeon build checks passed.');

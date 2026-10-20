@@ -5,7 +5,7 @@ var DungeonGPU=(function(){
   let ready=false,failed=false,preparing=null,sourceAssets={},fxShapes={},onFallback=null,onTile=null;
   let scene=null,mapHost=null,legacyMap=null,mode='map',visible=true,enabled=true,raf=0,cell=20,vw=1,vh=1;
   let clock=0,walkMs=144,actor=null,pet=null,goal=null,camera={x:0,y:0},target={x:0,y:0},start={x:0,y:0},moveAt=0;
-  let actorFrom={x:0,y:0},actorTo={x:0,y:0},lastTile=null,drawnChunks=new Set(),terrainChunks=[],spriteById=new Map();
+  let actorFrom={x:0,y:0},actorTo={x:0,y:0},actorBase={x:0,y:0},lastTile=null,drawnChunks=new Set(),terrainChunks=[],spriteById=new Map();
   const textures=new Map(),pool=[],effects=[],metrics={frames:0,worldBuilds:0,entitySyncs:0,terrainWrites:0,textureUploads:0};
   const reduce=window.matchMedia?window.matchMedia('(prefers-reduced-motion:reduce)'):null;
   const now=()=>performance.now(),quiet=()=>document.hidden||!visible;
@@ -110,7 +110,12 @@ var DungeonGPU=(function(){
   function sample(t){
     const p=walkMs?Math.max(0,Math.min(1,(t-moveAt)/walkMs)):1;
     camera.x=start.x+(target.x-start.x)*p;camera.y=start.y+(target.y-start.y)*p;
-    if(actor){actor.position.set(actorFrom.x+(actorTo.x-actorFrom.x)*p,actorFrom.y+(actorTo.y-actorFrom.y)*p);actor.width=actor.height=1;pet.position.set(actor.x-.58,actor.y+.27);pet.width=pet.height=.7;}
+    if(actor){
+      actorBase={x:actorFrom.x+(actorTo.x-actorFrom.x)*p,y:actorFrom.y+(actorTo.y-actorFrom.y)*p};
+      const pulse=walkMs&&p>0&&p<1&&!(reduce&&reduce.matches)?Math.sin(Math.PI*p):0,scale=1+pulse*.1;
+      actor.position.set(actorBase.x,actorBase.y-(scale-1)*.5-pulse*2/cell);actor.width=actor.height=scale;
+      pet.position.set(actorBase.x-.58,actorBase.y+.27);pet.width=pet.height=.7;
+    }
     return p<1;
   }
   function trails(x,y){
@@ -124,7 +129,7 @@ var DungeonGPU=(function(){
       const t=now(),resize=cell!==o.cell||vw!==o.width||vh!==o.height,changed=!lastTile||lastTile.x!==o.x||lastTile.y!==o.y;
       sample(t);size(o.width,o.height);const snap=resize||!lastTile||Math.abs(lastTile.x-o.x)+Math.abs(lastTile.y-o.y)>3||!!(reduce&&reduce.matches);
       cell=o.cell;mapRoot.scale.set(cell);if(!backdrop||backdrop._chapter!==scene.chapter){if(backdrop){backdrop.removeFromParent();backdrop.destroy();}backdrop=new PIXI.TilingSprite({texture:textures.get('tile:'+scene.chapter+':rock:0'),width:vw,height:vh});backdrop._chapter=scene.chapter;stage.addChildAt(backdrop,0);}backdrop.tileScale.set(cell/64);
-      if(changed||resize){if(!snap)trails(o.x,o.y);start={x:camera.x,y:camera.y};target={x:o.cameraX,y:o.cameraY};actorFrom={x:actor.x,y:actor.y};actorTo={x:o.x+.5,y:o.y+.5};moveAt=t;walkMs=snap?0:o.ms;lastTile={x:o.x,y:o.y};}
+      if(changed||resize){if(!snap)trails(o.x,o.y);start={x:camera.x,y:camera.y};target={x:o.cameraX,y:o.cameraY};actorFrom={x:actorBase.x,y:actorBase.y};actorTo={x:o.x+.5,y:o.y+.5};moveAt=t;walkMs=snap?0:o.ms;lastTile={x:o.x,y:o.y};}
       goal.visible=!!o.goal;if(o.goal)goal.position.set(o.goal.x+.5,o.goal.y+.5);pet.visible=!!o.pet;
       sample(t);request();return true;
     }catch(e){fail(e.message);return false;}
