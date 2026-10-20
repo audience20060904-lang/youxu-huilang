@@ -295,12 +295,12 @@ var Heirlooms=(function(){
       case 'cycle':return '依次轮转：对敌人施加灼蚀 → 自身获得灵盾 → 自身获得回春灵息，每次 '+n+' 层';
       case 'phase':return '依次轮转：锋芒 → 烈意 → 回春灵息 → 灵盾，每次自身获得 '+n+' 层';
       case 'soul':return '获得 '+n+' 个游魂，最多 5 个；此后每次答对，每个游魂造成攻击力 10% 的独立追击伤害';
-      case 'spendgold':return '若金币足够，消耗 '+n+' 金币，对当前敌人造成攻击力 100% 的独立伤害，并施加 2 层破绽';
+      case 'spendgold':return '若当前敌人存活且金币足够，消耗 '+n+' 金币，对其造成攻击力 100% 的独立伤害；若其仍存活，再施加 2 层破绽';
       default:return '';
     }
   }
   const statScale={atk:[2,3,4,5,7],hp:[4,7,10,14,20],crit:[2,3,5,7,10],def:[1,1,2,2,3]};
-  const statNames={atk:'攻击',hp:'最大生命',crit:'暴击率',def:'护甲'};
+  const statNames={atk:'攻击力',hp:'最大生命',crit:'暴击率',def:'护甲'};
   function actions(rule){return rule.split(',').map(s=>{const [key,n]=s.split(':');return [key,Number(n)];});}
   function legacyR(hero){return ['naturalist','poet','bard','necro','bounty','medium','collector','rewinder','saint'].includes(hero)?3:2;}
   function id(hero,q){return q===legacyR(hero)?'hx_'+hero:'hx_'+hero+'_'+q;}
@@ -341,7 +341,7 @@ var Heirlooms=(function(){
   function equipped(p,mask){return [...new Set(p&&p.relics||[])].map(id=>byId[id]).filter(r=>r && !(mask && (mask==='all'||mask[r.id])));}
   function bonus(p,stat,mask){return equipped(p,mask).reduce((n,r)=>n+(r.stat===stat?r.amount:0),0);}
   function test(trigger,c,s){
-    const right=c.event==='right',debuff=o=>Object.keys(o?.status||{}).some(k=>HeroRules.negative.includes(k)&&o.status[k]>0);
+    const right=c.event==='right',snap=c.snapshot||{p:c.p,mob:c.mob},sp=snap.p||c.p,sm=snap.mob||c.mob,debuff=o=>Object.keys(o?.status||{}).some(k=>HeroRules.negative.includes(k)&&o.status[k]>0);
     if(trigger===c.event)return 1;if(!right)return 0;
     switch(trigger){
       case 'spell':return +!!c.spell;case 'fast':return +!!c.fast;case 'patient':return +(c.seconds>=3);
@@ -351,14 +351,15 @@ var Heirlooms=(function(){
       case 'rhythm':{const ok=Number.isFinite(s.seconds)&&Math.abs(c.seconds-s.seconds)<=1;s.seconds=c.seconds;return +ok;}
       case 'sand':return Math.min(6,c.untimed?3:Math.max(0,c.left||0));
       case 'repeat':{s.words=s.words||[];const has=s.words.includes(c.word);if(!has)s.words.push(c.word);return +has;}
-      case 'combo':return +(c.p.combo>=5);case 'shielded':return +((c.p.shield||0)>0);case 'marked':return +debuff(c.mob);
-      case 'afflicted':return +debuff(c.p);case 'low':return +(c.p.hp<=c.stats.maxHp*.5);case 'rich':return +(c.p.gold>=100);
+      case 'combo':return +(c.p.combo>=5);case 'shielded':return +((sp.shield||0)>0);case 'marked':return +debuff(sm);
+      case 'afflicted':return +debuff(sp);case 'low':return +(sp.hp<=c.stats.maxHp*.5);case 'rich':return +(sp.gold>=100);
       case 'collection':return +(new Set((c.p.relics||[]).map(id=>c.rarity(id))).size>=3);
       case 'reversal':{const armed=s.armed;s.armed=false;return +!!armed;}
     }return 0;
   }
   function settle(c){
     if(!c.p || c.p.hp<=0 || c.p.study || c.p.tut)return;
+    if(!c.snapshot)c=Object.assign({},c,{snapshot:{p:{hp:c.p.hp,shield:c.p.shield||0,gold:c.p.gold,status:Object.assign({},c.p.status)},mob:{status:Object.assign({},c.mob&&c.mob.status)}}});
     const state=c.p.heirState||(c.p.heirState={});
     for(const item of equipped(c.p,c.mask)){
       const s=state[item.id]||(state[item.id]={n:0});

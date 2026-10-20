@@ -23,7 +23,7 @@ async function run(fail,coop=false,style=true){
  let groups=0;
  for(const coop of [false,true]){
   const r=await run(null,coop),scripts=r.events.filter(e=>e[0]==='script').map(e=>e[1].split('?')[0]),preloads=r.events.filter(e=>e[0]==='preload');
-  assert.equal(scripts.length,20);assert.equal(preloads.length,20);assert.equal(scripts[0],'util.js');assert.equal(scripts.at(-1),'game.js');
+  assert.equal(scripts.length,21);assert.equal(preloads.length,21);assert.equal(scripts[0],'util.js');assert.equal(scripts.at(-1),'game.js');
   assert(scripts.indexOf('art.js')<scripts.indexOf('monster-art.js'));assert(scripts.indexOf('learning-cache.js')<scripts.indexOf('game.js'));
   assert(scripts.includes(coop?'net.js':'i18n-en.js'));for(const file of scripts)assert(fs.existsSync(path.join(__dirname,'..',file)),file);assert.equal(r.app.inert,false);assert.equal(r.ids.gameLoader.hidden,true);assert.equal(r.ids.loadCount.textContent,'100%');
   assert.equal(r.events.filter(e=>e[0]==='prepare').length,2);assert(r.events.filter(e=>e[0]==='frame').length>=40);

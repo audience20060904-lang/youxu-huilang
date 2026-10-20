@@ -7,8 +7,8 @@
 <title>幽墟回廊</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261017-battle2">
-<script src="preload.js?v=20261017-battle2" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-builds1">
+<script src="preload.js?v=20261020-builds1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -177,7 +177,7 @@
             <button class="btn ghost partsbtn" id="btnRunCode" type="button">复制本局码</button>
           </div>
         </div>
-        <div class="panel" id="panelHeroState" hidden><div class="phead">角色机制</div><div class="stats" id="heroRunState"></div><div id="borrowedSkills"></div></div>
+        <div class="panel" id="panelHeroState" hidden><div class="phead">角色机制</div><div class="stats" id="heroRunState"></div><div id="borrowedSkills"></div><div id="runRules" hidden></div></div>
         <div class="panel" id="panelHoly" hidden><div class="phead">圣器</div><div class="holyslots" id="holySlots"></div></div>
         <div class="panel" id="panelRun" hidden><div class="phead">本局战绩</div><div class="stats" id="runStats"></div></div>
       </div>
@@ -364,6 +364,7 @@
   <div class="sheet battle">
     <section class="battle-arena" id="battleArena" aria-label="战斗场景">
       <div class="battle-effects" id="battleEffects" aria-hidden="true"></div>
+      <button class="rules-toggle" id="btnDungeonRules" type="button" hidden>流派与词条</button>
       <div class="arena-scenery" aria-hidden="true"><i class="arena-gate"></i><i class="arena-flame left"></i><i class="arena-flame right"></i></div>
     <div class="foe">
       <div class="battle-statuses foe-statuses" id="foeStatuses" aria-label="怪物的祝福与负面状态" hidden></div>
@@ -603,6 +604,14 @@
 
 <!-- 合成完的二选一：材料已经砸了，所以这个窗只能挑，没有关闭钮 -->
 <!-- 构成（2026-09-26）：上一刀 / 上一口是谁贡献的，top10 占比 -->
+<div class="veil" id="veilDungeonRules" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow">战斗机制</div><h2 id="rulesTitle">流派与无尽词条</h2>
+    <div class="sx" id="rulesList"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnCloseDungeonRules" type="button">关闭</button></div>
+  </div>
+</div>
+
 <div class="veil" id="veilParts" hidden>
   <div class="sheet tall">
     <div class="eyebrow">构成</div>

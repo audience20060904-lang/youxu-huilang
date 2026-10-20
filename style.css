@@ -689,7 +689,13 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
   100%{opacity:0;transform:translate(-50%,-75%) scale(1.15)}}
 @media (prefers-reduced-motion:reduce){.dfx,.move-trail,.map-burst{display:none!important;animation:none!important}}
 @keyframes jolt{25%{transform:translateX(-5px)}60%{transform:translateX(5px)}100%{transform:translateX(0)}}
-.foe-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.foe-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;position:relative}
+.rules-toggle{position:absolute;left:8px;top:8px;max-width:28%;min-height:28px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #BBA774;border-radius:4px;background:#282D28;color:#E6D7AB;font:10px var(--body);padding:4px 5px;cursor:pointer;z-index:2}
+.rule-card{border:1px solid var(--edge);border-radius:5px;padding:9px;margin:7px 0;background:var(--stone)}
+.rule-card b{font-size:13px;color:var(--bone)}.rule-card p{font-size:12px;line-height:1.6;margin:5px 0;color:var(--dim)}.rule-card small{font-size:11px;color:var(--faint)}
+.rule-card summary{font-size:12px;color:var(--torch);cursor:pointer}
+#veilDungeonRules{z-index:55}
+.rule-card.affix{border-left:3px solid #8D5879}
 .foe-name{font-family:var(--disp);font-size:17px;font-weight:600;letter-spacing:.03em}
 .foe-tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
 .fbar{height:16px;border:1px solid var(--edge);background:#E7E0CF;position:relative;overflow:hidden;border-radius:1px}

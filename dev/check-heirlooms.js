@@ -62,7 +62,7 @@ check('Sacred time anchor rescues once per floor for any hero; old ranks are dis
 const source=read('game.js').replace(/\r\n/g,'\n');
 function load(name){const i=source.indexOf('function '+name+'('),j=source.indexOf('\n}',i);assert(i>=0&&j>i,name);vm.runInContext(source.slice(i,j+2),c);}
 Object.assign(c,{window:{},RMASK:null,P:{},G:{floor:51,mobs:[]},B:null,stats:()=>({atk:100,maxHp:100}),shieldCap:()=>100,
- statusGain:(p,k,n)=>{if(!p)return;p.status=p.status||{};p.status[k]=Math.min(5,(p.status[k]||0)+n);},relicRar:id=>c.RELICS.find(r=>r.id===id)?.r||0,
+ buildEvent(){},statusGain:(p,k,n)=>{if(!p)return;p.status=p.status||{};p.status[k]=Math.min(5,(p.status[k]||0)+n);},relicRar:id=>c.RELICS.find(r=>r.id===id)?.r||0,
  coopDealDamage:(m,n)=>m.hp-=n,floatNum(){},healUp:n=>c.P.hp=Math.min(100,c.P.hp+n),earnGold:n=>c.P.gold+=n,addSpent(){},T:x=>x});
 load('heirEvent');
 check('Actual bridge: pet attacks work on other heroes, cap opening hits and apply damage/status mechanics',()=>{

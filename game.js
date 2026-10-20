@@ -570,6 +570,7 @@ function statsRaw(){
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
   s.atk += Heirlooms.bonus(P,"atk",RMASK); s.maxHp += Heirlooms.bonus(P,"hp",RMASK);
   s.def += Heirlooms.bonus(P,"def",RMASK); s.crit += Heirlooms.bonus(P,"crit",RMASK);
+  if(typeof DungeonRules!=="undefined"){s.atk+=DungeonRules.bonus(P,"atk",RMASK,hasRelic);s.maxHp+=DungeonRules.bonus(P,"hp",RMASK,hasRelic);s.def+=DungeonRules.bonus(P,"def",RMASK,hasRelic);s.crit+=DungeonRules.bonus(P,"crit",RMASK,hasRelic);}
   /* 金坛（无尽章 50 层往下的 Boss 房，2026-09-25）：投金币换的加成跟等级同一档，是**底子** ——
      它不是遗物，本局一直有效；放在最前面，后面铁躯 / 重装那些乘法件照样放大它。*/
   s.atk += gildGet("atk"); s.maxHp += gildGet("hp"); s.def += gildGet("def"); s.crit += gildGet("crit");
@@ -751,6 +752,7 @@ function nextFloor(){
      跟 withMaxHp() 一个规矩，不然第 50 → 51 层怪 ×10 的那一下，厚血的上限翻几倍、血却还是原来那么多。*/
   const hpCap0 = stats().maxHp;
   G.floor = from + 1;
+  advanceEndless();
   if(holyOn("scripture")) P.holyWords = masteredCount();   // 万言圣典：每进一层量一次掌握了几个词（上限涨了下面跟着补血）
   { const hpCap1 = stats().maxHp; if(hpCap1 > hpCap0) P.hp += hpCap1 - hpCap0; }
   /* 汗巾／血锤要按「**这一层**回了多少血」给加成 —— 清零放在最前面，
@@ -991,7 +993,7 @@ function nextFloor(){
    格式跟 writeRun() 的打包方式是同一路子（packRow 就是那边定义的）。*/
 function packWorld(){
   return {
-    ch: CH.id,
+    ch: CH.id, endlessMods:P.endlessMods||null,
     map: G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
     stair: G.stair, rooms: G.rooms || null,
     px: P.x, py: P.y,
@@ -1028,6 +1030,7 @@ function applyCoopWorld(msg){
   }
   setChapter(pack.ch);
   G.floor = msg.floor;
+  if(typeof DungeonRules!=="undefined"){P.endlessMods=pack.endlessMods;DungeonRules.normalize(P);}
   G.map = pack.map.split("|").map(function(row){ return row.split("").map(function(c){ return c === "1" ? 1 : 0; }); });
   G.seen = []; G.vis = [];
   for(let y=0;y<H;y++){ G.seen.push(new Array(W).fill(false)); G.vis.push(new Array(W).fill(false)); }
@@ -1377,13 +1380,14 @@ function holyDeep(floor){
   return 1 + (HOLY_DEEP_X - 1) * t;
 }
 /* 第 floor 层「一只普通小怪」的平均数值 —— Boss 房就是照着上一层的这个数放大的 */
-function refFoe(floor){
+function refFoe(floor,base){
   const f = Math.max(1, floor);
   let list = FOES.filter(function(d){ return d.from <= f; });
   if(!list.length) list = [FOES[0]];
   let hp = 0, dmg = 0, xp = 0;
   list.forEach(function(d){ const n = foeNums(d, f); hp += n.hp; dmg += n.dmg; xp += n.xp; });
-  return {hp: hp / list.length, dmg: dmg / list.length, xp: xp / list.length};
+  const ref={hp:hp/list.length,dmg:dmg/list.length,armor:0,xp:xp/list.length};
+  return base ? ref : endlessScale(ref);
 }
 function makeFoe(def, x, y){
   // 成长曲线在 CHAPTER.grow 里，全是整数加法（分段倍率在 foeNums 末尾乘一次）。
@@ -1391,7 +1395,7 @@ function makeFoe(def, x, y){
   // step 按**绝对层数**算，不是“距离首次出现几层”。
   // 否则第 38 层登场的怪在第 40 层只长了 2 层，一出场就是纸糊。
   // def.from 只决定**什么时候出现**，def.hp 决定它在同层怪里的相对硬度。
-  const n = foeNums(def, G.floor);
+  const n = endlessScale(foeNums(def, G.floor));
   // 弱点：**普通怪按类别**（就是它自己那一类），**Boss 按词性**随机（用户 2026-09 改的，
   // 逼你换着词性背）。weakPos 标明这一只的 weak 是词性还是类别 —— showWeak / answer 都看它。
   // ⚠️ 只能从**这一章真的有词**的词性/类别里挑 —— 挑到没词的等于白给一个弱点
@@ -1407,10 +1411,11 @@ function makeFoe(def, x, y){
 function makeBossFoe(def, x, y){
   const m = makeFoe(def, x, y);
   if(!def.fixed){
-    const ref = refFoe(G.floor - 1);
+    const ref = refFoe(G.floor - 1,true);
     m.hp = m.max = Math.max(1, Math.round(ref.hp * BOSS_HP_X));
     m.dmg = Math.max(1, Math.round(ref.dmg * BOSS_DMG_X));
     m.xp = Math.max(1, Math.round(ref.xp * BOSS_XP_X));
+    const modded=endlessScale({hp:m.hp,dmg:m.dmg,armor:0,xp:m.xp});m.hp=m.max=modded.hp;m.dmg=modded.dmg;
   }
   m.loot = Math.round((ri(2,5) + G.floor) * BOSS_GOLD_X);
   return m;
@@ -1804,7 +1809,7 @@ let partsTab = "dmg";
 function partName(k){
   const sp = {"@base":L("基础属性", "Base stats"), "@combo":L("连击", "Combo"), "@gild":L("金坛", "Gold altar"),
     "@crit":L("暴击", "Crit"), "@wager":L("冒险", "Risk"), "@weak":L("弱点", "Weakness"), "@mix":L("相互叠加", "Interplay"),
-    "@other":L("其它", "Others"), "@status":L("祝福与负面状态", "Blessings and afflictions"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt")};
+    "@other":L("其它", "Others"), "@status":L("祝福与负面状态", "Blessings and afflictions"), "@follow":L("追加攻击", "Follow-up"), "@practice":L("练习模式", "Practice mode"), "@haunt":L("心魔", "Haunt"),"@build":L("流派追加伤害","Build damage"),"@heirloom":L("遗物格挡","Relic guard")};
   if(sp[k]) return sp[k];
   if(String(k).indexOf("holy:") === 0){ const h = holyById(k.slice(5)); return h ? h.n : k; }   // 圣器
   if(k === "hero"){ const h = heroById(P && P.hero); return h ? L("角色 · ", "Hero · ") + h.n : k; }   // 角色
@@ -1995,6 +2000,7 @@ function renderSheets(s){
   $("infoRunEmpty").hidden=!!inRun;
   $("panelHeroState").hidden=!inRun;
   if(inRun){$("heroRunState").innerHTML=heroRunCells();$("borrowedSkills").innerHTML=borrowedSkillsHtml();}
+  renderDungeonRules();
   renderHoly();                         // 圣器的三个方格（属性下面，同样只在洞里露）
   $("panelRun").hidden = !inRun;
   $("panelStats").hidden = !inRun;      // 「属性」也一样：镇上没有这一趟，面板上全是 1 级的底子，没意义（用户 2026-09-25）
@@ -2348,6 +2354,8 @@ function startBattle(m){
        wrongTimes:0, shatterUsed:false, shatterFree:false, deflectUsed:false};
   const openingHealth={hp:m.hp,max:m.max,study:COOP||!!(m.def&&(m.def.study||m.def.abyss))};
   B.fxHits=[];
+  endlessBattle(m);
+  buildEvent("battle",{mob:m});
   /* 冒险者 ★3：这一层第一场战斗（G.heroFought 每层清零）*/
   if(!G.heroFought){ G.heroFought = true; B.heroFirst = true; }
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
@@ -2380,7 +2388,7 @@ function startBattle(m){
   /* 驯兽师（角色第三批）：开战宠物先咬一口 —— 跟余劲一样永远给怪留 1 点（不会不答题就打死一只）。深渊 / 书灵 / 联机不走这条 */
   if(heroOn("tamer") && !COOP && !(m.def && (m.def.abyss || m.def.study))){
     const bite = Math.min(petBite(stats()), m.hp - 1);
-    if(bite > 0){ m.hp -= bite;queueVisualHit("tamer","pet",bite);say(L("宠物开场攻击：" + m.name + " 受到 <b>" + bite + "</b> 点伤害。", "Pet opening attack: " + m.name + " takes <b>" + bite + "</b> damage."), "good"); }
+    if(bite > 0){ m.hp -= bite;queueVisualHit("tamer","pet",bite);buildEvent("summon",{mob:m,hits:1,wasAlive:true});say(L("宠物开场攻击：" + m.name + " 受到 <b>" + bite + "</b> 点伤害。", "Pet opening attack: " + m.name + " takes <b>" + bite + "</b> damage."), "good"); }
   }
   clearQTimer();          // 上一场要是被别的路子掐断了，读条可能还挂着
   G.paused = true;
@@ -2399,6 +2407,7 @@ function startBattle(m){
   $("btnFlee").textContent = P.study ? L("撤退 · 不掉血", "Retreat · no HP lost") : T("撤退 · 掉一半血");
   $("veilBattle").hidden = false;
   heirEvent("battle",{mob:m});
+  renderDungeonRules();
   const openings=B.fxHits;B.fxHits=null;openingHealth.end=m.hp;
   say(T("你撞上了 ") + m.name + T("。"), "hurt");
   if(P.combo > 0) say(T("上一场的连击 <b>×") + P.combo + T("</b> 还留着 —— 别断。"), "crit");
@@ -2445,6 +2454,7 @@ function renderCombatFeedback(head, note){
 }
 function renderBattleBars(){
   renderStatuses();
+  renderDungeonRules();
   DungeonScene.battleSummons(battleSoulCount());
   const m = B.mob, s = stats();
   const heroName=$("battleHeroName"), hero=heroById(P.hero);
@@ -2656,6 +2666,7 @@ function qCustom(){ return OPT.snow && typeof OPT.qtime === "number" ? OPT.qtime
 function qBase(){ const c = qCustom(); return c > 0 ? c : QUIZ_TIME + (heroOn("hermit") ? HERO_HERMIT_SEC : 0); }   // 隐士：读条 +3 秒（自己填了秒数就按自己的）
 function startQTimer(){
   clearQTimer();
+  if(B)B.rulesReadMs=0;
   if(!B || !B.q || B.q.type === "spell" || B.q.type === "def") return;   // 拼写 / 释义句都不限时
   if(P && P.tut) return;          // 教程关不限时 —— 先把规矩看明白
   if(qCustom() === 0) return;     // 设置里选了「不限时」
@@ -2672,7 +2683,8 @@ function startQTimer(){
   fill.style.width = "100%";
   qTimer = setInterval(function(){
     if(!B || !B.q || B.locked){ clearQTimer(); return; }
-    const left = total - (Date.now() - t0);
+    if(B.rulesReadAt)return;
+    const left = total - (Date.now() - t0 - (B.rulesReadMs||0));
     if(left <= 0){ clearQTimer(); timeUp(); return; }
     fill.style.width = (left / total * 100) + "%";
     t.classList.toggle("hot", left <= 2000);
@@ -2799,6 +2811,7 @@ function nearSyn(a, b){
   return !!x && x === synHead(b.cn);
 }
 function nextQuestion(){
+  closeDungeonRules();
   clearQTimer();
   if(B.fxPlayed&&window.DungeonFX)DungeonFX.resetRound();
   B.fxPlayed=false;
@@ -3258,7 +3271,10 @@ function answer(btn, ok){
   B.fxHits=ok?[]:null;
   let soulExtra=0;
   /* 缓刑（第十三批）：前几题挂着的账，这一题先扣一份（答对少扣）—— 这一题自己要是答错，那一口排到后面三题 */
+  const heirSnapshot={p:{hp:P.hp,shield:P.shield||0,gold:P.gold,status:Object.assign({},P.status)},mob:{status:Object.assign({},m.status)}};
   const oweLog = payOwe(ok, m);
+  if(P.hp<=0){const fallenBattle=B;renderCombatFeedback(L("生命耗尽","Life depleted"),oweLog);renderBattleBars();renderHud();setTimeout(function(){if(B===fallenBattle)finishBattle(false);},480);return;}
+  buildEvent("before",{mob:m,ok:ok});
   const firstSeen = !LEX[lexKey(word)];          // 课业：这个存档从没见过的生词（LEX 里没记录）
   /* 角色：答题**之前**这个词是不是到期了 / 以前错过几次（守夜人看它，lexMark 之后就变了）*/
   const wasDue = !firstSeen && lexDue(LEX[lexKey(word)]);
@@ -3571,6 +3587,7 @@ function answer(btn, ok){
     const soulShare=soulExtra?Math.min(dmg-1,Math.max(0,Math.round(soulExtra*(1+pct/100)*(crit?critMult:1)*wagerOutX()))):0;
     queueVisualHit(P.hero,"strike",dmg-soulShare,1,0,crit);
     if(soulExtra)queueVisualHit("necro","soul",soulShare,P.heroSouls,0,crit);
+    if(soulShare>0)buildEvent("summon",{mob:m,hits:P.heroSouls,wasAlive:visualHealth.hp>0});
     /* ===== 角色第三批：这一刀落下之后 =====
        战吼者：这一刀的一部分震到这一层别的怪身上（震不死）；剑圣：必定追加一刀（★5 两刀）；驯兽师 ★5：每 5 题宠物再咬一口。
        追加的那几下跟下面遗物的追加攻击一个写法（单独一笔，打倒了也照打，溢出算进余劲）。*/
@@ -3599,10 +3616,11 @@ function answer(btn, ok){
       P.heroPetN = (P.heroPetN || 0) + 1;
       if(P.heroPetN >= HERO_PET_EVERY){
         P.heroPetN = 0;
-        const bite = petBite(s);
+        const bite = petBite(s),petAlive=m.hp>0;
         dealt += bite; landed += landedOn(m, bite); coopDealDamage(m, bite);
         if(lastDmgRec) lastDmgRec.more.push(["hero", bite]);
         queueVisualHit("tamer","pet",bite);
+        if(petAlive)buildEvent("summon",{mob:m,hits:1,wasAlive:true});
         relicLog += L(" <span class=\"sys\">(宠物 +" + bite + ")</span>", " <span class=\"sys\">(Pet +" + bite + ")</span>");
       }
     }
@@ -3979,6 +3997,7 @@ function answer(btn, ok){
         head = L("<span class=\"big no\">眩晕 · 本次攻击无效</span>", "<span class=\"big no\">Stunned · attack prevented</span>");
         note = L("辩手把它说愣了，这一下没落到身上。", "The Debater left it speechless; the blow never landed.");
       }
+      if(dmg>0&&B.shatterFree){B.shatterFree=false;hurtRow("shatter",-dmg);dmg=0;head=L('<span class="big no">破盾余威 · 格挡</span>','<span class="big no">Shatter · Block</span>');}
       if(dmg > 0 && studyNoHurt()){             // 纯净学习 + 练习模式：一律不掉血
         hurtRow("@practice", -dmg); dmg = 0;
         head = L("<span class=\"big no\">失手 · 练习模式不掉血</span>", "<span class=\"big no\">Missed · practice, no HP lost</span>");
@@ -4055,7 +4074,10 @@ function answer(btn, ok){
     }
   }
   heroRoundEnd(ok,word,m,s);
-  heirEvent(ok?"right":"wrong",{mob:m,word:word.en,cat:word.cat,pos:word.pos,spell:isSpell,fast:fastAns,seconds:usedSec,left:leftSec,untimed:untimed,fresh:firstSeen,due:wasDue,haunt:!!B.q.haunted,wager:!!B.wager});
+  heirEvent(ok?"right":"wrong",{mob:m,word:word.en,cat:word.cat,pos:word.pos,spell:isSpell,fast:fastAns,seconds:usedSec,left:leftSec,untimed:untimed,fresh:firstSeen,due:wasDue,haunt:!!B.q.haunted,wager:!!B.wager,snapshot:heirSnapshot});
+  endlessRound(ok,m,s);
+  buildEvent("after",{mob:m,ok:ok});
+  renderDungeonRules();
   LEX[lexKey(word)] = rec;     // 只改内存，下一个存档点（下楼 / 回主城）才落盘
 
   renderCombatFeedback(head, note);
@@ -4176,7 +4198,8 @@ function deathSave(){
    force = true 时不看有没有泉涌也转（「水」自己那条词条）。
    返回 {hp, sh}：真回了多少血、转了多少盾，调用方拿去写日志。*/
 function healUp(n, s0, force){
-  if(!(n > 0)) return {hp:0, sh:0};
+  if(!(n > 0)||P.hp<=0) return {hp:0, sh:0};
+  const famine=endlessMods().famine||0;if(famine&&B&&B.mob&&B.mob.hp>0)n=Math.max(0,Math.floor(n*(1-Math.min(.5,famine*.1))));
   const s = s0 || stats();
   const room = Math.max(0, s.maxHp - P.hp);
   const up = Math.min(room, n), spill = n - up;
@@ -4585,7 +4608,7 @@ function hurtEnd(final){
 function mitigate(dmg, s0, opt){
   const s = s0 || stats();
   let out = dmg, why = "";
-  if((P.heirGuard||0)>0){P.heirGuard--;hurtRow("@heirloom",-out);return {dmg:0,dodged:false,why:L("（专属遗物格挡）"," (Heirloom guard)")};}
+  if((P.heirGuard||0)>0){P.heirGuard--;hurtRow("@heirloom",-out);return {dmg:0,dodged:false,why:L("（遗物格挡）"," (Relic guard)")};}
   const wrong = !!(opt && opt.wrong);        // 这一下是不是「答错」挨的（超时不算）
   /* 减伤百分比这一档**先全部相加再乘一次**（软甲 10 + 皮甲 5 = 15%）——
      跟伤害那边「只有一个百分比乘区」是同一条规矩，玩家要能心算。*/
@@ -4606,7 +4629,7 @@ function mitigate(dmg, s0, opt){
   // 心镜 2026-09-21 从「完全免伤」改成减伤（原来一层能免掉 2.4 次挨打，稀有档超标三倍）
   if(wrong && hasRelic("psyche") && opt && opt.haunted) cut += ct("psyche", PSYCHE_CUT);
   // 缓冲：!wrong 就是超时那条路（唯二两个调用点之一），跟沙漏是两条路——沙漏会在 timeUp() 里提前返回
-  if(!wrong && hasRelic("buffer")) cut += ct("buffer", BUFFER_CUT);
+  if(!wrong && !(opt&&opt.counter) && hasRelic("buffer")) cut += ct("buffer", BUFFER_CUT);
   // 记仇：连续挨你打到第 GRUDGE_AT 刀起——m.hitsLanded 在 answer() 答对分支里累加，只属于这一只怪
   if(wrong && hasRelic("grudge") && B && B.mob && (B.mob.hitsLanded || 0) >= GRUDGE_AT) cut += ct("grudge", GRUDGE_CUT);
   // 面熟：这一层同类别的怪见过几只——G.catSeen 在 startBattle() 里累，nextFloor() 清零
@@ -4773,7 +4796,7 @@ function landHit(dmg, m, haunted){
   // 护盾从"有"变成"没有"的那一下（真的被打穿，不是本来就没盾）：借甲 / 破盾余威 / 久经 都挂在这个事件上
   const brokeNow = hadShield && (P.shield || 0) <= 0;
   if(ate>0)heirEvent("blocked",{mob:m});
-  if(brokeNow)heirEvent("wardbreak",{mob:m});
+  if(brokeNow){heirEvent("wardbreak",{mob:m});buildEvent("wardbreak",{mob:m});}
   if(brokeNow){
     P.shieldBrokenCount = (P.shieldBrokenCount || 0) + 1;    // 久经：累计次数，stats() 里按门槛判
     if(hasRelic("borrow") && !G.borrowUsed){                 // 借甲：每层一次，白送一批新盾
@@ -4808,6 +4831,7 @@ function landHit(dmg, m, haunted){
     (haunted ? T("（心魔加重）") : "") + T("。");
 }
 function finishBattle(win){
+  closeDungeonRules();
   const m = B.mob;
   clearQTimer();
   if(!win){
@@ -4846,7 +4870,7 @@ function closeBattleWin(){
   if(m.boss && !(m.def && (m.def.abyss || m.def.study))) withMaxHp(function(){ P.bossKills = (P.bossKills || 0) + 1; });
   const xp = gainXp(m.xp * xpx);     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
   // Boss 房一整层就它一只，身上压着一层份的金币（m.loot，makeBossFoe 里定的）
-  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
+  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (1+.15*(endlessMods().bounty||0)) * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
@@ -5475,11 +5499,12 @@ function shopMarkup(r){
   return SHOP_MARKUP * ((((r && r.r) || 0) >= SHOP_HI_FROM) ? SHOP_HI_X : 1);
 }
 function shopPrice(row){
+  const item=typeof row.relic==="string"?relicById(row.relic):row.relic;
+  const floor=item?sellPrice(item)+1:1;
   const p = Math.max(1, Math.round(row.price * (hasRelic("regular") ? Math.max(0.5, 1 - hx("regular", 0.15)) : 1)));
-  if(!heroOn("merchant")) return p;
+  if(!heroOn("merchant")) return Math.max(floor,p);
   /* 商人（角色第三批）：再便宜 {v}%，但**不低过分解价 +1** —— 不然买进来再拆掉就是白赚金币 */
-  const r = typeof row.relic === "string" ? relicById(row.relic) : row.relic;
-  return Math.max(Math.min(p, r ? sellPrice(r) + 1 : 1), Math.round(p * (1 - heroV("merchant") / 100)));
+  return Math.max(floor, Math.round(p * (1 - heroV("merchant") / 100)));
 }
 function renderShop(){
   const th = pendingRoom;
@@ -5666,6 +5691,7 @@ function withMaxHp(fn){
     P.hp += up;
     say(T("生命上限 <b>+") + up + T("</b> —— 当前生命跟着补上了（") + P.hp + " / " + after + T("）。"), "good");
   }
+  if(P.builds&&typeof DungeonRules!=="undefined"){if(!hasRelic("db_rivet"))delete P.builds.rivet;if(!hasRelic("db_anvil"))delete P.builds.anvil;if(!hasRelic("db_reforge"))delete P.builds.reforge;if(!hasRelic("db_prism")&&!hasRelic("db_orbit"))delete P.builds.blessings;}
   if(P.hp > after) P.hp = after;
   if(P.hp < 1) P.hp = 1;
 }
@@ -5706,13 +5732,13 @@ function rollRelic(floor, up, skip){
   const pool = relicPool().filter(function(x){ return !skip || skip.indexOf(x) < 0; });
   if(!pool.length) return null;
   for(let d = 0; d < 5; d++){
-    for(const r of [want - d, want + d]){
+    for(const r of [want - d]){
       if(r < 0 || r > 4) continue;
       const hit = pool.filter(function(x){ return (x.r || 0) === r; });
       if(hit.length) return blessPick(hit);      // 祝福·偏爱在同品质里加权，见 blessPick()
     }
   }
-  return blessPick(pool);
+  return null;
 }
 
 /* ---- 分解：拆掉一件换金币，腾出格子 ---- */
@@ -7160,6 +7186,7 @@ function heirEvent(event,details){
       if(typeof queueVisualHit!=="function"||!queueVisualHit(item.heroOnly,souls?"soul":kind,dmg,souls||1,souls&&heroOn("necro")?(P.heroSouls||0):0)){
         floatNum("foe","-"+dmg,"dmg");if(window.DungeonFX)DungeonFX.skill(item.heroOnly,kind);
       }
+      if(kind==="pet"||souls)buildEvent("summon",{mob:m,hits:souls||1,wasAlive:true});
     }};
     switch(key){
       case "hit":case "echohit":hit(s.atk*n,"strike");break;
@@ -7171,13 +7198,109 @@ function heirEvent(event,details){
       case "extend":for(const k in P.status)if(!HeroRules.negative.includes(k)&&P.status[k]>0)statusGain(P,k,n);break;
       case "mirror":if(m&&m.hp>0)for(const k of HeroRules.negative)if(P.status&&P.status[k]){statusGain(m,k,P.status[k]);delete P.status[k];break;}break;
       case "gold":earnGold(n);break;
-      case "spendgold":if(P.gold>=n){P.gold-=n;addSpent(n);hit(s.atk,"coin");statusGain(m,"exposed",2);}break;
+      case "spendgold":if(m&&m.hp>0&&P.gold>=n){P.gold-=n;addSpent(n);hit(s.atk,"coin");if(m.hp>0)statusGain(m,"exposed",2);}break;
       case "spendshield":{const spent=Math.min(P.shield||0,Math.max(1,Math.round(s.maxHp*.1)));if(spent>0&&m&&m.hp>0){P.shield-=spent;hit(spent*n,"forge");}break;}
       case "spread":for(const foe of G.mobs)if(foe!==m&&foe.hp>1){const damage=Math.min(foe.hp-1,Math.max(1,Math.round(s.atk*n)));coopDealDamage(foe,damage);}break;
     }
   };
   ctx.fx=function(item){if(window.DungeonFX&&B)DungeonFX.skill(item.heroOnly,item.trigger);};
   Heirlooms.settle(ctx);
+}
+function dungeonRulesOn(){ return typeof DungeonRules!=="undefined" && !!P && !P.study && !P.tut; }
+function endlessMods(){
+  return dungeonRulesOn() && CH && CH.endless && G && G.floor>=50 ? DungeonRules.counts(P.endlessMods) : {};
+}
+function endlessScale(s){
+  return dungeonRulesOn() && CH && CH.endless && G && G.floor>=50 ? DungeonRules.scaleStats(s,P.endlessMods) : s;
+}
+function advanceEndless(){
+  if(!dungeonRulesOn() || !CH || !CH.endless || !G)return;
+  const before=P.endlessMods&&P.endlessMods.picks?P.endlessMods.picks.length:0;
+  const state=DungeonRules.advance(P,G.floor);
+  if(state.picks.length>before){const a=DungeonRules.affixById[state.picks[state.picks.length-1]];say(L("无尽词条累计：","Endless modifier added: ")+a.n,"sys");}
+}
+function endlessBattle(m){
+  if(!dungeonRulesOn()||!m)return;
+  const mods=endlessMods(),s=m.endless||(m.endless={});
+  if(!s.entered){s.entered=true;if(mods.dread)statusGain(P,"weak",Math.min(3,mods.dread));}
+}
+function endlessRound(ok,m,s){
+  if(!dungeonRulesOn()||!m||m.hp<=0||P.hp<=0)return;
+  const mods=endlessMods(),state=m.endless||(m.endless={});
+  if(!Object.keys(mods).length)return;
+  state.rounds=(state.rounds||0)+1;
+  if(!ok){
+    for(const k of ["weak","exposed","poison","burn"])if(mods[k])statusGain(P,k,Math.min(3,mods[k]));
+    if(mods.dispel){const key=Object.keys(P.status||{}).filter(k=>!HeroRules.negative.includes(k)).sort((a,b)=>P.status[b]-P.status[a])[0];if(key){P.status[key]-=Math.min(3,mods.dispel);if(P.status[key]<=0)delete P.status[key];}}
+  }
+  if(state.rounds%3===0){
+    if(mods.purge)for(const k of HeroRules.negative)if(m.status&&m.status[k]){m.status[k]-=Math.min(3,mods.purge);if(m.status[k]<=0)delete m.status[k];}
+    if(mods.wither)for(const k in P.status)if(!HeroRules.negative.includes(k)){P.status[k]-=Math.min(3,mods.wither);if(P.status[k]<=0)delete P.status[k];}
+  }
+  if(ok){
+    state.right=(state.right||0)+1;
+    if(mods.reprisal&&state.right%3===0){
+      const raw=Math.max(1,Math.ceil(Math.min(m.dmg*.12*Math.min(3,mods.reprisal),s.maxHp*.08)));
+      hurtBegin(Object.assign({},m,{dmg:raw}),s,false);
+      const mit=mitigate(Math.max(1,raw-s.def),s,{counter:true});
+      const dmg=wagerScale(mit.dmg,true);if(!mit.dodged)takeHit(dmg,m,false);hurtEnd(dmg);
+      say(L("反扑：","Reprisal: ")+dmg+L(" 点伤害。"," damage."),"hurt");
+      if(P.hp<=0){const saved=deathSave();if(saved)say(saved,"sys");}
+    }
+  }
+}
+function buildEvent(event,details){
+  if(!dungeonRulesOn()||!G||!DungeonRules.items.some(r=>hasRelic(r.id)))return;
+  const m=details&&details.mob||B&&B.mob,s=stats();
+  if(event==="before"&&B){B.buildFrame={spiritUsed:false};B.buildBlessings=[];B.buildRoundActive=true;}
+  const ctx=Object.assign({p:P,mob:m,stats:s,battle:B?(B.buildFrame||(B.buildFrame={})):{},turn:(P.right||0)+(P.wrong||0),ok:!!(details&&details.ok),has:hasRelic,scale:hx,blessings:B&&B.buildBlessings||[]},details||{});
+  ctx.act=function(key,n,extra){
+    if(P.hp<=0)return;
+    if(HeroRules.effects[key]){statusGain(P,key,n);return;}
+    if(key.startsWith("foe.")){if(m&&m.hp>0)statusGain(m,key.slice(4),n);return;}
+    if(key==="hit"){
+      if(!m||m.hp<=0)return;
+      let dmg=wagerScale(Math.max(1,Math.round(s.atk*n)),false);
+      if(B&&!B.q)dmg=Math.min(dmg,m.hp-1);if(dmg<=0)return;
+      coopDealDamage(m,dmg);
+      if(!queueVisualHit(extra&&extra.hero||P.hero,extra&&extra.kind||"strike",dmg,extra&&extra.count||1))floatNum("foe","-"+dmg,"dmg");
+      if(lastDmgRec)lastDmgRec.more.push(["@build",dmg]);
+    }else if(key==="shield"||key==="shieldFloor"){
+      const amount=Math.max(1,Math.round(s.maxHp*n));P.shield=Math.min(shieldCap(s),key==="shield"?(P.shield||0)+amount:Math.max(P.shield||0,amount));
+    }else if(key==="heal")healUp(Math.max(1,Math.round(s.maxHp*n)),s);
+    else if(key==="guard")P.heirGuard=Math.min(2,(P.heirGuard||0)+n);
+    else if(key==="extend"){for(const k in P.status)if(!HeroRules.negative.includes(k)&&P.status[k]>0)statusGain(P,k,n);}
+    else if(key==="spreadBleed"){let left=extra.targets;for(const foe of G.mobs)if(left>0&&foe!==m&&foe.hp>0){statusGain(foe,"bleed",n);left--;}}
+  };
+  DungeonRules.settle(ctx,event);
+  if(event==="after"&&B)B.buildRoundActive=false;
+}
+function runRulesHtml(){
+  if(!dungeonRulesOn())return "";
+  let html="";const state=P.builds||{};
+  for(const flow in DungeonRules.flows){const equipped=DungeonRules.items.filter(r=>r.flow===flow&&hasRelic(r.id));if(!equipped.length)continue;
+    html+='<article class="rule-card"><b>'+DungeonRules.flows[flow]+' · '+equipped.length+'</b><p>'+equipped.map(r=>r.n).join('、')+'</p>';
+    if(flow==="rift")html+='<small>'+L("待释放反击：","Stored ripostes: ")+((hasRelic("db_rivet")?state.rivet||0:0)+(hasRelic("db_anvil")?state.anvil||0:0))+'</small>';
+    if(flow==="wheel")html+='<small>'+L("轮转印记：","Rotation record: ")+(state.blessings||[]).map(statusLabel).join(' / ')+' · '+(state.blessings||[]).length+'/4</small>';
+    html+='<details><summary>'+L("查看效果","Show effects")+'</summary>'+equipped.map(r=>'<p><b>'+r.n+'</b><br>'+r.pw+'</p>').join('')+'</details></article>';
+  }
+  const mods=endlessMods();for(const id in mods){const a=DungeonRules.affixById[id];html+='<article class="rule-card affix"><b>'+a.n+' ×'+mods[id]+'</b><p>'+a.pw+'</p></article>';}
+  return html;
+}
+function renderDungeonRules(){
+  if(typeof DungeonRules==="undefined")return;
+  const holder=$("runRules");if(holder&&$("viewInfo").classList.contains("on")){const html=runRulesHtml();if(holder.innerHTML!==html)holder.innerHTML=html;holder.hidden=!html;}
+  const button=$("btnDungeonRules");if(button){const count=Object.values(endlessMods()).reduce((a,b)=>a+b,0),flows=Object.keys(DungeonRules.flows).filter(f=>DungeonRules.items.some(r=>r.flow===f&&hasRelic(r.id))).length;button.hidden=!(count||flows);button.textContent=L("流派 ","Builds ")+flows+(count?L(" · 无尽词条 "," · Endless ")+count:"");}
+}
+function openDungeonRules(){
+  $("rulesTitle").textContent=L("流派与无尽词条","Builds & Endless modifiers");
+  $("rulesList").innerHTML=runRulesHtml()||L("尚未获得流派遗物或无尽词条。","No build relics or Endless modifiers yet.");
+  $("veilDungeonRules").hidden=false;
+  if(B&&B.q&&!B.locked&&!B.rulesReadAt)B.rulesReadAt=Date.now();
+}
+function closeDungeonRules(){
+  $("veilDungeonRules").hidden=true;
+  if(B&&B.rulesReadAt){const elapsed=Math.max(0,Date.now()-B.rulesReadAt);B.qAt+=elapsed;B.rulesReadMs=(B.rulesReadMs||0)+elapsed;delete B.rulesReadAt;}
 }
 function statusN(owner,key){
   if(RMASK && (RMASK==="all" || RMASK["@status"]))return 0;
@@ -7188,7 +7311,9 @@ function statusCap(){ return 4+((P&&P.heroStar||1)>=4?1:0); }
 function statusGain(owner,key,n){
   if(!owner || !n) return;
   if(!owner.status)owner.status={};
+  const before=owner.status[key]||0;
   HeroRules.gain(owner.status,key,n,owner===P&&!HeroRules.negative.includes(key)?statusCap():4);
+  if(owner===P&&B&&B.buildRoundActive&&!HeroRules.negative.includes(key)&&(owner.status[key]||0)>before){if(!B.buildBlessings)B.buildBlessings=[];if(!B.buildBlessings.includes(key))B.buildBlessings.push(key);}
 }
 function statusDamagePct(){
   if(!P || P.study || P.tut)return 0;
@@ -7206,7 +7331,7 @@ function statusChips(owner){
     const debuff=HeroRules.negative.includes(k),n=statusN(owner,k);
     return "<button type=\"button\" class=\"status-chip"+(debuff?" negative":"")+"\" data-status=\""+k+"\" title=\""+HeroRules.effects[k][UI_EN?3:2]+"\">"+statusLabel(k)+" <b>"+n+"</b></button>";
   }).join("");
-  return chips+(owner===P && (P.heirGuard||0)>0?'<span class="status-chip" title="下次实际受到的攻击被专属遗物格挡，最多储存两次">'+L("专属格挡","Heirloom guard")+' <b>'+P.heirGuard+'</b></span>':'');
+  return chips+(owner===P && (P.heirGuard||0)>0?'<span class="status-chip" title="下次实际受到攻击时消耗一次格挡并免疫该次伤害，最多储存两次">'+L("遗物格挡","Relic guard")+' <b>'+P.heirGuard+'</b></span>':'');
 }
 function renderStatusOwner(id, owner){
   const el=$(id);if(!el)return;
@@ -8421,7 +8546,7 @@ function writeRun(){
       // 怪只存 defId + 当前状态，读档时重新链回 FOES
       mobs: G.mobs.map(function(m){
         return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status)};
+                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null};
       }),
       things: G.things
     });
@@ -8454,6 +8579,7 @@ function unpackGrid(str, f){
 function resumeRun(s){
   setChapter(s.ch || 1);          // 先把章切对，下面的词难度/怪/结算才对得上
   P = s.P;
+  const migrateEndless=typeof DungeonRules!=="undefined"&&CH.endless&&s.floor>=50&&!Array.isArray(P.endlessMods&&P.endlessMods.picks);
   // 旧档的 gear/bag 字段留着也无害，没人读它了                 // 老档兜底
   if(!P.relics) P.relics = [];
   P.relics = P.relics.filter(function(id){ return !!relicById(id); });   // 遗物被删掉的老档
@@ -8492,6 +8618,7 @@ function resumeRun(s){
   if(typeof P.thunder !== "number") P.thunder = 0;            // 雷霆之匣：匣子里存了多少（小数攒着）
   if(typeof P.sellN !== "number") P.sellN = 0;                // 余烬：本局分解过几件
   heroResume();                                               // 角色（2026-10-15），老档没有就当冒险者
+  if(typeof DungeonRules!=="undefined")DungeonRules.normalize(P);
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
@@ -8499,6 +8626,7 @@ function resumeRun(s){
         vis: [], things: s.things || [], stair: s.stair, rooms: s.rooms || null, mobs: [] };
   /* 续玩档存的是「刚踏进这一层」的样子，所以这几个每层字段直接按新一层初始化。
      ⚠️ 开场那个 openLeft 是计数不是布尔，不补的话读档后这一层就白少三刀。*/
+  advanceEndless();
   G.openLeft = OPENING_N;
   G.corrodeArmor = 0;
   G.warmthUsed = false;
@@ -8560,8 +8688,12 @@ function resumeRun(s){
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, layer:m.ly || 1,
-                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s, status:HeroRules.clean(m.status)});
+                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s, status:HeroRules.clean(m.status),builds:m.builds||{},endless:m.endless||{}});
     if(def.study){ const sm = G.mobs[G.mobs.length - 1]; sm.art = studyArt(); sm.dmg = studyDmgNow(); }   // 书灵的立绘跟着这一章走
+  });
+  if(migrateEndless)G.mobs.forEach(function(m){
+    const oldMax=m.max,n=endlessScale({hp:m.max,dmg:m.dmg,armor:m.armor,xp:m.xp});
+    m.hp=m.hp>0?Math.max(1,Math.round(m.hp/Math.max(1,oldMax)*n.hp)):0;m.max=n.hp;m.dmg=n.dmg;m.armor=n.armor;
   });
   /* 联机：怪身上的 cid / 两条血条 / 归谁砍**不进存档**（writeRun 里只存 defId + 状态），
      所以读档之后必须照 genFloor() 的规矩补一次，否则 coopDealDamage 的 m.cid 是 undefined、
@@ -8580,6 +8712,7 @@ function resumeRun(s){
     say(T("你回到了踏进这一层时的样子 —— 存档存在每层的入口。"), "sys");
   }
   lockInput(320);
+  if(migrateEndless)commit(true); // 一次性迁移同时保存词条和已调整的怪物，继续读档不会重抽或重复放大。
 }
 /* ================= 结算 ================= */
 /* 返回的就是内存里那一份，改完等 commit() 落盘，别单独写 localStorage */
@@ -8895,12 +9028,14 @@ function openCodex(tab){
   $("veilCodex").hidden = false;
 }
 function hideAll(){
+  closeDungeonRules();
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
   ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHero","veilHeroInfo","veilHeroGot"].forEach(function(id){ $(id).hidden = true; });
 }
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
+  if(!$("veilDungeonRules").hidden)return $("veilDungeonRules");
   const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHeroGot","veilHeroInfo","veilHero"];   // 角色那三个：叠在上面的排前面
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
   return null;
@@ -9278,7 +9413,7 @@ function makeRunCode(){
     stair: G.stair, rooms: G.rooms || null,
     mobs: G.mobs.map(function(m){
       return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status)};
+              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null};
     }),
     things: G.things, g: g,
     /* 对账用：导出那一刻的面板（信息页同一套函数）+ 上一刀 / 上一口的构成 */
@@ -9768,6 +9903,7 @@ document.addEventListener("keydown", function(ev){
       if(b && !b.disabled && b.getClientRects().length){ ev.preventDefault(); b.click(); }
     } else if(ev.key === "Escape"){
       if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
+      else if(v.id === "veilDungeonRules")closeDungeonRules();
       else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
       else if(v.id === "veilHolyInfo") closeHolyInfo();     // 圣器详情
@@ -9981,6 +10117,8 @@ $("btnRunCode").addEventListener("click", function(){
   }catch(e){}
   manual();
 });
+$("btnDungeonRules").addEventListener("click",openDungeonRules);
+$("btnCloseDungeonRules").addEventListener("click",closeDungeonRules);
 $("btnMiss").addEventListener("click", function(){ openMiss("all"); });
 document.querySelectorAll("#veilMiss .mtab").forEach(function(b){
   b.addEventListener("click", function(){ openMiss(b.dataset.mt); });
