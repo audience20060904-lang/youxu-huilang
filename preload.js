@@ -5,19 +5,20 @@
   const status=document.getElementById('loadStatus'),bar=document.getElementById('loadProgress'),count=document.getElementById('loadCount'),retry=document.getElementById('loadRetry');
   const app=document.querySelector('.app'),coop=!!document.querySelector('[data-coop-page]');
   if(coop)window.__COOP=true;
-  const version='20261020-rooms1';
-  const asset=src=>src+'?v='+version;
+  const version='20261020-gpu1';
+  const asset=src=>src+'?v='+(src==='pixi.min.js'?'8.22.0':version);
   const stages=[
     ['util.js','准备基础资源'],['i18n.js','读取语言设置'],
     ['words-a1.js','载入英语词库'],['words-zh.js','载入中文词库'],['words-es.js','载入西语词库'],['words-ja.js','载入日语词库'],
     ['syn.js','载入词义索引'],['defs-en.js','载入释义题'],['content.js','准备冒险玩法'],['orb.js','载入主城资源'],
     ['art.js','载入角色模型'],['monster-art.js','载入地牢生物'],['dungeon-scene.js','载入洞窟场景'],
+    ['dungeon-view.js','准备场景数据'],['pixi.min.js','载入绘图引擎',true],['dungeon-gpu.js','准备场景绘制',true],
     [coop?'net.js':'i18n-en.js',coop?'准备合作模式':'准备界面语言'],
     ['compact-save.js','准备存档'],['hero-system.js','准备角色技能'],['heirlooms.js','载入遗物'],
     ['dungeon-rules.js','准备流派与无尽词条'],['dungeon-rooms.js','准备房间与岔路'],['dungeon-fx.js','准备战斗动画'],['learning-cache.js','准备学习内容'],['game.js','整理游戏进度']
   ];
   let registration=null,fatal=null,finished=false;
-  const total=stages.length+3;
+  const total=stages.length+4;
   window.GameBoot={register:function(value){registration=value;}};
   if(app)app.inert=true;
   const english=()=>typeof window.UI_EN!=='undefined'&&window.UI_EN;
@@ -47,7 +48,8 @@
       if(!document.getElementById('gameStyle').sheet)throw new Error('Styles unavailable');
       progress(0,'正在准备资源');await frame();
       for(let i=0;i<stages.length;i++){
-        progress(i,stages[i][1]);await frame();await script(stages[i][0]);
+        progress(i,stages[i][1]);await frame();
+        try{await script(stages[i][0]);}catch(error){if(!stages[i][2])throw error;fatal=null;}
       }
       if(!registration)throw new Error('Game did not initialize');
       const tasks=registration.prepare||[];

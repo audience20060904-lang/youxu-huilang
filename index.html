@@ -7,8 +7,8 @@
 <title>幽墟回廊</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-rooms1">
-<script src="preload.js?v=20261020-rooms1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-gpu1">
+<script src="preload.js?v=20261020-gpu1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -243,6 +243,7 @@
         <label class="setopt"><input type="checkbox" id="optSpeak" checked><span><b>答完自动朗读</b><i>每题答完念一遍这个词；也能自己点题面右上角的 🔊</i></span></label>
         <label class="setopt"><input type="checkbox" id="optAuto" checked><span><b>答对自动下一题</b><i>关掉就每题都手动点继续</i></span></label>
         <label class="setopt" id="optDefQRow"><input type="checkbox" id="optDefQ" checked><span><b>释义句题</b><i>已掌握的词会出「哪一句在说这个词」</i></span></label>
+        <div class="langset"><div class="langrow"><label class="lk" for="optSceneMode" id="sceneModeLabel">画面模式</label><select class="vsel" id="optSceneMode"><option value="auto">标准</option><option value="basic">兼容</option></select></div></div>
         <!-- 发音（2026-09-24）：挑声音 + 语速，game.js 的 renderVoiceSet()。浏览器不支持朗读就整块藏掉 -->
         <div class="langset voiceset" id="voiceSet">
           <div class="langrow"><label class="lk" for="optVoice">声音</label><select class="vsel" id="optVoice"></select><button class="lchip vtry" id="btnVoiceTry" type="button">试听</button></div>

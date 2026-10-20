@@ -200,10 +200,11 @@ check('All 446 relics execute actual correct/wrong choice/spelling settlement an
   for(const type of ['en2zh','spell'])for(const ok of [true,false])for(const rng of [0,.99]){reset([r.id],{level:50,player:{combo:20,hp:30,shield:20,status:{weak:1}}});c.B.q.type=type;c.Math.random=()=>rng;const out=round(ok);assert(out&&Number.isFinite(out.damage)&&Number.isFinite(c.P.hp)&&Number.isFinite(c.P.shield),r.id);cases++;}}
  assert.equal(cases,6244);
 });
-check('Walking, map renderer and classic trails remain unchanged; both entrypoints preload rules before gameplay and expose a reader',()=>{
- const base=cp.execFileSync('git',['show','HEAD:game.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');for(const name of ['goTo','renderStep','stepWalk','camera']){const a=source.indexOf('function '+name+'('),b=base.indexOf('function '+name+'('),end=source.indexOf('\n}',a)+2;assert(a>=0&&b>=0);assert.equal(source.slice(a,end),base.slice(b,base.indexOf('\n}',b)+2),name);}
- for(const file of ['dungeon-scene.js','dungeon-fx.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
+check('Walking timing and fallback classic trails remain unchanged; both entrypoints preload rules before gameplay and expose a reader',()=>{
+ const base=cp.execFileSync('git',['show','HEAD:game.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');for(const name of ['goTo','stepWalk']){const a=source.indexOf('function '+name+'('),b=base.indexOf('function '+name+'('),end=source.indexOf('\n}',a)+2;assert(a>=0&&b>=0);assert.equal(source.slice(a,end),base.slice(b,base.indexOf('\n}',b)+2),name);}
+ for(const file of ['dungeon-scene.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
  for(const file of ['index.html','coop.html']){const html=read(file),a=html.indexOf('id="battleArena"'),b=html.indexOf('class="battle-learning"');assert(html.indexOf('id="btnDungeonRules"')>a&&html.indexOf('id="btnDungeonRules"')<b);for(const id of ['veilDungeonRules','rulesTitle','rulesList','btnCloseDungeonRules'])assert(html.includes('id="'+id+'"'));}
  assert(read('preload.js').indexOf("['dungeon-rules.js'")<read('preload.js').indexOf("['game.js'"));
+ const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
 });
 console.log(groups+' dungeon build checks passed.');

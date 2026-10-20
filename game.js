@@ -1815,6 +1815,7 @@ function camera(){
      以前这里把 cx/cy 夹在 [0, 地图-视野] 里，走到地图上下/左右边缘时镜头就顶住不动了，
      人会跑到画面边上。现在宁可让取景窗露出地图外的空白，也要保证视角始终居中。 */
   const cx = P.x - ((VW - 1) >> 1), cy = P.y - ((VH - 1) >> 1);
+  if(gpuMapOn()&&DungeonGPU.move({host:$("stageBox"),map:m,world:G.map,cell:cell,width:VW*cell,height:VH*cell,x:P.x,y:P.y,cameraX:-cx*cell,cameraY:-cy*cell,ms:CHAPTER.stepMs,goal:G.goal,pet:hasPetCompanion()}))return;
   DungeonScene.camera(m,-cx*cell,-cy*cell,G.map,cell);
   DungeonScene.paint(m,cells,W,G.map,P.x,P.y,heroArt(P.hero),hasPetCompanion(),CH.id,cell,heroCls(P.hero));
 }
@@ -1834,6 +1835,20 @@ function paintMapCell(c,html){
 function paintMapClass(c,classes){if(c.className!==classes)c.className=classes;}
 function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer")||!!(B&&B.roomPet)||!!(roomMeta()&&roomType()==="pack"&&G.roomPersonal.petFreed)||!!(P&&P.roomRun&&P.roomRun.companion&&P.roomRun.companion.kind==="claw"&&P.roomRun.companion.left>0);}
 let mapRenderState=null;
+let gpuSceneAssets=null;
+function gpuMapOn(){return typeof DungeonGPU!=="undefined"&&DungeonGPU.active()&&P&&!P.tut&&OPT.sceneMode!=="basic";}
+function gpuMapAssets(){
+  if(gpuSceneAssets)return gpuSceneAssets;
+  const doors={};if(typeof DungeonRooms!=="undefined")for(const r of DungeonRooms.items)doors[r.id]=DungeonRooms.icon(r.id);
+  gpuSceneAssets=DungeonView.assets({heroes:HEROES,heroArt:heroArt,monsters:MOB_ART,bossIds:Object.keys(MOB_ART).filter(id=>id!=="study"&&!FOES.some(f=>f.id===id)),items:{gold:COIN,chest:CHEST,feat:SPRING,altar:ALTAR,gild:ALTAR,shop:SHOP,stair:STAIR},doors:doors,pet:DungeonScene.pet,mate:HERO});
+  return gpuSceneAssets;
+}
+function gpuMapFull(){
+  if(typeof DungeonGPU==="undefined"||!DungeonGPU.status().ready)return false;
+  if(P.tut||OPT.sceneMode==="basic"){DungeonGPU.clearMap();return false;}
+  if(!B)DungeonGPU.endBattle();
+  return DungeonGPU.full(DungeonView.snapshot({map:G.map,seen:G.seen,mobs:G.mobs,things:G.things,stair:G.stair,chapter:CH.id,hero:P.hero,pet:hasPetCompanion(),assets:gpuMapAssets(),room:roomType(),active:roomMobActive,mate:COOP?{x:coopMateX,y:coopMateY}:null}));
+}
 function renderMapTile(x,y,cleared,tutAt){
     const c = cells[y*W + x];
     const isGoal = G.goal && G.goal.x === x && G.goal.y === y;
@@ -1881,25 +1896,26 @@ function renderMapTile(x,y,cleared,tutAt){
 /* 空地移动只更新镜头、人物和目标圈；拾取/战斗/换层仍走完整渲染。 */
 function renderStep(){
   const old=mapRenderState;
-  if(!old || COOP || P.tut || old.world!==G.map || old.grid!==cells ||
+  if(!old || (COOP&&!old.gpu) || P.tut || old.world!==G.map || old.grid!==cells ||
      old.mobs!==G.mobs || old.mobCount!==G.mobs.length || old.things!==G.things || old.thingCount!==G.things.length){
     render();return;
   }
   const goal=G.goal ? G.goal.y*W+G.goal.x : -1;
   if(old.goal!==goal){
-    for(const index of [old.goal,goal])if(index>=0&&cells[index])cells[index].classList.toggle("goal",index===goal);
+    if(!old.gpu)for(const index of [old.goal,goal])if(index>=0&&cells[index])cells[index].classList.toggle("goal",index===goal);
     old.goal=goal;
   }
   camera();
-  if(window.DungeonFX) DungeonFX.move($("map"),cells,W,G.map,P.x,P.y,heroArt(P.hero),heroCls(P.hero));
+  if(!old.gpu&&window.DungeonFX) DungeonFX.move($("map"),cells,W,G.map,P.x,P.y,heroArt(P.hero),heroCls(P.hero));
 }
 function render(){
   const cleared = G.mobs.length === 0;
   const tutAt = (P && P.tut) ? tutTarget() : null;
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++)renderMapTile(x,y,cleared,tutAt);
-  mapRenderState={world:G.map,grid:cells,mobs:G.mobs,mobCount:G.mobs.length,things:G.things,thingCount:G.things.length,goal:G.goal?G.goal.y*W+G.goal.x:-1};
+  const gpu=gpuMapFull();
+  if(!gpu)for(let y=0;y<H;y++) for(let x=0;x<W;x++)renderMapTile(x,y,cleared,tutAt);
+  mapRenderState={world:G.map,grid:cells,mobs:G.mobs,mobCount:G.mobs.length,things:G.things,thingCount:G.things.length,goal:G.goal?G.goal.y*W+G.goal.x:-1,gpu:gpu};
   // 联机：队友棋子（逻辑不占格子，纯视觉叠一层在队友最后上报的位置上，见 coopMateX/Y）
-  if(COOP && coopMateX != null && coopMateY != null &&
+  if(!gpu&&COOP && coopMateX != null && coopMateY != null &&
      coopMateX >= 0 && coopMateY >= 0 && coopMateX < W && coopMateY < H){
     const mc = cells[coopMateY * W + coopMateX];
     if(mc){
@@ -1910,7 +1926,7 @@ function render(){
     }
   }
   camera();
-  if(window.DungeonFX) DungeonFX.move($("map"), cells, W, G.map, P.x, P.y, heroArt(P.hero), heroCls(P.hero));
+  if(!gpu&&window.DungeonFX) DungeonFX.move($("map"), cells, W, G.map, P.x, P.y,heroArt(P.hero),heroCls(P.hero));
   renderHud();
 }
 function renderHud(){
@@ -3397,7 +3413,7 @@ function fxFly(fromEl, toEl, kind, n, color){
    纯装饰、挂在 body 上、LEVEL_FX_MS 之后全删，REDUCE_MOTION 开着就整段跳过。*/
 function fxLevelUp(){
   if(REDUCE_MOTION) return;
-  const host = (P && cells && cells[P.y * W + P.x]) || null;
+  const host = P?mapFxAnchor(P.x,P.y):null;
   const from = rectOf(host) ? host
              : rectOf($("bHpBar")) ? $("bHpBar")
              : $("stageBox");
@@ -3438,17 +3454,21 @@ function fxLevelUp(){
 }
 /* 捡金币：从那一格飞到顶上的「金」 */
 function fxGold(x, y){
-  const cell = cells[y * W + x];
+  const cell = mapFxAnchor(x,y);
   fxFly(cell || $("stageBox"), $("hGold"), "coin", 7);
 }
 /* 怪倒下：掉的金币飞向「金」，经验飞向「等级」（绿色，跟血/金区分开）*/
 function fxKill(x, y){
-  const cell = cells[y * W + x] || $("stageBox");
-  if(window.DungeonFX) DungeonFX.mapKill($("map"), cells[y * W + x]);
+  const cell = mapFxAnchor(x,y) || $("stageBox");
+  if(!gpuMapOn()&&window.DungeonFX) DungeonFX.mapKill($("map"), cells[y * W + x]);
   fxFly(cell, $("hGold"), "coin", 6);
   const green = getComputedStyle(document.documentElement)
                   .getPropertyValue("--venom").trim() || "#47702F";
   fxFly(cell, $("hLevel"), "gem", 5, green);
+}
+function mapFxAnchor(x,y){
+  if(gpuMapOn()){const r=DungeonGPU.project(x,y);if(r)return {getBoundingClientRect:()=>r};}
+  return cells[y*W+x];
 }
 /* 拿遗物：从弹窗（或屏幕中央）飞到底部的「遗物」标签，颜色按品质走 */
 function fxRelic(r){
@@ -8403,6 +8423,7 @@ let SCENE = "town";
 /* 地牢那几块和主城面板互斥显示 */
 function showScene(){
   const inRun = SCENE === "run";
+  if(typeof DungeonGPU!=="undefined")DungeonGPU.setVisible(inRun&&$("viewAdv").classList.contains("on"));
   /* hudRow / barsRow 现在住在 stageBox 里面（.mapui 浮层），跟着 stage 一起显隐，不用单独管 */
   ["stageBox","log"].forEach(function(id){ $(id).hidden = !inRun; });
   $("townPanel").hidden = inRun;
@@ -10184,16 +10205,18 @@ document.addEventListener("keydown", function(ev){
   else if(k === "arrowright" || k === "d"){ ev.preventDefault(); tryMove(1,0,rep); }
   else if(k === "escape"){ cancelWalk(); render(); }
 });
-$("map").addEventListener("click", function(ev){
-  const c = ev.target.closest(".c");
-  if(!c || G.paused || G.over) return;
+function mapTileClick(x,y){
+  if(!P||!G||G.paused||G.over||SCENE!=="run")return;
   if(coopLocked()){ coopNoteLocked(); return; }   // 怪没清完，双方都不能自己动（联机方案.md）
-  const x = +c.dataset.x, y = +c.dataset.y;
   // 站在阶梯上再点一下脚下这格 = 重新问「要不要下去」（上次选了「再待一会儿」的退路）
   autoOff();        // 自己点了地图 = 关掉自动寻路
   if(x === P.x && y === P.y && G.stair && x === G.stair.x && y === G.stair.y){ askStair(); return; }
   goTo(x, y);
+}
+$("map").addEventListener("click", function(ev){
+  const c = ev.target.closest(".c");if(c)mapTileClick(+c.dataset.x,+c.dataset.y);
 });
+if(typeof DungeonGPU!=="undefined")DungeonGPU.configure({tile:mapTileClick,fallback:function(){if(G&&P&&SCENE==="run"){mapRenderState=null;buildGrid();render();}}});
 $("btnSpeak").addEventListener("click", function(){ if(B && B.q) speak(spellOf(B.q.word)); });
 $("btnSpellSpeak").addEventListener("click", function(){ if(B && B.q) speak(spellOf(B.q.word)); });
 $("btnNextQ").addEventListener("click", function(){
@@ -10205,6 +10228,7 @@ $("btnFlee").addEventListener("click", flee);
 
 /* ---- 底部标签切换 ---- */
 function showView(id){
+  if(typeof DungeonGPU!=="undefined")DungeonGPU.setVisible(id==="viewAdv"&&SCENE==="run");
   Array.prototype.forEach.call(document.querySelectorAll(".view"), function(v){
     v.classList.toggle("on", v.id === id);
   });
@@ -10281,6 +10305,15 @@ $("optSpeak").checked = OPT.speak !== false;
 $("optAuto").checked = OPT.auto !== false;
 $("optSpeak").addEventListener("change", function(){ OPT.speak = this.checked; saveOpt(); });
 $("optAuto").addEventListener("change", function(){ OPT.auto = this.checked; saveOpt(); });
+$("optSceneMode").value=OPT.sceneMode==="basic"?"basic":"auto";
+$("optSceneMode").options[0].textContent=L("标准","Standard");$("optSceneMode").options[1].textContent=L("兼容","Compatibility");
+$("sceneModeLabel").textContent=L("画面模式","Graphics");
+$("optSceneMode").addEventListener("change",async function(){
+  OPT.sceneMode=this.value;saveOpt();this.disabled=true;
+  try{if(typeof DungeonGPU!=="undefined"){DungeonGPU.setEnabled(OPT.sceneMode!=="basic");if(OPT.sceneMode!=="basic")await DungeonGPU.prepare({assets:gpuMapAssets()});}
+    if(P&&G&&SCENE==="run"){mapRenderState=null;buildGrid();render();}
+  }finally{this.disabled=false;}
+});
 /* 释义句题的开关（用户 2026-09-29）：默认开；只有学英语才有这种题，别的语言整行藏掉 */
 $("optDefQ").checked = OPT.defq !== false;
 $("optDefQRow").hidden = LANG_LEARN !== "en";
@@ -11609,7 +11642,8 @@ refreshSaveState();
 if(window.GameBoot)GameBoot.register({
   prepare:[
     {label:"整理词义与近义词",run:function(){synIndex();}},
-    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}}
+    {label:"准备学习与战斗资源",run:function(){for(const lv in BYLV)scopeToLevel(ALLW,Number(lv));scopeByLevel(ALLW);}},
+    {label:"准备场景图集",run:function(){if(typeof DungeonGPU!=="undefined")return DungeonGPU.prepare({assets:gpuMapAssets(),disabled:OPT.sceneMode==="basic"});}}
   ],start:bootGame
 });
 else bootGame();

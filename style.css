@@ -200,6 +200,10 @@ body{
 .map{position:absolute;top:0;left:0;display:block;width:max-content;
   will-change:transform;transition:transform var(--walk-ms,144ms) linear}
 .map-tiles{display:grid;gap:0;width:max-content;contain:layout paint}
+.dungeon-gpu{position:absolute;left:0;top:0;display:block;z-index:0;touch-action:manipulation}
+.stage.gpu-map > .map{display:none;pointer-events:none;will-change:auto;transition:none!important}
+.stage.gpu-map::after{display:none}
+.battle-effects > .dungeon-gpu{pointer-events:none}
 .map-pawn,.map-pet{position:absolute;top:0;left:0;z-index:3;pointer-events:none;user-select:none;
   color:var(--hero);transition:transform var(--walk-ms,144ms) linear;will-change:transform}
 .map-pawn svg{display:block;width:100%;height:100%}

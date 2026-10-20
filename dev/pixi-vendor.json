@@ -1,0 +1,8 @@
+{
+  "name": "pixi.js",
+  "version": "8.22.0",
+  "source": "https://registry.npmjs.org/pixi.js/-/pixi.js-8.22.0.tgz",
+  "sha256": "06d9ef9823e743518793083c296d801e752db128cb1f519fbabe37e1259567ea",
+  "license": "MIT",
+  "file": "package/dist/pixi.min.js"
+}

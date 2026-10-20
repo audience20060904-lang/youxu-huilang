@@ -126,9 +126,10 @@ check('Actual resume restores private event costs and staged mobs without replay
  c.resumeRun(plain(saved));assert.equal(c.G.routeRoom.actual,roomName);assert.equal(c.P.hp,hp);assert.equal(c.P.shield,shield);assert(c.G.roomPersonal.forgeUsed);assert.equal(c.G.roomExtraRedraw,2);assert(c.G.mobs[0].roomPlayer.petOpened);c.roomApplyEntry();assert.equal(c.P.shield,shield);
  room('outpost');const old=plain(saved);delete old.routeRoom;delete old.roomPersonal;delete old.P.roomRun;c.resumeRun(old);assert.equal(c.roomMeta(),null);assert(c.P.roomRun.seed>=0);
 });
-check('Both entrypoints expose three-choice and event controls; movement fast path and existing trails are unchanged',()=>{
+check('Both entrypoints expose three-choice and event controls; pathfinding, walking timing and fallback trails are unchanged',()=>{
  for(const f of ['index.html','coop.html']){const html=read(f);for(const id of ['roomRoutes','roomLabel','veilRoomEvent','roomEventTitle','roomEventChoices','btnRoomEventClose'])assert.equal(html.split('id="'+id+'"').length,2,f+' '+id);}
- const cp=require('node:child_process');for(const file of ['dungeon-scene.js','dungeon-fx.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
- const base=cp.execFileSync('git',['show','HEAD:game.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');for(const name of ['renderStep','stepWalk','camera','goTo']){const i=base.indexOf('function '+name+'('),j=base.indexOf('\n}',i)+2;assert.equal(definitions[name],base.slice(i,j),name);}
+ const cp=require('node:child_process');for(const file of ['dungeon-scene.js'])assert.equal(read(file),cp.execFileSync('git',['show','HEAD:'+file],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n'));
+ const base=cp.execFileSync('git',['show','HEAD:game.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');for(const name of ['stepWalk','goTo']){const i=base.indexOf('function '+name+'('),j=base.indexOf('\n}',i)+2;assert.equal(definitions[name],base.slice(i,j),name);}
+ const fx=read('dungeon-fx.js'),oldFx=cp.execFileSync('git',['show','ea31fd8:dungeon-fx.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');assert.equal(fx.slice(fx.indexOf('    move:function('),fx.indexOf('  if(reduce){')),oldFx.slice(oldFx.indexOf('    move:function('),oldFx.indexOf('  if(reduce){')));
 });
 console.log(groups+' dungeon room checks passed.');

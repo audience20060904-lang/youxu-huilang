@@ -18,7 +18,7 @@
     const active=motions.get(bar.el);if(active){active.animation.cancel();motions.delete(bar.el);}
     bar.el.style.width=bar.width;
   }
-  function resetRound(){restoreBar();round++;responseEpoch++;for(const bucket of [scheduled,responses]){for(const id of bucket)clearTimeout(id);bucket.clear();}if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");}
+  function resetRound(){restoreBar();round++;responseEpoch++;for(const bucket of [scheduled,responses]){for(const id of bucket)clearTimeout(id);bucket.clear();}if(roundText!==null&&$("foeTxt"))$("foeTxt").textContent=roundText;roundText=null;clear("battle");if(window.DungeonGPU)DungeonGPU.clearBattle();}
   const battleOpen = () => $("veilBattle") && !$("veilBattle").hidden;
   const label = (zh, en) => typeof L === "function" ? L(zh, en) : zh;
   const shapes = {
@@ -108,6 +108,7 @@
     if(light())n=Math.min(n,2);
     // 粒子共享同一次布局读取，避免每追加一颗都强制重新计算页面。
     const position=at||point(el,effectSpace());if(!position)return;
+    if(window.DungeonGPU&&DungeonGPU.sparks(position,type,n))return;
     for(let i=0;i<n;i++){
       const fx = stamp(el, "spark " + type, null, 5, position);
       if(!fx) break;
@@ -124,6 +125,7 @@
     const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,reach=Math.min(!shape||shape==='slash'||shape==='claw'?32:10,length*.28),ux=dx/length,uy=dy/length;
     motion(actor(from),[{transform:'translate(0,0) scale(1)'},{transform:'translate('+(-ux*3)+'px,'+(-uy*3)+'px) scale(.96)',offset:.14},
       {transform:'translate('+(ux*reach)+'px,'+(uy*reach)+'px) rotate('+(dy<0?-6:6)+'deg) scale(1.04)',offset:.4},{transform:'translate(0,0) scale(1)'}],220);
+    if(window.DungeonGPU&&DungeonGPU.projectile(a,b,color,shape||'slash'))return;
     const bolt=stamp(from,'bolt',shape||'slash',shape&&shape!=='slash'?27:22,a,180);
     if(bolt){
       bolt.style.color=color;
@@ -298,6 +300,7 @@
   document.addEventListener("visibilitychange", () => { if(document.hidden){resetRound();clear();} });
   window.addEventListener("pagehide", () => {resetRound();clear();});
   const veil = $("veilBattle");
-  if(veil && window.MutationObserver) new MutationObserver(() => { if(veil.hidden) resetRound(); }).observe(veil, {attributes:true, attributeFilter:["hidden"]});
+  if(veil && window.MutationObserver) new MutationObserver(() => { if(veil.hidden){resetRound();if(window.DungeonGPU)DungeonGPU.endBattle();} }).observe(veil, {attributes:true, attributeFilter:["hidden"]});
+  if(window.DungeonGPU)DungeonGPU.registerFx(shapes);
   window.DungeonFX = api;
 })();
