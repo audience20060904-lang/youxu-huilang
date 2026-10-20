@@ -7,7 +7,7 @@ const {c,reset,definitions}=new Function('require','__dirname',setup+'\nreturn {
 vm.runInContext(read('dungeon-rooms.js'),c);const R=c.DungeonRooms;let groups=0;
 function check(name,fn){fn();groups++;console.log('PASS '+name);}
 const nodes={};function el(id){return nodes[id]||(nodes[id]={id,hidden:true,innerHTML:'',textContent:'',children:[],dataset:{},style:{},listeners:{},classList:{add(){},remove(){},toggle(){},contains(){return false}},setAttribute(k,v){this[k]=v},addEventListener(k,f){this.listeners[k]=f},appendChild(x){this.children.push(x)},focus(){}});}
-c.$=el;c.document={createElement:()=>({hidden:false,children:[],dataset:{},style:{},listeners:{},classList:{add(){},remove(){}},setAttribute(k,v){this[k]=v},addEventListener(k,f){this.listeners[k]=f},appendChild(x){this.children.push(x)}})};
+c.$=el;c.document={createElement:tag=>({tagName:tag.toUpperCase(),hidden:false,children:[],dataset:{},style:{},listeners:{},classList:{add(){},remove(){}},setAttribute(k,v){this[k]=v},addEventListener(k,f){this.listeners[k]=f},appendChild(x){this.children.push(x)},focus(){this.focused=(this.focused||0)+1}})};
 Object.assign(c,{SCENE:'run',pendingLoot:null,pendingSwap:null,pendingRoom:null,comboShown:null,DungeonScene:{},resetHpFx(){},fov(){},buildGrid(){},commit(){},commitPerm(){},heroSnapFloor(){},tip(){},blessSet(){},coopMyName:'Test'});
 function room(id,opt={}){reset(opt.relics||[],{chapter:opt.chapter||1,floor:opt.floor||2,level:opt.level||10,player:opt.player||{}});c.P.roomRun={seed:opt.seed==null?77:opt.seed,history:[],boons:{},materials:0};c.G.routeRoom=R.enter(c.P,c.G.floor,false,id);c.G.roomPersonal={};c.G.roomExtraRedraw=0;c.B=null;c.genRouteRoom();c.roomApplyEntry();return c.roomConfig();}
 function clear(){c.G.mobs=[];}
@@ -21,6 +21,25 @@ check('All twenty proposed rooms have real configurations, readable bilingual pr
 check('Three distinct doors are deterministic, avoid the last two rooms, cover all twenty types and bypass bosses/study/tutorial',()=>{
  const seen=new Set();for(let seed=1;seed<=800;seed++){const p={roomRun:{seed,history:[]}};const a=R.offers(p,2,false);assert.equal(new Set(a).size,3);assert.deepEqual(plain(R.offers(p,2,false)),plain(a));a.forEach(id=>seen.add(id));p.roomRun.history=[{floor:1,id:a[0]},{floor:2,id:a[1]}];assert(R.offers(p,3,false).every(id=>!a.slice(0,2).includes(id)));}
  assert.equal(seen.size,20);assert.equal(R.offers({},10,true).length,0);assert.equal(R.offers({study:true},2,false).length,0);assert.equal(R.offers({tut:true},2,false).length,0);
+});
+check('All eight temporary room modifiers have separate readable chips; previews match entry and never change the selected route',()=>{
+ room('outpost');const original=c.roomPlan,seen=new Set(),history=JSON.stringify(c.P.roomRun);el('veilStair').hidden=false;
+ try{for(let seed=1;seed<=100;seed++){
+  const plan={floor:3,seed,ids:['library','cursed','prison'],selected:'library',rev:7},before=JSON.stringify(plan);c.roomPlan=()=>plan;el('roomRoutes').children=[];c.renderRoomRoutes();
+  const option=el('roomRoutes').children[1],main=option.children[0],chip=option.children[1].children[1],expected=R.enter({roomRun:{seed,history:[]}},3,false,'cursed').curse,affix=c.DungeonRules.affixById[expected];seen.add(expected);
+  assert.equal(main.tagName,'BUTTON');assert(!main.innerHTML.includes('<button'));assert(!main.innerHTML.includes('词条：'));assert.equal(chip.textContent,affix.n+' ⓘ');assert.equal(chip.title,affix.pw);assert.equal(chip['aria-controls'],'veilDungeonRules');chip.listeners.click();
+  assert.equal(c.anyVeil().id,'veilDungeonRules');assert.equal(el('rulesTitle').textContent,affix.n);assert(el('rulesList').innerHTML.includes(affix.pw));assert.equal(JSON.stringify(plan),before);assert.equal(JSON.stringify(c.P.roomRun),history);c.closeDungeonRules();assert(!el('veilStair').hidden);assert.equal(chip.focused,1);
+ }
+ assert.equal(seen.size,8);assert(seen.has('reprisal'));
+ }finally{c.roomPlan=original;c.closeDungeonRules();el('veilStair').hidden=true;}
+});
+check('Peers and ready hosts may read room modifiers without selecting doors, sending readiness or losing the stair screen',()=>{
+ const original=c.roomPlan;
+ try{for(const host of [false,true]){
+  room('outpost');let sent=0;c.COOP=true;c.window.NET=true;c.NET={isHost:()=>host,send:()=>sent++};const plan={floor:3,seed:77,ids:['library','cursed','prison'],selected:'library',rev:9,ready:host};c.roomPlan=()=>plan;el('veilStair').hidden=false;el('roomRoutes').children=[];c.renderRoomRoutes();
+  const option=el('roomRoutes').children[1],main=option.children[0],chip=option.children[1].children[1],before=JSON.stringify(plan);assert(main.disabled);assert(!chip.disabled);main.listeners.click();chip.listeners.click();assert.equal(JSON.stringify(plan),before);assert.equal(sent,0);
+  chip.isConnected=false;let focused=0;const focus=el('btnStairStay').focus;el('btnStairStay').focus=()=>focused++;c.closeDungeonRules();assert.equal(focused,1);el('btnStairStay').focus=focus;assert(!el('veilStair').hidden);
+ }}finally{c.roomPlan=original;c.COOP=false;c.window.NET=undefined;c.closeDungeonRules();el('veilStair').hidden=true;}
 });
 check('Every generated room is connected, stays inside the existing map and has nonoverlapping reachable guards and resources',()=>{
  for(const r of R.items){room(r.id);const walk=new Set(),todo=[[c.P.x,c.P.y]];while(todo.length){const [x,y]=todo.pop(),key=x+','+y;if(walk.has(key)||!c.G.map[y]?.[x])continue;walk.add(key);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])todo.push([x+dx,y+dy]);}

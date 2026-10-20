@@ -698,9 +698,15 @@ button:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .rule-card b{font-size:13px;color:var(--bone)}.rule-card p{font-size:12px;line-height:1.6;margin:5px 0;color:var(--dim)}.rule-card small{font-size:11px;color:var(--faint)}
 .rule-card summary{font-size:12px;color:var(--torch);cursor:pointer}
 #veilDungeonRules{z-index:55}
+.room-affix-reader > .sheet.tall{height:auto;max-height:min(460px, calc(100dvh - 28px))}
 .rule-card.affix{border-left:3px solid #8D5879}
 .room-label{pointer-events:auto;align-self:flex-start;max-width:180px;min-height:25px;padding:2px 8px;margin-top:3px;border:1px solid var(--edge);border-radius:4px;color:var(--torch-deep);background:var(--stone);font:11px var(--body);cursor:pointer}
 .room-routes,.room-event-choices{display:flex;flex-direction:column;gap:9px;padding:2px}
+.room-route-option{flex:none;display:flex;flex-direction:column;gap:6px;min-width:0}
+.room-route-modifiers{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 8px 3px}
+.room-route-modifiers > span{font-size:11px;color:var(--faint)}
+.room-affix-chip{min-height:32px;padding:3px 10px;border:1px solid #AF91AD;border-radius:5px;background:#F0E6ED;color:#74496C;font:12px var(--body);white-space:nowrap;cursor:pointer}
+.room-affix-chip:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
 .room-route-card,.room-event-choice{flex:none;width:100%;text-align:left;border:1px solid var(--edge);border-radius:9px;background:var(--stone-2);color:var(--bone);font-family:var(--body);cursor:pointer;line-height:1.5}
 .room-route-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:center;min-height:111px;padding:12px}
 .room-route-card.selected{border:2px solid var(--torch);background:#F7EDD3;padding:11px;box-shadow:inset 0 0 0 1px #D5B56B}

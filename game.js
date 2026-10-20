@@ -781,13 +781,24 @@ function renderRoomRoutes(){
   box.hidden=!roomOn()||boss;box.innerHTML="";if(box.hidden)return;
   if(!plan){box.textContent=L("等待房主展示三个入口…","Waiting for the host's three doors…");$("btnStairGo").disabled=true;return;}
   const readonly=COOP&&!coopIsHost();
-  for(const id of plan.ids){const r=DungeonRooms.byId[id];if(!r)continue;const card=document.createElement("button");card.type="button";card.className="room-route-card"+(plan.selected===id?" selected":"");card.disabled=readonly||!!plan.ready;card.setAttribute("aria-pressed",String(plan.selected===id));
-    let danger=r.danger;if(id==="cursed"){const copy={roomRun:{seed:plan.seed,history:[]}},m=DungeonRooms.enter(copy,plan.floor,false,id);danger+=L(" 词条："," Modifier: ")+DungeonRules.affixById[m.curse].n;}
-    card.innerHTML='<span class="room-door">'+DungeonRooms.icon(id)+'</span><span><small>'+r.tag+'</small><b>'+r.n+'</b><span>'+danger+'</span><em>'+r.reward+'</em></span>';
-    card.addEventListener("click",function(){if(plan.ready)return;plan.selected=id;plan.rev=(plan.rev||0)+1;renderRoomRoutes();if(COOP)coopSendMe();});box.appendChild(card);
+  for(const id of plan.ids){const r=DungeonRooms.byId[id];if(!r)continue;const option=document.createElement("div");option.className="room-route-option";
+    const card=document.createElement("button");card.type="button";card.className="room-route-card"+(plan.selected===id?" selected":"");card.disabled=readonly||!!plan.ready;card.setAttribute("aria-pressed",String(plan.selected===id));
+    card.innerHTML='<span class="room-door">'+DungeonRooms.icon(id)+'</span><span><small>'+r.tag+'</small><b>'+r.n+'</b><span>'+r.danger+'</span><em>'+r.reward+'</em></span>';
+    card.addEventListener("click",function(){if(card.disabled||plan.ready)return;plan.selected=id;plan.rev=(plan.rev||0)+1;renderRoomRoutes();if(COOP)coopSendMe();});option.appendChild(card);
+    if(id==="cursed"){const copy={roomRun:{seed:plan.seed,history:[]}},m=DungeonRooms.enter(copy,plan.floor,false,id),affix=DungeonRules.affixById[m.curse];
+      if(affix){const row=document.createElement("div"),label=document.createElement("span"),button=document.createElement("button");row.className="room-route-modifiers";label.textContent=L("房间词缀","Room modifier");button.type="button";button.className="room-affix-chip";button.textContent=affix.n+" ⓘ";button.title=affix.pw;button.setAttribute("aria-label",affix.n+L(" · 查看词缀说明"," · Read modifier details"));button.setAttribute("aria-haspopup","dialog");button.setAttribute("aria-controls","veilDungeonRules");
+        button.addEventListener("click",function(){openRoomAffix(affix.id,button);});row.appendChild(label);row.appendChild(button);option.appendChild(row);}
+    }
+    box.appendChild(option);
   }
   $("btnStairGo").disabled=!plan.selected||!!plan.ready;
   $("btnStairGo").textContent=plan.ready?L("等待队友确认…","Waiting for teammate…"):readonly?L("确认房主选择 ▼","Confirm host's choice ▼"):L("进入所选房间 ▼","Enter selected room ▼");
+}
+function openRoomAffix(id,trigger){
+  const affix=typeof DungeonRules!=="undefined"&&DungeonRules.affixById[id];if(!affix||$("veilStair").hidden)return;
+  openDungeonRules();$("rulesEyebrow").textContent=L("房间词缀","Room modifier");$("rulesTitle").textContent=affix.n;
+  $("rulesList").innerHTML='<article class="rule-card affix"><b>'+affix.n+' ×1</b><p>'+affix.pw+'</p><small>'+L("仅在所选房间这一层生效，不加入无尽累计词缀。","Applies only on the chosen room floor; does not enter the cumulative Endless modifier pool.")+'</small></article>';
+  const reader=$("veilDungeonRules");reader._roomAffix=true;reader._returnFocus=trigger;reader.classList.add("room-affix-reader");$("btnCloseDungeonRules").focus();
 }
 function roomPrepareFloor(){
   if(!roomOn())return;
@@ -2587,6 +2598,7 @@ function stepAside(){
 }
 function closeStair(go){
   if(go&&roomOn()&&!isBossFloor(G.floor+1)&&!(roomPlan()&&roomPlan().selected)){renderRoomRoutes();return;}
+  if($("veilDungeonRules")._roomAffix)closeDungeonRules();
   if(!go)roomCancelReady();
   $("veilStair").hidden = true;
   G.paused = false;
@@ -7591,6 +7603,7 @@ function renderDungeonRules(){
   const button=$("btnDungeonRules");if(button){const count=Object.values(endlessMods()).reduce((a,b)=>a+b,0),flows=Object.keys(DungeonRules.flows).filter(f=>DungeonRules.items.some(r=>r.flow===f&&hasRelic(r.id))).length;button.hidden=!(count||flows||roomMeta()||roomHasBenefits());button.textContent=roomMeta()||roomHasBenefits()?L("旅途 · 流派与词条","Journey · builds & modifiers"):L("流派 ","Builds ")+flows+(count?L(" · 词条 "," · Modifiers ")+count:"");}
 }
 function openDungeonRules(){
+  const reader=$("veilDungeonRules");reader._roomAffix=false;reader._returnFocus=null;reader.classList.remove("room-affix-reader");
   const expand=$("btnExpandStatus");if(expand&&expand.setAttribute)expand.setAttribute("aria-expanded","false");
   const eyebrow=$("rulesEyebrow");if(eyebrow)eyebrow.textContent=L("战斗机制","Combat mechanics");
   $("rulesTitle").textContent=L("流派与无尽词条","Builds & Endless modifiers");
@@ -7599,10 +7612,13 @@ function openDungeonRules(){
   if(B&&B.q&&!B.locked&&!B.rulesReadAt)B.rulesReadAt=Date.now();
 }
 function closeDungeonRules(){
-  $("veilDungeonRules").hidden=true;
+  const reader=$("veilDungeonRules"),trigger=reader._returnFocus,roomAffix=reader._roomAffix;reader.hidden=true;reader._returnFocus=null;reader._roomAffix=false;reader.classList.remove("room-affix-reader");
   if(B&&B.rulesReadAt){const elapsed=Math.max(0,Date.now()-B.rulesReadAt);B.qAt+=elapsed;B.rulesReadMs=(B.rulesReadMs||0)+elapsed;delete B.rulesReadAt;}
   const expand=$("btnExpandStatus"),restore=expand&&expand.getAttribute&&expand.getAttribute("aria-expanded")==="true";
-  if(expand&&expand.setAttribute)expand.setAttribute("aria-expanded","false");if(restore&&SCENE==="run"&&expand.focus)expand.focus();
+  if(expand&&expand.setAttribute)expand.setAttribute("aria-expanded","false");
+  if(trigger&&trigger.isConnected!==false&&trigger.focus)trigger.focus();
+  else if(roomAffix&&!$("veilStair").hidden&&$("btnStairStay").focus)$("btnStairStay").focus();
+  else if(restore&&SCENE==="run"&&expand.focus)expand.focus();
 }
 function statusN(owner,key){
   if(RMASK && (RMASK==="all" || RMASK["@status"]))return 0;

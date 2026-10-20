@@ -5,7 +5,7 @@ const setup=read('dev/check-dungeon-builds.js').split("check('Twelve appended")[
 const {c,reset}=new Function('require','__dirname',setup+'\nreturn {c,reset};')(require,__dirname);
 vm.runInContext(read('dungeon-rooms.js'),c);let groups=0;
 function check(name,fn){fn();groups++;console.log('PASS '+name);}
-const nodes={};function el(id){return nodes[id]||(nodes[id]={id,hidden:true,attrs:{},style:{setProperty(k,v){this[k]=v}},textContent:'',_html:'',writes:0,get innerHTML(){return this._html},set innerHTML(v){this._html=v;this.writes++},classList:{contains(){return false}},setAttribute(k,v){this.attrs[k]=v},getAttribute(k){return this.attrs[k]},focus(){this.focused=(this.focused||0)+1}});}
+const nodes={};function el(id){return nodes[id]||(nodes[id]={id,hidden:true,attrs:{},style:{setProperty(k,v){this[k]=v}},textContent:'',_html:'',writes:0,get innerHTML(){return this._html},set innerHTML(v){this._html=v;this.writes++},classList:{add(){},remove(){},contains(){return false}},setAttribute(k,v){this.attrs[k]=v},getAttribute(k){return this.attrs[k]},focus(){this.focused=(this.focused||0)+1}});}
 reset([],{floor:2});c.SCENE='run';c.B=null;c.P.roomRun={seed:77,history:[]};c.G.routeRoom=c.DungeonRooms.enter(c.P,2,false,'market');c.G.roomPersonal={};c.$=el;c.L=(a,b)=>c.UI_EN?b:a;
 check('The footer shows current room and real status stacks, removes expired effects and caches repeated renders',()=>{
  c.P.status={drain:4,weak:2};const before=JSON.stringify({p:c.P,g:c.G});c.renderMapStatus();c.renderMapStatus();
