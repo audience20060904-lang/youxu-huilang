@@ -14,7 +14,7 @@ for(const match of source.matchAll(/^function (\w+)\(/gm)){
 const nodes={};let visual=[],interval=null,now=10000;
 function node(id){return nodes[id]||(nodes[id]={id,hidden:true,innerHTML:'',textContent:'',children:[],style:{},classList:{add(){},remove(){},toggle(){},contains(){return false}},appendChild(){}});}
 Object.assign(c,{AMP_OFF:false,RMASK:null,COOP:false,FLOORS:c.CHAPTER.floors,W:c.CHAPTER.W,H:c.CHAPTER.H,RELIC_MAX:15,RELIC_IDX:null,HR:null,hitLost:0,
- ST_KEYS:['atk','maxHp','def','defGear','crit','hpAdd'],PART_KEYS:['atk','pct','flat','extra','cm','def','cut'],LEX:{},MET:{},CODEX:{},TOWN:{hero:{own:{}}},OPT:{},lastDmgRec:null,lastHurtRec:null,
+ ST_KEYS:['atk','maxHp','def','defGear','crit','hpAdd'],PART_KEYS:['atk','pct','flat','extra','cm','def','cut'],LEX:{},MET:{},CODEX:{},TOWN:{hero:{own:{}}},OPT:{},lastDmgRec:null,lastHurtRec:null,pendingRoom:null,
  $:node,document:{createElement:()=>node('new')},clearQTimer(){},setTimeout(){},setInterval:f=>{interval=f;return 1},clearInterval(){interval=null},qTimer:null,
  pick:a=>a[Math.floor(c.Math.random()*a.length)],ri:(a,b)=>a+Math.floor(c.Math.random()*(b-a+1)),chapterPos:()=>['noun'],blessBanned:()=>false,blessFavored:()=>false,blessPick:a=>a[Math.floor(c.Math.random()*a.length)],
  say(){},floatNum(){},hurtRow(){},hurtSplit(){},flaskDrink(){},renderHud(){},renderBattleBars(){},renderCombatFeedback(){},render(){},fxLevelUp(){},cancelWalk(){},autoOff(){},fxKill(){},lockInput(){},tutEvent(){},maybeRelic(){},fxRelic(){},markNewRelic(){},blessNoteGot(){},

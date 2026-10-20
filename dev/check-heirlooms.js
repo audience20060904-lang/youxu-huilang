@@ -79,7 +79,7 @@ check('Actual mitigation consumes exactly one stored guard before shields or dod
 });
 check('Actual floor-entry settlement grants heirloom resources to an unrelated hero before saving',()=>{
  const r=H.items.find(r=>r.heroOnly==='heir'&&r.r===3);c.P={hero:'adv',hp:100,relics:[r.id],status:{}};c.G={floor:2,mobs:[]};c.stats=()=>({atk:100,maxHp:100});
- let saved=0;Object.assign(c,{sayFloorIntro(){},clampShield(){},heroSnapFloor(){},commit(){saved=c.P.heirGuard;}});
+ let saved=0;Object.assign(c,{sayFloorIntro(){},clampShield(){},heroSnapFloor(){},roomResumeUI(){},commit(){saved=c.P.heirGuard;}});
  const start=source.indexOf('  sayFloorIntro();',source.indexOf('function nextFloor(')),end=source.indexOf('  const lk =',start);assert(start>0&&end>start);
  vm.runInContext(source.slice(start,end),c);assert.equal(c.P.heirGuard,1);assert.equal(saved,1);assert.equal(c.P.status.renew,2);
 });

@@ -4,8 +4,8 @@
 <title>幽墟回廊 · 联机</title>
 <!-- 装饰字体不阻塞手机首屏；网络不可用时使用系统字体。 -->
 <link rel="stylesheet" data-optional-font media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Spectral:ital,wght@1,400&display=swap">
-<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-affixes50">
-<script src="preload.js?v=20261020-affixes50" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
+<link rel="stylesheet" id="gameStyle" href="style.css?v=20261020-rooms1">
+<script src="preload.js?v=20261020-rooms1" defer onerror="document.getElementById('loadStatus').textContent='加载失败，请重试。';document.getElementById('loadRetry').hidden=false"></script>
 <div class="game-loader" id="gameLoader" role="status" aria-live="polite" aria-label="正在加载游戏">
   <div class="loader-emblem" aria-hidden="true">◇</div><h1>幽墟回廊</h1><p id="loadStatus">正在准备资源</p>
   <progress id="loadProgress" max="23" value="0" aria-label="资源准备进度"></progress><span id="loadCount">0%</span>
@@ -127,6 +127,7 @@
             </div>
             <div class="xpbar"><div class="fill" id="xpFill"></div></div>
             <div class="map-statuses" id="mapStatuses" aria-label="当前祝福与负面状态" hidden></div>
+            <button class="room-label" id="roomLabel" type="button" hidden aria-label="查看当前房间详情"></button>
           </div>
           <!-- 联机独有：队友状态条（血/连击/遗物数），index.html 里没有这一块 -->
           <div class="hudline mateline" id="mateRow" hidden>
@@ -491,10 +492,11 @@
 </div>
 
 <div class="veil" id="veilStair" hidden>
-  <div class="sheet">
+  <div class="sheet tall route-sheet">
     <div class="eyebrow" id="stairEyebrow">石廊 第 1 层 · 已清空</div>
     <h2 id="stairTitle">阶梯通向第 2 层</h2>
     <p class="note" id="stairNote">下去之后<b>这一层不会再回来</b>。进下一层时会存一次档。</p>
+    <div class="room-routes sx" id="roomRoutes" aria-label="选择下一层房间" hidden></div>
     <div class="rowb">
       <button class="btn ghost" id="btnStairStay" type="button">再待一会儿</button>
       <span class="sp"></span>
@@ -650,6 +652,15 @@
 </div>
 
 <!-- 构成（2026-09-26）：上一刀 / 上一口是谁贡献的，top10 占比 -->
+<div class="veil" id="veilRoomEvent" hidden>
+  <div class="sheet tall">
+    <div class="eyebrow">幽墟岔路</div><h2 id="roomEventTitle">房间事件</h2>
+    <p class="note" id="roomEventNote"></p>
+    <div class="room-event-choices sx" id="roomEventChoices"></div>
+    <div class="rowb"><span class="sp"></span><button class="btn primary" id="btnRoomEventClose" type="button">离开 · 保留已有选择</button></div>
+  </div>
+</div>
+
 <div class="veil" id="veilDungeonRules" hidden>
   <div class="sheet tall">
     <div class="eyebrow">战斗机制</div><h2 id="rulesTitle">流派与无尽词条</h2>

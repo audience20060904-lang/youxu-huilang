@@ -359,6 +359,7 @@ function newRun(){
   heroStart();                // 角色：出战的那个人定死在 P 上（一趟一个人）
   if(P.study){ P.diff = DIFF_DEFAULT; P.hp = STUDY_HP; }   // 不选难度等级；生命从满的 100 起
   G = { floor:0, paused:false, over:false };
+  if(typeof DungeonRooms!=="undefined")P.roomRun={seed:Math.floor(Math.random()*4294967296),history:[],boons:{},materials:0};
   P.hp=stats().maxHp;           // 包含出战角色的生命加成，从满血开始。
   newRelics = [];
   comboShown = null;          // 连击动效的基准，新的一趟从头算（不然第一场会白播一次「掉了」）
@@ -568,6 +569,7 @@ function statsRaw(){
   const pb = CHAPTER.playerBase, pl = CHAPTER.perLevel;
   const s = {atk: pb.atk + (P.lvl-1) * pl.atk, def:0, crit:pb.crit,
              maxHp: pb.hp + (P.lvl-1) * pl.hp};
+  const roomBonus=roomBoonStats();s.atk+=roomBonus.atk;s.maxHp+=roomBonus.hp;s.def+=roomBonus.def;
   s.atk += Heirlooms.bonus(P,"atk",RMASK); s.maxHp += Heirlooms.bonus(P,"hp",RMASK);
   s.def += Heirlooms.bonus(P,"def",RMASK); s.crit += Heirlooms.bonus(P,"crit",RMASK);
   if(typeof DungeonRules!=="undefined"){s.atk+=DungeonRules.bonus(P,"atk",RMASK,hasRelic);s.maxHp+=DungeonRules.bonus(P,"hp",RMASK,hasRelic);s.def+=DungeonRules.bonus(P,"def",RMASK,hasRelic);s.crit+=DungeonRules.bonus(P,"crit",RMASK,hasRelic);}
@@ -743,6 +745,206 @@ function statsRaw(){
 /* 练习模式那一刀（+50 护甲、攻击减半）算不算：无尽 50 层往下 / 深渊不算（见 noShelterAt），
    纯净学习模式也不算 —— 那里的练习模式只表示「不掉血」（见 studyNoHurt）。*/
 function practiceStats(){ return !!(P && P.practice && !noShelter() && !P.study); }
+/* ================= 房间路线 ================= */
+function roomOn(){return typeof DungeonRooms!=="undefined"&&!!P&&!!G&&!P.tut&&!P.study;}
+function roomMeta(){return roomOn()&&DungeonRooms.valid(G.routeRoom,G.floor)?G.routeRoom:null;}
+function roomType(){const r=roomMeta();return r?r.actual:"";}
+function roomConfig(){return roomMeta()?DungeonRooms.byId[roomType()]:null;}
+function roomMobActive(m){return typeof DungeonRooms==="undefined"||!G||DungeonRooms.active(m,G.routeRoom);}
+function roomBoonStats(){
+  if(!roomOn())return {atk:0,hp:0,def:0};const b=P.roomRun&&P.roomRun.boons||{},pb=CHAPTER.playerBase,pl=CHAPTER.perLevel;
+  return {atk:Math.round((pb.atk+(P.lvl-1)*pl.atk)*.06*(b.atk||0)),hp:Math.round((pb.hp+(P.lvl-1)*pl.hp)*.08*(b.hp||0)),def:2*(b.def||0)};
+}
+function roomPlan(){
+  if(!roomOn()||isBossFloor(G.floor+1))return null;
+  const run=DungeonRooms.normalize(P),floor=G.floor+1;
+  if(COOP&&!coopIsHost())return P.roomPlan&&P.roomPlan.floor===floor?P.roomPlan:null;
+  const ids=DungeonRooms.offers(P,floor,false);
+  if(!P.roomPlan||P.roomPlan.floor!==floor||!Array.isArray(P.roomPlan.ids)||P.roomPlan.ids.join(",")!==ids.join(","))P.roomPlan={floor:floor,ids:ids,selected:null,seed:run.seed,rev:0};
+  return P.roomPlan;
+}
+function roomAcceptPlan(plan){
+  if(!roomOn()||coopIsHost()||!plan||plan.floor!==G.floor+1||!Array.isArray(plan.ids)||plan.ids.length!==3||new Set(plan.ids).size!==3||plan.ids.some(id=>!DungeonRooms.byId[id])||!Number.isFinite(plan.seed))return;
+  const selected=plan.ids.includes(plan.selected)?plan.selected:null,rev=Math.max(0,Math.floor(plan.rev||0)),old=P.roomPlan,changed=!old||old.selected!==selected||old.rev!==rev||old.ids.join(",")!==plan.ids.join(",");
+  const wasReady=!!P.floorReady,oldKey=P.floorReadyKey;DungeonRooms.normalize(P).seed=plan.seed>>>0;P.roomPlan={floor:plan.floor,ids:plan.ids.slice(),selected:selected,seed:plan.seed,rev:rev,ready:changed?false:wasReady};
+  if(changed){P.floorReady=false;P.floorReadyKey=null;if(wasReady&&oldKey)NET.send({t:"ready",what:oldKey,on:false});}
+  if(changed&&!$("veilStair").hidden)renderRoomRoutes();
+}
+function roomReadyKey(){const plan=roomPlan();return plan&&plan.selected?"floor:"+plan.floor+":"+DungeonRooms.hash([plan.seed,plan.rev||0,plan.ids.join(","),plan.selected].join(":")):"floor";}
+function roomCancelReady(){
+  if(!COOP||!window.NET)return;const key=P.floorReadyKey||roomReadyKey();P.floorReady=false;P.floorReadyKey=null;
+  if(P.roomPlan){P.roomPlan.ready=false;if(coopIsHost())P.roomPlan.rev=(P.roomPlan.rev||0)+1;}
+  NET.send({t:"ready",what:key,on:false});coopSendMe();
+}
+function renderRoomRoutes(){
+  const box=$("roomRoutes");if(!box)return;const plan=roomPlan(),boss=!!(P&&G&&isBossFloor(G.floor+1));
+  box.hidden=!roomOn()||boss;box.innerHTML="";if(box.hidden)return;
+  if(!plan){box.textContent=L("等待房主展示三个入口…","Waiting for the host's three doors…");$("btnStairGo").disabled=true;return;}
+  const readonly=COOP&&!coopIsHost();
+  for(const id of plan.ids){const r=DungeonRooms.byId[id];if(!r)continue;const card=document.createElement("button");card.type="button";card.className="room-route-card"+(plan.selected===id?" selected":"");card.disabled=readonly||!!plan.ready;card.setAttribute("aria-pressed",String(plan.selected===id));
+    let danger=r.danger;if(id==="cursed"){const copy={roomRun:{seed:plan.seed,history:[]}},m=DungeonRooms.enter(copy,plan.floor,false,id);danger+=L(" 词条："," Modifier: ")+DungeonRules.affixById[m.curse].n;}
+    card.innerHTML='<span class="room-door">'+DungeonRooms.icon(id)+'</span><span><small>'+r.tag+'</small><b>'+r.n+'</b><span>'+danger+'</span><em>'+r.reward+'</em></span>';
+    card.addEventListener("click",function(){if(plan.ready)return;plan.selected=id;plan.rev=(plan.rev||0)+1;renderRoomRoutes();if(COOP)coopSendMe();});box.appendChild(card);
+  }
+  $("btnStairGo").disabled=!plan.selected||!!plan.ready;
+  $("btnStairGo").textContent=plan.ready?L("等待队友确认…","Waiting for teammate…"):readonly?L("确认房主选择 ▼","Confirm host's choice ▼"):L("进入所选房间 ▼","Enter selected room ▼");
+}
+function roomPrepareFloor(){
+  if(!roomOn())return;
+  const run=DungeonRooms.normalize(P),plan=P.roomPlan,selected=plan&&plan.floor===G.floor?plan.selected:null;
+  G.routeRoom=DungeonRooms.enter(P,G.floor,isBossFloor(G.floor),selected);G.roomPersonal={};G.roomExtraRedraw=0;P.floorReady=false;P.floorReadyKey=null;delete P.roomPlan;
+  if(!G.routeRoom)return;
+  const bank=Math.max(0,run.redrawBank||0);G.roomExtraRedraw=bank;run.redrawBank=0;
+}
+function genRouteRoom(){
+  const r=roomConfig(),meta=roomMeta(),shape=DungeonRooms.shape(r.layout,W,H),random=DungeonRooms.rng(DungeonRooms.hash(P.roomRun.seed+":"+G.floor+":"+meta.actual));
+  G.map=shape.map;G.rooms=shape.rooms;G.seen=Array.from({length:H},()=>Array(W).fill(false));G.vis=Array.from({length:H},()=>Array(W).fill(false));G.mobs=[];G.things=[];P.x=shape.start.x;P.y=shape.start.y;G.stair=shape.center;
+  const cells=shape.walk.filter(c=>(c.x!==P.x||c.y!==P.y)&&(c.x!==shape.center.x||c.y!==shape.center.y));
+  const take=function(){return cells.length?cells.splice(Math.floor(random()*cells.length),1)[0]:null;};
+  let pool=FOES.filter(d=>!d.boss&&d.from<=G.floor);if(!pool.length)pool=[FOES[0]];
+  for(let i=0;i<r.mobs;i++){const pos=i===0?shape.center:take();if(!pos)break;const m=makeFoe(pool[Math.floor(random()*pool.length)],pos.x,pos.y);m.route={wave:r.id==="ambush"?1+Math.floor(i/2):1};
+    if(r.id==="elite"){m.hp=m.max=Math.round(m.max*3.5);m.dmg=Math.max(1,Math.round(m.dmg*1.25));m.armor+=2;m.route.name=L("祠堂精英 · ","Shrine elite · ")+m.name;}
+    if(r.id==="nest"){if(i===0){m.hp=m.max=Math.round(m.max*2.1);m.route.role="core";m.route.name=L("寄生巢核","Parasite core");}else{m.route.baseDmg=m.dmg;m.dmg=Math.round(m.dmg*1.25);}}
+    if(r.id==="bounty"&&i===0){m.hp=m.max=Math.round(m.max*1.5);m.route.role="bounty";m.route.name=L("悬赏 · ","Bounty · ")+m.name;}
+    if(m.route.name)m.name=m.route.name;G.mobs.push(m);
+  }
+  for(let i=0;i<3;i++){const pos=take();if(pos)G.things.push({x:pos.x,y:pos.y,kind:"gold",amt:Math.max(1,Math.round((3+G.floor)*CHAPTER.goldMult))});}
+  const feature=r.feature||r.event||r.entry;
+  if(feature){const pos=take();if(pos)G.things.push({x:pos.x,y:pos.y,kind:"route",event:feature});}
+  if(hasRelic("hoardbox")){const pos=take();if(pos)G.things.push({x:pos.x,y:pos.y,kind:"chest"});}
+  if(hasRelic("shrine")&&G.floor>=ALTAR_FROM){const pos=take();if(pos)G.things.push({x:pos.x,y:pos.y,kind:"altar"});}
+}
+function roomApplyEntry(){
+  if(!roomMeta())return;const p=G.roomPersonal||(G.roomPersonal={});if(p.entered)return;p.entered=true;
+  if(roomType()==="rift")P.shield=Math.min(shieldCap(),(P.shield||0)+Math.round(stats().maxHp*.12));
+}
+function roomLoans(id){const r=roomConfig();return !!(r&&r.loans&&r.loans.includes(id));}
+function roomRewardMult(kind){const r=roomConfig();return r?(r[kind]||1)*(kind==="gold"&&roomMeta().id==="mystery"?1.25:1):1;}
+function roomBattle(m){
+  if(!roomOn()||!B)return;const run=DungeonRooms.normalize(P),saved=m.roomPlayer||(m.roomPlayer={});
+  if(!saved.entered){saved.entered=true;if(run.companion&&run.companion.left>0){saved.companion=run.companion.kind;run.companion.left--;}
+    if(run.battleBless&&run.battleBless.left>0){statusGain(P,run.battleBless.key,2);run.battleBless.left--;}
+    if(run.aidShield){P.shield=Math.min(shieldCap(),(P.shield||0)+Math.round(stats().maxHp*run.aidShield));run.aidShield=0;}
+    if(run.deepDrink){statusGain(P,"weak",2);statusGain(P,"exposed",1);run.deepDrink=false;}
+    if(saved.companion==="ward")P.shield=Math.min(shieldCap(),(P.shield||0)+Math.round(stats().maxHp*.2));
+  }
+  B.roomPet=saved.companion==="claw"||!!(roomType()==="pack"&&G.roomPersonal.petFreed);
+  if(B.roomPet&&!saved.petOpened){saved.petOpened=true;roomPetHit(m,true);}
+}
+function roomPetHit(m,opening){
+  if(!B||!B.roomPet||P.hp<=0||m.hp<=0)return;let dmg=wagerScale(Math.max(1,Math.round(stats().atk*.25)),false);if(opening)dmg=Math.min(dmg,m.hp-1);if(dmg<=0)return;
+  coopDealDamage(m,dmg);queueVisualHit("tamer","pet",dmg);buildEvent("summon",{mob:m,hits:1,wasAlive:true});
+  if(!opening&&lastDmgRec)lastDmgRec.more.push(["@room",dmg]);
+}
+function roomAnswer(ok,m,review){
+  if(!roomOn())return;
+  if(roomType()==="memory"&&ok&&review){const p=G.roomPersonal;p.reviews=Math.min(3,(p.reviews||0)+1);}
+  if(ok)roomPetHit(m,false);
+}
+function roomWorldDead(m){
+  const meta=roomMeta();if(!meta||!m)return;const state=meta.state||(meta.state={}),key=m.x+","+m.y;state.killed=state.killed||[];if(state.killed.includes(key))return;
+  state.killed.push(key);if(state.killed.length===1)state.bountyFirst=!!(m.route&&m.route.role==="bounty");
+  if(roomType()==="nest"&&m.route&&m.route.role==="core"){state.coreDead=true;for(const foe of G.mobs)if(foe.route&&foe.route.baseDmg)foe.dmg=foe.route.baseDmg;}
+  if(roomType()==="bleed")for(const foe of G.mobs)if(foe!==m&&foe.hp>0&&roomMobActive(foe))statusGain(foe,"bleed",2);
+  if(roomType()==="ambush"){
+    const left=G.mobs.filter(foe=>foe!==m&&foe.hp>0&&!state.killed.includes(foe.x+","+foe.y)),wave=left.length?Math.min(...left.map(foe=>foe.route.wave)):3;
+    if(wave>meta.wave){meta.wave=wave;G.roomPersonal.pendingWave=wave;autoOff();}
+  }
+}
+function roomAfterKill(m){
+  if(!roomMeta())return;roomWorldDead(m);const p=G.roomPersonal,meta=roomMeta();
+  if(roomType()==="bounty"&&meta.state.bountyFirst&&!p.bountyClaimed){p.bountyClaimed=true;earnGold(20+G.floor*4);healUp(Math.round(stats().maxHp*.1));say(L("悬赏完成。","Bounty complete."),"good");}
+  if(!G.mobs.length&&!p.clearClaimed){p.clearClaimed=true;if(roomType()==="elite")G.roomExtraRedraw=(G.roomExtraRedraw||0)+1;if(roomType()==="ambush")earnGold(20+G.floor*3);}
+}
+function roomNeedsEvent(){
+  const r=roomConfig();if(!r)return "";const p=G.roomPersonal||(G.roomPersonal={});
+  if(p.pendingWave)return "wave";if(r.entry&&!p.eventResolved)return r.entry;if(!G.mobs.length&&r.event&&!p.eventResolved)return r.event;return "";
+}
+function roomResumeUI(){
+  if(!roomMeta())return;roomApplyEntry();if(!G.mobs.length)roomAfterKill(null);const event=roomNeedsEvent();if(event)openRoomEvent(event);
+}
+function roomEventChoices(event){
+  const s=stats(),run=DungeonRooms.normalize(P),p=G.roomPersonal,choices=[],add=(id,name,desc,disabled)=>choices.push({id,name,desc,disabled:!!disabled});
+  if(event==="camp"){add("camp:heal",L("靠近余烬","Rest by the embers"),L("回复 35% 最大生命。","Heal 35% max HP."));add("camp:clean",L("整理伤口","Tend wounds"),L("移除全部负面状态，回复 12% 最大生命。","Remove all debuffs and heal 12% max HP."));add("camp:ward",L("准备防具","Prepare armor"),L("下一场新敌人的战斗获得 25% 最大生命护盾。","Gain 25% max HP shield against the next new foe."));}
+  if(event==="spring"){add("spring:drink",L("普通饮用","Drink"),L("回复 25% 最大生命。","Heal 25% max HP."));add("spring:deep",L("冒险深饮","Drink deeply"),L("回复 55% 最大生命；下一场新敌人的战斗施加自身衰弱 2 层、破绽 1 层。","Heal 55% max HP; gain 2 Weakness and 1 Exposed against the next new foe."));}
+  if(event==="vault"){add("vault:gold",L("沉重钱匣","Coin chest"),(30+G.floor*8)+L(" 金币。"," gold."));add("vault:xp",L("刻字铜匣","Inscribed chest"),L("获得本级升级需求 25% 的经验。","Gain 25% of this level's required XP."));add("vault:supply",L("补给木匣","Supply chest"),L("回复 25% 最大生命，获得 15% 最大生命护盾。","Heal 25% max HP and gain 15% max HP shield."));}
+  if(event==="forge")add("forge:ward",L("启用补盾锻台","Use the shield forge"),L("本层一次：获得 25% 最大生命护盾。","Once this floor: gain 25% max HP shield."),p.forgeUsed);
+  if(event==="pack")add("pack:free",L("解开兽灵的锁链","Free the beast spirit"),L("本层每场首次宠物攻击及每次答对，伙伴造成攻击力 25% 的独立伤害；开场最低留敌人 1 生命。","A companion deals 25% ATK on first entry and each right answer this floor; opening hits leave 1 foe HP."));
+  if(event==="wheel")for(const key of ["stone","fury","renew","ward"])add("wheel:"+key,statusLabel(key),L("获得 4 层；最多激活两种不同碑文。","Gain 4 stacks; activate at most two different steles."),(p.steles||[]).includes(key));
+  if(event==="library")for(const key of ["clarity","edge","echo"])add("library:"+key,statusLabel(key),L("接下来两场不同敌人的战斗，开场获得 2 层。","Gain 2 stacks on entry against the next two different foes."));
+  if(event==="memory")add("memory:claim",L("领取复习补给","Take review supplies"),L("本层有效复习 ","Successful reviews: ")+(p.reviews||0)+L(" / 3；回复 "," / 3; heal ")+(5*(p.reviews||0))+L("% 最大生命。","% max HP."));
+  if(event==="prison"){add("prison:claw",L("解救爪灵","Free the claw spirit"),L("接下来 3 场不同敌人的战斗，伙伴开场与每次答对造成攻击力 25% 的独立伤害。","For the next 3 different foes, a companion attacks for 25% ATK on entry and right answers."));add("prison:ward",L("解救护灵","Free the ward spirit"),L("接下来 3 场不同敌人的战斗，开场获得 20% 最大生命护盾。","Gain 20% max HP shield on entry against the next 3 different foes."));}
+  if(event==="wave"){add("wave:go",L("继续前进","Continue"),L("下一批敌人已出现。","The next wave has appeared."));add("wave:prepare",L("花费金币整备","Pay for preparation"),(10+G.floor)+L(" 金币：获得 12% 最大生命护盾。"," gold: gain 12% max HP shield."),P.gold<10+G.floor);}
+  if(event==="shrine"){
+    add("shrine:hp",L("献出生命","Offer HP"),L("失去 10% 最大生命；本局基础攻击 +6%，最多 3 次。","Lose 10% max HP; base ATK +6% this run, cap 3."),P.hp<=Math.ceil(s.maxHp*.1)||run.boons.atk>=3);
+    add("shrine:gold",L("献出金币","Offer gold"),(15+G.floor*3)+L(" 金币：本局基础最大生命 +8%，最多 3 次。"," gold: base max HP +8% this run, cap 3."),P.gold<15+G.floor*3||run.boons.hp>=3);
+    for(const id of P.relics.filter(id=>!relicById(id).heroOnly))add("shrine:relic:"+id,L("献出 ","Offer ")+relicById(id).n,L("本局护甲 +2，最多 3 次。","Armor +2 this run, cap 3."),run.boons.def>=3);
+  }
+  if(event==="market"){
+    add("market:browse",L("查看黑市货架","Browse the market"),L("额外八折，最终价格高于分解价。","Extra 20% discount; price remains above dismantle value."));
+    const rarity=G.floor%4;for(const id of P.relics.filter(id=>!relicById(id).heroOnly&&relicRar(id)===rarity))add("market:sell:"+id,L("黑市收购 · ","Wanted · ")+relicById(id).n,L("本层一次，售价 ","Once this floor, price ")+Math.ceil(sellPrice(relicById(id))*1.5)+L(" 金币。"," gold."),p.marketSold);
+  }
+  if(event==="workshop"){
+    for(const id of P.relics.filter(id=>!relicById(id).heroOnly))add("workshop:salvage:"+id,L("拆解 ","Salvage ")+relicById(id).n,L("获得 ","Gain ")+(relicRar(id)+1)+L(" 材料，不额外获得分解金币；本层最多 2 件。"," materials, no dismantle gold; at most 2 items this floor."),(p.salvaged||0)>=2);
+    add("workshop:redraw",L("材料换重抽","Trade for a redraw"),L("消耗 2 材料；本层清层重抽 +1。","Spend 2 materials for one floor-reward redraw."),run.materials<2);
+    add("workshop:heal",L("材料换补给","Trade for supplies"),L("消耗 1 材料；回复 25% 最大生命。","Spend 1 material; heal 25% max HP."),run.materials<1);
+    add("workshop:gold",L("材料换金币","Trade for gold"),L("消耗 1 材料；获得 ","Spend 1 material; gain ")+(10+G.floor*3)+L(" 金币。"," gold."),run.materials<1);
+  }
+  return choices;
+}
+function openRoomEvent(event){
+  if(!roomMeta()||B||P.hp<=0)return;if(G.roomPersonal.eventResolved&&!["forge","wave","market"].includes(event))return;G.paused=true;G.roomEvent=event;noteRoomUsed();const r=roomConfig();$("roomEventTitle").textContent=event==="wave"?L("波间整备","Between waves"):r.n;
+  $("roomEventNote").textContent=event==="workshop"?L("工坊材料：","Materials: ")+P.roomRun.materials:r.reward;
+  const box=$("roomEventChoices");box.innerHTML="";for(const c of roomEventChoices(event)){const b=document.createElement("button");b.type="button";b.className="room-event-choice";b.disabled=c.disabled;b.innerHTML='<b>'+c.name+'</b><span>'+c.desc+'</span>';b.addEventListener("click",()=>roomChooseEvent(c.id));box.appendChild(b);}
+  $("veilRoomEvent").hidden=false;
+}
+function closeRoomEvent(){
+  if(!roomMeta())return;const event=G.roomEvent;$("veilRoomEvent").hidden=true;G.roomEvent=null;G.paused=false;
+  if(event==="wave")delete G.roomPersonal.pendingWave;else if(event!=="forge")G.roomPersonal.eventResolved=true;
+  renderHud();render();maybeRelic();
+}
+function roomChooseEvent(id){
+  if(!roomMeta()||!G.roomEvent||$("veilRoomEvent").hidden)return;
+  const choice=roomEventChoices(G.roomEvent).find(c=>c.id===id&&!c.disabled);if(!choice)return;
+  const parts=id.split(":"),kind=parts[0],action=parts[1],rid=parts.slice(2).join(":"),p=G.roomPersonal,run=DungeonRooms.normalize(P),s=stats(),shield=n=>{P.shield=Math.min(shieldCap(s),(P.shield||0)+Math.round(s.maxHp*n));};
+  if(kind==="camp"){if(action==="heal")healUp(Math.round(s.maxHp*.35));if(action==="clean"){for(const k of HeroRules.negative)delete P.status[k];healUp(Math.round(s.maxHp*.12));}if(action==="ward")run.aidShield=.25;}
+  if(kind==="spring"){healUp(Math.round(s.maxHp*(action==="deep"?.55:.25)));if(action==="deep")run.deepDrink=true;}
+  if(kind==="vault"){if(action==="gold")earnGold(30+G.floor*8);if(action==="xp")gainXp(Math.round(xpNeed(P.lvl)*.25));if(action==="supply"){healUp(Math.round(s.maxHp*.25));shield(.15);}}
+  if(kind==="forge"){p.forgeUsed=true;shield(.25);}
+  if(kind==="pack")p.petFreed=true;
+  if(kind==="wheel"){p.steles=p.steles||[];p.steles.push(action);statusGain(P,action,4);if(p.steles.length<2){openRoomEvent("wheel");return;}}
+  if(kind==="library")run.battleBless={key:action,left:2};
+  if(kind==="memory")healUp(Math.round(s.maxHp*.05*(p.reviews||0)));
+  if(kind==="prison")run.companion={kind:action,left:3};
+  if(kind==="wave"&&action==="prepare"){P.gold-=10+G.floor;addSpent(10+G.floor);shield(.12);}
+  if(kind==="shrine")withMaxHp(function(){if(action==="hp"){P.hp-=Math.ceil(s.maxHp*.1);run.boons.atk++;}if(action==="gold"){P.gold-=15+G.floor*3;addSpent(15+G.floor*3);run.boons.hp++;}if(action==="relic"){P.relics.splice(P.relics.indexOf(rid),1);run.boons.def++;}});
+  if(kind==="workshop"){
+    if(action==="salvage"){const amount=relicRar(rid)+1;withMaxHp(()=>P.relics.splice(P.relics.indexOf(rid),1));run.materials=Math.min(99,run.materials+amount);p.salvaged=(p.salvaged||0)+1;openRoomEvent("workshop");renderHud();return;}
+    run.materials-=action==="redraw"?2:1;if(action==="redraw")G.roomExtraRedraw=(G.roomExtraRedraw||0)+1;if(action==="heal")healUp(Math.round(s.maxHp*.25));if(action==="gold")earnGold(10+G.floor*3);
+  }
+  if(kind==="market"){
+    if(action==="sell"){const amount=Math.ceil(sellPrice(relicById(rid))*1.5);withMaxHp(()=>P.relics.splice(P.relics.indexOf(rid),1));P.gold+=amount;p.marketSold=true;openRoomEvent("market");renderHud();return;}
+    p.eventResolved=true;$("veilRoomEvent").hidden=true;G.roomEvent=null;
+    const th=p.marketShop||(p.marketShop={kind:"shop",blackMarket:true,x:P.x,y:P.y});openShop(th);return;
+  }
+  closeRoomEvent();
+}
+function roomInfoHtml(){
+  if(!roomOn())return "";const r=roomConfig(),meta=roomMeta(),p=G.roomPersonal||{},run=P.roomRun||{};if(!r&&!roomHasBenefits())return "";
+  let html='<article class="rule-card"><b>'+(r?DungeonRooms.byId[meta.id].n+(meta.id!==meta.actual?' · '+r.n:''):L("旅途收获","Journey benefits"))+'</b>';
+  if(r)html+='<p>'+r.danger+'</p><p>'+r.reward+'</p>';
+  if(r&&r.loans)html+='<small>'+L("本层借用：","Floor loans: ")+r.loans.map(id=>relicById(id).n).join('、')+'</small>';
+  if(r&&r.id==="ambush")html+='<p>'+L("当前波次 ","Wave ")+meta.wave+'/3</p>';
+  if(r&&r.id==="memory")html+='<p>'+L("有效复习 ","Reviews ")+(p.reviews||0)+'/3</p>';
+  if(run.companion&&run.companion.left>0)html+='<p>'+(run.companion.kind==="claw"?L("爪灵","Claw spirit"):L("护灵","Ward spirit"))+L(" · 剩余战斗 "," · Battles left: ")+run.companion.left+'</p>';
+  if(run.boons&&(run.boons.atk||run.boons.hp||run.boons.def))html+='<p>'+L("神龛祝福 · 基础攻击 +","Sanctuary · Base ATK +")+6*(run.boons.atk||0)+L("%，基础最大生命 +","%, base max HP +")+8*(run.boons.hp||0)+L("%，护甲 +","%, armor +")+2*(run.boons.def||0)+'</p>';
+  if(run.materials)html+='<small>'+L("工坊材料：","Workshop materials: ")+run.materials+'</small>';
+  if(run.aidShield)html+='<p>'+L("下场护盾：最大生命的 ","Next-battle shield: ")+Math.round(run.aidShield*100)+'%</p>';
+  if(run.battleBless&&run.battleBless.left>0)html+='<p>'+L("学识祝福 · 剩余战斗 ","Scholar blessing · Battles left: ")+run.battleBless.left+'</p>';
+  if(run.deepDrink)html+='<p>'+L("深饮余咒：下一场新敌人的战斗施加自身衰弱 2 层、破绽 1 层。","Deep-drink curse: 2 Weakness and 1 Exposed against the next new foe.")+'</p>';
+  return html+'</article>';
+}
+function roomHasBenefits(){const r=P&&P.roomRun;return !!(roomOn()&&r&&(r.materials||r.deepDrink||r.aidShield||(r.companion&&r.companion.left>0)||(r.battleBless&&r.battleBless.left>0)||(r.boons&&(r.boons.atk||r.boons.hp||r.boons.def))));}
 /* ================= 生成 ================= */
 function nextFloor(){
   cancelWalk();
@@ -752,6 +954,7 @@ function nextFloor(){
      跟 withMaxHp() 一个规矩，不然第 50 → 51 层怪 ×10 的那一下，厚血的上限翻几倍、血却还是原来那么多。*/
   const hpCap0 = stats().maxHp;
   G.floor = from + 1;
+  roomPrepareFloor();
   advanceEndless();
   if(holyOn("scripture")) P.holyWords = masteredCount();   // 万言圣典：每进一层量一次掌握了几个词（上限涨了下面跟着补血）
   { const hpCap1 = stats().maxHp; if(hpCap1 > hpCap0) P.hp += hpCap1 - hpCap0; }
@@ -972,6 +1175,7 @@ function nextFloor(){
   genFloor();
   coopPrepMobs();     // 联机第二期：给每只怪挂上 cid + 两条血条的字段（单人版里是空函数）
   if(COOP) coopBroadcastWorld();
+  roomApplyEntry();
   if(hasRelic("water")) drinkAll();     // 「水」：泉是 genFloor 摆的，所以只能放在它后面
   fov();
   buildGrid();
@@ -983,6 +1187,7 @@ function nextFloor(){
   clampShield();         // 护盾封顶：进层发的那一堆种子收一次再存档
   heroSnapFloor();       // 回溯者：记下进这一层时的样子（生命 / 护盾 / 连击）
   commit(true);          // 存档点之二：下一层
+  roomResumeUI();
   const lk = $("btnLockWager"); if(lk) lk.classList.remove("tipmark");   // 「锁定冒险」那一闪只留一层
   if(G.floor === 1) tip("path");                   // 第一趟的提示：寻路
 }
@@ -993,12 +1198,12 @@ function nextFloor(){
    格式跟 writeRun() 的打包方式是同一路子（packRow 就是那边定义的）。*/
 function packWorld(){
   return {
-    ch: CH.id, endlessMods:P.endlessMods||null,
+    ch: CH.id, endlessMods:P.endlessMods||null,routeRoom:G.routeRoom||null,routeInfo:P.roomRun?{seed:P.roomRun.seed,history:P.roomRun.history}:null,
     map: G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
     stair: G.stair, rooms: G.rooms || null,
     px: P.x, py: P.y,
     mobs: G.mobs.map(function(m){
-      return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0};
+      return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0,route:m.route||null};
     }),
     things: G.things
   };
@@ -1030,6 +1235,10 @@ function applyCoopWorld(msg){
   }
   setChapter(pack.ch);
   G.floor = msg.floor;
+  if(typeof DungeonRooms!=="undefined"){
+    const run=DungeonRooms.normalize(P);if(pack.routeInfo){run.seed=pack.routeInfo.seed;run.history=pack.routeInfo.history||[];}
+    G.routeRoom=DungeonRooms.valid(pack.routeRoom,G.floor)?pack.routeRoom:null;G.roomPersonal={};delete P.roomPlan;P.floorReady=false;P.floorReadyKey=null;
+  }
   if(typeof DungeonRules!=="undefined"){P.endlessMods=pack.endlessMods;DungeonRules.normalize(P);}
   G.map = pack.map.split("|").map(function(row){ return row.split("").map(function(c){ return c === "1" ? 1 : 0; }); });
   G.seen = []; G.vis = [];
@@ -1041,11 +1250,13 @@ function applyCoopWorld(msg){
     const boss = !!def.boss;
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
-                 hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:false});
+                 hp:m.hp, max:m.max, dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:false,route:m.route||null});
+    if(m.route&&m.route.name)G.mobs[G.mobs.length-1].name=m.route.name;
   });
   coopPrepMobs();     // 联机第二期：非房主这边也要给每只怪挂上 cid + 两条血条的字段
   P.x = pack.px; P.y = pack.py;
   coopPendingFloor = false;
+  roomApplyEntry();
   if(hasRelic("water")) drinkAll();
   fov();
   buildGrid();
@@ -1053,6 +1264,7 @@ function applyCoopWorld(msg){
   lockInput(320);
   sayFloorIntro();
   commit(true);
+  roomResumeUI();
 }
 /* ===== 房间图 =====
    地图切成 SLOT_C × SLOT_R 个槽位，每个槽位 SLOT_W × SLOT_H 格（4×4 个 8×6 的槽，加一圈边墙 = 33×25）。
@@ -1126,6 +1338,7 @@ function genBossRoom(){
 function genFloor(){
   if(P.tut){ genTutorialFloor(); return; }
   if(isBossFloor(G.floor) || P.study){ genBossRoom(); return; }
+  if(roomMeta()){genRouteRoom();return;}
   const map = [], seen = [], vis = [];
   for(let y=0;y<H;y++){
     map.push(new Array(W).fill(0));
@@ -1607,7 +1820,7 @@ function camera(){
 }
 
 function mobAt(x,y){
-  for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y) return G.mobs[i];
+  for(let i=0;i<G.mobs.length;i++) if(G.mobs[i].x===x && G.mobs[i].y===y&&roomMobActive(G.mobs[i])) return G.mobs[i];
   return null;
 }
 function thingAt(x,y){
@@ -1619,7 +1832,7 @@ function paintMapCell(c,html){
   if(COOP){const mate=c.querySelector(".matepawn");if(mate)mate.remove();}
 }
 function paintMapClass(c,classes){if(c.className!==classes)c.className=classes;}
-function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer");}
+function hasPetCompanion(){return heroOn("tamer") || Heirlooms.equipped(P,RMASK).some(r=>r.heroOnly==="tamer")||!!(B&&B.roomPet)||!!(roomMeta()&&roomType()==="pack"&&G.roomPersonal.petFreed)||!!(P&&P.roomRun&&P.roomRun.companion&&P.roomRun.companion.kind==="claw"&&P.roomRun.companion.left>0);}
 let mapRenderState=null;
 function renderMapTile(x,y,cleared,tutAt){
     const c = cells[y*W + x];
@@ -1647,6 +1860,7 @@ function renderMapTile(x,y,cleared,tutAt){
       else if(th.kind === "gild"){ content = "altar gild"; art = ALTAR; }   // 金坛：同一张图，染成金色
       else if(th.kind === "chest"){ content = "chest"; art = CHEST; }
       else if(th.kind === "shop"){ content = "shop"; art = SHOP; }
+      else if(th.kind === "route"){content="room-feature";art=DungeonRooms.icon(roomType());}
     }
     const mo = mobAt(x,y);
     if(mo && (visible || mo.seen)){
@@ -1722,6 +1936,7 @@ function renderHud(){
   const need = xpNeed(P.lvl);
   $("xpFill").style.width = Math.min(100, P.xp / need * 100) + "%";
   renderStatusOwner("mapStatuses", P);
+  const roomLabel=$("roomLabel");if(roomLabel){const meta=roomMeta();roomLabel.hidden=!meta;if(meta)roomLabel.textContent=DungeonRooms.byId[meta.actual].n;}
 
   renderSheets(s);
 }
@@ -1746,7 +1961,7 @@ function coopSendMe(){
   NET.send({t:"me", name: coopMyName || T("队友"), hp: Math.max(0, P.hp), maxHp: s.maxHp,
             combo: P.combo || 0, relics: (P.relics || []).length,
             busy: !!G.paused, clear: G.mobs ? G.mobs.length === 0 : true,
-            down: !!P.down,
+            down: !!P.down,roomPlan:coopIsHost()?P.roomPlan||null:null,
             x: P.x, y: P.y});
 }
 /* 联机：踩到泉/坛/箱/商时通知队友一声（纯通知，不改队友自己的世界 —— 消耗是各自独立的，
@@ -2164,8 +2379,9 @@ function autoPath(){
   /* 联机 · 怪没清完时寻路只认怪，别被顺路的金币岔开走岔路（联机方案.md：移动锁只锁怪）——
      金币各自生成各自捡，共享路线要是也去够金币，两人捡到的份数很可能对不上。
      怪清完（或者压根不是联机）就跟原来一样，怪和金币一起比谁近。*/
-  const goals = coopLocked() ? G.mobs.slice()
-    : G.mobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
+  const activeMobs=G.mobs.filter(roomMobActive);
+  const goals = coopLocked() ? activeMobs
+    : activeMobs.concat(G.things.filter(function(th){ return th.kind === "gold"; }));
   const here = roomOf(P.x, P.y);
   let t = null;
   if(here){
@@ -2264,6 +2480,7 @@ function tryMove(dx, dy, rep){
 function onEnter(){
   const th = thingAt(P.x, P.y);
   if(th){
+    if(th.kind==="route"){noteRoomUsed();if(G.mobs.length&&!["forge","pack","wheel"].includes(th.event)){say(L("先击败本层守卫。","Defeat this floor's guards first."),"sys");return;}openRoomEvent(th.event);return;}
     if(th.kind === "gold"){
       let amt = th.amt;
       if(hasRelic("greed")) amt = Math.round(amt * (1 + hx("greed", 0.2)));  // 拾荒者 +20%
@@ -2290,6 +2507,7 @@ function onEnter(){
 function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
   if(P.tut){ tutFinish(false); return; }          // 教程关：踩上阶梯就是走完了
+  if(roomNeedsEvent()){openRoomEvent(roomNeedsEvent());return;}
   G.paused = true;
   const last = G.floor === floorMax();
   const to = G.floor + 1;
@@ -2305,6 +2523,7 @@ function askStair(){
   $("veilStair").hidden = false;
   $("btnStairGo").disabled = false;
   $("btnStairGo").textContent = T("下去 ▼");
+  renderRoomRoutes();if(COOP)coopSendMe();
   $("btnStairGo").focus();
 }
 /* 「再待一会儿」之后自己从阶梯上退开一格（用户 2026-09）——
@@ -2332,6 +2551,8 @@ function stepAside(){
   return false;
 }
 function closeStair(go){
+  if(go&&roomOn()&&!isBossFloor(G.floor+1)&&!(roomPlan()&&roomPlan().selected)){renderRoomRoutes();return;}
+  if(!go)roomCancelReady();
   $("veilStair").hidden = true;
   G.paused = false;
   if(go){ nextFloor(); return; }
@@ -2347,6 +2568,7 @@ function closeStair(go){
 
 /* ================= 战斗 ================= */
 function startBattle(m){
+  if(!roomMobActive(m))return;
   /* 连击（P.combo）不在这儿清零 —— 它跟着人走，打完一只接着下一只还算数。
      只有答错、倒下、回主城才断。赌骰攒的暴击率挂在 G.dice 上，每层清零。 */
   B = {mob:m, q:null, locked:false, asked:0,
@@ -2356,6 +2578,7 @@ function startBattle(m){
   B.fxHits=[];
   endlessBattle(m);
   buildEvent("battle",{mob:m});
+  roomBattle(m);
   /* 冒险者 ★3：这一层第一场战斗（G.heroFought 每层清零）*/
   if(!G.heroFought){ G.heroFought = true; B.heroFirst = true; }
   /* 城垣（第十一批）：每场开始护盾至少补到上限的 CITY_FIGHT（取大值，手里更多就不动）*/
@@ -2584,7 +2807,7 @@ function unused(pool){
 function pickQuizWord(cat){
   // 心魔：这一趟答错过的词，**熬过 HAUNT_DELAY 次答题之后**才有 35% 被拽出来重考
   const ready = readyHaunts();
-  const hauntRate = hasRelic("bind") ? 0.7 : 0.35;      // 缚魂：心魔出现率翻倍
+  const hauntRate = roomType()==="memory"?.8:hasRelic("bind") ? 0.7 : 0.35;      // 缚魂：心魔出现率翻倍
   if(ready.length && Math.random() < hauntRate){
     const en = pick(ready), w = WMAP[en];
     if(w && !(B && B.q && B.q.word.en === en)) return w;
@@ -2598,6 +2821,7 @@ function pickQuizWord(cat){
   pool = unused(scopeByLevel(pool));
   if(!pool.length) pool = unused(all);                  // 这一类问完了，退回全池
   if(!pool.length){ P.used = {}; pool = all; }          // 整章都问过一轮了，从头再来
+  if(roomType()==="memory"){const mistakes=pool.filter(w=>lexMiss(LEX[lexKey(w)]||{})>0);if(mistakes.length&&Math.random()<.75)pool=mistakes;}
   /* **没学过的新词权重 80%**（用户 2026-09）：LEX 里没有记录 = 这个存档从没遇到过。
      掷中就只在生词里挑；这一章的生词问完了（fresh 空）自然落回下面那个熟练度加权袋。*/
   /* 按时间复习（FSRS）：复习占几成跟着这一章积压了多少到期词走（DUE_MIN ~ DUE_MAX），没中再按 NEW_WORD_RATE 挑生词 */
@@ -2605,7 +2829,7 @@ function pickQuizWord(cat){
   const due = pool.filter(function(w){ return lexDue(LEX[lexKey(w)], today); });
   const fresh = pool.filter(function(w){ return !LEX[lexKey(w)]; });
   const dueMin = heroOn("keeper") ? Math.max(DUE_MIN, HERO_KEEPER_DUE) : DUE_MIN;   // 守夜人：复习题至少占 40%
-  const dueRate = dueMin + (DUE_MAX - dueMin) * Math.min(1, due.length / DUE_FULL);
+  const dueRate = roomType()==="library"?.85:dueMin + (DUE_MAX - dueMin) * Math.min(1, due.length / DUE_FULL);
   let draw;
   if(due.length && Math.random() < dueRate){
     draw=LearningCache.weighted(due,function(w){return 1+Math.round((1-lexRecall(LEX[lexKey(w)],today))*10);});
@@ -4073,6 +4297,7 @@ function answer(btn, ok){
       if(saved) relicLog += " <span class=\"sys\">(" + saved + ")</span>";
     }
   }
+  roomAnswer(ok,m,wasDue||missBefore>0||!!B.q.haunted);
   heroRoundEnd(ok,word,m,s);
   heirEvent(ok?"right":"wrong",{mob:m,word:word.en,cat:word.cat,pos:word.pos,spell:isSpell,fast:fastAns,seconds:usedSec,left:leftSec,untimed:untimed,fresh:firstSeen,due:wasDue,haunt:!!B.q.haunted,wager:!!B.wager,snapshot:heirSnapshot});
   endlessRound(ok,m,s);
@@ -4859,6 +5084,7 @@ function closeBattleWin(){
   $("veilBattle").hidden = true;
   const i = G.mobs.indexOf(m);
   if(i >= 0) G.mobs.splice(i,1);
+  roomAfterKill(m);
   P.kills++;
   heirEvent("kill",{mob:m});
   /* 招魂者（角色第二批）：收下它的魂（★5 打倒 Boss 一次收 5 个）*/
@@ -4868,9 +5094,9 @@ function closeBattleWin(){
   /* 殉道者之冠：本局打倒过几只 Boss / 层间守者（只是个事实，换算在 stats() 里包着 holyOn）。
      上限跟着涨，所以从 withMaxHp 过 —— 涨出来的那截当前血跟着补。*/
   if(m.boss && !(m.def && (m.def.abyss || m.def.study))) withMaxHp(function(){ P.bossKills = (P.bossKills || 0) + 1; });
-  const xp = gainXp(Math.round(m.xp * xpx * endlessRewardMult("xp")));     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
+  const xp = gainXp(Math.round(m.xp * xpx * endlessRewardMult("xp")*roomRewardMult("xp")));     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
   // Boss 房一整层就它一只，身上压着一层份的金币（m.loot，makeBossFoe 里定的）
-  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * endlessRewardMult("gold") * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
+  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * endlessRewardMult("gold")*roomRewardMult("gold") * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
@@ -5502,9 +5728,10 @@ function shopPrice(row){
   const item=typeof row.relic==="string"?relicById(row.relic):row.relic;
   const floor=item?sellPrice(item)+1:1;
   const p = Math.max(1, Math.round(row.price * (hasRelic("regular") ? Math.max(0.5, 1 - hx("regular", 0.15)) : 1)));
-  if(!heroOn("merchant")) return Math.max(floor,p);
+  const market=pendingRoom&&pendingRoom.blackMarket?Math.round(p*.8):p;
+  if(!heroOn("merchant")) return Math.max(floor,market);
   /* 商人（角色第三批）：再便宜 {v}%，但**不低过分解价 +1** —— 不然买进来再拆掉就是白赚金币 */
-  return Math.max(floor, Math.round(p * (1 - heroV("merchant") / 100)));
+  return Math.max(floor, Math.round(market * (1 - heroV("merchant") / 100)));
 }
 function renderShop(){
   const th = pendingRoom;
@@ -5595,6 +5822,7 @@ function closeShop(){
   if(shop && shop.kind === "shop") stepAside();
   lockInput(200);
   renderHud(); render();
+  if(roomMeta()&&!G.mobs.length)maybeRelic();
 }
 function removeThing(th){
   if(!th) return;
@@ -5631,6 +5859,7 @@ function hasRelic(id){
   if(!P || !P.relics) return false;
   if(RMASK && (RMASK === "all" || RMASK[id])) return false;   // 「构成」逐件拿掉算差（partsOf），平时是 null
   if(P.relics.indexOf(id) >= 0) return true;
+  if(roomLoans(id))return true;
   /* 千面（第十三批）：这一层借来的两件也算「带着」—— 只认**这一层**借的（P.face.f），
      千面本身得真在身上（卖掉 / 换掉那一刻借来的也一起还回去）。*/
   return !!(P.face && G && P.face.f === G.floor && P.face.ids.indexOf(id) >= 0 &&
@@ -5735,7 +5964,7 @@ function rollRelic(floor, up, skip){
     for(const r of [want - d]){
       if(r < 0 || r > 4) continue;
       const hit = pool.filter(function(x){ return (x.r || 0) === r; });
-      if(hit.length) return blessPick(hit);      // 祝福·偏爱在同品质里加权，见 blessPick()
+      if(hit.length){const cfg=roomConfig(),fav=cfg?hit.filter(x=>DungeonRooms.biased(x,cfg.flow)):[];return blessPick(fav.length&&Math.random()<.65?fav:hit);}      // 房间偏向只在同品质通用池内生效。
     }
   }
   return null;
@@ -6040,7 +6269,7 @@ function noteRelicFound(r, how){
 /* 这一层能重掷几次：现在只有「集齐」给 —— 身上凑齐普通/稀有/史诗三个品质就是 1 次。
    （遗物「重掷」2026-09 已按用户要求删掉。）G.rerollUsed 记的是"已经用掉几次"（数字，不是布尔）。 */
 function rerollBudget(){
-  let n = 0;
+  let n = (G&&G.roomExtraRedraw)||0;
   if(hasRelic("fullset")){
     const q = {};
     (P.relics || []).forEach(function(id){ const r = relicById(id); if(r) q[r.r || 0] = true; });
@@ -6111,8 +6340,10 @@ function takeRelic(id){
 /* 清完一层就给一次；掉落弹窗结束后再触发，免得两个窗打架 */
 function maybeRelic(){
   if(!G || G.over) return false;
+  if(roomMeta()&&G.roomPersonal.pendingWave&&!B){openRoomEvent("wave");return true;}
   if(G.mobs.length > 0) return false;
   if(pendingLoot) return false;
+  if(roomNeedsEvent()){openRoomEvent(roomNeedsEvent());return true;}
   if(!G.relicDone){
     if(holyFloor() && G.heroHolyFloor!==G.floor){ G.heroHolyFloor=G.floor; G.spoils=(G.spoils||0)+1;return offerHoly(); }
     return offerRelics();
@@ -7208,10 +7439,12 @@ function heirEvent(event,details){
 }
 function dungeonRulesOn(){ return typeof DungeonRules!=="undefined" && !!P && !P.study && !P.tut; }
 function endlessMods(){
-  return dungeonRulesOn() && CH && CH.endless && G && G.floor>=50 ? DungeonRules.counts(P.endlessMods) : {};
+  const n=dungeonRulesOn()&&CH&&CH.endless&&G&&G.floor>=50?DungeonRules.counts(P.endlessMods):{};
+  const meta=roomMeta();if(meta&&meta.curse)n[meta.curse]=(n[meta.curse]||0)+1;return n;
 }
 function endlessScale(s){
-  return dungeonRulesOn() && CH && CH.endless && G && G.floor>=50 ? DungeonRules.scaleStats(s,P.endlessMods) : s;
+  if(!dungeonRulesOn())return s;let picks=CH&&CH.endless&&G&&G.floor>=50&&P.endlessMods?P.endlessMods.picks||[]:[];
+  const meta=roomMeta();if(meta&&meta.curse)picks=picks.concat(meta.curse);return picks.length?DungeonRules.scaleStats(s,{picks:picks}):s;
 }
 function endlessRewardMult(kind){ return typeof DungeonRules!=="undefined"?DungeonRules.rewardMultiplier(kind,endlessMods()):1; }
 function advanceEndless(){
@@ -7300,7 +7533,7 @@ function buildEvent(event,details){
 }
 function runRulesHtml(){
   if(!dungeonRulesOn())return "";
-  let html="";const state=P.builds||{};
+  let html=roomInfoHtml();const state=P.builds||{};
   for(const flow in DungeonRules.flows){const equipped=DungeonRules.items.filter(r=>r.flow===flow&&hasRelic(r.id));if(!equipped.length)continue;
     html+='<article class="rule-card"><b>'+DungeonRules.flows[flow]+' · '+equipped.length+'</b><p>'+equipped.map(r=>r.n).join('、')+'</p>';
     if(flow==="rift")html+='<small>'+L("待释放反击：","Stored ripostes: ")+((hasRelic("db_rivet")?state.rivet||0:0)+(hasRelic("db_anvil")?state.anvil||0:0))+'</small>';
@@ -7313,7 +7546,7 @@ function runRulesHtml(){
 function renderDungeonRules(){
   if(typeof DungeonRules==="undefined")return;
   const holder=$("runRules");if(holder&&$("viewInfo").classList.contains("on")){const html=runRulesHtml();if(holder.innerHTML!==html)holder.innerHTML=html;holder.hidden=!html;}
-  const button=$("btnDungeonRules");if(button){const count=Object.values(endlessMods()).reduce((a,b)=>a+b,0),flows=Object.keys(DungeonRules.flows).filter(f=>DungeonRules.items.some(r=>r.flow===f&&hasRelic(r.id))).length;button.hidden=!(count||flows);button.textContent=L("流派 ","Builds ")+flows+(count?L(" · 无尽词条 "," · Endless ")+count:"");}
+  const button=$("btnDungeonRules");if(button){const count=Object.values(endlessMods()).reduce((a,b)=>a+b,0),flows=Object.keys(DungeonRules.flows).filter(f=>DungeonRules.items.some(r=>r.flow===f&&hasRelic(r.id))).length;button.hidden=!(count||flows||roomMeta()||roomHasBenefits());button.textContent=roomMeta()||roomHasBenefits()?L("旅途 · 流派与词条","Journey · builds & modifiers"):L("流派 ","Builds ")+flows+(count?L(" · 词条 "," · Modifiers ")+count:"");}
 }
 function openDungeonRules(){
   $("rulesTitle").textContent=L("流派与无尽词条","Builds & Endless modifiers");
@@ -8566,10 +8799,11 @@ function writeRun(){
       seen: G.seen.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
       stair: G.stair,
       rooms: G.rooms || null,        // 自动寻路要「先扫完当前这间屋子」，老档没有就退回全图最近
+      routeRoom:G.routeRoom||null,roomPersonal:G.roomPersonal||null,roomExtraRedraw:G.roomExtraRedraw||0,
       // 怪只存 defId + 当前状态，读档时重新链回 FOES
       mobs: G.mobs.map(function(m){
         return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null};
+                dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null,route:m.route||null,roomPlayer:m.roomPlayer||null};
       }),
       things: G.things
     });
@@ -8641,12 +8875,13 @@ function resumeRun(s){
   if(typeof P.thunder !== "number") P.thunder = 0;            // 雷霆之匣：匣子里存了多少（小数攒着）
   if(typeof P.sellN !== "number") P.sellN = 0;                // 余烬：本局分解过几件
   heroResume();                                               // 角色（2026-10-15），老档没有就当冒险者
+  if(typeof DungeonRooms!=="undefined"){DungeonRooms.normalize(P,s.t);P.floorReady=false;P.floorReadyKey=null;if(P.roomPlan)P.roomPlan.ready=false;}
   if(typeof DungeonRules!=="undefined")DungeonRules.normalize(P);
   resetHpFx();                                               // 读档不该播一次掉血/回血动画
   G = { floor: s.floor, paused:false, over:false,
         map:  unpackGrid(s.map,  function(c){ return c === "1" ? 1 : 0; }),
         seen: unpackGrid(s.seen, function(c){ return c === "1"; }),
-        vis: [], things: s.things || [], stair: s.stair, rooms: s.rooms || null, mobs: [] };
+        vis: [], things: s.things || [], stair: s.stair, rooms: s.rooms || null, mobs: [],routeRoom:s.routeRoom||null,roomPersonal:s.roomPersonal||{},roomExtraRedraw:s.roomExtraRedraw||0 };
   /* 续玩档存的是「刚踏进这一层」的样子，所以这几个每层字段直接按新一层初始化。
      ⚠️ 开场那个 openLeft 是计数不是布尔，不补的话读档后这一层就白少三刀。*/
   advanceEndless();
@@ -8711,7 +8946,8 @@ function resumeRun(s){
     G.mobs.push({x:m.x, y:m.y, def:def, g:def.g, name:def.name, art:def.art,
                  cat:def.cat, boss:boss, weak: boss ? pick(chapterPos()) : def.cat, weakPos:boss,
                  hp:m.hp, max:m.max, layer:m.ly || 1,
-                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s, status:HeroRules.clean(m.status),builds:m.builds||{},endless:m.endless||{}});
+                 dmg:m.dmg, armor:m.armor, xp:m.xp, loot:m.lt || 0, seen:!!m.s, status:HeroRules.clean(m.status),builds:m.builds||{},endless:m.endless||{},route:m.route||null,roomPlayer:m.roomPlayer||null});
+    if(m.route&&m.route.name)G.mobs[G.mobs.length-1].name=m.route.name;
     if(def.study){ const sm = G.mobs[G.mobs.length - 1]; sm.art = studyArt(); sm.dmg = studyDmgNow(); }   // 书灵的立绘跟着这一章走
   });
   if(migrateEndless)G.mobs.forEach(function(m){
@@ -8736,6 +8972,7 @@ function resumeRun(s){
   }
   lockInput(320);
   if(migrateEndless)commit(true); // 一次性迁移同时保存词条和已调整的怪物，继续读档不会重抽或重复放大。
+  roomResumeUI();
 }
 /* ================= 结算 ================= */
 /* 返回的就是内存里那一份，改完等 commit() 落盘，别单独写 localStorage */
@@ -9051,6 +9288,7 @@ function openCodex(tab){
   $("veilCodex").hidden = false;
 }
 function hideAll(){
+  if($("veilRoomEvent"))$("veilRoomEvent").hidden=true;
   closeDungeonRules();
   clearQTimer();          // 战斗窗要是被顺手藏掉了，读条别还在后台走
   ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHero","veilHeroInfo","veilHeroGot"].forEach(function(id){ $(id).hidden = true; });
@@ -9058,6 +9296,7 @@ function hideAll(){
 /* ⚠️ veilFuseGot **故意不进 hideAll**：材料已经砸掉了，窗一被顺手藏掉那一件就没了。
    它只进 anyVeil（挡住键盘走路），玩家必须挑一件才关得掉。*/
 function anyVeil(){
+  if($("veilRoomEvent")&&!$("veilRoomEvent").hidden)return $("veilRoomEvent");
   if(!$("veilDungeonRules").hidden)return $("veilDungeonRules");
   const ids = ["veilBattle","veilEnd","veilCodex","veilHelp","veilRelic","veilSwap","veilAltar","veilGild","veilForge","veilChest","veilShop","veilStair","veilSpring","veilFuse","veilFuseGot","veilBless","veilBlessPick","veilParts","veilMiss","veilHoly","veilHolyInfo","veilHeroGot","veilHeroInfo","veilHero"];   // 角色那三个：叠在上面的排前面
   for(let i=0;i<ids.length;i++) if(!$(ids[i]).hidden) return $(ids[i]);
@@ -9433,10 +9672,10 @@ function makeRunCode(){
     P: p, floor: G.floor,
     map:  G.map.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
     seen: G.seen.map(function(r){ return packRow(r, function(v){ return v ? 1 : 0; }); }).join("|"),
-    stair: G.stair, rooms: G.rooms || null,
+    stair: G.stair, rooms: G.rooms || null,routeRoom:G.routeRoom||null,roomPersonal:G.roomPersonal||null,
     mobs: G.mobs.map(function(m){
       return {d:m.def.id, x:m.x, y:m.y, hp:m.hp, max:m.max,
-              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null};
+              dmg:m.dmg, armor:m.armor, xp:m.xp, lt:m.loot || 0, ly:m.layer || 0, s:m.seen, status:HeroRules.clean(m.status),builds:m.builds||null,endless:m.endless||null,route:m.route||null,roomPlayer:m.roomPlayer||null};
     }),
     things: G.things, g: g,
     /* 对账用：导出那一刻的面板（信息页同一套函数）+ 上一刀 / 上一口的构成 */
@@ -9927,6 +10166,7 @@ document.addEventListener("keydown", function(ev){
     } else if(ev.key === "Escape"){
       if(v.id === "veilBlessPick") closeBlessPick();       // 挑遗物的窗：Esc = 退回祝福那一页
       else if(v.id === "veilDungeonRules")closeDungeonRules();
+      else if(v.id === "veilRoomEvent")closeRoomEvent();
       else if(v.id === "veilCodex" || v.id === "veilHelp" || v.id === "veilFuse" || v.id === "veilBless" || v.id === "veilParts" || v.id === "veilMiss") v.hidden = true;
       else if(v.id === "veilStair") closeStair(false);       // Esc = 再待一会儿
       else if(v.id === "veilHolyInfo") closeHolyInfo();     // 圣器详情
@@ -10141,6 +10381,8 @@ $("btnRunCode").addEventListener("click", function(){
   manual();
 });
 $("btnDungeonRules").addEventListener("click",openDungeonRules);
+$("btnRoomEventClose").addEventListener("click",closeRoomEvent);
+$("roomLabel").addEventListener("click",openDungeonRules);
 $("btnCloseDungeonRules").addEventListener("click",closeDungeonRules);
 $("btnMiss").addEventListener("click", function(){ openMiss("all"); });
 document.querySelectorAll("#veilMiss .mtab").forEach(function(b){
@@ -10191,7 +10433,6 @@ $("btnStairGo").addEventListener("click", function(){
   closeStair(true);
 });
 $("btnStairStay").addEventListener("click", function(){
-  if(COOP && window.NET) NET.send({t:"ready", what:"floor", on:false});
   closeStair(false);
 });
 $("btnAltarPay").addEventListener("click", function(){ resolveAltar(true); });
@@ -10666,6 +10907,7 @@ function mobByCid(cid){
    那条竞态）。m.hp 本身的语义不变——这个函数只是把 answer() 里原来的 `m.hp -= n` 包一层，
    单人版（COOP 恒为 false）行为跟原来一模一样。 */
 function coopDealDamage(m, n){
+  if(!roomMobActive(m))return;
   if(!(n > 0)) return;
   /* 无终之影：伤害在「层」之间穿过去，血条不会归零（abyssAbsorb）。
      ⚠️ 联机里**这一刀不上报** —— 服务器那套是按「一条会被打空的血条」写的，
@@ -10697,6 +10939,7 @@ function coopTrySwitchTarget(m){
 function coopHandleDead(cid){
   const m = mobByCid(cid);
   if(!m) return;
+  roomWorldDead(m);
   if(B && B.mob === m){
     clearQTimer();                                    // 别让读条在这个空当里咬一口
     setTimeout(function(){ if(B && B.mob === m) finishBattle(true); }, 300);
@@ -10704,6 +10947,7 @@ function coopHandleDead(cid){
   }
   const i = G.mobs.indexOf(m);
   if(i >= 0) G.mobs.splice(i, 1);
+  roomAfterKill(m);
   if(G.mobs.length === 0){
     G.stair = {x:m.x, y:m.y};
     G.seen[m.y][m.x] = true;
@@ -10725,6 +10969,7 @@ function coopHandleDead(cid){
   render();
   renderHud();
   coopCheckRevive();
+  if(!B&&roomMeta())maybeRelic();
 }
 /* 血掉光不出局，是「倒地」：停止答题，怪也不再打他，队友清完层原地复活（1 点血）。
    ⚠️ 寻路的算路/广播是房主单方面做的（跟着房主自己的坐标算），房主倒下之后再算就是错的路 ——
@@ -10763,10 +11008,11 @@ function coopCheckRevive(){
 function coopCheckBothDown(){
   if(COOP && P && P.down && coopMateInfo && coopMateInfo.down && G && !G.over) gameOver();
 }
-/* 下楼前的双确认：点「下去」先只是举手，等两人都举手了服务器才发 go{what:"floor"}，
+/* 下楼前的双确认：点「下去」先只是举手，等两人对同一房间版本举手后服务器才发 go，
    到那时候才真的调 closeStair(true) 进下一层。 */
 function coopConfirmStair(){
-  NET.send({t:"ready", what:"floor", on:true});
+  if(roomOn()&&!isBossFloor(G.floor+1)){const plan=roomPlan();if(!plan||!plan.selected)return;plan.ready=true;renderRoomRoutes();}
+  P.floorReady=true;P.floorReadyKey=roomReadyKey();coopSendMe();NET.send({t:"ready", what:P.floorReadyKey, on:true});
   const b = $("btnStairGo");
   if(b){ b.disabled = true; b.textContent = T("等待队友确认…"); }
 }
@@ -10940,13 +11186,16 @@ if(COOP){
         if(b) b.classList.remove("armed");
         render();
       }
-    } else if(msg.what === "floor"){
-      if(msg.on && !$("veilStair").hidden) closeStair(true);
+    } else if(msg.what === "floor"||String(msg.what).startsWith("floor:")){
+      if(!P||msg.what!==roomReadyKey())return;
+      if(msg.on&&P.floorReady&&P.floorReadyKey===msg.what&&!$("veilStair").hidden)closeStair(true);
+      if(!msg.on){const ready=P.floorReady;P.floorReady=false;P.floorReadyKey=null;if(P.roomPlan){P.roomPlan.ready=false;if(coopIsHost())P.roomPlan.rev=(P.roomPlan.rev||0)+1;}if(ready)NET.send({t:"ready",what:msg.what,on:false});if(coopIsHost())coopSendMe();if(!$("veilStair").hidden)renderRoomRoutes();}
     }
   });
   NET.on("mate", function(msg){
     const wasDown = coopMateInfo && coopMateInfo.down;
     coopMateInfo = msg;
+    roomAcceptPlan(msg.roomPlan);
     coopMateX = (typeof msg.x === "number") ? msg.x : null;
     coopMateY = (typeof msg.y === "number") ? msg.y : null;
     const wasBusy = coopMateBusy;

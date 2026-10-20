@@ -5,7 +5,7 @@
   const status=document.getElementById('loadStatus'),bar=document.getElementById('loadProgress'),count=document.getElementById('loadCount'),retry=document.getElementById('loadRetry');
   const app=document.querySelector('.app'),coop=!!document.querySelector('[data-coop-page]');
   if(coop)window.__COOP=true;
-  const version='20261020-affixes50';
+  const version='20261020-rooms1';
   const asset=src=>src+'?v='+version;
   const stages=[
     ['util.js','准备基础资源'],['i18n.js','读取语言设置'],
@@ -14,7 +14,7 @@
     ['art.js','载入角色模型'],['monster-art.js','载入地牢生物'],['dungeon-scene.js','载入洞窟场景'],
     [coop?'net.js':'i18n-en.js',coop?'准备合作模式':'准备界面语言'],
     ['compact-save.js','准备存档'],['hero-system.js','准备角色技能'],['heirlooms.js','载入遗物'],
-    ['dungeon-rules.js','准备流派与无尽词条'],['dungeon-fx.js','准备战斗动画'],['learning-cache.js','准备学习内容'],['game.js','整理游戏进度']
+    ['dungeon-rules.js','准备流派与无尽词条'],['dungeon-rooms.js','准备房间与岔路'],['dungeon-fx.js','准备战斗动画'],['learning-cache.js','准备学习内容'],['game.js','整理游戏进度']
   ];
   let registration=null,fatal=null,finished=false;
   const total=stages.length+3;

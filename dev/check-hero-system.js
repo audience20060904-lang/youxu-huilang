@@ -5,7 +5,7 @@ const codec=require('../compact-save'),rules=require('../hero-system');
 const c=vm.createContext({T:x=>x,L:(a,b)=>a,UI_EN:false,console,TextEncoder,TextDecoder,Uint8Array,Math:Object.create(Math),CompactSave:codec,
   P:null,B:null,G:{},RMASK:null,SCENE:'town',COOP:false,TOWN:{gem:1e9},commitPerm(){},renderHero(){},renderHeroInfo(){},renderTown(){},toast(){},heroInfoId:'adv',
   addGems(n){c.TOWN.gem+=n;},ri(a){return a;},say(){},hideAll(){},blessBanned(){return false;},hasRelic(){return false;},rerollBudget(){return 0;},
-  CH:{name:'Test'},heroArmed:'',heroTab:'roster'});
+  CH:{name:'Test'},heroArmed:'',heroTab:'roster',roomMeta:()=>null,roomNeedsEvent:()=>''});
 vm.runInContext(read('content.js'),c);vm.runInContext(read('hero-system.js'),c);vm.runInContext(read('heirlooms.js'),c);
 const source=read('game.js').replace(/\r\n/g,'\n');
 function load(name){const i=source.indexOf('function '+name+'('),line=source.indexOf('\n',i),j=source.slice(i,line).trimEnd().endsWith('}')?line-2:source.indexOf('\n}',i);assert(i>=0&&j>i,name);vm.runInContext(source.slice(i,j+2),c);}
