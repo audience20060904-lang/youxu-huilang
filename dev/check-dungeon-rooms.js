@@ -31,13 +31,28 @@ check('Every generated room is connected, stays inside the existing map and has 
 check('Boss floors use the original single-boss generator and do not inherit route loans or room effects',()=>{
  room('rift',{floor:9});c.G.floor=10;c.P.roomPlan={floor:10,selected:'camp'};c.roomPrepareFloor();assert.equal(c.G.routeRoom,null);c.genFloor();assert.equal(c.G.mobs.length,1);assert(c.G.mobs[0].boss);assert.equal(c.G.things.length,0);assert.equal(c.hasRelic('db_rivet'),false);
 });
+check('Room populations increase without multiplying elites or adding enemies to rest rooms',()=>{
+ const expected={outpost:8,ambush:12,elite:4,nest:8,bounty:6,cursed:6,rift:6,bleed:6,pack:6,wheel:6,vault:6,market:4,workshop:4,shrine:4,camp:0,spring:0,library:6,memory:6,prison:4};
+ for(const [id,n] of Object.entries(expected)){room(id);assert.equal(c.G.mobs.length,n,id);}
+ room('elite');assert.equal(c.G.mobs.filter(m=>m.route.name?.startsWith('祠堂精英')).length,1);assert(c.G.mobs.slice(1).every(m=>!m.route.name));assert(c.CHAPTER.mobsPerFloor.min>=14&&c.CHAPTER.mobsPerFloor.max<=18);
+});
+check('Dense room placement leaves a clear spawn area, every free tile connected and every guard or feature approachable',()=>{
+ const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+ for(const r of R.items)for(let seed=1;seed<=24;seed++){
+  room(r.id,{seed});const before=plain({map:c.G.map,mobs:c.G.mobs,things:c.G.things}),occupied=[...c.G.mobs,...c.G.things],blocked=new Set(occupied.map(p=>p.x+','+p.y)),seen=new Set(),todo=[[c.P.x,c.P.y]];
+  for(let i=0;i<todo.length;i++){const [x,y]=todo[i],k=x+','+y;if(seen.has(k)||blocked.has(k)||!c.G.map[y]?.[x])continue;seen.add(k);for(const [dx,dy] of dirs)todo.push([x+dx,y+dy]);}
+  assert.equal(blocked.size,occupied.length,r.id+' '+seed);assert.equal(seen.size,c.G.map.flat().filter(Boolean).length-blocked.size,r.id+' '+seed);
+  for(const p of occupied){assert(Math.abs(p.x-c.P.x)+Math.abs(p.y-c.P.y)>=3);assert(dirs.some(([dx,dy])=>seen.has((p.x+dx)+','+(p.y+dy))),r.id+' inaccessible object');}
+  assert(c.G.things.every(p=>p.x!==c.G.stair.x||p.y!==c.G.stair.y));const n=c.G.mobs.length;room(r.id,{seed});assert.equal(c.G.mobs.length,n);assert.deepEqual(plain({map:c.G.map,mobs:c.G.mobs,things:c.G.things}),before);
+ }
+});
 check('Flow rooms grant temporary working loans, preserve owned inventory and keep heirloom rarity/source rules intact',()=>{
  for(const id of ['rift','bleed','pack','wheel']){room(id);const own=plain(c.P.relics);for(const loan of c.roomConfig().loans){assert(c.hasRelic(loan));c.RMASK={[loan]:true};assert(!c.hasRelic(loan));c.RMASK=null;}assert.deepEqual(plain(c.P.relics),own);c.G.floor++;assert.equal(c.roomConfig(),null);for(const loan of R.byId[id].loans)assert(!c.hasRelic(loan));}
  room('rift');const shield=c.P.shield;c.roomApplyEntry();assert.equal(c.P.shield,shield);assert(R.biased(c.relicById('db_rivet'),'rift'));assert(!R.biased(c.Heirlooms.items[0],'rift'));
 });
-check('Ambush waves gate combat and map targets, advance after two kills and grant the clear bonus only once',()=>{
- room('ambush');assert.equal(c.G.mobs.filter(c.roomMobActive).length,2);const future=c.G.mobs[2],hp=future.hp;c.coopDealDamage(future,9999);assert.equal(future.hp,hp);assert.equal(c.mobAt(future.x,future.y),null);
- kill(c.G.mobs[0]);kill(c.G.mobs[0]);assert.equal(c.G.routeRoom.wave,2);assert.equal(c.roomNeedsEvent(),'wave');assert.equal(c.G.mobs.filter(c.roomMobActive).length,2);choose('wave','wave:go');assert.equal(c.G.roomPersonal.pendingWave,undefined);
+check('Ambush waves gate combat and map targets, advance after four kills and grant the clear bonus only once',()=>{
+ room('ambush');assert.equal(c.G.mobs.filter(c.roomMobActive).length,4);const future=c.G.mobs[4],hp=future.hp;c.coopDealDamage(future,9999);assert.equal(future.hp,hp);assert.equal(c.mobAt(future.x,future.y),null);
+ for(let i=0;i<3;i++){kill(c.G.mobs[0]);assert.equal(c.G.routeRoom.wave,1);}kill(c.G.mobs[0]);assert.equal(c.G.routeRoom.wave,2);assert.equal(c.roomNeedsEvent(),'wave');assert.equal(c.G.mobs.filter(c.roomMobActive).length,4);choose('wave','wave:go');assert.equal(c.G.roomPersonal.pendingWave,undefined);
  while(c.G.mobs.length)kill(c.G.mobs[0]);const gold=c.P.gold;c.roomAfterKill(null);assert.equal(c.P.gold,gold);assert(c.G.roomPersonal.clearClaimed);assert.equal(c.G.routeRoom.wave,3);
 });
 check('Nest core removes the shared attack boost once; bounty requires its target to be the first kill',()=>{
@@ -94,7 +109,7 @@ check('Room events precede the original five-choice reward without extra or miss
  finally{c.maybeRelic=old;c.offerRelics=offer;}
 });
 check('Actual checkpoint and compact run code preserve room, private choices, waves, loan state and redraw credits',()=>{
- room('ambush');kill(c.G.mobs[0]);kill(c.G.mobs[0]);c.G.roomExtraRedraw=2;c.G.roomPersonal.forgeUsed=true;c.G.mobs[0].roomPlayer={entered:true,companion:'claw'};let saved;c.put=(k,v)=>saved=plain(v);c.RUN_KEY='run';c.RUN_V=4;c.writeRun();assert.equal(saved.routeRoom.wave,2);assert(saved.roomPersonal.forgeUsed);assert.equal(saved.roomExtraRedraw,2);assert.equal(saved.mobs[0].route.wave,2);assert(saved.mobs[0].roomPlayer.entered);
+ room('ambush');for(let i=0;i<4;i++)kill(c.G.mobs[0]);c.G.roomExtraRedraw=2;c.G.roomPersonal.forgeUsed=true;c.G.mobs[0].roomPlayer={entered:true,companion:'claw'};let saved;c.put=(k,v)=>saved=plain(v);c.RUN_KEY='run';c.RUN_V=4;c.writeRun();assert.equal(saved.routeRoom.wave,2);assert(saved.roomPersonal.forgeUsed);assert.equal(saved.roomExtraRedraw,2);assert.equal(saved.mobs[0].route.wave,2);assert(saved.mobs[0].roomPlayer.entered);
  const codec=require('../compact-save');c.CompactSave=codec;c.SCENE='run';c.partSnap=()=>({});const code=c.makeRunCode(),run=JSON.parse(Buffer.from(codec.unpack('YXS',code)).toString());assert.equal(run.routeRoom.wave,2);assert(run.roomPersonal.forgeUsed);assert.equal(run.g.roomExtraRedraw,2);
 });
 check('Host plan preview and world packet share only route state; peer validates it without rerolling or sharing personal resources',()=>{
@@ -125,6 +140,9 @@ check('Actual resume restores private event costs and staged mobs without replay
  room('rift');c.G.roomPersonal.forgeUsed=true;c.G.roomExtraRedraw=2;c.G.mobs[0].roomPlayer={entered:true,companion:'claw',petOpened:true};let saved;c.put=(k,v)=>saved=plain(v);c.RUN_V=4;c.writeRun();const hp=c.P.hp,shield=c.P.shield,roomName=c.G.routeRoom.actual;
  c.resumeRun(plain(saved));assert.equal(c.G.routeRoom.actual,roomName);assert.equal(c.P.hp,hp);assert.equal(c.P.shield,shield);assert(c.G.roomPersonal.forgeUsed);assert.equal(c.G.roomExtraRedraw,2);assert(c.G.mobs[0].roomPlayer.petOpened);c.roomApplyEntry();assert.equal(c.P.shield,shield);
  room('outpost');const old=plain(saved);delete old.routeRoom;delete old.roomPersonal;delete old.P.roomRun;c.resumeRun(old);assert.equal(c.roomMeta(),null);assert(c.P.roomRun.seed>=0);
+});
+check('An old two-per-wave ambush resumes its existing enemies and advances without being repopulated',()=>{
+ room('ambush');c.G.mobs=c.G.mobs.filter((m,i)=>i%4<2);assert.equal(c.G.mobs.length,6);let saved;c.put=(k,v)=>saved=plain(v);c.RUN_V=4;c.writeRun();c.resumeRun(saved);assert.equal(c.G.mobs.length,6);assert.equal(c.G.mobs.filter(c.roomMobActive).length,2);kill(c.G.mobs[0]);kill(c.G.mobs[0]);assert.equal(c.G.routeRoom.wave,2);assert.equal(c.G.mobs.length,4);
 });
 check('Both entrypoints expose three-choice and event controls; pathfinding, walking timing and fallback trails are unchanged',()=>{
  for(const f of ['index.html','coop.html']){const html=read(f);for(const id of ['roomRoutes','roomLabel','veilRoomEvent','roomEventTitle','roomEventChoices','btnRoomEventClose'])assert.equal(html.split('id="'+id+'"').length,2,f+' '+id);}

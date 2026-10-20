@@ -110,7 +110,7 @@ var DungeonGPU=(function(){
         actor=take(s.hero,actorRoot);pet=take('pet',actorRoot);goal=take('goal',actorRoot);if(!actor||!pet||!goal)throw Error('Missing actor texture');actor.label='hero';pet.label='pet';goal.label='goal';goal.zIndex=100000;goal.tint=0xb68b38;goal.width=goal.height=.8;
       }
       scene=s;actor.texture=textures.get(s.hero);pet.visible=s.pet;const keys=new Set();metrics.entitySyncs++;
-      for(const e of s.entities){keys.add(e.id);let sprite=spriteById.get(e.id);if(!sprite){sprite=take(e.key,actorRoot);if(!sprite)throw Error('Missing entity texture '+e.key);spriteById.set(e.id,sprite);}sprite.texture=textures.get(e.key);sprite.label='entity';sprite.zIndex=e.y+1;sprite.position.set(e.x+.5,e.y+.5);sprite.width=sprite.height=e.scale||1;sprite.alpha=e.alpha||1;}
+      for(const e of s.entities){keys.add(e.id);let sprite=spriteById.get(e.id);if(!sprite){sprite=take(e.key,e.ground?entityRoot:actorRoot);if(!sprite)throw Error('Missing entity texture '+e.key);spriteById.set(e.id,sprite);}sprite.texture=textures.get(e.key);sprite.label='entity';sprite.zIndex=e.y+1;sprite.position.set(e.x+.5,e.y+.5);sprite.width=sprite.height=e.scale||1;sprite.alpha=e.alpha||1;}
       for(const [id,sprite] of spriteById)if(!keys.has(id)){spriteById.delete(id);release(sprite);}
       request();return true;
     }catch(e){fail(e.message);return false;}

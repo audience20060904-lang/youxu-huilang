@@ -799,11 +799,10 @@ function roomPrepareFloor(){
 function genRouteRoom(){
   const r=roomConfig(),meta=roomMeta(),shape=DungeonRooms.shape(r.layout,W,H),random=DungeonRooms.rng(DungeonRooms.hash(P.roomRun.seed+":"+G.floor+":"+meta.actual));
   G.map=shape.map;G.rooms=shape.rooms;G.seen=Array.from({length:H},()=>Array(W).fill(false));G.vis=Array.from({length:H},()=>Array(W).fill(false));G.mobs=[];G.things=[];P.x=shape.start.x;P.y=shape.start.y;G.stair=shape.center;
-  const cells=shape.walk.filter(c=>(c.x!==P.x||c.y!==P.y)&&(c.x!==shape.center.x||c.y!==shape.center.y));
-  const take=function(){return cells.length?cells.splice(Math.floor(random()*cells.length),1)[0]:null;};
+  const take=DungeonRooms.allocator(shape,random);
   let pool=FOES.filter(d=>!d.boss&&d.from<=G.floor);if(!pool.length)pool=[FOES[0]];
-  for(let i=0;i<r.mobs;i++){const pos=i===0?shape.center:take();if(!pos)break;const m=makeFoe(pool[Math.floor(random()*pool.length)],pos.x,pos.y);m.route={wave:r.id==="ambush"?1+Math.floor(i/2):1};
-    if(r.id==="elite"){m.hp=m.max=Math.round(m.max*3.5);m.dmg=Math.max(1,Math.round(m.dmg*1.25));m.armor+=2;m.route.name=L("祠堂精英 · ","Shrine elite · ")+m.name;}
+  for(let i=0;i<r.mobs;i++){const pos=take(i===0?shape.center:null);if(!pos)break;const m=makeFoe(pool[Math.floor(random()*pool.length)],pos.x,pos.y);m.route={wave:r.id==="ambush"?1+Math.floor(i/r.waveSize):1};
+    if(r.id==="elite"&&i===0){m.hp=m.max=Math.round(m.max*3.5);m.dmg=Math.max(1,Math.round(m.dmg*1.25));m.armor+=2;m.route.name=L("祠堂精英 · ","Shrine elite · ")+m.name;}
     if(r.id==="nest"){if(i===0){m.hp=m.max=Math.round(m.max*2.1);m.route.role="core";m.route.name=L("寄生巢核","Parasite core");}else{m.route.baseDmg=m.dmg;m.dmg=Math.round(m.dmg*1.25);}}
     if(r.id==="bounty"&&i===0){m.hp=m.max=Math.round(m.max*1.5);m.route.role="bounty";m.route.name=L("悬赏 · ","Bounty · ")+m.name;}
     if(m.route.name)m.name=m.route.name;G.mobs.push(m);

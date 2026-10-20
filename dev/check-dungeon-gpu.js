@@ -74,6 +74,11 @@ function setup(options={}){
  check('Scene props share the actor depth layer and fade only when they would cover the nearby hero',()=>{
   const plan=base.DungeonDecor.layout(grid,'outpost',1),p=plan.props.find(q=>q.alpha<1);assert(p);t.move(p.x,p.y-1);t.drain();let root=t.visuals().root.children[3];assert(root.sortableChildren);let prop=root.children.find(s=>s.label==='scenery'&&Math.abs(s.x-(p.x+.5))<1e-9&&s.zIndex===p.y+1);assert(prop);assert.equal(prop.alpha,.35);assert.equal(t.visuals().actor.zIndex,p.y);t.move(p.x+2,p.y-1);t.drain();assert.equal(prop.alpha,p.alpha);t.move(10);t.drain();
  });
+ check('Stepping onto doors, stairs or pickups keeps them below the hero, including after an entity refresh',()=>{
+  const things=[{x:10,y:10,kind:'route'},{x:11,y:10,kind:'gold'},{x:12,y:10,kind:'chest'},{x:13,y:10,kind:'shop'}],s=snapshot(grid,{mobs:[],things,stair:{x:14,y:10}});
+  assert(s.entities.every(e=>e.ground));assert(t.gpu.full(s));for(let x=10;x<=14;x++){t.move(x);t.drain();const v=t.visuals();assert.equal(v.root.children[2].children.length,5);assert(v.root.children[2].children.every(n=>n.label==='entity'));assert(!v.root.children[3].children.some(n=>n.label==='entity'));assert.equal(v.actor.x,x+.5);}
+  const before=t.gpu.status().worldBuilds;t.gpu.full(s);t.drain();assert.equal(t.visuals().root.children[2].children.length,5);assert.equal(t.gpu.status().worldBuilds,before);t.gpu.full(snapshot());t.move(10);t.drain();assert(t.visuals().root.children[3].children.some(n=>n.label==='entity'),'Monsters retain depth sorting with scenery');
+ });
  check('Pickup/chest/door feedback is visual-only, bounded and returns to an idle renderer after its short burst',()=>{
   const before=JSON.stringify(grid),builds=t.gpu.status().sceneryBuilds;for(const kind of ['gold','chest','door','kill'])assert(t.gpu.interact(10,10,kind));assert(t.gpu.status().liveEffects<=48);t.drain();assert.equal(t.gpu.status().liveEffects,0);assert.equal(t.frames.size,0);assert.equal(t.gpu.status().sceneryBuilds,builds);assert.equal(JSON.stringify(grid),before);t.media.matches=true;assert.equal(t.gpu.interact(10,10,'gold'),false);t.media.matches=false;
  });
