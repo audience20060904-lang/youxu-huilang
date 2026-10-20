@@ -128,6 +128,73 @@ check('Build reader overlays combat, pauses the same question clock and does not
  node('runRules').innerHTML='untouched';c.renderDungeonRules();assert.equal(node('runRules').innerHTML,'untouched');assert.equal(node('btnDungeonRules').hidden,false);
  vm.runInContext(definitions.startQTimer,c);c.timeUp=()=>{throw Error('timed out while reading')};c.B.locked=false;c.startQTimer();c.openDungeonRules();c.clockNow+=20000;interval();c.closeDungeonRules();interval();
 });
+check('Fifty named modifiers are reachable, keep all historical IDs and have real bilingual rules',()=>{
+ assert.equal(R.affixes.length,50);assert.equal(new Set(R.affixes.map(a=>a.id)).size,50);assert.equal(new Set(R.affixes.map(a=>a.n)).size,50);
+ const old=vm.createContext({UI_EN:false});vm.runInContext(cp.execFileSync('git',['show','80152c8:dungeon-rules.js'],{cwd:root,encoding:'utf8'}),old);assert.deepEqual(plain(R.affixes.slice(0,14).map(a=>a.id)),plain(old.DungeonRules.affixes.map(a=>a.id)));
+ const english=vm.createContext({UI_EN:true});vm.runInContext(read('dungeon-rules.js'),english);
+ for(let i=0;i<50;i++){const a=R.affixes[i];assert.equal(R.advance({},50,()=>(i+.25)/50).picks[0],a.id);assert(a.pw.length>5);assert(!/undefined|NaN/.test(a.pw));assert(english.DungeonRules.affixes[i].pw.length>5);if(i>=14)assert(a.rule&&(a.rule.stats||a.rule.reward||a.rule.action),a.id);}
+ const saved={endlessMods:{picks:['might','dispel','vital']}};R.advance(saved,70,()=>{throw Error('old history rerolled')});assert.deepEqual(saved.endlessMods.picks,['might','dispel','vital']);assert.equal(R.advance({},540,()=>.999).picks.length,50);
+});
+check('Composite monster stats use additive bonuses, bounded penalties, nonnegative armor and unchanged XP',()=>{
+ const base={hp:100,dmg:100,armor:10,xp:7},rows=[['carapace',108,100,11],['berserk',94,110,10],['bulwark',115,96,10],['razor',100,105,11],['riches',106,100,10],['tempered',96,100,13],['hulking',120,100,9]];
+ for(const [id,hp,dmg,armor] of rows)assert.deepEqual(plain(R.scaleStats(base,{picks:[id]})),{hp,dmg,armor,xp:7},id);
+ const extreme=R.scaleStats(base,{picks:[...Array(100).fill('berserk'),...Array(100).fill('tempered')]});assert.equal(extreme.hp,50);assert.equal(extreme.dmg,1100);
+ assert.equal(R.scaleStats(base,{picks:Array(100).fill('hulking')}).armor,0);
+ const all=R.scaleStats(base,{picks:R.affixes.flatMap(a=>Array(10).fill(a.id))});for(const v of Object.values(all))assert(Number.isFinite(v)&&v>=0);
+});
+check('Reward changes affect actual kill payouts once, preserve spelling multiplier and stay disabled outside Endless',()=>{
+ vm.runInContext(definitions.closeBattleWin.slice(0,definitions.closeBattleWin.indexOf('  fov();')).replace('function closeBattleWin(','function actualKill(')+'\nreturn {xp:xp,gold:g};\n}',c);
+ const gain=c.gainXp;c.gainXp=n=>n;
+ try{for(const chapter of [1,5]){reset([],{chapter,floor:60,player:{endlessMods:{picks:['scholar','tuition','bounty','austerity','riches']}}});c.B.xpx=2;c.B.mob.hp=0;c.B.mob.xp=100;c.G.mobs.push({hp:1});const out=c.actualKill();assert.equal(out.xp,chapter===5?208:200);assert.equal(out.gold,chapter===5?76:65);}}
+ finally{c.gainXp=gain;}
+ assert.equal(Math.round(100*R.rewardMultiplier('xp',{tuition:100})),60);assert.equal(Math.round(100*R.rewardMultiplier('gold',{austerity:100})),60);
+});
+check('Four opening curses and opening dispel are capped and cannot retrigger after re-entry or JSON resume',()=>{
+ reset([],{chapter:5,floor:100,player:{status:{stone:4,fury:2},endlessMods:{picks:['ambush','miasma','cinder','bloodmark','rally'].flatMap(id=>Array(4).fill(id))}}});c.endlessBattle(c.B.mob);
+ for(const k of ['exposed','poison','burn','bleed'])assert.equal(c.P.status[k],3);assert.equal(c.P.status.stone,1);c.P.status={};c.B.mob=plain(c.B.mob);c.endlessBattle(c.B.mob);assert.deepEqual(plain(c.P.status),{});
+});
+check('Five periodic ailments trigger on the fourth submitted answer, with a cap of three per trigger',()=>{
+ const s=reset([],{chapter:5,floor:100,player:{endlessMods:{picks:['emberclock','toxicclock','bloodclock','frailclock','riftclock'].flatMap(id=>Array(10).fill(id))}}});
+ for(let i=0;i<3;i++)c.endlessRound(true,c.B.mob,s);assert.deepEqual(plain(c.P.status),{});c.endlessRound(true,c.B.mob,s);for(const k of c.HeroRules.negative)assert.equal(c.P.status[k],3);
+ const hp=c.P.hp;c.B.mob.hp=0;c.endlessRound(false,c.B.mob,s);assert.equal(c.P.hp,hp);assert.equal(c.B.mob.endless.rounds,4);
+});
+check('Named blessing counters strip only their stated targets and never create negative stacks',()=>{
+ const s=reset([],{chapter:5,floor:100,player:{status:{clarity:4,ward:4,fury:4,stone:4,renew:4,drain:4,edge:2},endlessMods:{picks:['silence','snuff','daunt','crush','sap','wilt'].flatMap(id=>Array(5).fill(id))}}});
+ for(let i=0;i<3;i++)c.endlessRound(false,c.B.mob,s);for(const k of ['clarity','ward','fury','stone'])assert.equal(c.P.status[k],1);assert.equal(c.P.status.renew,undefined);assert.equal(c.P.status.drain,undefined);assert.equal(c.P.status.edge,2);
+ reset([],{chapter:5,floor:100,player:{endlessMods:{picks:['lacerate']}}});c.endlessRound(false,c.B.mob,c.stats());assert.equal(c.P.status.bleed,1);
+});
+check('Right-answer and submitted-answer curse rotations persist phase and use different counters',()=>{
+ for(const [id,period,sequence] of [['hexstep',4,['weak','exposed','burn','weak']],['entropy',3,['weak','exposed','poison','burn','bleed','weak']]]){
+  const s=reset([],{chapter:5,floor:100,player:{endlessMods:{picks:[id]}}});let j=0;
+  for(let i=1;i<=period*sequence.length;i++){c.P.status={};c.endlessRound(true,c.B.mob,s);if(i%period===0)assert.equal(c.P.status[sequence[j++]],1);else assert.deepEqual(plain(c.P.status),{});if(i===period)c.B.mob=plain(c.B.mob);}
+  const phase=c.B.mob.endless.phases[id];c.P.status={};c.endlessRound(false,c.B.mob,s);if(id==='hexstep')assert.equal(c.B.mob.endless.phases[id],phase);
+ }
+});
+check('Hex mirror copies at most the source stacks, while enemy cleansing and sealing choose one strongest status',()=>{
+ const s=reset([],{chapter:5,floor:100,player:{endlessMods:{picks:Array(4).fill('hexmirror')}}});c.B.mob.status={poison:1,burn:2};for(let i=0;i<4;i++)c.endlessRound(true,c.B.mob,s);assert.equal(c.P.status.burn,2);assert.equal(c.B.mob.status.burn,2);
+ c.P.endlessMods={picks:['memory','memory','sealed','sealed']};c.P.status={stone:4,fury:1};c.B.mob.status={bleed:4,burn:1};c.endlessRound(false,c.B.mob,s);assert.equal(c.B.mob.status.bleed,2);assert.equal(c.B.mob.status.burn,1);
+ c.B.mob.endless.right=7;c.endlessRound(true,c.B.mob,s);assert.equal(c.P.status.stone,2);assert.equal(c.P.status.fury,1);
+});
+check('Gold loss has a five-percent cap, rounds up, never becomes spending and never runs on a dead target',()=>{
+ const s=reset([],{chapter:5,floor:100,player:{gold:21,spent:7,endlessMods:{picks:Array(10).fill('tithe')}}});c.endlessRound(false,c.B.mob,s);assert.equal(c.P.gold,19);assert.equal(c.P.spent,7);
+ c.P.gold=0;c.endlessRound(false,c.B.mob,s);assert.equal(c.P.gold,0);c.P.gold=21;c.B.mob.hp=0;c.endlessRound(false,c.B.mob,s);assert.equal(c.P.gold,21);
+});
+check('Wrong-answer retaliation observes its own cadence, damage cap, guards and final Risk stage',()=>{
+ const s=reset([],{chapter:5,floor:100,level:50,wager:true,player:{heirGuard:1,endlessMods:{picks:Array(10).fill('echo')}}});c.B.mob.dmg=1000;const hp=c.P.hp;
+ c.endlessRound(false,c.B.mob,s);assert.equal(c.P.hp,hp);assert.equal(c.P.heirGuard,1);c.endlessRound(false,c.B.mob,s);assert.equal(c.P.heirGuard,0);assert.equal(c.P.hp,hp);
+ c.endlessRound(false,c.B.mob,s);c.endlessRound(false,c.B.mob,s);assert(c.P.hp<hp);assert(hp-c.P.hp<=Math.ceil(s.maxHp*.06)*2);assert.equal(c.B.mob.endless.wrong,4);assert.equal(c.B.mob.endless.right,undefined);
+});
+check('Shield drain never damages HP, triggers real shield breaks and defers its curse until the next answer',()=>{
+ const s=reset(['db_rivet'],{chapter:5,floor:100,player:{endlessMods:{picks:['devour','devour','devour','devour','devour','martyr']}}});c.endlessBattle(c.B.mob);c.P.shield=1;const hp=c.P.hp;
+ for(let i=0;i<3;i++)c.endlessRound(true,c.B.mob,s);assert.equal(c.P.hp,hp);assert.equal(c.P.shield,0);assert.equal(c.P.shieldBrokenCount,1);assert.equal(c.P.builds.rivet,1);assert.equal(c.P.status.bleed,undefined);
+ c.B.mob=plain(c.B.mob);c.endlessRound(true,c.B.mob,s);assert.equal(c.P.status.bleed,1);delete c.P.status.bleed;c.endlessRound(true,c.B.mob,s);assert.equal(c.P.status.bleed,undefined);
+});
+check('All fifty modifiers execute in real mode with bounded status layers, resume counters and no mutation on read-only views',()=>{
+ for(const a of R.affixes){const s=reset([],{chapter:5,floor:100,level:100,player:{shield:100,status:{stone:4,fury:4,ward:4,clarity:4,renew:4,drain:4},endlessMods:{picks:[a.id,a.id]}}});c.B.mob.status={bleed:4,burn:3};c.endlessBattle(c.B.mob);
+  for(let i=0;i<8;i++){c.endlessRound(i%2===0,c.B.mob,s);if(i===3)c.B.mob=plain(c.B.mob);for(const n of Object.values(c.P.status))assert(Number.isFinite(n)&&n>0&&n<=4,a.id);assert(Number.isFinite(c.P.hp)&&Number.isFinite(c.P.gold)&&c.P.gold>=0,a.id);}
+  const before=JSON.stringify({p:c.P,m:c.B.mob});c.runRulesHtml();c.endlessRewardMult('gold');assert.equal(JSON.stringify({p:c.P,m:c.B.mob}),before,a.id);
+ }
+});
 check('All 446 relics execute actual correct/wrong choice/spelling settlement and finite stats across six floor brackets',()=>{
  let cases=0;for(const r of c.RELICS){for(const floor of [1,25,50,100,200,500]){reset([r.id],{chapter:floor>=50?5:1,floor,level:50});const s=c.stats();for(const n of Object.values(s))assert(Number.isFinite(n),r.id);cases++;}
   for(const type of ['en2zh','spell'])for(const ok of [true,false])for(const rng of [0,.99]){reset([r.id],{level:50,player:{combo:20,hp:30,shield:20,status:{weak:1}}});c.B.q.type=type;c.Math.random=()=>rng;const out=round(ok);assert(out&&Number.isFinite(out.damage)&&Number.isFinite(c.P.hp)&&Number.isFinite(c.P.shield),r.id);cases++;}}

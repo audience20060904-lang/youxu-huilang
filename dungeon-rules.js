@@ -38,8 +38,44 @@ var DungeonRules=(function(){
     ['purge','净蚀','Purge','每答 3 题移除敌人每种负面状态 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 stack of every foe debuff per modifier stack, max 3'],
     ['wither','凋零','Wither','每答 3 题，使玩家每种现有祝福额外减少 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 extra stack of every current player blessing per modifier stack, max 3'],
     ['reprisal','反扑','Reprisal','每答对 3 题反击；基础伤害为敌人攻击力的 12% / 层，最多 36%，且不超过玩家最大生命的 8%；仍可减伤、格挡和闪避','Every 3 right answers retaliate for 12% foe ATK per stack (max 36%), capped at 8% player max HP before armor/mitigation/guard/dodge'],
-    ['dispel','夺辉','Dispel','答错后移除玩家层数最多的一种祝福 1 层 / 词条层数，最多 3 层','After a wrong answer remove 1 stack of the player blessing with most stacks per modifier stack, max 3']
-  ].map(([id,zh,eng,desc,english])=>({id,n:choose(zh,eng),pw:choose(desc,english)}));
+    ['dispel','夺辉','Dispel','答错后移除玩家层数最多的一种祝福 1 层 / 词条层数，最多 3 层','After a wrong answer remove 1 stack of the player blessing with most stacks per modifier stack, max 3'],
+    ['carapace','岩壳','Carapace','每层词条：最大生命 +8%，护甲 +1','Per stack: max HP +8%, armor +1',{stats:{hp:.08,armor:1}}],
+    ['berserk','狂化','Berserk','每层词条：攻击力 +10%，最大生命 −6%；生命减幅最多 30%','Per stack: ATK +10%, max HP −6%; HP penalty capped at 30%',{stats:{atk:.1,hpDown:.06,hpCap:.3}}],
+    ['bulwark','重躯','Bulwark','每层词条：最大生命 +15%，攻击力 −4%；攻击减幅最多 20%','Per stack: max HP +15%, ATK −4%; ATK penalty capped at 20%',{stats:{hp:.15,atkDown:.04,atkCap:.2}}],
+    ['razor','刃骨','Razor bones','每层词条：攻击力 +5%，护甲 +1','Per stack: ATK +5%, armor +1',{stats:{atk:.05,armor:1}}],
+    ['scholar','藏识','Stored wisdom','击杀经验 +12% / 层词条','Kill XP +12% per modifier stack',{reward:{xp:.12}}],
+    ['riches','金脉','Gold vein','每层词条：最大生命 +6%，击杀金币 +10%','Per stack: max HP +6%, kill gold +10%',{stats:{hp:.06},reward:{gold:.1}}],
+    ['tempered','淬甲','Tempered armor','每层词条：护甲 +3，最大生命 −4%；生命减幅最多 20%','Per stack: armor +3, max HP −4%; HP penalty capped at 20%',{stats:{armor:3,hpDown:.04,hpCap:.2}}],
+    ['hulking','巨躯','Hulking','每层词条：最大生命 +20%，护甲 −1；护甲最低为 0','Per stack: max HP +20%, armor −1; armor cannot fall below 0',{stats:{hp:.2,armor:-1}}],
+    ['ambush','破阵','Ambush','首次开战施加破绽 1 层 / 词条层数，最多 3 层；同一敌人不重复触发','On first entry apply 1 Exposed per stack, max 3; once per foe',{on:'battle',action:'status',key:'exposed'}],
+    ['miasma','瘴幕','Miasma','首次开战施加侵毒 1 层 / 词条层数，最多 3 层；同一敌人不重复触发','On first entry apply 1 Venom per stack, max 3; once per foe',{on:'battle',action:'status',key:'poison'}],
+    ['cinder','烬幕','Cinder veil','首次开战施加灼蚀 1 层 / 词条层数，最多 3 层；同一敌人不重复触发','On first entry apply 1 Scorch per stack, max 3; once per foe',{on:'battle',action:'status',key:'burn'}],
+    ['bloodmark','血印','Blood mark','首次开战施加裂伤 1 层 / 词条层数，最多 3 层；同一敌人不重复触发','On first entry apply 1 Bleed per stack, max 3; once per foe',{on:'battle',action:'status',key:'bleed'}],
+    ['lacerate','撕裂','Lacerate','答错后施加裂伤 1 层 / 词条层数，最多 3 层','Wrong answers apply 1 Bleed per stack, max 3',{on:'wrong',action:'status',key:'bleed'}],
+    ['emberclock','焚时','Ember clock','每答 4 题施加灼蚀 1 层 / 词条层数，最多 3 层','Every 4 submitted answers apply 1 Scorch per stack, max 3',{on:'round',every:4,action:'status',key:'burn'}],
+    ['toxicclock','瘴涌','Venom surge','每答 4 题施加侵毒 1 层 / 词条层数，最多 3 层','Every 4 submitted answers apply 1 Venom per stack, max 3',{on:'round',every:4,action:'status',key:'poison'}],
+    ['bloodclock','血潮','Blood tide','每答 4 题施加裂伤 1 层 / 词条层数，最多 3 层','Every 4 submitted answers apply 1 Bleed per stack, max 3',{on:'round',every:4,action:'status',key:'bleed'}],
+    ['frailclock','疲潮','Fatigue tide','每答 4 题施加衰弱 1 层 / 词条层数，最多 3 层','Every 4 submitted answers apply 1 Weakness per stack, max 3',{on:'round',every:4,action:'status',key:'weak'}],
+    ['riftclock','隙潮','Rift tide','每答 4 题施加破绽 1 层 / 词条层数，最多 3 层','Every 4 submitted answers apply 1 Exposed per stack, max 3',{on:'round',every:4,action:'status',key:'exposed'}],
+    ['hexstep','逆咒','Reverse hex','每答对 4 题，依次向玩家施加衰弱、破绽、灼蚀中的一种，1 层 / 词条层数，最多 3 层','Every 4 right answers cycle Weakness, Exposed and Scorch on the player, 1 per stack, max 3',{on:'right',every:4,action:'status',sequence:['weak','exposed','burn']}],
+    ['silence','浊识','Clouded mind','每答 3 题移除玩家澄明 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 Clarity per stack, max 3',{on:'round',every:3,action:'strip',key:'clarity'}],
+    ['snuff','蚀盾','Aegis blight','每答 3 题移除玩家灵盾祝福 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 Aegis blessing per stack, max 3',{on:'round',every:3,action:'strip',key:'ward'}],
+    ['daunt','折意','Daunt','每答 3 题移除玩家烈意 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 Fervor per stack, max 3',{on:'round',every:3,action:'strip',key:'fury'}],
+    ['crush','碎誓','Broken oath','每答 3 题移除玩家磐岩誓印 1 层 / 词条层数，最多 3 层','Every 3 submitted answers remove 1 Stone oath per stack, max 3',{on:'round',every:3,action:'strip',key:'stone'}],
+    ['sap','断汲','Severed siphon','答错后移除玩家汲能 1 层 / 词条层数，最多 3 层','Wrong answers remove 1 Siphon per stack, max 3',{on:'wrong',action:'strip',key:'drain'}],
+    ['hexmirror','咒镜','Hex mirror','每答 4 题，将敌人当前层数最多的一种负面状态复制给玩家，复制 1 层 / 词条层数，最多 3 层且不超过敌人现有层数；敌方层数不减少','Every 4 answers copy the foe\'s strongest debuff to the player, 1 per stack, max 3 and no more than its current stacks; foe keeps its stacks',{on:'round',every:4,action:'mirror'}],
+    ['tithe','索金','Tithe','答错后失去当前金币的 1% / 层词条，最多 5%，向上取整；不计为主动消费','Wrong answers lose 1% current gold per stack, max 5%, rounded up; not counted as spending',{on:'wrong',action:'gold',ratio:.01,cap:.05}],
+    ['austerity','贫藏','Austerity','击杀金币 −8% / 层词条，最多 −40%；与词条的金币加成相加结算','Kill gold −8% per stack, max −40%; additive with modifier gold bonuses',{reward:{goldDown:.08,goldCap:.4}}],
+    ['tuition','蚀识','Fading wisdom','击杀经验 −8% / 层词条，最多 −40%；与词条的经验加成相加结算','Kill XP −8% per stack, max −40%; additive with modifier XP bonuses',{reward:{xpDown:.08,xpCap:.4}}],
+    ['rally','夺势','Seized momentum','首次开战移除玩家层数最多的一种祝福 1 层 / 词条层数，最多 3 层；同一敌人不重复触发','On first entry remove 1 stack of the player\'s strongest blessing per modifier stack, max 3; once per foe',{on:'battle',action:'stripMax'}],
+    ['memory','蜕痕','Shed scars','答错后移除敌人层数最多的一种负面状态 1 层 / 词条层数，最多 3 层','Wrong answers remove 1 stack of the foe\'s strongest debuff per modifier stack, max 3',{on:'wrong',action:'cleanseMax'}],
+    ['sealed','封辉','Sealed light','每答对 4 题移除玩家层数最多的一种祝福 1 层 / 词条层数，最多 3 层','Every 4 right answers remove 1 stack of the player\'s strongest blessing per modifier stack, max 3',{on:'right',every:4,action:'stripMax'}],
+    ['martyr','裂盾咒','Shield-break curse','作答结算时，若护盾自上次作答以来被击破，施加裂伤 1 层 / 词条层数，最多 3 层；每题最多触发一次','At answer settlement, if shield broke since the last answer, apply 1 Bleed per stack, max 3; once per question',{on:'shieldbreak',action:'status',key:'bleed'}],
+    ['wilt','断息','Withered breath','答错后移除玩家回春灵息 1 层 / 词条层数，最多 3 层','Wrong answers remove 1 Renewal per stack, max 3',{on:'wrong',action:'strip',key:'renew'}],
+    ['entropy','五衰','Fivefold decay','每答 3 题，依次向玩家施加衰弱、破绽、侵毒、灼蚀、裂伤中的一种，1 层 / 词条层数，最多 3 层','Every 3 answers cycle Weakness, Exposed, Venom, Scorch and Bleed on the player, 1 per stack, max 3',{on:'round',every:3,action:'status',sequence:['weak','exposed','poison','burn','bleed']}],
+    ['echo','回震','Counter echo','每答错 2 题反击；基础伤害为敌人攻击力的 8% / 层词条，最多 24%，且不超过玩家最大生命的 6%；仍可减伤、格挡和闪避','Every 2 wrong answers retaliate for 8% foe ATK per stack, max 24%, capped at 6% player max HP before armor/mitigation/guard/dodge',{on:'wrong',every:2,action:'counter',ratio:.08,cap:.24,hpCap:.06}],
+    ['devour','噬障','Barrier devourer','每答 3 题消耗玩家当前护盾的 10% / 层词条，最多 50%，向上取整；不扣生命，可触发破盾效果','Every 3 answers consume 10% current shield per stack, max 50%, rounded up; no HP loss, can trigger shield-break effects',{on:'round',every:3,action:'shieldDrain',ratio:.1,cap:.5}]
+  ].map(([id,zh,eng,desc,english,rule])=>({id,n:choose(zh,eng),pw:choose(desc,english),rule}));
   const affixById=Object.fromEntries(affixes.map(a=>[a.id,a]));
   function normalize(run){
     const old=run.endlessMods;
@@ -53,7 +89,44 @@ var DungeonRules=(function(){
     return state;
   }
   function counts(state){const out={};for(const id of state&&state.picks||[])if(affixById[id])out[id]=(out[id]||0)+1;return out;}
-  function scaleStats(s,state){const n=counts(state);return {hp:Math.max(1,Math.round(s.hp*(1+.12*(n.vital||0)))),dmg:Math.max(1,Math.round(s.dmg*(1+.08*(n.might||0)))),armor:s.armor+2*(n.plate||0),xp:s.xp};}
+  function scaleStats(s,state){
+    const n=counts(state);let hp=1+.12*(n.vital||0),atk=1+.08*(n.might||0),armor=s.armor+2*(n.plate||0);
+    for(const a of affixes){const r=a.rule&&a.rule.stats,k=n[a.id]||0;if(!r||!k)continue;hp+=(r.hp||0)*k-Math.min(r.hpCap||0,(r.hpDown||0)*k);atk+=(r.atk||0)*k-Math.min(r.atkCap||0,(r.atkDown||0)*k);armor+=(r.armor||0)*k;}
+    return {hp:Math.max(1,Math.round(s.hp*hp)),dmg:Math.max(1,Math.round(s.dmg*atk)),armor:Math.max(0,armor),xp:s.xp};
+  }
+  function rewardMultiplier(kind,n){
+    let value=1+(kind==='gold'?.15*(n.bounty||0):0);
+    for(const a of affixes){const r=a.rule&&a.rule.reward,k=n[a.id]||0;if(r&&k)value+=(r[kind]||0)*k-Math.min(r[kind+'Cap']||0,(r[kind+'Down']||0)*k);}
+    return Math.max(.1,value);
+  }
+  function endless(c,event){
+    const p=c.p,m=c.mob,s=c.state,n=c.mods;if(!p||p.hp<=0||p.study||p.tut||!m||m.hp<=0)return;
+    const broken=p.shieldBrokenCount||0;
+    if(event==='battle')s.shieldBreakAt=broken;
+    const newBreak=broken>(s.shieldBreakAt==null?broken:s.shieldBreakAt);
+    for(const a of affixes){
+      const r=a.rule,k=n[a.id]||0;if(!r||!r.on||!k)continue;
+      let count=1,active=r.on===event;
+      if(event==='round'){
+        if(r.on==='right'){active=c.ok;count=s.right||0;}
+        else if(r.on==='wrong'){active=!c.ok;count=s.wrong||0;}
+        else if(r.on==='round')count=s.rounds||0;
+        else if(r.on==='shieldbreak')active=newBreak;
+      }
+      if(!active||(r.every&&(!count||count%r.every)))continue;
+      if(p.hp<=0||m.hp<=0)break;
+      const layers=Math.min(3,k);
+      if(r.action==='status'){
+        let key=r.key;if(r.sequence){s.phases=s.phases||{};const phase=s.phases[a.id]||0;key=r.sequence[phase%r.sequence.length];s.phases[a.id]=phase+1;}
+        c.act('status',layers,{key});
+      }else if(r.action==='strip')c.act('strip',layers,{key:r.key});
+      else if(['stripMax','cleanseMax','mirror'].includes(r.action))c.act(r.action,layers);
+      else if(r.action==='gold')c.act('gold',Math.min(r.cap,r.ratio*k));
+      else if(r.action==='counter')c.act('counter',Math.min(r.cap,r.ratio*k),{hpCap:r.hpCap,label:a.n});
+      else if(r.action==='shieldDrain')c.act('shieldDrain',Math.min(r.cap,r.ratio*k));
+    }
+    if(event==='round')s.shieldBreakAt=broken; // A break caused by this settlement is observed by the next answer.
+  }
   function bonus(p,stat,mask,has){return items.reduce((n,r)=>n+((has?has(r.id):(p.relics||[]).includes(r.id))&&r.stat===stat&&!(mask&&(mask==='all'||mask[r.id]))?r.amount:0),0);}
   function settle(c,event){
     const p=c.p,m=c.mob;if(!p||p.hp<=0||p.study||p.tut)return;
@@ -106,7 +179,7 @@ var DungeonRules=(function(){
       if(s.blessings.length>=4){s.blessings=[];if(has('db_prism')){act('guard',v('db_prism','guard'));act('heal',v('db_prism','heal'));}if(has('db_orbit')){act('hit',v('db_orbit','hit'));act('extend',v('db_orbit','extend'));}}
     }
   }
-  return {items,byId,flows,affixes,affixById,normalize,advance,counts,scaleStats,bonus,settle};
+  return {items,byId,flows,affixes,affixById,normalize,advance,counts,scaleStats,rewardMultiplier,endless,bonus,settle};
 })();
 if(typeof RELICS!=='undefined'){
   // Append after the historical 434 indices; never shift existing save-code IDs.

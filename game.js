@@ -4868,9 +4868,9 @@ function closeBattleWin(){
   /* 殉道者之冠：本局打倒过几只 Boss / 层间守者（只是个事实，换算在 stats() 里包着 holyOn）。
      上限跟着涨，所以从 withMaxHp 过 —— 涨出来的那截当前血跟着补。*/
   if(m.boss && !(m.def && (m.def.abyss || m.def.study))) withMaxHp(function(){ P.bossKills = (P.bossKills || 0) + 1; });
-  const xp = gainXp(m.xp * xpx);     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
+  const xp = gainXp(Math.round(m.xp * xpx * endlessRewardMult("xp")));     // 求知的 +20% 在 gainXp 里加，日志写实际到手的
   // Boss 房一整层就它一只，身上压着一层份的金币（m.loot，makeBossFoe 里定的）
-  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * (1+.15*(endlessMods().bounty||0)) * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
+  const g = earnGold(Math.round((ri(2,5) + G.floor + (m.loot || 0)) * endlessRewardMult("gold") * (1 + (hasRelic("greed") ? hx("greed", 0.2) : 0) + (hasRelic("goldhand") ? hx("goldhand", GOLDHAND_PCT) / 100 : 0))));   // 拾荒者 +20% / 点金手 +50%；百纳的 −N% 在 earnGold
   fxKill(m.x, m.y);                  // 金币和经验各飞一串碎屑
   const s0 = stats();
   let heal = CHAPTER.killHeal;
@@ -7213,6 +7213,7 @@ function endlessMods(){
 function endlessScale(s){
   return dungeonRulesOn() && CH && CH.endless && G && G.floor>=50 ? DungeonRules.scaleStats(s,P.endlessMods) : s;
 }
+function endlessRewardMult(kind){ return typeof DungeonRules!=="undefined"?DungeonRules.rewardMultiplier(kind,endlessMods()):1; }
 function advanceEndless(){
   if(!dungeonRulesOn() || !CH || !CH.endless || !G)return;
   const before=P.endlessMods&&P.endlessMods.picks?P.endlessMods.picks.length:0;
@@ -7222,7 +7223,7 @@ function advanceEndless(){
 function endlessBattle(m){
   if(!dungeonRulesOn()||!m)return;
   const mods=endlessMods(),s=m.endless||(m.endless={});
-  if(!s.entered){s.entered=true;if(mods.dread)statusGain(P,"weak",Math.min(3,mods.dread));}
+  if(!s.entered){s.entered=true;if(mods.dread)statusGain(P,"weak",Math.min(3,mods.dread));if(Object.keys(mods).length)endlessEffects("battle",m,stats(),false);}
 }
 function endlessRound(ok,m,s){
   if(!dungeonRulesOn()||!m||m.hp<=0||P.hp<=0)return;
@@ -7230,6 +7231,7 @@ function endlessRound(ok,m,s){
   if(!Object.keys(mods).length)return;
   state.rounds=(state.rounds||0)+1;
   if(!ok){
+    state.wrong=(state.wrong||0)+1;
     for(const k of ["weak","exposed","poison","burn"])if(mods[k])statusGain(P,k,Math.min(3,mods[k]));
     if(mods.dispel){const key=Object.keys(P.status||{}).filter(k=>!HeroRules.negative.includes(k)).sort((a,b)=>P.status[b]-P.status[a])[0];if(key){P.status[key]-=Math.min(3,mods.dispel);if(P.status[key]<=0)delete P.status[key];}}
   }
@@ -7240,14 +7242,35 @@ function endlessRound(ok,m,s){
   if(ok){
     state.right=(state.right||0)+1;
     if(mods.reprisal&&state.right%3===0){
-      const raw=Math.max(1,Math.ceil(Math.min(m.dmg*.12*Math.min(3,mods.reprisal),s.maxHp*.08)));
-      hurtBegin(Object.assign({},m,{dmg:raw}),s,false);
-      const mit=mitigate(Math.max(1,raw-s.def),s,{counter:true});
-      const dmg=wagerScale(mit.dmg,true);if(!mit.dodged)takeHit(dmg,m,false);hurtEnd(dmg);
-      say(L("反扑：","Reprisal: ")+dmg+L(" 点伤害。"," damage."),"hurt");
-      if(P.hp<=0){const saved=deathSave();if(saved)say(saved,"sys");}
+      endlessRetaliate(m,s,.12*Math.min(3,mods.reprisal),.08,L("反扑","Reprisal"));
     }
   }
+  endlessEffects("round",m,s,ok);
+}
+function endlessRetaliate(m,s,ratio,cap,label){
+  if(P.hp<=0||m.hp<=0)return;
+  const raw=Math.max(1,Math.ceil(Math.min(m.dmg*ratio,s.maxHp*cap)));
+  hurtBegin(Object.assign({},m,{dmg:raw}),s,false);
+  const mit=mitigate(Math.max(1,raw-s.def),s,{counter:true});
+  const dmg=wagerScale(mit.dmg,true);if(!mit.dodged)takeHit(dmg,m,false);hurtEnd(dmg);
+  say(label+"："+dmg+L(" 点伤害。"," damage."),"hurt");
+  if(P.hp<=0){const saved=deathSave();if(saved)say(saved,"sys");}
+}
+function endlessEffects(event,m,s,ok){
+  const mods=endlessMods();if(!Object.keys(mods).length||!m)return;
+  const strip=function(owner,key,n){if(owner.status&&owner.status[key]){owner.status[key]-=n;if(owner.status[key]<=0)delete owner.status[key];}};
+  const strongest=function(owner,negative){return Object.keys(HeroRules.effects).filter(k=>HeroRules.negative.includes(k)===negative&&owner.status&&owner.status[k]>0).sort((a,b)=>owner.status[b]-owner.status[a])[0];};
+  DungeonRules.endless({p:P,mob:m,state:m.endless||(m.endless={}),mods:mods,ok:ok,act:function(action,n,extra){
+    if(P.hp<=0||m.hp<=0)return;
+    if(action==="status")statusGain(P,extra.key,n);
+    else if(action==="strip")strip(P,extra.key,n);
+    else if(action==="stripMax"){const key=strongest(P,false);if(key)strip(P,key,n);}
+    else if(action==="cleanseMax"){const key=strongest(m,true);if(key)strip(m,key,n);}
+    else if(action==="mirror"){const key=strongest(m,true);if(key)statusGain(P,key,Math.min(n,m.status[key]));}
+    else if(action==="gold")P.gold=Math.max(0,P.gold-Math.ceil(P.gold*n));
+    else if(action==="counter")endlessRetaliate(m,s,n,extra.hpCap,extra.label);
+    else if(action==="shieldDrain"){const lost=Math.min(P.shield||0,Math.ceil((P.shield||0)*n));if(lost>0)landHit(lost,m,false);}
+  }},event);
 }
 function buildEvent(event,details){
   if(!dungeonRulesOn()||!G||!DungeonRules.items.some(r=>hasRelic(r.id)))return;
