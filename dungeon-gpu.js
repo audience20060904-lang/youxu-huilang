@@ -169,7 +169,8 @@ var DungeonGPU=(function(){
   }
   function battle(space){
     if(!ready||!enabled||!space||!space.host||quiet())return false;
-    if(mode!=='battle'){stop();dropEffects('map');mode='battle';mapRoot.visible=false;if(backdrop)backdrop.visible=false;stage.addChild(battleRoot);renderer.background.alpha=0;}
+    // WebGL uses premultiplied alpha: a transparent clear must have zero RGB too.
+    if(mode!=='battle'){stop();dropEffects('map');mode='battle';mapRoot.visible=false;if(backdrop)backdrop.visible=false;stage.addChild(battleRoot);renderer.background.color=0x000000;renderer.background.alpha=0;}
     if(canvas.parentNode!==space.host)space.host.appendChild(canvas);canvas.style.pointerEvents='none';canvas.setAttribute('aria-hidden','true');size(space.width,space.height);return true;
   }
   function projectile(a,b,color,shape){
@@ -183,7 +184,7 @@ var DungeonGPU=(function(){
     for(let i=0;i<Math.min(n,12);i++){const a=i*Math.PI*2/n+.3,s=take('spark',battleRoot);s.tint=color;s.position.set(at.x,at.y);addEffect({sprite:s,kind:'battle',type:'spark',x:at.x,y:at.y,dx:Math.cos(a)*32,dy:Math.sin(a)*27,gravity:10,base:5,born:now(),ms:350,turn:a});}return true;
   }
   function endBattle(){
-    if(!ready||mode!=='battle')return;stop();dropEffects('battle');battleRoot.removeFromParent();mode='map';mapRoot.visible=true;if(backdrop)backdrop.visible=true;renderer.background.alpha=1;
+    if(!ready||mode!=='battle')return;stop();dropEffects('battle');battleRoot.removeFromParent();mode='map';mapRoot.visible=true;if(backdrop)backdrop.visible=true;renderer.background.color=0x242321;renderer.background.alpha=1;
     if(mapHost&&scene){mapHost.appendChild(canvas);canvas.style.pointerEvents='auto';canvas.setAttribute('aria-hidden','false');size(mapHost.clientWidth,mapHost.clientHeight);drawnChunks.clear();request();}else canvas.remove();
   }
   function setVisible(value){visible=!!value;if(!visible){stop();dropEffects();}else request();}

@@ -10,6 +10,7 @@ base.document={getElementById:()=>null};vm.runInContext(read('dungeon-scene.js')
 for(const id of ['gold','chest','feat','altar','gild','shop','stair']){const key={gold:'COIN',chest:'CHEST',feat:'SPRING',altar:'ALTAR',gild:'ALTAR',shop:'SHOP',stair:'STAIR'}[id];assets['item:'+id]={id:'item:'+id,svg:base[key],color:V.itemColors[id]};}
 assets.pet={id:'pet',svg:base.DungeonScene.pet,color:'#ffffff'};
 const shapes=new vm.Script('('+read('dungeon-fx.js').match(/const shapes = (\{[\s\S]*?\n  \});/)[1]+')').runInNewContext();
+const vendor=vm.createContext({console,performance,setTimeout,clearTimeout,URL,TextEncoder,TextDecoder,navigator:{userAgent:'node-api-check'}});vm.runInContext(read('pixi.min.js'),vendor);
 const grid=Array.from({length:25},(_,y)=>Array.from({length:33},(_,x)=>x>2&&x<30&&y>2&&y<22?1:0));
 function snapshot(map=grid,extra={}){return V.snapshot(Object.assign({map,seen:map.map(r=>r.map(()=>true)),mobs:[{x:7,y:7,def:{id:'rat'}},{x:8,y:8,def:{id:'slime'},wave:2}],things:[{x:6,y:6,kind:'gold'},{x:9,y:9,kind:'route'}],stair:{x:10,y:10},chapter:1,hero:'adv',pet:true,assets,room:'outpost',active:m=>m.wave!==2},extra));}
 function setup(options={}){
@@ -30,7 +31,7 @@ function setup(options={}){
  }
  class Sprite extends Node{constructor(t){super();this.texture=t?.texture||t;this.width=t?.width||0;this.height=t?.height||0;}}
  class Texture{constructor(t){Object.assign(this,t);}destroy(){this.destroyed=true;}static from(source){uploads++;return new Texture({source});}}
- class Renderer{constructor(){this.background={alpha:1};}async init(o){init++;assert.equal(o.backgroundAlpha,0,'Shared battle context must support transparency');this.options=o;this.canvas=o.canvas;if(options.noGL)throw Error('WebGL unavailable');if(options.timeout)return new Promise(()=>{});}resize(w,h){this.canvas.width=Math.round(w*this.resolution);this.canvas.height=Math.round(h*this.resolution);}render(o){if(options.renderFail)throw Error('GPU failure');renders.push(o);this.last=o;}destroy(){this.destroyed=true;}}
+ class Renderer{constructor(){this.background=new vendor.PIXI.BackgroundSystem();}async init(o){init++;assert.equal(o.backgroundAlpha,0,'Shared battle context must support transparency');this.background.init(o);this.options=o;this.canvas=o.canvas;if(options.noGL)throw Error('WebGL unavailable');if(options.timeout)return new Promise(()=>{});}resize(w,h){this.canvas.width=Math.round(w*this.resolution);this.canvas.height=Math.round(h*this.resolution);}render(o){if(options.renderFail)throw Error('GPU failure');renders.push({...o,clearColor:Array.from(o.clearColor||this.background.colorRgba)});this.last=o;}destroy(){this.destroyed=true;}}
  const document={hidden:false,createElement:()=>new Node(),addEventListener:(k,f)=>events[k]=f};
  const media={matches:false,addEventListener(k,f){this.changed=f}},window={devicePixelRatio:3,matchMedia:()=>media,addEventListener:(k,f)=>winEvents[k]=f};
  const ctx=vm.createContext({window,document,console,PIXI:{Container:Node,Sprite,TilingSprite:Sprite,Texture,WebGLRenderer:Renderer,Rectangle:class{constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}}},DungeonView:V,DungeonDecor:base.DungeonDecor,performance:{now:()=>time},
@@ -42,7 +43,7 @@ function setup(options={}){
  function drain(){for(let i=0;frames.size;i++){if(i>200)throw Error('Non-idle render loop');tick();}}
  function move(x,y=10,extra={}){return gpu.move(Object.assign({host,map,world:grid,cell:20,width:280,height:380,x,y,cameraX:-(x-6)*20,cameraY:-(y-9)*20,ms:144,goal:null,pet:true},extra));}
  const visuals=()=>{const mapRoot=renders.at(-1).container.children.find(n=>n.children.length===4);return {root:mapRoot,actor:mapRoot.children[3].children.find(n=>n.label==='hero'),pet:mapRoot.children[3].children.find(n=>n.label==='pet')};};
- return {ctx,gpu,host,map,media,document,events,winEvents,frames,move,tick,drain,Node,decodes,visuals,counts:()=>({draws,init,uploads,maxDecoders,renders:renders.length})};
+ return {ctx,gpu,host,map,media,document,events,winEvents,frames,move,tick,drain,Node,decodes,visuals,counts:()=>({draws,init,uploads,maxDecoders,renders:renders.length,lastClear:renders.at(-1)?.clearColor})};
 }
 (async()=>{
  check('Scene snapshot is read-only, respects staged enemies and only reveals stairs after a full clear',()=>{
@@ -97,6 +98,16 @@ function setup(options={}){
   const space={host:new t.Node(),width:360,height:280},from={x:40,y:200,space},to={x:250,y:60,space};
   for(let i=0;i<15;i++)assert(t.gpu.projectile(from,to,'#ffffff',i%2?'claw':'spirit'));assert.equal(t.gpu.status().liveEffects,15);assert.equal(t.gpu.status().mode,'battle');assert.equal(t.counts().init,1);assert(t.gpu.sparks(to,'critical',4));t.drain();assert.equal(t.gpu.status().liveEffects,0);t.gpu.endBattle();t.drain();assert.equal(t.gpu.status().mode,'map');assert.equal(t.counts().init,1);
  });
+ check('Battle clears preserve the underlying scene during attacks and after every question reset; returning to the map restores its opaque clear',()=>{
+  const space={host:new t.Node(),width:360,height:280},from={x:40,y:200,space},to={x:250,y:60,space},under=[.15,.18,.17];
+  for(let i=0;i<3;i++){
+   assert(t.gpu.projectile(from,to,'#ffffff','spirit'));t.tick();assert.deepEqual(t.counts().lastClear,[0,0,0,0]);
+   if(i!==1)t.gpu.clearBattle();t.drain();const rgba=t.counts().lastClear;assert.deepEqual(rgba,[0,0,0,0]);assert.equal(t.gpu.status().liveEffects,0);assert.equal(t.frames.size,0);
+   const composited=under.map((channel,k)=>rgba[k]+channel*(1-rgba[3]));assert.deepEqual(composited,under,'An empty effects canvas must not add a grey RGB veil');
+   t.gpu.endBattle();t.drain();const map=t.counts().lastClear;assert.equal(map[3],1);assert(Math.abs(map[0]-36/255)<1e-7&&Math.abs(map[1]-35/255)<1e-7&&Math.abs(map[2]-33/255)<1e-7);
+  }
+  assert.equal(t.counts().init,1);
+ });
  check('Hiding the app or reducing motion cancels rendering; resume needs only one frame and does not replay effects',()=>{
   t.move(11);assert(t.frames.size);t.gpu.setVisible(false);assert.equal(t.frames.size,0);assert.equal(t.gpu.status().liveEffects,0);t.gpu.setVisible(true);t.drain();t.move(10);t.document.hidden=true;t.events.visibilitychange();assert.equal(t.frames.size,0);t.document.hidden=false;t.events.visibilitychange();t.drain();assert.equal(t.frames.size,0);
  });
@@ -113,7 +124,6 @@ function setup(options={}){
   const game=read('game.js');for(const name of ['gpuMapAssets','gpuMapFull','mapTileClick'])assert(game.includes('function '+name+'('));assert(game.includes('if(!gpu)for(let y=0;y<H;y++)'));assert(game.includes('if(!old.gpu&&window.DungeonFX)'));for(const f of ['index.html','coop.html']){const html=read(f);assert(html.includes('id="optSceneMode"'));assert(html.includes('class="battle-learning"'));}
   assert(read('preload.js').includes("['pixi.min.js','载入绘图引擎',true]"));assert(read('.github/workflows/deploy.yml').includes('LICENSE-PIXI.txt'));
  });
- const vendor=vm.createContext({console,performance,setTimeout,clearTimeout,URL,TextEncoder,TextDecoder,navigator:{userAgent:'node-api-check'}});vm.runInContext(read('pixi.min.js'),vendor);
  check('Actual vendored Pixi scene and texture APIs accept the renderer adapter without loading a browser',()=>{
   const P=vendor.PIXI,parent=new P.Container(),source=new P.TextureSource({width:1024,height:1024}),texture=new P.Texture({source,frame:new P.Rectangle(2,2,64,64)}),sprite=new P.Sprite(texture),tile=new P.TilingSprite({texture,width:280,height:380});parent.addChild(sprite,tile);parent.sortableChildren=true;sprite.zIndex=10;tile.zIndex=5;parent.sortChildren();assert.equal(parent.children[0],tile);sprite.anchor.set(.5);sprite.position.set(3,4);sprite.width=sprite.height=1;tile.tileScale.set(.3);assert.equal(P.VERSION,'8.22.0');assert.equal(sprite.x,3);assert.equal(texture.width,64);assert.equal(typeof P.WebGLRenderer.prototype.init,'function');parent.destroy({children:true});
  });
