@@ -1840,14 +1840,14 @@ function gpuMapOn(){return typeof DungeonGPU!=="undefined"&&DungeonGPU.active()&
 function gpuMapAssets(){
   if(gpuSceneAssets)return gpuSceneAssets;
   const doors={};if(typeof DungeonRooms!=="undefined")for(const r of DungeonRooms.items)doors[r.id]=DungeonRooms.icon(r.id);
-  gpuSceneAssets=DungeonView.assets({heroes:HEROES,heroArt:heroArt,monsters:MOB_ART,bossIds:Object.keys(MOB_ART).filter(id=>id!=="study"&&!FOES.some(f=>f.id===id)),items:{gold:COIN,chest:CHEST,feat:SPRING,altar:ALTAR,gild:ALTAR,shop:SHOP,stair:STAIR},doors:doors,pet:DungeonScene.pet,mate:HERO});
+  gpuSceneAssets=DungeonView.assets({heroes:HEROES,heroArt:heroArt,monsters:MOB_ART,bossIds:Object.keys(MOB_ART).filter(id=>id!=="study"&&!FOES.some(f=>f.id===id)),items:{gold:COIN,chest:CHEST,feat:SPRING,altar:ALTAR,gild:ALTAR,shop:SHOP,stair:STAIR},doors:doors,scenery:DungeonDecor.assets(),pet:DungeonScene.pet,mate:HERO});
   return gpuSceneAssets;
 }
 function gpuMapFull(){
   if(typeof DungeonGPU==="undefined"||!DungeonGPU.status().ready)return false;
   if(P.tut||OPT.sceneMode==="basic"){DungeonGPU.clearMap();return false;}
   if(!B)DungeonGPU.endBattle();
-  return DungeonGPU.full(DungeonView.snapshot({map:G.map,seen:G.seen,mobs:G.mobs,things:G.things,stair:G.stair,chapter:CH.id,hero:P.hero,pet:hasPetCompanion(),assets:gpuMapAssets(),room:roomType(),active:roomMobActive,mate:COOP?{x:coopMateX,y:coopMateY}:null}));
+  return DungeonGPU.full(DungeonView.snapshot({map:G.map,seen:G.seen,mobs:G.mobs,things:G.things,stair:G.stair,chapter:CH.id,hero:P.hero,pet:hasPetCompanion(),assets:gpuMapAssets(),room:roomType(),theme:roomType()||(P.study?"study":isBossFloor(G.floor)?"boss":"outpost"),active:roomMobActive,mate:COOP?{x:coopMateX,y:coopMateY}:null}));
 }
 function renderMapTile(x,y,cleared,tutAt){
     const c = cells[y*W + x];
@@ -2524,6 +2524,7 @@ function askStair(){
   if(!G || G.over || G.mobs.length > 0) return;
   if(P.tut){ tutFinish(false); return; }          // 教程关：踩上阶梯就是走完了
   if(roomNeedsEvent()){openRoomEvent(roomNeedsEvent());return;}
+  if(gpuMapOn())DungeonGPU.interact(P.x,P.y,"door");
   G.paused = true;
   const last = G.floor === floorMax();
   const to = G.floor + 1;
@@ -3454,11 +3455,13 @@ function fxLevelUp(){
 }
 /* 捡金币：从那一格飞到顶上的「金」 */
 function fxGold(x, y){
+  if(gpuMapOn())DungeonGPU.interact(x,y,"gold");
   const cell = mapFxAnchor(x,y);
   fxFly(cell || $("stageBox"), $("hGold"), "coin", 7);
 }
 /* 怪倒下：掉的金币飞向「金」，经验飞向「等级」（绿色，跟血/金区分开）*/
 function fxKill(x, y){
+  if(gpuMapOn()){DungeonGPU.endBattle();DungeonGPU.interact(x,y,"kill");}
   const cell = mapFxAnchor(x,y) || $("stageBox");
   if(!gpuMapOn()&&window.DungeonFX) DungeonFX.mapKill($("map"), cells[y * W + x]);
   fxFly(cell, $("hGold"), "coin", 6);
@@ -5553,6 +5556,7 @@ function closeForge(){
 
 /* ---- 上锁宝箱：拼对开箱，拼错锁死 ---- */
 function openChest(th){
+  if(gpuMapOn())DungeonGPU.interact(th.x,th.y,"chest");
   G.paused = true;
   pendingRoom = th;
   const word = pickQuizWord("all");

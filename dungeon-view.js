@@ -25,7 +25,7 @@ var DungeonView=(function(){
     for(const t of s.things){const key=t.kind==='route'?'door:'+s.room:'item:'+t.kind;if(s.assets[key])add('thing:'+t.x+','+t.y,t.x,t.y,key);}
     for(const m of s.mobs){if(s.active&&!s.active(m))continue;const id=m.def&&m.def.id;if(s.assets['mob:'+id])add('mob:'+m.x+','+m.y,m.x,m.y,'mob:'+id,{boss:!!m.boss});else unsupported=true;}
     if(s.mate&&Number.isFinite(s.mate.x)&&Number.isFinite(s.mate.y)&&s.mate.x>=0&&s.mate.y>=0&&s.mate.x<s.map[0].length&&s.mate.y<s.map.length)add('mate',s.mate.x+.2,s.mate.y+.2,'mate',{alpha:.7,scale:.6});
-    return {world:s.map,width:s.map[0].length,height:s.map.length,terrain:terrain(s.map,s.seen),entities,chapter:Math.max(1,Math.min(5,s.chapter||1)),hero:'hero:'+s.hero,trail:'trail:'+s.hero,pet:!!s.pet,unsupported};
+    return {world:s.map,width:s.map[0].length,height:s.map.length,terrain:terrain(s.map,s.seen),entities,chapter:Math.max(1,Math.min(5,s.chapter||1)),theme:s.theme||s.room||'outpost',hero:'hero:'+s.hero,trail:'trail:'+s.hero,pet:!!s.pet,unsupported};
   }
   function assets(s){
     const out={},add=(id,svg,color)=>{if(svg)out[id]={id,svg,color:color||'#ffffff'};};
@@ -33,6 +33,7 @@ var DungeonView=(function(){
     for(const id in s.monsters)add('mob:'+id,s.monsters[id],mobColor(id,s.bossIds.includes(id)));
     for(const id in s.items)add('item:'+id,s.items[id],itemColors[id]);
     for(const id in s.doors)add('door:'+id,s.doors[id]);
+    for(const a of s.scenery||[])add('decor:'+a.id,a.svg,a.color);
     add('pet',s.pet);add('mate',s.mate,'#245E8C');return out;
   }
   function hit(px,py,camera,cell,w,h){

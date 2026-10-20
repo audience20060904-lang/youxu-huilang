@@ -3,8 +3,8 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const root=path.join(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8').replace(/\r\n/g,'\n'),V=require('../dungeon-view');let groups=0;
 function check(name,fn){fn();groups++;console.log('PASS '+name);}
-const base=vm.createContext({});for(const f of ['content.js','art.js','monster-art.js','dungeon-rooms.js'])vm.runInContext(read(f),base);
-const assets=V.assets({heroes:base.HEROES,heroArt:id=>base.HERO_ART[id],monsters:base.MOB_ART,bossIds:Object.keys(base.MOB_ART).filter(id=>!base.FOES.some(f=>f.id===id)&&id!=='study'),items:{gold:base.COIN,chest:base.CHEST,feat:base.SPRING,altar:base.ALTAR,gild:base.ALTAR,shop:base.SHOP,stair:base.STAIR},doors:Object.fromEntries(base.DungeonRooms.items.map(r=>[r.id,base.DungeonRooms.icon(r.id)])),pet:base.HERO,mate:base.HERO});
+const base=vm.createContext({});for(const f of ['content.js','art.js','monster-art.js','dungeon-rooms.js','dungeon-decor.js'])vm.runInContext(read(f),base);
+const assets=V.assets({heroes:base.HEROES,heroArt:id=>base.HERO_ART[id],monsters:base.MOB_ART,bossIds:Object.keys(base.MOB_ART).filter(id=>!base.FOES.some(f=>f.id===id)&&id!=='study'),items:{gold:base.COIN,chest:base.CHEST,feat:base.SPRING,altar:base.ALTAR,gild:base.ALTAR,shop:base.SHOP,stair:base.STAIR},doors:Object.fromEntries(base.DungeonRooms.items.map(r=>[r.id,base.DungeonRooms.icon(r.id)])),scenery:base.DungeonDecor.assets(),pet:base.HERO,mate:base.HERO});
 // Scene module owns the six current item drawings and companion art.
 base.document={getElementById:()=>null};vm.runInContext(read('dungeon-scene.js'),base);
 for(const id of ['gold','chest','feat','altar','gild','shop','stair']){const key={gold:'COIN',chest:'CHEST',feat:'SPRING',altar:'ALTAR',gild:'ALTAR',shop:'SHOP',stair:'STAIR'}[id];assets['item:'+id]={id:'item:'+id,svg:base[key],color:V.itemColors[id]};}
@@ -33,7 +33,7 @@ function setup(options={}){
  class Renderer{constructor(){this.background={alpha:1};}async init(o){init++;assert.equal(o.backgroundAlpha,0,'Shared battle context must support transparency');this.options=o;this.canvas=o.canvas;if(options.noGL)throw Error('WebGL unavailable');if(options.timeout)return new Promise(()=>{});}resize(w,h){this.canvas.width=Math.round(w*this.resolution);this.canvas.height=Math.round(h*this.resolution);}render(o){if(options.renderFail)throw Error('GPU failure');renders.push(o);this.last=o;}destroy(){this.destroyed=true;}}
  const document={hidden:false,createElement:()=>new Node(),addEventListener:(k,f)=>events[k]=f};
  const media={matches:false,addEventListener(k,f){this.changed=f}},window={devicePixelRatio:3,matchMedia:()=>media,addEventListener:(k,f)=>winEvents[k]=f};
- const ctx=vm.createContext({window,document,console,PIXI:{Container:Node,Sprite,TilingSprite:Sprite,Texture,WebGLRenderer:Renderer,Rectangle:class{constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}}},DungeonView:V,performance:{now:()=>time},
+ const ctx=vm.createContext({window,document,console,PIXI:{Container:Node,Sprite,TilingSprite:Sprite,Texture,WebGLRenderer:Renderer,Rectangle:class{constructor(x,y,width,height){Object.assign(this,{x,y,width,height});}}},DungeonView:V,DungeonDecor:base.DungeonDecor,performance:{now:()=>time},
   Image:class{set src(v){decodes.push(decodeURIComponent(v.split(',').slice(1).join(',')));imageCount++;maxDecoders=Math.max(maxDecoders,imageCount);Promise.resolve().then(()=>{imageCount--;if(options.imageFail)this.onerror();else this.onload();});}},
   requestAnimationFrame:f=>{frames.set(++serial,f);return serial;},cancelAnimationFrame:i=>frames.delete(i),setTimeout:(fn,ms)=>{if(options.timeout&&ms===12000){Promise.resolve().then(fn);return -1;}return setTimeout(fn,ms);},clearTimeout:id=>{if(id!==-1)clearTimeout(id);}});
  window.PIXI=ctx.PIXI;vm.runInContext(read('dungeon-gpu.js'),ctx);window.DungeonGPU=ctx.DungeonGPU;
@@ -41,7 +41,7 @@ function setup(options={}){
  function tick(ms=16){time+=ms;const tasks=[...frames.values()];frames.clear();tasks.forEach(f=>f(time));}
  function drain(){for(let i=0;frames.size;i++){if(i>200)throw Error('Non-idle render loop');tick();}}
  function move(x,y=10,extra={}){return gpu.move(Object.assign({host,map,world:grid,cell:20,width:280,height:380,x,y,cameraX:-(x-6)*20,cameraY:-(y-9)*20,ms:144,goal:null,pet:true},extra));}
- const visuals=()=>{const mapRoot=renders.at(-1).container.children.find(n=>n.children.length===4);return {root:mapRoot,actor:mapRoot.children[3].children[0],pet:mapRoot.children[3].children[1]};};
+ const visuals=()=>{const mapRoot=renders.at(-1).container.children.find(n=>n.children.length===4);return {root:mapRoot,actor:mapRoot.children[3].children.find(n=>n.label==='hero'),pet:mapRoot.children[3].children.find(n=>n.label==='pet')};};
  return {ctx,gpu,host,map,media,document,events,winEvents,frames,move,tick,drain,Node,decodes,visuals,counts:()=>({draws,init,uploads,maxDecoders,renders:renders.length})};
 }
 (async()=>{
@@ -68,7 +68,13 @@ function setup(options={}){
   t.move(20,20);t.drain();assert.equal(a.width,1);assert.equal(a.y,20.5);t.move(20,20,{cell:30});t.drain();assert.equal(a.width,1);t.move(20,20);t.drain();t.move(21,20);t.tick(40);assert(a.width>1);t.media.matches=true;t.media.changed();t.drain();assert.equal(a.width,1);assert.equal(a.y,20.5);t.media.matches=false;t.move(10);t.drain();
  });
  check('Viewport-sized GPU surface settles to idle; a thousand steps do not rebuild terrain, upload textures or resync entities',()=>{
-  const before=t.gpu.status();assert.equal(t.frames.size,0);for(let i=0;i<1000;i++){t.move(10+i%2);t.tick(144);}t.drain();const after=t.gpu.status();assert.equal(after.worldBuilds,before.worldBuilds);assert.equal(after.terrainWrites,before.terrainWrites);assert.equal(after.entitySyncs,before.entitySyncs);assert.equal(after.textureUploads,before.textureUploads);assert(after.width*after.height<=900000);assert(after.liveEffects===0);assert(after.pool<=48);
+  const before=t.gpu.status();assert.equal(t.frames.size,0);for(let i=0;i<1000;i++){t.move(10+i%2);t.tick(144);}t.drain();const after=t.gpu.status();assert.equal(after.worldBuilds,before.worldBuilds);assert.equal(after.terrainWrites,before.terrainWrites);assert.equal(after.entitySyncs,before.entitySyncs);assert.equal(after.textureUploads,before.textureUploads);assert.equal(after.sceneryBuilds,before.sceneryBuilds);assert(after.width*after.height<=900000);assert(after.liveEffects===0);assert(after.pool<=48);
+ });
+ check('Scene props share the actor depth layer and fade only when they would cover the nearby hero',()=>{
+  const plan=base.DungeonDecor.layout(grid,'outpost',1),p=plan.props.find(q=>q.alpha<1);assert(p);t.move(p.x,p.y-1);t.drain();let root=t.visuals().root.children[3];assert(root.sortableChildren);let prop=root.children.find(s=>s.label==='scenery'&&Math.abs(s.x-(p.x+.5))<1e-9&&s.zIndex===p.y+1);assert(prop);assert.equal(prop.alpha,.35);assert.equal(t.visuals().actor.zIndex,p.y);t.move(p.x+2,p.y-1);t.drain();assert.equal(prop.alpha,p.alpha);t.move(10);t.drain();
+ });
+ check('Pickup/chest/door feedback is visual-only, bounded and returns to an idle renderer after its short burst',()=>{
+  const before=JSON.stringify(grid),builds=t.gpu.status().sceneryBuilds;for(const kind of ['gold','chest','door','kill'])assert(t.gpu.interact(10,10,kind));assert(t.gpu.status().liveEffects<=48);t.drain();assert.equal(t.gpu.status().liveEffects,0);assert.equal(t.frames.size,0);assert.equal(t.gpu.status().sceneryBuilds,builds);assert.equal(JSON.stringify(grid),before);t.media.matches=true;assert.equal(t.gpu.interact(10,10,'gold'),false);t.media.matches=false;
  });
  check('Classic movement emits three bounded trails; stationary updates emit none and reduced motion clears animation',()=>{
   t.move(10);t.drain();t.move(11);assert.equal(t.gpu.status().liveEffects,3);t.move(11);assert.equal(t.gpu.status().liveEffects,3);for(let i=0;i<20;i++){t.move(10+i%2);assert(t.gpu.status().liveEffects<=12);}t.media.matches=true;t.media.changed();t.drain();assert.equal(t.gpu.status().liveEffects,0);assert.equal(t.frames.size,0);t.media.matches=false;
@@ -109,7 +115,7 @@ function setup(options={}){
  });
  const vendor=vm.createContext({console,performance,setTimeout,clearTimeout,URL,TextEncoder,TextDecoder,navigator:{userAgent:'node-api-check'}});vm.runInContext(read('pixi.min.js'),vendor);
  check('Actual vendored Pixi scene and texture APIs accept the renderer adapter without loading a browser',()=>{
-  const P=vendor.PIXI,parent=new P.Container(),source=new P.TextureSource({width:1024,height:1024}),texture=new P.Texture({source,frame:new P.Rectangle(2,2,64,64)}),sprite=new P.Sprite(texture),tile=new P.TilingSprite({texture,width:280,height:380});parent.addChild(sprite,tile);sprite.anchor.set(.5);sprite.position.set(3,4);sprite.width=sprite.height=1;tile.tileScale.set(.3);assert.equal(P.VERSION,'8.22.0');assert.equal(sprite.x,3);assert.equal(texture.width,64);assert.equal(typeof P.WebGLRenderer.prototype.init,'function');parent.destroy({children:true});
+  const P=vendor.PIXI,parent=new P.Container(),source=new P.TextureSource({width:1024,height:1024}),texture=new P.Texture({source,frame:new P.Rectangle(2,2,64,64)}),sprite=new P.Sprite(texture),tile=new P.TilingSprite({texture,width:280,height:380});parent.addChild(sprite,tile);parent.sortableChildren=true;sprite.zIndex=10;tile.zIndex=5;parent.sortChildren();assert.equal(parent.children[0],tile);sprite.anchor.set(.5);sprite.position.set(3,4);sprite.width=sprite.height=1;tile.tileScale.set(.3);assert.equal(P.VERSION,'8.22.0');assert.equal(sprite.x,3);assert.equal(texture.width,64);assert.equal(typeof P.WebGLRenderer.prototype.init,'function');parent.destroy({children:true});
  });
  const adapter=setup();await adapter.gpu.prepare({assets});
  check('Real render and camera functions bypass all cell HTML and legacy actor work; real map input preserves pause and coop locks',()=>{
